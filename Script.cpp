@@ -118,11 +118,11 @@ bool Script::BeginThread(LPTHREAD_START_ROUTINE ThreadFunc) {
 void Script::Run(void) {
     try {
         runtime = JS_NewRuntime(Vars.dwMemUsage, JS_NO_HELPER_THREADS);
-        JS_SetNativeStackQuota(runtime, (size_t)50000);
+        //JS_SetNativeStackQuota(runtime, (size_t)50000);
         // JS_SetRuntimeThread(runtime);
         JS_SetContextCallback(runtime, contextCallback);
 
-        context = JS_NewContext(runtime, 0x2000);
+        context = JS_NewContext(runtime, 0x800000);
         if (!context)
             throw std::exception("Couldn't create the context");
 
