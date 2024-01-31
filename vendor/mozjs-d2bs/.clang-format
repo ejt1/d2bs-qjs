@@ -1,0 +1,15 @@
+# Use the Google style in this project.
+BasedOnStyle: Google
+
+AllowShortFunctionsOnASingleLine: Empty
+DerivePointerAlignment: false
+PointerAlignment: Left
+#QualifierAlignment: Left
+IncludeBlocks: Merge
+IncludeCategories:
+- Regex: '^\"'
+  Priority: 1500
+- Regex: '^<.*/.*'
+  Priority: 4000
+- Regex: '^<[^/]*>'
+  Priority: 5000

@@ -1,0 +1,1 @@
+add_subdirectory(mozjs-d2bs)
