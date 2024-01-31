@@ -245,7 +245,7 @@ void Genhook::Hover(POINT* loc) {
     Event* evt = new Event;
     evt->owner = owner;
     evt->argc = 2;
-    evt->functions.push_back(new AutoRoot((owner->GetContext(), hovered)));
+    evt->functions.push_back(new AutoRoot(owner->GetContext(), hovered));
     evt->name = _strdup("ScreenHookHover");
     evt->arg1 = new DWORD((DWORD)loc->x);
     evt->arg2 = new DWORD((DWORD)loc->y);

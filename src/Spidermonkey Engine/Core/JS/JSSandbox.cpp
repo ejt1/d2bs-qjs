@@ -7,7 +7,8 @@ JSAPI_FUNC(sandbox_ctor) {
   (argc);
 
   sandbox* box = new sandbox;  // leaked?
-  box->context = JS_NewContext(sScriptEngine->GetRuntime(), 0x2000);
+  box->rt = JS_NewRuntime(0, JS_NO_HELPER_THREADS);
+  box->context = JS_NewContext(box->rt, 0x2000);
   if (!box->context) {
     delete box;
     return JS_TRUE;
@@ -236,8 +237,8 @@ JSAPI_FUNC(sandbox_clear) {
   (argc);
   (vp);
 
-  //sandbox* box = (sandbox*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &sandbox_class, NULL);
-  // if(box)
+  // sandbox* box = (sandbox*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &sandbox_class, NULL);
+  //  if(box)
   //	JS_ClearScope(cx, box->innerObj);
   return JS_TRUE;
 }

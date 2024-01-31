@@ -17,7 +17,7 @@ bool __fastcall DisposeScript(Script* script, void*, uint);
 bool __fastcall StopScript(Script* script, void* argv, uint argc);
 
 ScriptEngine::ScriptEngine()
-    : console(NULL), runtime(NULL), scripts(), state(Stopped), lock({0}), scriptListLock({0}), DelayedExecList(), delayedExecKey(), context(NULL) {
+    : console(NULL), scripts(), state(Stopped), lock({0}), scriptListLock({0}), DelayedExecList(), delayedExecKey() {
 }
 
 ScriptEngine::~ScriptEngine() {
@@ -152,12 +152,6 @@ void ScriptEngine::Shutdown(void) {
     if (!scripts.empty())
       scripts.clear();
 
-    if (runtime) {
-      JS_DestroyContext(context);
-      JS_DestroyRuntime(runtime);
-      JS_ShutDown();
-      runtime = NULL;
-    }
     UnLockScriptList("shutdown");
     // LeaveCriticalSection(&lock);
     DeleteCriticalSection(&lock);

@@ -20,8 +20,6 @@ class ScriptEngine {
   ScriptEngine();
   virtual ~ScriptEngine();
 
-  JSRuntime* runtime;
-  JSContext* context;
   Script* console;
   EngineState state;
   std::list<Event*> DelayedExecList;
@@ -54,13 +52,6 @@ class ScriptEngine {
 
   bool ForEachScript(ScriptCallback callback, void* argv, uint argc);
   unsigned int GetCount(bool active = true, bool unexecuted = false);
-
-  JSRuntime* GetRuntime(void) {
-    return runtime;
-  }
-  JSContext* GetGlobalContext(void) {
-    return context;
-  }
 
   void StopAll(bool forceStop = false);
   void InitClass(JSContext* context, JSObject* globalObject, JSClass* classp, JSFunctionSpec* methods, JSPropertySpec* props, JSFunctionSpec* s_methods,
