@@ -18,9 +18,9 @@ JSAPI_FUNC(sandbox_clear);
 void sandbox_finalize(JSFreeOp* fop, JSObject* obj);
 
 struct sandbox {
-    JSContext* context;
-    JSObject* innerObj;
-    IncludeList list;
+  JSContext* context;
+  JSObject* innerObj;
+  IncludeList list;
 };
 
 static JSFunctionSpec sandbox_methods[] = {JS_FS("evaluate", sandbox_eval, 1, FUNCTION_FLAGS), JS_FS("include", sandbox_include, 1, FUNCTION_FLAGS),

@@ -32,11 +32,11 @@ static JSFunctionSpec dir_methods[] = {JS_FS("create", dir_create, 1, FUNCTION_F
                                        JS_FS("getFiles", dir_getFiles, 1, FUNCTION_FLAGS), JS_FS("getFolders", dir_getFolders, 1, FUNCTION_FLAGS), JS_FS_END};
 
 class DirData {
-  public:
-    wchar_t name[_MAX_FNAME];
-    DirData(const wchar_t* newname) {
-        wcscpy_s(name, _MAX_FNAME, newname);
-    }
+ public:
+  wchar_t name[_MAX_FNAME];
+  DirData(const wchar_t* newname) {
+    wcscpy_s(name, _MAX_FNAME, newname);
+  }
 };
 
 #endif

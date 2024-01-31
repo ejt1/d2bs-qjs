@@ -72,19 +72,19 @@ CellFile* LoadBmpCellFile(const wchar_t* filename);
 CellFile* myInitCellFile(CellFile* cf);
 
 static inline UnitAny* GetPlayerUnit() {
-    return D2CLIENT_GetPlayerUnit();
+  return D2CLIENT_GetPlayerUnit();
 }
 static inline void AddRoomData(Room2* room) {
-    D2COMMON_AddRoomData(room->pLevel->pMisc->pAct, room->pLevel->dwLevelNo, room->dwPosX, room->dwPosY, room->pRoom1);
+  D2COMMON_AddRoomData(room->pLevel->pMisc->pAct, room->pLevel->dwLevelNo, room->dwPosX, room->dwPosY, room->pRoom1);
 }
 static inline void RemoveRoomData(Room2* room) {
-    D2COMMON_RemoveRoomData(room->pLevel->pMisc->pAct, room->pLevel->dwLevelNo, room->dwPosX, room->dwPosY, room->pRoom1);
+  D2COMMON_RemoveRoomData(room->pLevel->pMisc->pAct, room->pLevel->dwLevelNo, room->dwPosX, room->dwPosY, room->pRoom1);
 }
 static inline char* __stdcall GetLevelName(const Level* level) {
-    return D2COMMON_GetLevelText(level->dwLevelNo)->szName;
+  return D2COMMON_GetLevelText(level->dwLevelNo)->szName;
 }
 static inline char* __stdcall GetLevelIdName(DWORD level) {
-    return D2COMMON_GetLevelText(level)->szName;
+  return D2COMMON_GetLevelText(level)->szName;
 }
 
 DWORD __fastcall D2CLIENT_GetUnitName_STUB(DWORD UnitAny);

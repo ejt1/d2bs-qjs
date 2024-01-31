@@ -4,8 +4,8 @@
 // TODO: Deprecate this and look it up via the MPQ tables
 
 struct Skill_t {
-    char name[64];
-    unsigned short skillID;
+  char name[64];
+  unsigned short skillID;
 };
 
 static Skill_t Game_Skills[] = {

@@ -14,18 +14,18 @@ void profile_finalize(JSFreeOp* fop, JSObject* obj);
 JSAPI_PROP(profile_getProperty);
 
 struct jsProfilePrivate {
-    char* password;
+  char* password;
 };
 
 enum jsProfileProperty_ids {
-    PROFILE_TYPE,
-    PROFILE_IP,
-    PROFILE_USERNAME,
-    PROFILE_GATEWAY,
-    PROFILE_CHARACTER,
-    PROFILE_DIFFICULTY,
-    PROFILE_MAXLOGINTIME,
-    PROFILE_MAXCHARSELTIME
+  PROFILE_TYPE,
+  PROFILE_IP,
+  PROFILE_USERNAME,
+  PROFILE_GATEWAY,
+  PROFILE_CHARACTER,
+  PROFILE_DIFFICULTY,
+  PROFILE_MAXLOGINTIME,
+  PROFILE_MAXCHARSELTIME
 };
 
 static JSPropertySpec profile_props[] = {{"type", PROFILE_TYPE, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(profile_getProperty), JSOP_NULLWRAPPER},

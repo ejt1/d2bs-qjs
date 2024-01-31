@@ -8,12 +8,12 @@
 #define INST_RET 0xC3
 
 typedef struct PatchHook_t {
-    void (*pFunc)(DWORD, DWORD, DWORD);
-    DWORD dwAddr;
-    DWORD dwFunc;
-    DWORD dwLen;
-    BOOL* enabled;
-    BYTE* bOldCode;
+  void (*pFunc)(DWORD, DWORD, DWORD);
+  DWORD dwAddr;
+  DWORD dwFunc;
+  DWORD dwLen;
+  BOOL* enabled;
+  BYTE* bOldCode;
 } PatchHook;
 
 void DefineOffsets();

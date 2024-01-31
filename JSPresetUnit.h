@@ -13,13 +13,13 @@ JSAPI_FUNC(my_getPresetUnit);
 JSAPI_FUNC(my_getPresetUnits);
 
 enum presetunit_tinyid {
-    PUNIT_TYPE,  // 0
-    PUNIT_ROOMX, // 1
-    PUNIT_ROOMY, // 2
-    PUNIT_X,     // 3
-    PUNIT_Y,     // 4
-    PUNIT_ID,    // 5
-    PUINT_LEVEL  // 6
+  PUNIT_TYPE,   // 0
+  PUNIT_ROOMX,  // 1
+  PUNIT_ROOMY,  // 2
+  PUNIT_X,      // 3
+  PUNIT_Y,      // 4
+  PUNIT_ID,     // 5
+  PUINT_LEVEL   // 6
 };
 
 static JSPropertySpec presetunit_props[] = {{"type", PUNIT_TYPE, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(presetunit_getProperty), JSOP_NULLWRAPPER},
@@ -32,13 +32,13 @@ static JSPropertySpec presetunit_props[] = {{"type", PUNIT_TYPE, JSPROP_PERMANEN
                                             {0, 0, 0, JSOP_NULLWRAPPER, JSOP_NULLWRAPPER}};
 
 struct myPresetUnit {
-    DWORD dwType;
-    DWORD dwRoomX;
-    DWORD dwRoomY;
-    DWORD dwPosX;
-    DWORD dwPosY;
-    DWORD dwId;
-    DWORD dwLevel;
+  DWORD dwType;
+  DWORD dwRoomX;
+  DWORD dwRoomY;
+  DWORD dwPosX;
+  DWORD dwPosY;
+  DWORD dwId;
+  DWORD dwLevel;
 };
 
 #endif

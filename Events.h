@@ -25,56 +25,56 @@ void ReleaseGameLock(void);
 void TakeGameLock(void);
 
 struct ChatEventHelper {
-    char *name, *nick;
-    wchar_t* msg;
+  char *name, *nick;
+  wchar_t* msg;
 };
 
 struct CopyDataHelper {
-    DWORD mode;
-    wchar_t* msg;
+  DWORD mode;
+  wchar_t* msg;
 };
 
 struct ItemEventHelper {
-    DWORD id;
-    char* code;
-    WORD mode;
-    bool global;
+  DWORD id;
+  char* code;
+  WORD mode;
+  bool global;
 };
 
 struct KeyEventHelper {
-    BOOL up;
-    WPARAM key;
+  BOOL up;
+  WPARAM key;
 };
 
 struct GameActionEventHelper {
-    BYTE mode;
-    DWORD param1, param2;
-    char* name1;
-    wchar_t* name2;
+  BYTE mode;
+  DWORD param1, param2;
+  char* name1;
+  wchar_t* name2;
 };
 
 struct SingleArgHelper {
-    DWORD arg1;
+  DWORD arg1;
 };
 
 struct DoubleArgHelper {
-    DWORD arg1, arg2;
+  DWORD arg1, arg2;
 };
 
 struct TripleArgHelper {
-    DWORD arg1, arg2, arg3;
+  DWORD arg1, arg2, arg3;
 };
 struct QuadArgHelper {
-    DWORD arg1, arg2, arg3, arg4;
+  DWORD arg1, arg2, arg3, arg4;
 };
 
 struct BCastEventHelper {
-    JSContext* cx;
-    jsval* argv;
-    uint argc;
+  JSContext* cx;
+  jsval* argv;
+  uint argc;
 };
 struct PacketEventHelper {
-    char* name;
-    BYTE* pPacket;
-    DWORD dwSize;
+  char* name;
+  BYTE* pPacket;
+  DWORD dwSize;
 };

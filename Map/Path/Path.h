@@ -11,16 +11,16 @@
 namespace Mapping {
 namespace Pathing {
 
-typedef int(__fastcall* Estimator)(Map const*, Point const&, Point const&);
-typedef int(__fastcall* Distance)(Point const&, Point const&);
+typedef int(__fastcall* Estimator)(const Map*, const Point&, const Point&);
+typedef int(__fastcall* Distance)(const Point&, const Point&);
 
 class MapPath {
-  public:
-    virtual void GetPath(Point const& start, Point const& end, PointList& list, bool abs) = 0;
+ public:
+  virtual void GetPath(const Point& start, const Point& end, PointList& list, bool abs) = 0;
 
-    virtual void SetMap(Map* map) = 0;
-    virtual void SetPathReducer(Reducing::PathReducer* reducer) = 0;
+  virtual void SetMap(Map* map) = 0;
+  virtual void SetPathReducer(Reducing::PathReducer* reducer) = 0;
 };
 
-} // namespace Pathing
-} // namespace Mapping
+}  // namespace Pathing
+}  // namespace Mapping

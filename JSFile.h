@@ -64,22 +64,22 @@ static JSFunctionSpec file_s_methods[] = {JS_FN("open", file_open, 2, FUNCTION_F
 
 // ensure that read/write/append get the correct values
 enum {
-    FILE_READ = 0,
-    FILE_WRITE = 1,
-    FILE_APPEND = 2,
-    FILE_READABLE,
-    FILE_WRITEABLE,
-    FILE_SEEKABLE,
-    FILE_MODE,
-    FILE_LENGTH,
-    FILE_PATH,
-    FILE_POSITION,
-    FILE_EOF,
-    FILE_AUTOFLUSH,
-    FILE_BINARYMODE,
-    FILE_ACCESSED,
-    FILE_CREATED,
-    FILE_MODIFIED,
+  FILE_READ = 0,
+  FILE_WRITE = 1,
+  FILE_APPEND = 2,
+  FILE_READABLE,
+  FILE_WRITEABLE,
+  FILE_SEEKABLE,
+  FILE_MODE,
+  FILE_LENGTH,
+  FILE_PATH,
+  FILE_POSITION,
+  FILE_EOF,
+  FILE_AUTOFLUSH,
+  FILE_BINARYMODE,
+  FILE_ACCESSED,
+  FILE_CREATED,
+  FILE_MODIFIED,
 };
 
 /**

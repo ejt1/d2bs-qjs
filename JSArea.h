@@ -24,9 +24,9 @@ static JSPropertySpec area_props[] = {{"exits", AUNIT_EXITS, JSPROP_PERMANENT_VA
                                       {0, 0, 0, JSOP_NULLWRAPPER, JSOP_NULLWRAPPER}};
 
 struct myArea {
-    DWORD AreaId;
-    DWORD Exits;
-    JSObject* ExitArray;
+  DWORD AreaId;
+  DWORD Exits;
+  JSObject* ExitArray;
 };
 
 #endif

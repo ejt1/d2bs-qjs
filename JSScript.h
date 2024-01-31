@@ -19,11 +19,11 @@ JSAPI_FUNC(script_join);
 JSAPI_FUNC(my_getScript);
 JSAPI_FUNC(my_getScripts);
 enum script_tinyid {
-    SCRIPT_FILENAME,
-    SCRIPT_GAMETYPE,
-    SCRIPT_RUNNING,
-    SCRIPT_THREADID,
-    SCRIPT_MEMORY,
+  SCRIPT_FILENAME,
+  SCRIPT_GAMETYPE,
+  SCRIPT_RUNNING,
+  SCRIPT_THREADID,
+  SCRIPT_MEMORY,
 };
 
 static JSPropertySpec script_props[] = {{"name", SCRIPT_FILENAME, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(script_getProperty), JSOP_NULLWRAPPER},

@@ -22,15 +22,15 @@ JSAPI_FUNC(room_reveal);
 JSAPI_FUNC(my_getRoom);
 
 enum room_tinyid {
-    ROOM_NUM,
-    ROOM_XPOS,
-    ROOM_YPOS,
-    ROOM_XSIZE,
-    ROOM_YSIZE,
-    ROOM_SUBNUMBER,
-    ROOM_AREA,
-    ROOM_LEVEL,
-    ROOM_CORRECTTOMB,
+  ROOM_NUM,
+  ROOM_XPOS,
+  ROOM_YPOS,
+  ROOM_XSIZE,
+  ROOM_YSIZE,
+  ROOM_SUBNUMBER,
+  ROOM_AREA,
+  ROOM_LEVEL,
+  ROOM_CORRECTTOMB,
 };
 
 static JSPropertySpec room_props[] = {{"number", ROOM_NUM, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(room_getProperty), JSOP_NULLWRAPPER},

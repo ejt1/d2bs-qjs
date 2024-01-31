@@ -20,12 +20,12 @@ static JSPropertySpec exit_props[] = {{"x", EXIT_X, JSPROP_PERMANENT_VAR, JSOP_W
                                       {0, 0, 0, JSOP_NULLWRAPPER, JSOP_NULLWRAPPER}};
 
 struct myExit {
-    DWORD x;
-    DWORD y;
-    DWORD id;
-    DWORD type;
-    DWORD tileid;
-    DWORD level;
+  DWORD x;
+  DWORD y;
+  DWORD id;
+  DWORD type;
+  DWORD tileid;
+  DWORD level;
 };
 
 #endif

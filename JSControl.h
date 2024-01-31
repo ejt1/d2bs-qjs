@@ -19,31 +19,31 @@ JSAPI_PROP(control_getProperty);
 JSAPI_STRICT_PROP(control_setProperty);
 
 struct ControlData {
-    DWORD _dwPrivate;
-    Control* pControl;
+  DWORD _dwPrivate;
+  Control* pControl;
 
-    DWORD dwType;
-    DWORD dwX;
-    DWORD dwY;
-    DWORD dwSizeX;
-    DWORD dwSizeY;
+  DWORD dwType;
+  DWORD dwX;
+  DWORD dwY;
+  DWORD dwSizeX;
+  DWORD dwSizeY;
 };
 
 enum control_tinyid {
-    CONTROL_TEXT,
-    CONTROL_X,
-    CONTROL_Y,
-    CONTROL_XSIZE,
-    CONTROL_YSIZE,
-    CONTROL_STATE,
-    CONTROL_MAXLENGTH,
-    CONTROL_TYPE,
-    CONTROL_VISIBLE,
-    CONTROL_CURSORPOS,
-    CONTROL_SELECTSTART,
-    CONTROL_SELECTEND,
-    CONTROL_PASSWORD,
-    CONTROL_DISABLED
+  CONTROL_TEXT,
+  CONTROL_X,
+  CONTROL_Y,
+  CONTROL_XSIZE,
+  CONTROL_YSIZE,
+  CONTROL_STATE,
+  CONTROL_MAXLENGTH,
+  CONTROL_TYPE,
+  CONTROL_VISIBLE,
+  CONTROL_CURSORPOS,
+  CONTROL_SELECTSTART,
+  CONTROL_SELECTEND,
+  CONTROL_PASSWORD,
+  CONTROL_DISABLED
 };
 
 static JSPropertySpec control_props[] = {{"text", CONTROL_TEXT, JSPROP_STATIC_VAR, JSOP_WRAPPER(control_getProperty), JSOP_WRAPPER(control_setProperty)},
