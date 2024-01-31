@@ -439,7 +439,7 @@ bool ExecScriptEvent(Event* evt, bool clearList) {
       bool block;
       for (FunctionList::iterator it = evt->owner->functions[evtName].begin(); it != evt->owner->functions[evtName].end(); it++) {
         JS_CallFunctionValue(cx, JS_GetGlobalObject(cx), *(*it)->value(), 4, argv, &rval);
-        block |= (JSVAL_IS_BOOLEAN(rval) && JSVAL_TO_BOOLEAN(rval));
+        block |= static_cast<bool>(JSVAL_IS_BOOLEAN(rval) && JSVAL_TO_BOOLEAN(rval));
       }
       JS_EndRequest(cx);
       for (int j = 0; j < 4; j++) JS_RemoveValueRoot(cx, &argv[j]);
@@ -516,7 +516,7 @@ bool ExecScriptEvent(Event* evt, bool clearList) {
       jsval rval;
       for (FunctionList::iterator it = evt->owner->functions[evtName].begin(); it != evt->owner->functions[evtName].end(); it++) {
         JS_CallFunctionValue(cx, JS_GetGlobalObject(cx), *(*it)->value(), 2, argv, &rval);
-        block |= (JSVAL_IS_BOOLEAN(rval) && JSVAL_TO_BOOLEAN(rval));
+        block |= static_cast<bool>(JSVAL_IS_BOOLEAN(rval) && JSVAL_TO_BOOLEAN(rval));
       }
       JS_EndRequest(cx);
       for (int j = 0; j < 2; j++) JS_RemoveValueRoot(cx, &argv[j]);
@@ -595,7 +595,7 @@ bool ExecScriptEvent(Event* evt, bool clearList) {
       jsval rval;
       for (FunctionList::iterator it = evt->owner->functions[evtName].begin(); it != evt->owner->functions[evtName].end(); it++) {
         JS_CallFunctionValue(cx, JS_GetGlobalObject(cx), *(*it)->value(), 1, argv, &rval);
-        block |= (JSVAL_IS_BOOLEAN(rval) && JSVAL_TO_BOOLEAN(rval));
+        block |= static_cast<bool>(JSVAL_IS_BOOLEAN(rval) && JSVAL_TO_BOOLEAN(rval));
       }
       JS_EndRequest(cx);
       JS_RemoveValueRoot(cx, &argv[0]);
@@ -624,7 +624,7 @@ bool ExecScriptEvent(Event* evt, bool clearList) {
       // diffrent function source for hooks
       for (FunctionList::iterator it = evt->functions.begin(); it != evt->functions.end(); it++) {
         JS_CallFunctionValue(cx, JS_GetGlobalObject(cx), *(*it)->value(), 3, argv, &rval);
-        block |= (JSVAL_IS_BOOLEAN(rval) && JSVAL_TO_BOOLEAN(rval));
+        block |= static_cast<bool>(JSVAL_IS_BOOLEAN(rval) && JSVAL_TO_BOOLEAN(rval));
       }
 
       JS_EndRequest(cx);
@@ -706,7 +706,7 @@ bool ExecScriptEvent(Event* evt, bool clearList) {
       jsval rval;
       for (FunctionList::iterator it = evt->owner->functions[evtName].begin(); it != evt->owner->functions[evtName].end(); it++) {
         JS_CallFunctionValue(cx, JS_GetGlobalObject(cx), *(*it)->value(), 1, &argv, &rval);
-        block |= (JSVAL_IS_BOOLEAN(rval) && JSVAL_TO_BOOLEAN(rval));
+        block |= static_cast<bool>(JSVAL_IS_BOOLEAN(rval) && JSVAL_TO_BOOLEAN(rval));
       }
       *(DWORD*)evt->arg4 = block;
       JS_RemoveRoot(cx, &arr);

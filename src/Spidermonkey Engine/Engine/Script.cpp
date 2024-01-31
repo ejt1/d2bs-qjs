@@ -303,8 +303,10 @@ bool Script::Include(const wchar_t* file) {
   // since includes will happen on the same thread, locking here is acceptable
   EnterCriticalSection(&lock);
   wchar_t* fname = _wcsdup(file);
-  if (!fname)
+  if (!fname) {
+    LeaveCriticalSection(&lock);
     return false;
+  }
   _wcslwr_s(fname, wcslen(fname) + 1);
   StringReplace(fname, L'/', L'\\', wcslen(fname));
 
