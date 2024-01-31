@@ -49,7 +49,7 @@ class Genhook {
 
  public:
   Genhook::Genhook(Script* nowner, JSObject* nself, uint x, uint y, ushort nopacity, bool nisAutomap = false, Align nalign = Left, ScreenhookState ngameState = Perm);
-  ~Genhook(void);
+  virtual ~Genhook(void);
 
   friend bool __fastcall DrawHook(Genhook* hook, void* argv, uint argc);
   friend bool __fastcall CleanHook(Genhook* hook, void* argv, uint argc);
