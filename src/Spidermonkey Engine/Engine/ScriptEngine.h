@@ -20,12 +20,6 @@ class ScriptEngine {
   ScriptEngine();
   virtual ~ScriptEngine();
 
-  Script* console;
-  EngineState state;
-  std::list<Event*> DelayedExecList;
-  int delayedExecKey;
-  CRITICAL_SECTION scriptListLock;
-
  public:
   static ScriptEngine* GetInstance();
 
@@ -38,7 +32,7 @@ class ScriptEngine {
   BOOL Startup(void);
   void Shutdown(void);
   EngineState GetState(void) {
-    return state;
+    return m_state;
   }
 
   void FlushCache(void);
@@ -60,6 +54,13 @@ class ScriptEngine {
   void UpdateConsole();
   int AddDelayedEvent(Event* evt, int freq);
   void RemoveDelayedEvent(int key);
+
+ private:
+  Script* m_console;
+  EngineState m_state;
+  std::list<Event*> m_DelayedExecList;
+  int m_delayedExecKey;
+  CRITICAL_SECTION m_scriptListLock;
 };
 
 #define sScriptEngine ScriptEngine::GetInstance()

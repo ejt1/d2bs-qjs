@@ -16,8 +16,7 @@
 bool __fastcall DisposeScript(Script* script, void*, uint);
 bool __fastcall StopScript(Script* script, void* argv, uint argc);
 
-ScriptEngine::ScriptEngine()
-    : console(NULL), scripts(), state(Stopped), lock({0}), scriptListLock({0}), DelayedExecList(), delayedExecKey() {
+ScriptEngine::ScriptEngine() : m_console(NULL), scripts(), m_state(Stopped), lock({0}), m_scriptListLock({0}), m_DelayedExecList(), m_delayedExecKey() {
 }
 
 ScriptEngine::~ScriptEngine() {
@@ -58,7 +57,7 @@ void ScriptEngine::RunCommand(const wchar_t* command) {
     return;
   try {
     // EnterCriticalSection(&lock);
-    console->RunCommand(command);
+    m_console->RunCommand(command);
     // LeaveCriticalSection(&lock);
   } catch (std::exception e) {
     // LeaveCriticalSection(&lock);
@@ -89,12 +88,12 @@ void ScriptEngine::DisposeScript(Script* script) {
   }
 }
 void ScriptEngine::LockScriptList(char* /*loc*/) {
-  EnterCriticalSection(&scriptListLock);
+  EnterCriticalSection(&m_scriptListLock);
   // Log(loc);
 }
 void ScriptEngine::UnLockScriptList(char* /*loc*/) {
   // Log(loc);
-  LeaveCriticalSection(&scriptListLock);
+  LeaveCriticalSection(&m_scriptListLock);
 }
 unsigned int ScriptEngine::GetCount(bool active, bool unexecuted) {
   if (GetState() != Running)
@@ -116,21 +115,21 @@ unsigned int ScriptEngine::GetCount(bool active, bool unexecuted) {
 
 BOOL ScriptEngine::Startup(void) {
   if (GetState() == Stopped) {
-    state = Starting;
-    InitializeCriticalSection(&scriptListLock);
+    m_state = Starting;
+    InitializeCriticalSection(&m_scriptListLock);
     // InitializeCriticalSection(&lock);
     // EnterCriticalSection(&lock);
     LockScriptList("startup - enter");
     if (wcslen(Vars.szConsole) > 0) {
       wchar_t file[_MAX_FNAME + _MAX_PATH];
       swprintf_s(file, _countof(file), L"%s\\%s", Vars.szScriptPath, Vars.szConsole);
-      console = new Script(file, Command);
+      m_console = new Script(file, Command);
     } else {
-      console = new Script(L"", Command);
+      m_console = new Script(L"", Command);
     }
-    scripts[L"console"] = console;
-    console->BeginThread(ScriptThread);
-    state = Running;
+    scripts[L"console"] = m_console;
+    m_console->BeginThread(ScriptThread);
+    m_state = Running;
     // LeaveCriticalSection(&lock);
     UnLockScriptList("startup - leave");
   }
@@ -142,9 +141,9 @@ void ScriptEngine::Shutdown(void) {
     // bring the engine down properly
     // EnterCriticalSection(&lock);
     LockScriptList("Shutdown");
-    state = Stopping;
+    m_state = Stopping;
     StopAll(true);
-    console->Stop(true, true);
+    m_console->Stop(true, true);
 
     // clear all scripts now that they're stopped
     ForEachScript(::DisposeScript, NULL, 0);
@@ -155,7 +154,7 @@ void ScriptEngine::Shutdown(void) {
     UnLockScriptList("shutdown");
     // LeaveCriticalSection(&lock);
     DeleteCriticalSection(&lock);
-    state = Stopped;
+    m_state = Stopped;
   }
 }
 
@@ -170,7 +169,7 @@ void ScriptEngine::StopAll(bool forceStop) {
 }
 
 void ScriptEngine::UpdateConsole() {
-  console->UpdatePlayerGid();
+  m_console->UpdatePlayerGid();
 }
 void ScriptEngine::FlushCache(void) {
   if (GetState() != Running)
@@ -251,8 +250,8 @@ bool __fastcall StopIngameScript(Script* script, void*, uint) {
 }
 
 int ScriptEngine::AddDelayedEvent(Event* evt, int freq) {
-  delayedExecKey++;
-  evt->arg1 = new DWORD(delayedExecKey);
+  m_delayedExecKey++;
+  evt->arg1 = new DWORD(m_delayedExecKey);
   evt->arg2 = CreateWaitableTimer(NULL, true, NULL);
 
   __int64 start;
@@ -263,17 +262,17 @@ int ScriptEngine::AddDelayedEvent(Event* evt, int freq) {
   lStart.HighPart = (LONG)(start >> 32);
   freq = (strcmp(evt->name, "setInterval") == 0) ? freq : 0;
   EnterCriticalSection(&Vars.cEventSection);
-  DelayedExecList.push_back(evt);
+  m_DelayedExecList.push_back(evt);
   SetWaitableTimer((HANDLE*)evt->arg2, &lStart, freq, &EventTimerProc, evt, false);
   LeaveCriticalSection(&Vars.cEventSection);
 
-  return delayedExecKey;
+  return m_delayedExecKey;
 }
 
 void ScriptEngine::RemoveDelayedEvent(int key) {
   std::list<Event*>::iterator it;
-  it = DelayedExecList.begin();
-  while (it != DelayedExecList.end()) {
+  it = m_DelayedExecList.begin();
+  while (it != m_DelayedExecList.end()) {
     if (*(int*)(*it)->arg1 == key) {
       CancelWaitableTimer((HANDLE*)(*it)->arg2);
       CloseHandle((HANDLE*)(*it)->arg2);
@@ -283,7 +282,7 @@ void ScriptEngine::RemoveDelayedEvent(int key) {
       delete evt->arg3;
       free(evt->name);
       delete evt;
-      it = DelayedExecList.erase(it);
+      it = m_DelayedExecList.erase(it);
     } else
       it++;
   }
