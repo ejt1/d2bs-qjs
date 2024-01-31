@@ -73,6 +73,7 @@ struct NodeComparer {
 template <class Allocator = std::allocator<Node>>
 class AStarPath : public MapPath {
  private:
+  using AllocTraits = std::allocator_traits<Allocator>;
   Allocator alloc;
 
   Map* map;
@@ -92,7 +93,7 @@ class AStarPath : public MapPath {
     std::priority_queue<Node*, std::vector<Node*>, NodeComparer> open;
     std::set<Point> closed;
     PointList newNodes;
-    Node* begin = alloc.allocate(1);
+    Node* begin = AllocTraits::allocate(alloc, 1);
     UnitAny* player = D2CLIENT_GetPlayerUnit();
     DWORD startLvl = player->pPath->pRoom1->pRoom2->pLevel->dwLevelNo;
 
@@ -100,7 +101,7 @@ class AStarPath : public MapPath {
     if (!begin)
       return;
 
-    alloc.construct(begin, Node(start, NULL, 0, estimate(map, start, end)));
+    AllocTraits::construct(alloc, begin, Node(start, NULL, 0, estimate(map, start, end)));
     nodes.push_back(begin);
     open.push(begin);
     DWORD ticks = GetTickCount();
@@ -141,12 +142,12 @@ class AStarPath : public MapPath {
           closed.insert(point);
           continue;
         }
-        Node* next = alloc.allocate(1);
+        Node* next = AllocTraits::allocate(alloc, 1);
         // if we don't get a valid node, just return
         if (!next)
           return;
         int pointPenalty = reducer->GetPenalty(point, abs);
-        alloc.construct(next, Node(point, current, current->g + distance(current->point, point) + pointPenalty, estimate(map, point, end)));
+        AllocTraits::construct(alloc, next, Node(point, current, current->g + distance(current->point, point) + pointPenalty, estimate(map, point, end)));
         nodes.push_back(next);
         open.push(next);
       }
@@ -194,8 +195,8 @@ class AStarPath : public MapPath {
 
     std::vector<Node*>::iterator lbegin = nodes.begin(), lend = nodes.end();
     for (std::vector<Node*>::iterator it = lbegin; it != lend; it++) {
-      alloc.destroy((*it));
-      alloc.deallocate((*it), sizeof(*it));
+      AllocTraits::destroy(alloc, *it);
+      AllocTraits::deallocate(alloc, *it, sizeof(*it));
     }
   }
 };
