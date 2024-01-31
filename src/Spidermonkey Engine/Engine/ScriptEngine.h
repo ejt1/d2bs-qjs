@@ -83,8 +83,4 @@ struct EventHelper {
   bool executed;
 };
 
-JSBool operationCallback(JSContext* cx);
-JSBool contextCallback(JSContext* cx, uint contextOp);
-void reportError(JSContext* cx, const char* message, JSErrorReport* report);
-bool ExecScriptEvent(Event* evt, bool clearList);
 void CALLBACK EventTimerProc(LPVOID lpArg, DWORD dwTimerLowValue, DWORD dwTimerHighValue);
