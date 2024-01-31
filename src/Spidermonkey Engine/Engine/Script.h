@@ -109,31 +109,10 @@ class Script {
   Script(const wchar_t* file, ScriptState state, uint argc = 0, JSAutoStructuredCloneBuffer** argv = NULL);
   ~Script();
 
-  std::wstring fileName;
-  int execCount;
-  ScriptState scriptState;
-  JSContext* context;
-  JSScript* script;
-  JSRuntime* runtime;
-  myUnit* me;
-  uint argc;
-  JSAutoStructuredCloneBuffer** argv;
-
-  JSObject *globalObject, *scriptObject;
-  bool isLocked, isPaused, isReallyPaused, isAborted;
-
-  IncludeList includes, inProgress;
-
-  HANDLE threadHandle;
-
-  CRITICAL_SECTION lock;
-
  public:
   Script(const Script&) = delete;
   Script& operator=(const Script&) = delete;
 
-  DWORD threadId;
-  FunctionMap functions;
   void Run(void);
   void Join(void);
   void Pause(void);
@@ -142,56 +121,68 @@ class Script {
   bool BeginThread(LPTHREAD_START_ROUTINE ThreadFunc);
   void RunCommand(const wchar_t* command);
   inline void SetPauseState(bool reallyPaused) {
-    isReallyPaused = reallyPaused;
+    m_isReallyPaused = reallyPaused;
   }
   inline bool IsReallyPaused(void) {
-    return isReallyPaused;
+    return m_isReallyPaused;
   }
   void Stop(bool force = false, bool reallyForce = false);
 
   inline const wchar_t* GetFilename(void) {
-    return fileName.c_str();
+    return m_fileName.c_str();
   }
   const wchar_t* GetShortFilename(void);
   inline JSContext* GetContext(void) {
-    return context;
+    return m_context;
   }
   inline JSRuntime* GetRuntime(void) {
-    return runtime;
+    return m_runtime;
   }
   inline JSObject* GetGlobalObject(void) {
-    return globalObject;
+    return m_globalObject;
   }
   inline JSObject* GetScriptObject(void) {
-    return scriptObject;
+    return m_scriptObject;
   }
   inline ScriptState GetState(void) {
-    return scriptState;
+    return m_scriptState;
+  }
+  inline FunctionMap& functions() {
+    return m_functions;
+  }
+  inline bool& hasActiveCX() {
+    return m_hasActiveCX;
+  }
+  inline DWORD threadId() {
+    return m_threadId;
+  }
+  inline DWORD& LastGC() {
+    return m_LastGC;
+  }
+  inline HANDLE& eventSignal() {
+    return m_eventSignal;
   }
   inline void TriggerOperationCallback(void) {
-    if (hasActiveCX)
-      JS_TriggerOperationCallback(runtime);
+    if (m_hasActiveCX)
+      JS_TriggerOperationCallback(m_runtime);
   }
   int GetExecutionCount(void);
   DWORD GetThreadId(void);
-  DWORD LastGC;
-  bool hasActiveCX;  // hack to get away from JS_IsRunning
-  HANDLE eventSignal;
 
   // UGLY HACK to fix up the player gid on game join for cached scripts/oog scripts
   void UpdatePlayerGid(void);
   // Hack. Include from console needs to run on the RunCommandThread / cx.
   //		 a better solution may be to keep a list of threadId / cx and have a GetCurrentThreadCX()
   inline void SetContext(JSContext* cx) {
-    context = cx;
+    m_context = cx;
   }
   bool IsRunning(void);
   bool IsAborted(void);
   void Lock() {
-    EnterCriticalSection(&lock);
+    EnterCriticalSection(&m_lock);
   }  // needed for events walking function list
   void Unlock() {
-    LeaveCriticalSection(&lock);
+    LeaveCriticalSection(&m_lock);
   }
   bool IsIncluded(const wchar_t* file);
   bool Include(const wchar_t* file);
@@ -204,6 +195,32 @@ class Script {
   void ClearAllEvents(void);
   void FireEvent(Event*);
   std::list<Event*> EventList;
+
+ private:
+  std::wstring m_fileName;
+  int m_execCount;
+  ScriptState m_scriptState;
+  JSContext* m_context;
+  JSScript* m_script;
+  JSRuntime* m_runtime;
+  myUnit* m_me;
+  uint m_argc;
+  JSAutoStructuredCloneBuffer** m_argv;
+
+  DWORD m_threadId;
+  FunctionMap m_functions;
+  DWORD m_LastGC;
+  bool m_hasActiveCX;  // hack to get away from JS_IsRunning
+  HANDLE m_eventSignal;
+
+  JSObject *m_globalObject, *m_scriptObject;
+  bool m_isLocked, m_isPaused, m_isReallyPaused, m_isAborted;
+
+  IncludeList m_includes, m_inProgress;
+
+  HANDLE m_threadHandle;
+
+  CRITICAL_SECTION m_lock;
 };
 
 struct RUNCOMMANDSTRUCT {

@@ -270,8 +270,8 @@ BOOL SetSkill(JSContext* cx, WORD wSkillId, BOOL bLeft, DWORD dwItemId) {
     int amt = 100 - (GetTickCount() - start);
 
     while (amt > 0) {  // had a script deadlock here, make sure were positve with amt
-      WaitForSingleObjectEx(script->eventSignal, amt, true);
-      ResetEvent(script->eventSignal);
+      WaitForSingleObjectEx(script->eventSignal(), amt, true);
+      ResetEvent(script->eventSignal());
       while (script->EventList.size() > 0 && !!!(JSBool)(script->IsAborted() || ((script->GetState() == InGame) && ClientState() == ClientStateMenu))) {
         EnterCriticalSection(&Vars.cEventSection);
         Event* evt = script->EventList.back();
