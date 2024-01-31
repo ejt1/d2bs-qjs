@@ -120,18 +120,18 @@ JSAPI_PROP(sandbox_getProperty) {
     char name[32];
     _itoa_s(i, name, 32, 10);
     vp.set(JSVAL_VOID);
-    if (box && JS_LookupProperty(box->context, box->innerObj, name, &vp.get()))
+    if (box && JS_LookupProperty(box->context, box->innerObj, name, vp.address()))
       return JS_TRUE;
-    if (JSVAL_IS_VOID(vp.get()) && JS_LookupProperty(cx, obj, name, &vp.get()))
+    if (JSVAL_IS_VOID(vp.get()) && JS_LookupProperty(cx, obj, name, vp.address()))
       return JS_TRUE;
   } else if (JSVAL_IS_STRING(ID)) {
     char* name = JS_EncodeStringToUTF8(cx, JSVAL_TO_STRING(ID));
     vp.set(JSVAL_VOID);
-    if (box && (JS_LookupProperty(box->context, box->innerObj, name, &vp.get()))) {
+    if (box && (JS_LookupProperty(box->context, box->innerObj, name, vp.address()))) {
       JS_free(cx, name);
       return JS_TRUE;
     }
-    if (JSVAL_IS_VOID(vp.get()) && JS_LookupProperty(cx, obj, name, &vp.get())) {
+    if (JSVAL_IS_VOID(vp.get()) && JS_LookupProperty(cx, obj, name, vp.address())) {
       JS_free(cx, name);
       return JS_TRUE;
     }
@@ -154,11 +154,11 @@ JSAPI_STRICT_PROP(sandbox_setProperty) {
     char name[32];
     _itoa_s(i, name, 32, 10);
     if (box)
-      if (JS_SetProperty(box->context, box->innerObj, name, &vp.get()))
+      if (JS_SetProperty(box->context, box->innerObj, name, vp.address()))
         return JS_TRUE;
   } else if (JSVAL_IS_STRING(ID)) {
     char* name = JS_EncodeStringToUTF8(cx, JSVAL_TO_STRING(ID));
-    if (box && JS_SetProperty(box->context, box->innerObj, name, &vp.get())) {
+    if (box && JS_SetProperty(box->context, box->innerObj, name, vp.address())) {
       JS_free(cx, name);
       return JS_TRUE;
     }
