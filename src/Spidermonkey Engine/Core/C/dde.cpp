@@ -21,7 +21,7 @@ HDDEDATA CALLBACK DdeCallback(UINT uType, UINT uFmt, HCONV hconv, HSZ hsz1, HSZ 
       break;
     case XTYP_EXECUTE:
       DdeGetData(hdata, (LPBYTE)pszItem, sizeof(pszItem), 0);
-      ScriptEngine::RunCommand(pslzItem);
+      sScriptEngine->RunCommand(pslzItem);
       break;
   }
   delete[] pslzItem;

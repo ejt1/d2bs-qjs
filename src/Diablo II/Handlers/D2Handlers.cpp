@@ -81,8 +81,8 @@ DWORD WINAPI D2Thread(LPVOID lpParam) {
           Sleep(500);
 
           D2CLIENT_InitInventory();
-          ScriptEngine::ForEachScript(UpdatePlayerGid, NULL, 0);
-          ScriptEngine::UpdateConsole();
+          sScriptEngine->ForEachScript(UpdatePlayerGid, NULL, 0);
+          sScriptEngine->UpdateConsole();
           Vars.bQuitting = false;
           GameJoined();
 
@@ -107,13 +107,13 @@ DWORD WINAPI D2Thread(LPVOID lpParam) {
         break;
     }
     Sleep(50);
-    /*	EnterCriticalSection(&ScriptEngine::lock);
-            for(ScriptMap::iterator it = ScriptEngine::scripts.begin(); it != ScriptEngine::scripts.end(); it++)
+    /*	EnterCriticalSection(&sScriptEngine->lock);
+            for(ScriptMap::iterator it = sScriptEngine->scripts.begin(); it != sScriptEngine->scripts.end(); it++)
                     JS_TriggerOperationCallback(it->second->GetContext());
-            LeaveCriticalSection(&ScriptEngine::lock);  */
+            LeaveCriticalSection(&sScriptEngine->lock);  */
   }
 
-  ScriptEngine::Shutdown();
+  sScriptEngine->Shutdown();
 
   return NULL;
 }
@@ -183,10 +183,10 @@ LONG WINAPI GameEventHandler(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         wchar_t* lpwData = AnsiToUnicode((const char*)pCopy->lpData);
         if (pCopy->dwData == 0x1337)  // 0x1337 = Execute Script
         {
-          while (!Vars.bActive || (ScriptEngine::GetState() != Running)) {
+          while (!Vars.bActive || (sScriptEngine->GetState() != Running)) {
             Sleep(100);
           }
-          ScriptEngine::RunCommand(lpwData);
+          sScriptEngine->RunCommand(lpwData);
         } else if (pCopy->dwData == 0x31337)  // 0x31337 = Set Profile
           if (SwitchToProfile(lpwData))
             Print(L"\u00FFc2D2BS\u00FFc0 :: Switched to profile %s", lpwData);
@@ -506,15 +506,15 @@ void GameLeave(void) {
   //	else
   //		Vars.bGameLoopEntered = true;
 
-  /*EnterCriticalSection(&ScriptEngine::lock);
+  /*EnterCriticalSection(&sScriptEngine->lock);
   std::vector<Script*> list;
-  for(ScriptMap::iterator it = ScriptEngine::scripts.begin(); it != ScriptEngine::scripts.end(); it++)
+  for(ScriptMap::iterator it = sScriptEngine->scripts.begin(); it != sScriptEngine->scripts.end(); it++)
           if(it->second->GetState() == InGame)
                   it->second->Stop(true);
 
-  LeaveCriticalSection(&ScriptEngine::lock); */
+  LeaveCriticalSection(&sScriptEngine->lock); */
   Vars.bQuitting = false;
-  ScriptEngine::ForEachScript(StopIngameScript, NULL, 0);
+  sScriptEngine->ForEachScript(StopIngameScript, NULL, 0);
   ActMap::ClearCache();
 
   //	EnterCriticalSection(&Vars.cGameLoopSection);

@@ -424,7 +424,7 @@ void Script::ClearAllEvents(void) {
   LeaveCriticalSection(&lock);
 }
 void Script::FireEvent(Event* evt) {
-  // EnterCriticalSection(&ScriptEngine::lock);
+  // EnterCriticalSection(&sScriptEngine->lock);
   EnterCriticalSection(&Vars.cEventSection);
   evt->owner->EventList.push_front(evt);
   LeaveCriticalSection(&Vars.cEventSection);
@@ -433,7 +433,7 @@ void Script::FireEvent(Event* evt) {
     evt->owner->TriggerOperationCallback();
   }
   SetEvent(eventSignal);
-  // LeaveCriticalSection(&ScriptEngine::lock);
+  // LeaveCriticalSection(&sScriptEngine->lock);
 }
 
 #ifdef DEBUG
@@ -485,7 +485,7 @@ DWORD WINAPI ScriptThread(void* data) {
 #endif
     script->Run();
     if (Vars.bDisableCache)
-      ScriptEngine::DisposeScript(script);
+      sScriptEngine->DisposeScript(script);
   }
   return 0;
 }

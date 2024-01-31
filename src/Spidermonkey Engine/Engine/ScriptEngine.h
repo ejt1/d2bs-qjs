@@ -1,6 +1,4 @@
 #pragma once
-#ifndef __SCRIPTENGINE_H__
-#define __SCRIPTENGINE_H__
 
 #include <list>
 #include <map>
@@ -17,67 +15,76 @@ typedef bool(__fastcall* ScriptCallback)(Script*, void*, uint);
 enum EngineState { Starting, Running, Paused, Stopping, Stopped };
 
 class ScriptEngine {
-  ScriptEngine(void){};
-  ScriptEngine(const ScriptEngine&);
-  virtual ~ScriptEngine(void) = 0;
-  static JSRuntime* runtime;
-  static JSContext* context;
-  static Script* console;
-  static EngineState state;
-  static std::list<Event*> DelayedExecList;
-  static int delayedExecKey;
-  static CRITICAL_SECTION scriptListLock;
+  friend class Script;
+
+  ScriptEngine();
+  virtual ~ScriptEngine();
+
+  JSRuntime* runtime;
+  JSContext* context;
+  Script* console;
+  EngineState state;
+  std::list<Event*> DelayedExecList;
+  int delayedExecKey;
+  CRITICAL_SECTION scriptListLock;
 
  public:
-  friend class Script;
-  static ScriptMap scripts;
+  static ScriptEngine* GetInstance();
 
-  static CRITICAL_SECTION lock;
-  static BOOL Startup(void);
-  static void Shutdown(void);
-  static EngineState GetState(void) {
+  ScriptEngine(const ScriptEngine&) = delete;
+  ScriptEngine& operator=(const ScriptEngine&) = delete;
+
+  ScriptMap scripts;
+
+  CRITICAL_SECTION lock;
+  BOOL Startup(void);
+  void Shutdown(void);
+  EngineState GetState(void) {
     return state;
   }
 
-  static void FlushCache(void);
+  void FlushCache(void);
 
-  static Script* CompileFile(const wchar_t* file, ScriptState state, uint argc = 0, JSAutoStructuredCloneBuffer** argv = NULL, bool recompile = false);
-  static void RunCommand(const wchar_t* command);
-  static void DisposeScript(Script* script);
+  Script* CompileFile(const wchar_t* file, ScriptState state, uint argc = 0, JSAutoStructuredCloneBuffer** argv = NULL, bool recompile = false);
+  void RunCommand(const wchar_t* command);
+  void DisposeScript(Script* script);
 
-  static void LockScriptList(char* loc);
-  static void UnLockScriptList(char* loc);
+  void LockScriptList(char* loc);
+  void UnLockScriptList(char* loc);
 
-  static bool ForEachScript(ScriptCallback callback, void* argv, uint argc);
-  static unsigned int GetCount(bool active = true, bool unexecuted = false);
+  bool ForEachScript(ScriptCallback callback, void* argv, uint argc);
+  unsigned int GetCount(bool active = true, bool unexecuted = false);
 
-  static JSRuntime* GetRuntime(void) {
+  JSRuntime* GetRuntime(void) {
     return runtime;
   }
-  static JSContext* GetGlobalContext(void) {
+  JSContext* GetGlobalContext(void) {
     return context;
   }
 
-  static void StopAll(bool forceStop = false);
-  static void InitClass(JSContext* context, JSObject* globalObject, JSClass* classp, JSFunctionSpec* methods, JSPropertySpec* props, JSFunctionSpec* s_methods,
-                        JSPropertySpec* s_props);
-  static void DefineConstant(JSContext* context, JSObject* globalObject, const char* name, int value);
-  static void UpdateConsole();
-  static int AddDelayedEvent(Event* evt, int freq);
-  static void RemoveDelayedEvent(int key);
+  void StopAll(bool forceStop = false);
+  void InitClass(JSContext* context, JSObject* globalObject, JSClass* classp, JSFunctionSpec* methods, JSPropertySpec* props, JSFunctionSpec* s_methods,
+                 JSPropertySpec* s_props);
+  void DefineConstant(JSContext* context, JSObject* globalObject, const char* name, int value);
+  void UpdateConsole();
+  int AddDelayedEvent(Event* evt, int freq);
+  void RemoveDelayedEvent(int key);
 };
+
+#define sScriptEngine ScriptEngine::GetInstance()
 
 // these ForEachScript helpers are exposed in case they can be of use somewhere
 bool __fastcall StopIngameScript(Script* script, void*, uint);
+
 struct EventHelper {
   char* evtName;
   AutoRoot** argv;
   uint argc;
   bool executed;
 };
+
 JSBool operationCallback(JSContext* cx);
 JSBool contextCallback(JSContext* cx, uint contextOp);
 void reportError(JSContext* cx, const char* message, JSErrorReport* report);
 bool ExecScriptEvent(Event* evt, bool clearList);
 void CALLBACK EventTimerProc(LPVOID lpArg, DWORD dwTimerLowValue, DWORD dwTimerHighValue);
-#endif

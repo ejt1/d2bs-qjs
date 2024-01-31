@@ -4,7 +4,7 @@
 AutoRoot::AutoRoot(JSContext* ncx, jsval nvar) : cx(ncx), var(nvar), count(0) {
   Take();
 }
-AutoRoot::AutoRoot(jsval nvar) : cx(ScriptEngine::GetGlobalContext()), var(nvar), count(0) {
+AutoRoot::AutoRoot(jsval nvar) : cx(sScriptEngine->GetGlobalContext()), var(nvar), count(0) {
   Take();
 }
 AutoRoot::~AutoRoot() {
@@ -22,7 +22,7 @@ AutoRoot::~AutoRoot() {
 void AutoRoot::Take() {
   count++;
   JS_AddNamedValueRoot(cx, &var, "AutoRoot");
-  // JS_AddNamedRootRT(ScriptEngine::GetRuntime(), &var, "AutoRoot");
+  // JS_AddNamedRootRT(sScriptEngine->GetRuntime(), &var, "AutoRoot");
 }
 
 void AutoRoot::Release() {

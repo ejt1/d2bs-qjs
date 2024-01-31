@@ -5,7 +5,7 @@
 
 JSAPI_FUNC(sandbox_ctor) {
   sandbox* box = new sandbox;  // leaked?
-  box->context = JS_NewContext(ScriptEngine::GetRuntime(), 0x2000);
+  box->context = JS_NewContext(sScriptEngine->GetRuntime(), 0x2000);
   if (!box->context) {
     delete box;
     return JS_TRUE;
