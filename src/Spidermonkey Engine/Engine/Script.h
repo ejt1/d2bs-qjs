@@ -127,7 +127,6 @@ class Script {
   // Script(const char* file, ScriptState state, uint argc = 0, JSAutoStructuredCloneBuffer** argv = NULL);
   Script(const wchar_t* file, ScriptState state, uint argc = 0, JSAutoStructuredCloneBuffer** argv = NULL);
   Script(const Script&);
-  Script& operator=(const Script&);
   ~Script(void);
 
  public:
@@ -213,6 +212,3 @@ struct RUNCOMMANDSTRUCT {
 
 DWORD WINAPI RunCommandThread(void* data);
 DWORD WINAPI ScriptThread(void* data);
-DWORD WINAPI FuncThread(void* data);
-DWORD WINAPI EventThread(LPVOID lpParam);
-bool callEventFunction(JSContext* cx, Event* evt);

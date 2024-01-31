@@ -11,7 +11,6 @@ class AutoRoot {
   int count;
   JSContext* cx;
   AutoRoot(const AutoRoot&);
-  AutoRoot& operator=(const AutoRoot&);
 
  public:
   AutoRoot() : var(JSVAL_NULL), count(0) {

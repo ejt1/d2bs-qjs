@@ -18,9 +18,8 @@ enum EngineState { Starting, Running, Paused, Stopping, Stopped };
 
 class ScriptEngine {
   ScriptEngine(void){};
-  virtual ~ScriptEngine(void) = 0;
   ScriptEngine(const ScriptEngine&);
-  ScriptEngine& operator=(const ScriptEngine&);
+  virtual ~ScriptEngine(void) = 0;
   static JSRuntime* runtime;
   static JSContext* context;
   static Script* console;
@@ -60,19 +59,16 @@ class ScriptEngine {
   }
 
   static void StopAll(bool forceStop = false);
-  static void ExecEventAsync(char* evtName, AutoRoot** argv, uint argc);
   static void InitClass(JSContext* context, JSObject* globalObject, JSClass* classp, JSFunctionSpec* methods, JSPropertySpec* props, JSFunctionSpec* s_methods,
                         JSPropertySpec* s_props);
   static void DefineConstant(JSContext* context, JSObject* globalObject, const char* name, int value);
   static void UpdateConsole();
   static int AddDelayedEvent(Event* evt, int freq);
   static void RemoveDelayedEvent(int key);
-  JSGCCallback gcCallback(JSRuntime* rt, JSGCStatus status);
 };
 
 // these ForEachScript helpers are exposed in case they can be of use somewhere
 bool __fastcall StopIngameScript(Script* script, void*, uint);
-bool __fastcall ExecEventOnScript(Script* script, void* argv, uint argc);
 struct EventHelper {
   char* evtName;
   AutoRoot** argv;
@@ -81,7 +77,6 @@ struct EventHelper {
 };
 JSBool operationCallback(JSContext* cx);
 JSBool contextCallback(JSContext* cx, uint contextOp);
-// gcCallback(JSContext* cx, JSGCStatus status);
 void reportError(JSContext* cx, const char* message, JSErrorReport* report);
 bool ExecScriptEvent(Event* evt, bool clearList);
 void CALLBACK EventTimerProc(LPVOID lpArg, DWORD dwTimerLowValue, DWORD dwTimerHighValue);

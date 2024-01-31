@@ -388,41 +388,6 @@ JSBool contextCallback(JSContext* cx, uint contextOp) {
   return JS_TRUE;
 }
 
-// JSGCCallback gcCallback(JSRuntime *rt, JSGCStatus status)
-//{
-//	//Script* script = (Script*)JS_GetContextPrivate(cx);
-//	DWORD cur =GetCurrentThreadId() ;
-//	//if (cur != script->GetThreadId())
-//	//	return JS_FALSE;
-//	if(status == JSGC_BEGIN)
-//	{
-//
-//		//Script* script = (Script*)JS_GetContextPrivate(cx);
-//		//Print("Entering GC %s",script->GetShortFilename());
-////		EnterCriticalSection(&ScriptEngine::lock);
-//
-// #ifdef DEBUG
-//		Log("*** ENTERING GC ***");
-// #ifdef lord2800_INFO
-//		Print("*** ENTERING GC ***");
-// #endif
-// #endif
-//	}
-//	else if(status == JSGC_END)
-//	{
-//	//	Script* script = (Script*)JS_GetContextPrivate(cx);
-//	//	Print("Leaving GC %s",script->GetShortFilename());
-// #ifdef DEBUG
-//		Log("*** LEAVING GC ***");
-// #ifdef lord2800_INFO
-//		Print("*** LEAVING GC ***");
-// #endif
-// #endif
-////		LeaveCriticalSection(&ScriptEngine::lock);
-//	}
-//	//return JS_TRUE;
-//}
-
 void reportError(JSContext* cx, const char* message, JSErrorReport* report) {
   bool warn = JSREPORT_IS_WARNING(report->flags);
   bool isStrict = JSREPORT_IS_STRICT(report->flags);
