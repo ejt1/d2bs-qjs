@@ -71,11 +71,4 @@ class ScriptEngine {
 // these ForEachScript helpers are exposed in case they can be of use somewhere
 bool __fastcall StopIngameScript(Script* script, void*, uint);
 
-struct EventHelper {
-  char* evtName;
-  AutoRoot** argv;
-  uint argc;
-  bool executed;
-};
-
 void CALLBACK EventTimerProc(LPVOID lpArg, DWORD dwTimerLowValue, DWORD dwTimerHighValue);

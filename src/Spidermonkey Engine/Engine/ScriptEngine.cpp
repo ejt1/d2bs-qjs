@@ -83,7 +83,7 @@ void ScriptEngine::DisposeScript(Script* script) {
     // bad things happen if we delete from another thread
     Event* evt = new Event;
     evt->owner = script;
-    evt->name = _strdup("DisposeMe");
+    evt->name = "DisposeMe";
     script->FireEvent(evt);
   }
 }
@@ -260,7 +260,7 @@ int ScriptEngine::AddDelayedEvent(Event* evt, int freq) {
   // Copy the relative time into a LARGE_INTEGER.
   lStart.LowPart = (DWORD)(start & 0xFFFFFFFF);
   lStart.HighPart = (LONG)(start >> 32);
-  freq = (strcmp(evt->name, "setInterval") == 0) ? freq : 0;
+  freq = (evt->name.compare("setInterval") == 0) ? freq : 0;
   EnterCriticalSection(&Vars.cEventSection);
   m_DelayedExecList.push_back(evt);
   SetWaitableTimer((HANDLE*)evt->arg2, &lStart, freq, &EventTimerProc, evt, false);
@@ -277,10 +277,9 @@ void ScriptEngine::RemoveDelayedEvent(int key) {
       CancelWaitableTimer((HANDLE*)(*it)->arg2);
       CloseHandle((HANDLE*)(*it)->arg2);
       Event* evt = *it;
-      evt->owner->UnregisterEvent(evt->name, *(jsval*)evt->arg3);
+      evt->owner->UnregisterEvent(evt->name.c_str(), *(jsval*)evt->arg3);
       delete evt->arg1;
       delete evt->arg3;
-      free(evt->name);
       delete evt;
       it = m_DelayedExecList.erase(it);
     } else

@@ -165,7 +165,7 @@ bool Script::IsAborted() {
 void Script::RunCommand(const wchar_t* command) {
   Event* evt = new Event;
   evt->argc = m_argc;
-  evt->name = _strdup("Command");
+  evt->name = "Command";
   evt->arg1 = _wcsdup(command);
   FireEvent(evt);
 }
@@ -390,7 +390,7 @@ void Script::OnDestroyContext() {
 
 bool Script::HandleEvent(Event* evt, bool clearList) {
   JSContext* cx = m_context;
-  char* evtName = (char*)evt->name;
+  char* evtName = (char*)evt->name.c_str();
 
   if (strcmp(evtName, "itemaction") == 0) {
     if (!clearList) {
@@ -411,7 +411,6 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
     free(evt->arg2);
     delete evt->arg3;
     delete evt->arg4;
-    free(evt->name);
     delete evt;
     return true;
   }
@@ -432,7 +431,6 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
     delete evt->arg3;
     free(evt->arg4);
     free(evt->arg5);
-    free(evt->name);
     delete evt;
     return true;
   }
@@ -447,7 +445,6 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
     }
     delete evt->arg1;
     free(evt->arg2);
-    free(evt->name);
     delete evt;
     return true;
   }
@@ -468,7 +465,6 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
     } else {
       free(evt->arg1);
       free(evt->arg2);
-      free(evt->name);
       delete evt;
     }
     return true;
@@ -488,7 +484,6 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
     }
     delete evt->arg1;
     delete evt->arg2;
-    free(evt->name);
     delete evt;
     return true;
   }
@@ -507,7 +502,6 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
     delete evt->arg2;
     delete evt->arg3;
     delete evt->arg4;
-    free(evt->name);
     delete evt;
     return true;
   }
@@ -525,7 +519,6 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
       SetEvent(Vars.eventSignal);
     } else {
       delete evt->arg1;
-      free(evt->name);
       delete evt;
     }
     return true;
@@ -569,7 +562,6 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
       }
     }
     free(evt->arg1);
-    free(evt->name);
     delete evt;
   }
   if (strcmp(evtName, "scriptmsg") == 0) {
@@ -591,7 +583,6 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
       delete evt->argv[i];
     }
     delete evt->arg1;
-    free(evt->name);
     delete evt;
     return true;
   }

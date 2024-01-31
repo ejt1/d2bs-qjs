@@ -19,19 +19,19 @@ typedef std::map<std::string, FunctionList> FunctionMap;
 typedef std::list<Script*> ScriptList;
 
 struct Event {
-  Event() : count(0){};
+  Event() : owner(nullptr), argv(nullptr), argc(0), arg1(nullptr), arg2(nullptr), arg3(nullptr), arg4(nullptr), arg5(nullptr){};
   Script* owner;
   JSObject* object;
   FunctionList functions;
   JSAutoStructuredCloneBuffer** argv;
   uint argc;
-  char* name;
+  std::string name;
   void* arg1;
   void* arg2;
   void* arg3;
   void* arg4;
   void* arg5;
-  volatile long count;
+  // volatile long count;
 };
 
 enum ScriptMode { kScriptModeGame, kScriptModeMenu, kScriptModeCommand };
@@ -145,7 +145,7 @@ class Script {
   HANDLE m_eventSignal;
   std::list<Event*> m_EventList;
 
-  JSObject *m_globalObject;
+  JSObject* m_globalObject;
   bool m_isLocked, m_isPaused, m_isReallyPaused;
 
   IncludeList m_includes, m_inProgress;
