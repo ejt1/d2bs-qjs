@@ -128,10 +128,7 @@ JSAPI_FUNC(script_send) {
     evt->argv[i]->write(cx, JS_ARGV(cx, vp)[i]);
   }
 
-  EnterCriticalSection(&Vars.cEventSection);
-  evt->owner->EventList.push_front(evt);
-  LeaveCriticalSection(&Vars.cEventSection);
-  evt->owner->TriggerOperationCallback();
+  evt->owner->FireEvent(evt);
   sScriptEngine->UnLockScriptList("script.send");
 
   return JS_TRUE;

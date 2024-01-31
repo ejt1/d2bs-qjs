@@ -272,13 +272,7 @@ BOOL SetSkill(JSContext* cx, WORD wSkillId, BOOL bLeft, DWORD dwItemId) {
     while (amt > 0) {  // had a script deadlock here, make sure were positve with amt
       WaitForSingleObjectEx(script->eventSignal(), amt, true);
       ResetEvent(script->eventSignal());
-      while (script->EventList.size() > 0 && !!!(JSBool)(script->IsAborted() || ((script->GetState() == InGame) && ClientState() == ClientStateMenu))) {
-        EnterCriticalSection(&Vars.cEventSection);
-        Event* evt = script->EventList.back();
-        script->EventList.pop_back();
-        LeaveCriticalSection(&Vars.cEventSection);
-        ExecScriptEvent(evt, false);
-      }
+      script->ProcessAllEvents();
       amt = 100 - (GetTickCount() - start);
       // SleepEx(10,true);	// ex for delayed setTimer
     }

@@ -117,16 +117,22 @@ class Script {
   void Join(void);
   void Pause(void);
   void Resume(void);
+  void Stop(bool force = false, bool reallyForce = false);
   bool IsPaused(void);
   bool BeginThread(LPTHREAD_START_ROUTINE ThreadFunc);
   void RunCommand(const wchar_t* command);
+
+  inline void TriggerOperationCallback(void) {
+    if (m_hasActiveCX)
+      JS_TriggerOperationCallback(m_runtime);
+  }
+
   inline void SetPauseState(bool reallyPaused) {
     m_isReallyPaused = reallyPaused;
   }
   inline bool IsReallyPaused(void) {
     return m_isReallyPaused;
   }
-  void Stop(bool force = false, bool reallyForce = false);
 
   inline const wchar_t* GetFilename(void) {
     return m_fileName.c_str();
@@ -162,10 +168,7 @@ class Script {
   inline HANDLE& eventSignal() {
     return m_eventSignal;
   }
-  inline void TriggerOperationCallback(void) {
-    if (m_hasActiveCX)
-      JS_TriggerOperationCallback(m_runtime);
-  }
+
   int GetExecutionCount(void);
   DWORD GetThreadId(void);
 
@@ -194,7 +197,10 @@ class Script {
   void ClearEvent(const char* evtName);
   void ClearAllEvents(void);
   void FireEvent(Event*);
-  std::list<Event*> EventList;
+
+  void ClearEventList();
+  void ProcessAllEvents();
+  void ProcessOneEvent();
 
  private:
   std::wstring m_fileName;
@@ -212,6 +218,7 @@ class Script {
   DWORD m_LastGC;
   bool m_hasActiveCX;  // hack to get away from JS_IsRunning
   HANDLE m_eventSignal;
+  std::list<Event*> m_EventList;
 
   JSObject *m_globalObject, *m_scriptObject;
   bool m_isLocked, m_isPaused, m_isReallyPaused, m_isAborted;

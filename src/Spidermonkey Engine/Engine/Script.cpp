@@ -77,55 +77,6 @@ Script::~Script(void) {
   DeleteCriticalSection(&m_lock);
 }
 
-int Script::GetExecutionCount(void) {
-  return m_execCount;
-}
-
-DWORD Script::GetThreadId(void) {
-  return (m_threadHandle == INVALID_HANDLE_VALUE ? -1 : m_threadId);
-}
-
-void Script::RunCommand(const wchar_t* command) {
-  // RUNCOMMANDSTRUCT* rcs = new RUNCOMMANDSTRUCT;
-  // rcs->script = this;
-  // rcs->command = _wcsdup(command);
-
-  if (m_isAborted) {  // this should never happen -bob
-    // RUNCOMMANDSTRUCT* rcs = new RUNCOMMANDSTRUCT;
-
-    // rcs->script = this;
-    // rcs->command = _wcsdup(L"delay(1000000);");
-
-    Log(L"Console Aborted HELP!");
-  }
-
-  Event* evt = new Event;
-  evt->owner = this;
-  evt->argc = m_argc;
-  evt->name = _strdup("Command");
-  evt->arg1 = _wcsdup(command);
-  EnterCriticalSection(&Vars.cEventSection);
-  evt->owner->EventList.push_front(evt);
-  LeaveCriticalSection(&Vars.cEventSection);
-  evt->owner->TriggerOperationCallback();
-  SetEvent(evt->owner->m_eventSignal);
-}
-
-bool Script::BeginThread(LPTHREAD_START_ROUTINE ThreadFunc) {
-  EnterCriticalSection(&m_lock);
-  DWORD dwExitCode = STILL_ACTIVE;
-
-  if ((!GetExitCodeThread(m_threadHandle, &dwExitCode) || dwExitCode != STILL_ACTIVE) &&
-      (m_threadHandle = CreateThread(0, 0, ThreadFunc, this, 0, &m_threadId)) != NULL) {
-    LeaveCriticalSection(&m_lock);
-    return true;
-  }
-
-  m_threadHandle = INVALID_HANDLE_VALUE;
-  LeaveCriticalSection(&m_lock);
-  return false;
-}
-
 void Script::Run(void) {
   try {
     m_runtime = JS_NewRuntime(Vars.dwMemUsage, JS_NO_HELPER_THREADS);
@@ -218,17 +169,6 @@ void Script::Run(void) {
   // Stop();
 }
 
-void Script::UpdatePlayerGid(void) {
-  m_me->dwUnitId = (D2CLIENT_GetPlayerUnit() == NULL ? NULL : D2CLIENT_GetPlayerUnit()->dwUnitId);
-}
-
-void Script::Pause(void) {
-  if (!IsAborted() && !IsPaused())
-    m_isPaused = true;
-  TriggerOperationCallback();
-  SetEvent(m_eventSignal);
-}
-
 void Script::Join() {
   EnterCriticalSection(&m_lock);
   HANDLE hThread = m_threadHandle;
@@ -238,22 +178,18 @@ void Script::Join() {
     WaitForSingleObject(hThread, INFINITE);
 }
 
+void Script::Pause(void) {
+  if (!IsAborted() && !IsPaused())
+    m_isPaused = true;
+  TriggerOperationCallback();
+  SetEvent(m_eventSignal);
+}
+
 void Script::Resume(void) {
   if (!IsAborted() && IsPaused())
     m_isPaused = false;
   TriggerOperationCallback();
   SetEvent(m_eventSignal);
-}
-
-bool Script::IsPaused(void) {
-  return m_isPaused;
-}
-
-const wchar_t* Script::GetShortFilename() {
-  if (wcscmp(m_fileName.c_str(), L"Command Line") == 0)
-    return m_fileName.c_str();
-  else
-    return (m_fileName.c_str() + wcslen(Vars.szScriptPath) + 1);
 }
 
 void Script::Stop(bool force, bool reallyForce) {
@@ -285,6 +221,74 @@ void Script::Stop(bool force, bool reallyForce) {
     }
   }
   LeaveCriticalSection(&m_lock);
+}
+
+bool Script::IsPaused(void) {
+  return m_isPaused;
+}
+
+bool Script::BeginThread(LPTHREAD_START_ROUTINE ThreadFunc) {
+  EnterCriticalSection(&m_lock);
+  DWORD dwExitCode = STILL_ACTIVE;
+
+  if ((!GetExitCodeThread(m_threadHandle, &dwExitCode) || dwExitCode != STILL_ACTIVE) &&
+      (m_threadHandle = CreateThread(0, 0, ThreadFunc, this, 0, &m_threadId)) != NULL) {
+    LeaveCriticalSection(&m_lock);
+    return true;
+  }
+
+  m_threadHandle = INVALID_HANDLE_VALUE;
+  LeaveCriticalSection(&m_lock);
+  return false;
+}
+
+void Script::RunCommand(const wchar_t* command) {
+  // RUNCOMMANDSTRUCT* rcs = new RUNCOMMANDSTRUCT;
+  // rcs->script = this;
+  // rcs->command = _wcsdup(command);
+
+  if (m_isAborted) {  // this should never happen -bob
+    // RUNCOMMANDSTRUCT* rcs = new RUNCOMMANDSTRUCT;
+
+    // rcs->script = this;
+    // rcs->command = _wcsdup(L"delay(1000000);");
+
+    Log(L"Console Aborted HELP!");
+  }
+
+  Event* evt = new Event;
+  evt->owner = this;
+  evt->argc = m_argc;
+  evt->name = _strdup("Command");
+  evt->arg1 = _wcsdup(command);
+  evt->owner->FireEvent(evt);
+}
+
+const wchar_t* Script::GetShortFilename() {
+  if (wcscmp(m_fileName.c_str(), L"Command Line") == 0)
+    return m_fileName.c_str();
+  else
+    return (m_fileName.c_str() + wcslen(Vars.szScriptPath) + 1);
+}
+
+int Script::GetExecutionCount(void) {
+  return m_execCount;
+}
+
+DWORD Script::GetThreadId(void) {
+  return (m_threadHandle == INVALID_HANDLE_VALUE ? -1 : m_threadId);
+}
+
+void Script::UpdatePlayerGid(void) {
+  m_me->dwUnitId = (D2CLIENT_GetPlayerUnit() == NULL ? NULL : D2CLIENT_GetPlayerUnit()->dwUnitId);
+}
+
+bool Script::IsRunning(void) {
+  return m_context && !(IsAborted() || IsPaused() || !m_hasActiveCX);
+}
+
+bool Script::IsAborted() {
+  return m_isAborted;
 }
 
 bool Script::IsIncluded(const wchar_t* file) {
@@ -345,14 +349,6 @@ bool Script::Include(const wchar_t* file) {
   LeaveCriticalSection(&m_lock);
   free(fname);
   return rval;
-}
-
-bool Script::IsRunning(void) {
-  return m_context && !(IsAborted() || IsPaused() || !m_hasActiveCX);
-}
-
-bool Script::IsAborted() {
-  return m_isAborted;
 }
 
 bool Script::IsListenerRegistered(const char* evtName) {
@@ -425,10 +421,11 @@ void Script::ClearAllEvents(void) {
   m_functions.clear();
   LeaveCriticalSection(&m_lock);
 }
+
 void Script::FireEvent(Event* evt) {
   // EnterCriticalSection(&sScriptEngine->lock);
   EnterCriticalSection(&Vars.cEventSection);
-  evt->owner->EventList.push_front(evt);
+  evt->owner->m_EventList.push_front(evt);
   LeaveCriticalSection(&Vars.cEventSection);
 
   if (evt->owner && evt->owner->IsRunning()) {
@@ -436,6 +433,32 @@ void Script::FireEvent(Event* evt) {
   }
   SetEvent(m_eventSignal);
   // LeaveCriticalSection(&sScriptEngine->lock);
+}
+
+void Script::ClearEventList() {
+  while (m_EventList.size() > 0) {
+    EnterCriticalSection(&Vars.cEventSection);
+    Event* evt = m_EventList.back();
+    m_EventList.pop_back();
+    LeaveCriticalSection(&Vars.cEventSection);
+    ExecScriptEvent(evt, true);  // clean list and pop events
+  }
+
+  ClearAllEvents();
+}
+
+void Script::ProcessAllEvents() {
+  while (m_EventList.size() > 0 && !!!(JSBool)(IsAborted() || ((GetState() == InGame) && ClientState() == ClientStateMenu))) {
+    ProcessOneEvent();
+  }
+}
+
+void Script::ProcessOneEvent() {
+  EnterCriticalSection(&Vars.cEventSection);
+  Event* evt = m_EventList.back();
+  m_EventList.pop_back();
+  LeaveCriticalSection(&Vars.cEventSection);
+  ExecScriptEvent(evt, false);
 }
 
 #ifdef DEBUG
@@ -477,47 +500,6 @@ JSBool operationCallback(JSContext* cx) {
   Script* script = (Script*)JS_GetContextPrivate(cx);
   static int callBackCount = 0;
   callBackCount++;
-
-  // moved this to delay. operation callback isnt a good spot for this anymore
-  // event heavy stuff like shop bot would trigger gc alot while normal playing would not.
-  /*if (callBackCount % 30 == 0){
-  JS_GC(JS_GetRuntime(cx));
-  callBackCount = 0;
-  }*/
-
-  HWND debug_wnd = NULL;  // FindWindow(NULL, "JavaZone");
-  if (debug_wnd && D2GFX_GetHwnd() != debug_wnd) {
-    JS_BeginRequest(cx);
-    JS::Value err;
-    if (JS_CallFunctionName(cx, JS_GetGlobalObject(cx), "Error", 0, NULL, &err)) {
-      JS::Value stack;
-      if (JS_GetProperty(cx, JSVAL_TO_OBJECT(err), "stack", &stack)) {
-        char str[1024];
-        int l = 0;
-        COPYDATASTRUCT aCopy = {164344, 0, str};
-        if (JSVAL_IS_STRING(stack)) {
-          l = JS_EncodeStringToBuffer(cx, JSVAL_TO_STRING(stack), str, 1024);
-          if (l) {
-            str[l] = 0;
-            aCopy.cbData = l + 1;
-            SendMessage(debug_wnd, WM_COPYDATA, (WPARAM)D2GFX_GetHwnd(), (LPARAM)&aCopy);
-            // Print("%s", str);
-          }
-        } else if (JSVAL_IS_OBJECT(stack)) {
-          if (JS_CallFunctionName(cx, JSVAL_TO_OBJECT(stack), "ToString", 0, NULL, &err)) {
-            l = JS_EncodeStringToBuffer(cx, JSVAL_TO_STRING(err), str, 1024);
-            if (l) {
-              str[l] = 0;
-              aCopy.cbData = l + 1;
-              SendMessage(debug_wnd, WM_COPYDATA, (WPARAM)D2GFX_GetHwnd(), (LPARAM)&aCopy);
-              // Print("%s", str);
-            }
-          }
-        }
-      }
-    }
-    JS_EndRequest(cx);
-  }
   bool pause = script->IsPaused();
 
   if (pause)
@@ -530,13 +512,7 @@ JSBool operationCallback(JSContext* cx) {
     script->SetPauseState(false);
 
   if (!!!(JSBool)(script->IsAborted() || ((script->GetState() == InGame) && ClientState() == ClientStateMenu))) {
-    while (script->EventList.size() > 0 && !!!(JSBool)(script->IsAborted() || ((script->GetState() == InGame) && ClientState() == ClientStateMenu))) {
-      EnterCriticalSection(&Vars.cEventSection);
-      Event* evt = script->EventList.back();
-      script->EventList.pop_back();
-      LeaveCriticalSection(&Vars.cEventSection);
-      ExecScriptEvent(evt, false);
-    }
+    script->ProcessAllEvents();
     return !!!(JSBool)(script->IsAborted() || ((script->GetState() == InGame) && ClientState() == ClientStateMenu));
   } else {
     return false;
@@ -593,15 +569,7 @@ JSBool contextCallback(JSContext* cx, uint contextOp) {
   if (contextOp == JSCONTEXT_DESTROY) {
     Script* script = (Script*)JS_GetContextPrivate(cx);
     script->hasActiveCX() = false;
-    while (script->EventList.size() > 0) {
-      EnterCriticalSection(&Vars.cEventSection);
-      Event* evt = script->EventList.back();
-      script->EventList.pop_back();
-      LeaveCriticalSection(&Vars.cEventSection);
-      ExecScriptEvent(evt, true);  // clean list and pop events
-    }
-
-    script->ClearAllEvents();
+    script->ClearEventList();
     Genhook::Clean(script);
   }
   return JS_TRUE;

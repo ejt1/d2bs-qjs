@@ -142,13 +142,7 @@ JSAPI_FUNC(my_delay) {
       if (script->IsAborted())
         break;
 
-      while (script->EventList.size() > 0 && !!!(JSBool)(script->IsAborted() || ((script->GetState() == InGame) && ClientState() == ClientStateMenu))) {
-        EnterCriticalSection(&Vars.cEventSection);
-        Event* evt = script->EventList.back();
-        script->EventList.pop_back();
-        LeaveCriticalSection(&Vars.cEventSection);
-        ExecScriptEvent(evt, false);
-      }
+      script->ProcessAllEvents();
       if (JS_GetGCParameter(script->GetRuntime(), JSGC_BYTES) - script->LastGC() > 524288)  // gc every .5 mb
       {
         JS_GC(JS_GetRuntime(cx));
