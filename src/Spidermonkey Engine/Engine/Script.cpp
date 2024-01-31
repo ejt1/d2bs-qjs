@@ -127,7 +127,7 @@ void Script::Run(void) {
   if (Initialize()) {
     RunMain();
   }
-  Shutdown();
+  Cleanup();
 }
 
 void Script::Join() {
@@ -226,7 +226,7 @@ bool Script::Include(const wchar_t* file) {
 
   JSContext* cx = GetContext();
 
-  JS_BeginRequest(cx);
+  JSAutoRequest request(m_context);
 
   JSScript* _script = JS_CompileFile(cx, m_globalObject, fname);
   if (_script) {
@@ -242,7 +242,6 @@ bool Script::Include(const wchar_t* file) {
   } else
     JS_ReportPendingException(cx);
 
-  JS_EndRequest(cx);
   // JS_RemoveScriptRoot(cx, &script);
   LeaveCriticalSection(&m_lock);
   free(fname);
@@ -355,7 +354,9 @@ void Script::BlockThread(DWORD delay) {
   while (amt > 0) {  // had a script deadlock here, make sure were positve with amt
     WaitForSingleObjectEx(m_eventSignal, amt, true);
     ResetEvent(m_eventSignal);
-    ProcessAllEvents();
+    if (!ProcessAllEvents()) {
+      break;
+    }
 
     if (JS_GetGCParameter(m_runtime, JSGC_BYTES) - m_LastGC > 524288)  // gc every .5 mb
     {
@@ -367,28 +368,18 @@ void Script::BlockThread(DWORD delay) {
   }
 }
 
-void Script::ProcessAllEvents() {
-  while (m_EventList.size() > 0 && !!!(JSBool)(m_scriptState == kScriptStateStopped || ((m_scriptMode == kScriptModeGame) && ClientState() == ClientStateMenu))) {
-    ProcessOneEvent();
-  }
-}
-
-void Script::ProcessOneEvent() {
-  EnterCriticalSection(&Vars.cEventSection);
-  Event* evt = m_EventList.back();
-  m_EventList.pop_back();
-  LeaveCriticalSection(&Vars.cEventSection);
-  HandleEvent(evt, false);
-}
-
-void Script::ExecuteEvent(char* evtName, int argc, jsval* argv, bool* block) {
+void Script::ExecuteEvent(char* evtName, int argc, const jsval* argv, bool* block) {
   for (const auto& root : m_functions[evtName]) {
     jsval rval;
-    JS_CallFunctionValue(m_context, JS_GetGlobalObject(m_context), *root->value(), argc, argv, &rval);
+    JS_CallFunctionValue(m_context, JS_GetGlobalObject(m_context), *root->value(), argc, const_cast<JS::Value*>(argv), &rval);
     if (block) {
       *block |= static_cast<bool>(JSVAL_IS_BOOLEAN(rval) && JSVAL_TO_BOOLEAN(rval));
     }
   }
+}
+
+void Script::ExecuteEvent(char* evtName, const JS::AutoValueVector& args, bool* block) {
+  ExecuteEvent(evtName, args.length(), args.begin(), block);
 }
 
 void Script::OnDestroyContext() {
@@ -408,19 +399,13 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
       DWORD* mode = (DWORD*)evt->arg3;
       bool* global = (bool*)evt->arg4;
 
-      jsval* argv = new jsval[evt->argc];
-      JS_BeginRequest(cx);
-
-      argv[0] = JS_NumberValue(*gid);
-      argv[1] = JS_NumberValue(*mode);
-      argv[2] = (STRING_TO_JSVAL(JS_NewStringCopyZ(cx, code)));
-      argv[3] = (BOOLEAN_TO_JSVAL(*global));
-      for (int j = 0; j < 4; j++) JS_AddValueRoot(cx, &argv[j]);
-
-      bool block;
-      ExecuteEvent(evtName, 4, argv, &block);
-      JS_EndRequest(cx);
-      for (int j = 0; j < 4; j++) JS_RemoveValueRoot(cx, &argv[j]);
+      JSAutoRequest request(m_context);
+      JS::AutoValueVector args(m_context);
+      args.append(JS_NumberValue(*gid));
+      args.append(JS_NumberValue(*mode));
+      args.append(STRING_TO_JSVAL(JS_NewStringCopyZ(cx, code)));
+      args.append(BOOLEAN_TO_JSVAL(*global));
+      ExecuteEvent(evtName, args);
     }
     delete evt->arg1;
     free(evt->arg2);
@@ -432,20 +417,15 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
   }
   if (strcmp(evtName, "gameevent") == 0) {
     if (!clearList) {
-      jsval* argv = new jsval[5];
-      JS_BeginRequest(cx);
-      argv[0] = JS_NumberValue(*(BYTE*)evt->arg1);
-      argv[1] = JS_NumberValue(*(DWORD*)evt->arg2);
-      argv[2] = JS_NumberValue(*(DWORD*)evt->arg3);
-      argv[3] = (STRING_TO_JSVAL(JS_NewStringCopyZ(cx, (char*)evt->arg4)));
-      argv[4] = (STRING_TO_JSVAL(JS_NewUCStringCopyZ(cx, (wchar_t*)evt->arg5)));
+      JSAutoRequest request(m_context);
+      JS::AutoValueVector args(m_context);
+      args.append(JS_NumberValue(*(BYTE*)evt->arg1));
+      args.append(JS_NumberValue(*(DWORD*)evt->arg2));
+      args.append(JS_NumberValue(*(DWORD*)evt->arg3));
+      args.append(STRING_TO_JSVAL(JS_NewStringCopyZ(cx, (char*)evt->arg4)));
+      args.append(STRING_TO_JSVAL(JS_NewUCStringCopyZ(cx, (wchar_t*)evt->arg5)));
 
-      for (int j = 0; j < 5; j++) JS_AddValueRoot(cx, &argv[j]);
-
-      ExecuteEvent(evtName, 5, argv);
-
-      JS_EndRequest(cx);
-      for (int j = 0; j < 5; j++) JS_RemoveValueRoot(cx, &argv[j]);
+      ExecuteEvent(evtName, args);
     }
     delete evt->arg1;
     delete evt->arg2;
@@ -458,16 +438,12 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
   }
   if (strcmp(evtName, "copydata") == 0) {
     if (!clearList) {
-      jsval* argv = new jsval[2];
-      JS_BeginRequest(cx);
-      argv[0] = JS_NumberValue(*(DWORD*)evt->arg1);
-      argv[1] = STRING_TO_JSVAL(JS_NewUCStringCopyZ(cx, (wchar_t*)evt->arg2));
+      JSAutoRequest request(m_context);
+      JS::AutoValueVector args(m_context);
+      args.append(JS_NumberValue(*(DWORD*)evt->arg1));
+      args.append(STRING_TO_JSVAL(JS_NewUCStringCopyZ(cx, (wchar_t*)evt->arg2)));
 
-      for (int j = 0; j < 2; j++) JS_AddValueRoot(cx, &argv[j]);
-
-      ExecuteEvent(evtName, 2, argv);
-      JS_EndRequest(cx);
-      for (int j = 0; j < 2; j++) JS_RemoveValueRoot(cx, &argv[j]);
+      ExecuteEvent(evtName, args);
     }
     delete evt->arg1;
     free(evt->arg2);
@@ -479,16 +455,12 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
       strcmp(evtName, "chatinputblocker") == 0 || strcmp(evtName, "whispermsgblocker") == 0) {
     bool block = false;
     if (!clearList) {
-      jsval* argv = new jsval[2];
-      JS_BeginRequest(cx);
-      argv[0] = (STRING_TO_JSVAL(JS_NewStringCopyZ(cx, (char*)evt->arg1)));
-      argv[1] = (STRING_TO_JSVAL(JS_NewUCStringCopyZ(cx, (wchar_t*)evt->arg2)));
+      JSAutoRequest request(m_context);
+      JS::AutoValueVector args(m_context);
+      args.append(STRING_TO_JSVAL(JS_NewStringCopyZ(cx, (char*)evt->arg1)));
+      args.append(STRING_TO_JSVAL(JS_NewUCStringCopyZ(cx, (wchar_t*)evt->arg2)));
 
-      for (int j = 0; j < 2; j++) JS_AddValueRoot(cx, &argv[j]);
-
-      ExecuteEvent(evtName, 2, argv, &block);
-      JS_EndRequest(cx);
-      for (int j = 0; j < 2; j++) JS_RemoveValueRoot(cx, &argv[j]);
+      ExecuteEvent(evtName, args, &block);
     }
     if (strcmp(evtName, "chatmsgblocker") == 0 || strcmp(evtName, "chatinputblocker") == 0 || strcmp(evtName, "whispermsgblocker") == 0) {
       *(DWORD*)evt->arg4 = block;
@@ -503,20 +475,16 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
   }
   if (strcmp(evtName, "mousemove") == 0 || strcmp(evtName, "ScreenHookHover") == 0) {
     if (!clearList) {
-      jsval* argv = new jsval[2];
-      JS_BeginRequest(cx);
-      argv[0] = JS_NumberValue(*(DWORD*)evt->arg1);
-      argv[1] = JS_NumberValue(*(DWORD*)evt->arg2);
-
-      for (int j = 0; j < 2; j++) JS_AddValueRoot(cx, &argv[j]);
+      JSAutoRequest request(m_context);
+      JS::AutoValueVector args(m_context);
+      args.append(JS_NumberValue(*(DWORD*)evt->arg1));
+      args.append(JS_NumberValue(*(DWORD*)evt->arg2));
 
       if (strcmp(evtName, "ScreenHookHover") == 0) {
-        ExecuteEvent(evtName, evt->argc + 1, argv);
+        ExecuteEvent(evtName, evt->argc + 1, args.begin());
       } else {
-        ExecuteEvent(evtName, 2, argv);
+        ExecuteEvent(evtName, args);
       }
-      JS_EndRequest(cx);
-      for (int j = 0; j < 2; j++) JS_RemoveValueRoot(cx, &argv[j]);
     }
     delete evt->arg1;
     delete evt->arg2;
@@ -526,18 +494,14 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
   }
   if (strcmp(evtName, "mouseclick") == 0) {
     if (!clearList) {
-      jsval* argv = new jsval[4];
-      JS_BeginRequest(cx);
-      argv[0] = JS_NumberValue(*(DWORD*)evt->arg1);
-      argv[1] = JS_NumberValue(*(DWORD*)evt->arg2);
-      argv[2] = JS_NumberValue(*(DWORD*)evt->arg3);
-      argv[3] = JS_NumberValue(*(DWORD*)evt->arg4);
+      JSAutoRequest request(m_context);
+      JS::AutoValueVector args(m_context);
+      args.append(JS_NumberValue(*(DWORD*)evt->arg1));
+      args.append(JS_NumberValue(*(DWORD*)evt->arg2));
+      args.append(JS_NumberValue(*(DWORD*)evt->arg3));
+      args.append(JS_NumberValue(*(DWORD*)evt->arg4));
 
-      for (uint j = 0; j < evt->argc; j++) JS_AddValueRoot(cx, &argv[j]);
-
-      ExecuteEvent(evtName, 4, argv);
-      JS_EndRequest(cx);
-      for (int j = 0; j < 4; j++) JS_RemoveValueRoot(cx, &argv[j]);
+      ExecuteEvent(evtName, args);
     }
     delete evt->arg1;
     delete evt->arg2;
@@ -551,13 +515,10 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
       strcmp(evtName, "melife") == 0 || strcmp(evtName, "playerassign") == 0) {
     bool block = false;
     if (!clearList) {
-      jsval* argv = new jsval[1];
-      JS_BeginRequest(cx);
-      argv[0] = JS_NumberValue(*(DWORD*)evt->arg1);
-      JS_AddValueRoot(cx, &argv[0]);
-      ExecuteEvent(evtName, 1, argv, &block);
-      JS_EndRequest(cx);
-      JS_RemoveValueRoot(cx, &argv[0]);
+      JSAutoRequest request(m_context);
+      JS::AutoValueVector args(m_context);
+      args.append(JS_NumberValue(*(DWORD*)evt->arg1));
+      ExecuteEvent(evtName, args, &block);
     }
     if (strcmp(evtName, "keydownblocker") == 0) {
       *(DWORD*)evt->arg4 = block;
@@ -572,22 +533,18 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
   if (strcmp(evtName, "ScreenHookClick") == 0) {
     bool block = false;
     if (!clearList) {
-      jsval* argv = new jsval[3];
-      JS_BeginRequest(cx);
-      argv[0] = JS_NumberValue(*(DWORD*)evt->arg1);
-      argv[1] = JS_NumberValue(*(DWORD*)evt->arg2);
-      argv[2] = JS_NumberValue(*(DWORD*)evt->arg3);
-      for (int j = 0; j < 3; j++) JS_AddValueRoot(cx, &argv[j]);
+      JSAutoRequest request(m_context);
+      JS::AutoValueVector args(m_context);
+      args.append(JS_NumberValue(*(DWORD*)evt->arg1));
+      args.append(JS_NumberValue(*(DWORD*)evt->arg2));
+      args.append(JS_NumberValue(*(DWORD*)evt->arg3));
 
       jsval rval;
       // diffrent function source for hooks
       for (FunctionList::iterator it = evt->functions.begin(); it != evt->functions.end(); it++) {
-        JS_CallFunctionValue(cx, JS_GetGlobalObject(cx), *(*it)->value(), 3, argv, &rval);
+        JS_CallFunctionValue(cx, JS_GetGlobalObject(cx), *(*it)->value(), args.length(), args.begin(), &rval);
         block |= static_cast<bool>(JSVAL_IS_BOOLEAN(rval) && JSVAL_TO_BOOLEAN(rval));
       }
-
-      JS_EndRequest(cx);
-      for (int j = 0; j < 3; j++) JS_RemoveValueRoot(cx, &argv[j]);
     }
     *(DWORD*)evt->arg4 = block;
     SetEvent(Vars.eventSignal);
@@ -601,7 +558,7 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
     test.append(L"try{ ");
     test.append(cmd);
     test.append(L" } catch (error){print(error)}");
-    JS_BeginRequest(cx);
+    JSAutoRequest request(m_context);
     jsval rval;
 
     if (JS_EvaluateUCScript(cx, JS_GetGlobalObject(cx), test.data(), test.length(), "Command Line", 0, &rval)) {
@@ -611,7 +568,6 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
         Print(L"%s", text);
       }
     }
-    JS_EndRequest(cx);
     free(evt->arg1);
     free(evt->name);
     delete evt;
@@ -619,16 +575,16 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
   if (strcmp(evtName, "scriptmsg") == 0) {
     if (!clearList) {
       DWORD* argc = (DWORD*)evt->arg1;
-      JS_BeginRequest(cx);
-      jsval* argv = new jsval[*argc];
-      for (uint i = 0; i < *argc; i++) evt->argv[i]->read(cx, &argv[i]);
+      JSAutoRequest request(m_context);
+      JS::AutoValueVector args(m_context);
 
-      for (uint j = 0; j < *argc; j++) JS_AddValueRoot(cx, &argv[j]);
+      for (uint i = 0; i < *argc; ++i) {
+        jsval v;
+        evt->argv[i]->read(m_context, &v);
+        args.append(v);
+      }
 
-      ExecuteEvent(evtName, *argc, argv);
-      JS_EndRequest(cx);
-
-      for (uint j = 0; j < *argc; j++) JS_RemoveValueRoot(cx, &argv[j]);
+      ExecuteEvent(evtName, args);
     }
     for (uint i = 0; i < evt->argc; i++) {
       evt->argv[i]->clear();
@@ -645,27 +601,17 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
       BYTE* help = (BYTE*)evt->arg1;
       DWORD* size = (DWORD*)evt->arg2;
       //  DWORD* argc = (DWORD*)1;
-      JS_BeginRequest(cx);
+      JSAutoRequest request(m_context);
 
-      JSObject* arr = JS_NewUint8Array(cx, *size);
-      // JSObject* arr = JS_NewArrayObject(cx, 0, NULL);
-
-      JS_AddRoot(cx, &arr);
+      JS::RootedValue arr(m_context, JS::ObjectOrNullValue(JS_NewUint8Array(cx, *size)));
       for (uint i = 0; i < *size; i++) {
         jsval jsarr = UINT_TO_JSVAL(help[i]);
-        JS_SetElement(cx, arr, i, &jsarr);
+        JS_SetElement(cx, arr.toObjectOrNull(), i, &jsarr);
       }
-      jsval argv = OBJECT_TO_JSVAL(arr);
-      // evt->argv[0]->read(cx, &argv[0]);
-      // JS_AddValueRoot(cx, &argv[0]);
-
-      ExecuteEvent(evtName, 1, &argv, &block);
+      
+      ExecuteEvent(evtName, 1, arr.address(), &block);
       *(DWORD*)evt->arg4 = block;
-      JS_RemoveRoot(cx, &arr);
       SetEvent(Vars.eventSignal);
-      JS_EndRequest(cx);
-      //	for(int j = 0 ; j < *argc; j++)
-      //	JS_RemoveValueRoot(cx, &argv[j]);
     }
 
     // delete evt->arg1;
@@ -675,10 +621,9 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
   }
   if (strcmp(evtName, "setTimeout") == 0 || strcmp(evtName, "setInterval") == 0) {
     if (!clearList) {
-      JS_BeginRequest(cx);
+      JSAutoRequest request(m_context);
       jsval dummy;
       ExecuteEvent(evtName, 0, &dummy);
-      JS_EndRequest(cx);
     }
 
     if (strcmp(evtName, "setTimeout") == 0) {
@@ -820,8 +765,12 @@ bool Script::RunEventLoop() {
   if (pause)
     SetPauseState(false);
 
-  // run loop until there are no more events
-  while (!m_EventList.empty()) {
+  // run loop until there are no more events or script is interrupted
+  return ProcessAllEvents();
+}
+
+bool Script::ProcessAllEvents() {
+  for (;;) {
     if (m_scriptState == kScriptStateRequestStop) {
       return false;
     }
@@ -830,21 +779,22 @@ bool Script::RunEventLoop() {
       return false;
     }
 
-    ProcessOneEvent();
-  }
-
-  if (m_scriptState == kScriptStateRequestStop) {
-    return false;
-  }
-
-  if (m_scriptMode == kScriptModeGame && ClientState() == ClientStateMenu) {
-    return false;
+    EnterCriticalSection(&Vars.cEventSection);
+    if (m_EventList.empty()) {
+      // no more events
+      LeaveCriticalSection(&Vars.cEventSection);
+      break;
+    }
+    Event* evt = m_EventList.back();
+    m_EventList.pop_back();
+    LeaveCriticalSection(&Vars.cEventSection);
+    HandleEvent(evt, false);
   }
 
   return true;
 }
 
-void Script::Shutdown() {
+void Script::Cleanup() {
   m_scriptState = kScriptStateStopped;
 }
 

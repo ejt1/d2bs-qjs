@@ -266,16 +266,6 @@ BOOL SetSkill(JSContext* cx, WORD wSkillId, BOOL bLeft, DWORD dwItemId) {
       return TRUE;
 
     Script* script = (Script*)JS_GetContextPrivate(cx);  // run events to avoid packet block deadlock
-    //DWORD start = GetTickCount();
-    //int amt = 100 - (GetTickCount() - start);
-
-    //while (amt > 0) {  // had a script deadlock here, make sure were positve with amt
-    //  WaitForSingleObjectEx(script->eventSignal(), amt, true);
-    //  ResetEvent(script->eventSignal());
-    //  script->ProcessAllEvents();
-    //  amt = 100 - (GetTickCount() - start);
-    //  // SleepEx(10,true);	// ex for delayed setTimer
-    //}
     script->BlockThread(100);
   }
 

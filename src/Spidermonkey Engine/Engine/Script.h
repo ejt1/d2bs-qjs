@@ -32,74 +32,6 @@ struct Event {
   void* arg4;
   void* arg5;
   volatile long count;
-  inline void threadFinished() {
-    // clean up after both threads are done with the event
-    char* evtName = (char*)name;
-    InterlockedIncrement(&count);
-    if (count > 1) {
-      Event* evt = this;
-
-      if (strcmp(evtName, "itemaction") == 0) {
-        delete arg1;
-        free(arg2);
-        delete arg3;
-        delete arg4;
-      }
-      if (strcmp(evtName, "gameevent") == 0) {
-        delete evt->arg1;
-        delete evt->arg2;
-        delete evt->arg3;
-        free(evt->arg4);
-        free(evt->arg5);
-      }
-      if (strcmp(evtName, "copydata") == 0) {
-        delete evt->arg1;
-        free(evt->arg2);
-      }
-      if (strcmp(evtName, "chatmsg") == 0 || strcmp(evtName, "chatinput") == 0 || strcmp(evtName, "whispermsg") == 0 || strcmp(evtName, "chatmsgblocker") == 0 ||
-          strcmp(evtName, "chatinputblocker") == 0 || strcmp(evtName, "whispermsgblocker") == 0) {
-        free(evt->arg1);
-        free(evt->arg2);
-        delete evt->arg4;
-      }
-      if (strcmp(evtName, "mousemove") == 0 || strcmp(evtName, "ScreenHookHover") == 0) {
-        delete evt->arg1;
-        delete evt->arg2;
-      }
-      if (strcmp(evtName, "mouseclick") == 0) {
-        delete evt->arg1;
-        delete evt->arg2;
-        delete evt->arg3;
-        delete evt->arg4;
-      }
-      if (strcmp(evtName, "keyup") == 0 || strcmp(evtName, "keydownblocker") == 0 || strcmp(evtName, "keydown") == 0 || strcmp(evtName, "memana") == 0 ||
-          strcmp(evtName, "melife") == 0 || strcmp(evtName, "playerassign") == 0) {
-        delete evt->arg1;
-        delete evt->arg4;
-      }
-      if (strcmp(evtName, "ScreenHookClick") == 0) {
-        delete evt->arg1;
-        delete evt->arg2;
-        delete evt->arg3;
-        delete evt->arg4;
-      }
-      if (strcmp(evtName, "Command") == 0) {
-        // cleaned up in ExecScriptEvent
-      }
-      if (strcmp(evtName, "scriptmsg") == 0) {
-        delete evt->arg1;
-      }
-      if (strcmp(evtName, "gamepacket") == 0 || strcmp(evtName, "gamepacketsent") == 0 || strcmp(evtName, "realmpacket") == 0) {
-        delete[] evt->arg1;
-        delete evt->arg2;
-        delete evt->arg4;
-      }
-
-      free(evt->name);
-      delete evt;
-      Event::~Event();
-    }
-  };
 };
 
 enum ScriptMode { kScriptModeGame, kScriptModeMenu, kScriptModeCommand };
@@ -176,9 +108,8 @@ class Script {
   void ClearEventList();
   // blocks the executing thread for X milliseconds, keeping the event loop running during this time
   void BlockThread(DWORD delay);
-  void ProcessAllEvents();
-  void ProcessOneEvent();
-  void ExecuteEvent(char* evtName, int argc, jsval* argv, bool* block = nullptr);
+  void ExecuteEvent(char* evtName, int argc, const jsval* argv, bool* block = nullptr);
+  void ExecuteEvent(char* evtName, const JS::AutoValueVector& args, bool* block = nullptr);
 
   void OnDestroyContext();
 
@@ -187,9 +118,11 @@ class Script {
 
  private:
   bool Initialize();
+  void Cleanup();
+
   void RunMain();
   bool RunEventLoop();
-  void Shutdown();
+  bool ProcessAllEvents();
 
   static JSBool InterruptHandler(JSContext* ctx);
 
