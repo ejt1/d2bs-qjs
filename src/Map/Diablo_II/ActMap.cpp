@@ -141,10 +141,10 @@ bool ActMap::isPointInRoom(const Room2* room, const Point& pt) const {
   return (nX >= room->dwPosX * 5 && nY >= room->dwPosY * 5 && nX < (room->dwPosX * 5 + room->dwSizeX * 5) && nY < (room->dwPosY * 5 + room->dwSizeY * 5));
 }
 
-bool ActMap::isPointInLevel(const Level* level, const Point& pt) const {
+bool ActMap::isPointInLevel(const Level* _level, const Point& pt) const {
   DWORD x = pt.first;
   DWORD y = pt.second;
-  return (x >= level->dwPosX * 5 && y >= level->dwPosY * 5 && x < (level->dwPosX * 5 + level->dwSizeX * 5) && y < (level->dwPosY * 5 + level->dwSizeY * 5));
+  return (x >= _level->dwPosX * 5 && y >= _level->dwPosY * 5 && x < (_level->dwPosX * 5 + _level->dwSizeX * 5) && y < (_level->dwPosY * 5 + _level->dwSizeY * 5));
 }
 
 WORD ActMap::getAvoidLayerPoint(Room2* room, const Point& pt) const {
@@ -367,22 +367,22 @@ void ActMap::FindRoomLinkageExits(ExitArray& exits) const {
 
   std::pair<Point, std::pair<Point, int>> currentExit;
   std::multimap<int, std::pair<Point, std::pair<Point, int>>>::iterator it = exitMap.begin();
-  int level = 0;
+  int _level = 0;
   double minDistance = -1, tmpDistance;
   do {
-    if (level == 0 && it == exitMap.end()) {
+    if (_level == 0 && it == exitMap.end()) {
       break;
     }
-    if (level == 0) {
-      level = it->first;
+    if (_level == 0) {
+      _level = it->first;
       currentExit = it->second;
     }
-    if (it == exitMap.end() || level != it->first) {
-      exits.push_back(Exit(currentExit.second.first, level, Linkage, 0));
+    if (it == exitMap.end() || _level != it->first) {
+      exits.push_back(Exit(currentExit.second.first, _level, Linkage, 0));
       if (it == exitMap.end()) {
         break;
       }
-      level = it->first;
+      _level = it->first;
       currentExit = it->second;
       minDistance = -1;
     }
@@ -680,11 +680,11 @@ void ActMap::DumpLevel(const char* file) const {
   fprintf(f, "\n");
 
   for (int j = 0; j < width; j++) {
-    for (int i = 0; i < height; i++) {
+    for (int _i = 0; _i < height; _i++) {
       // skipping group of Avoid points at the end of row
       bool onlyAvoid = true;
       int k;
-      for (k = i; k < height; k++) {
+      for (k = _i; k < height; k++) {
         Point pt(k, j);
         if (!OneSpaceHasFlag(ActMap::Avoid, pt, false)) {
           onlyAvoid = false;
@@ -694,11 +694,11 @@ void ActMap::DumpLevel(const char* file) const {
       if (onlyAvoid) {
         break;
       }
-      for (; i < k; i++) {
+      for (; _i < k; _i++) {
         fprintf(f, "A");
       }
 
-      Point pt(i, j);
+      Point pt(_i, j);
       char c = '.';
       if (OneSpaceHasFlag(ActMap::ClosedDoor, pt, false))
         c = 'D';

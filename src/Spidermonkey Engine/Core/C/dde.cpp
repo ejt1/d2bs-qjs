@@ -6,7 +6,7 @@
 DWORD DdeSrvInst = 0;
 HSZ hszD2BSns;
 
-HDDEDATA CALLBACK DdeCallback(UINT uType, UINT uFmt, HCONV hconv, HSZ hsz1, HSZ hsz2, HDDEDATA hdata, DWORD dwData1, DWORD dwData2) {
+HDDEDATA CALLBACK DdeCallback(UINT uType, UINT, HCONV, HSZ, HSZ, HDDEDATA hdata, DWORD, DWORD) {
   char pszItem[65535] = "";
   wchar_t* pslzItem = AnsiToUnicode(pszItem);
   switch (uType) {

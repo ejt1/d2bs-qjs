@@ -30,11 +30,11 @@ char* UnicodeToAnsi(const wchar_t* str, UINT codepage) {
 }
 
 void StringToLower(char* p) {
-  for (; *p; ++p) *p = tolower(*p);
+  for (; *p; ++p) *p = static_cast<char>(tolower(*p));
 }
 
 void StringToLower(wchar_t* p) {
-  for (; *p; ++p) *p = towlower(*p);
+  for (; *p; ++p) *p = static_cast<wchar_t>(towlower(*p));
 }
 
 bool StringToBool(const char* str) {

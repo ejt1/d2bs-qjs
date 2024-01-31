@@ -33,13 +33,13 @@ inline int __fastcall Euclidean(const Point& start, const Point& end) {
   double dy = (double)(end.second - start.second);
   dx = pow(dx, 2);
   dy = pow(dy, 2);
-  return sqrt(dx + dy) * 10;
+  return static_cast<int>(sqrt(dx + dy)) * 10;
 }
 
 inline int __fastcall Slope(const Point& start, const Point& end) {
   double dx = (double)(end.first - start.first);
   double dy = (double)(end.second - start.second);
-  return dy / dx;
+  return static_cast<int>(dy / dx);
 }
 
 inline bool __fastcall checkFlag(int flag) {
@@ -47,7 +47,7 @@ inline bool __fastcall checkFlag(int flag) {
   return (/*((ActMap::Avoid & flag) == ActMap::Avoid) |*/ (((ActMap::BlockWalk | ActMap::BlockPlayer) & flag) > 0));
 }
 
-inline int __fastcall EstimateDistance(const Map* m, const Point& point, const Point& end) {
+inline int __fastcall EstimateDistance(const Map* /*m*/, const Point& point, const Point& end) {
   return DiagonalShortcut(point, end);
 }
 
@@ -127,9 +127,9 @@ class AStarPath : public MapPath {
       if (Vars.bQuitting)
         return;
 
-      bool result = closed.insert(current->point).second;
-      assert(result == true);
-      (void)(result);  // shut up compiler about unused variable warning
+      bool _result = closed.insert(current->point).second;
+      assert(_result == true);
+      (void)(_result);  // shut up compiler about unused variable warning
 
       // getOpenNodes should be in map along with a filter
       reducer->GetOpenNodes(current->point, newNodes, end);
@@ -163,11 +163,11 @@ class AStarPath : public MapPath {
   inline const Allocator& GetAllocator() {
     return alloc;
   }
-  inline void SetMap(Map* map) {
-    this->map = map;
+  inline void SetMap(Map* _map) {
+    this->map = _map;
   }
-  inline void SetPathReducer(Reducing::PathReducer* reducer) {
-    this->reducer = reducer;
+  inline void SetPathReducer(Reducing::PathReducer* _reducer) {
+    this->reducer = _reducer;
   }
 
   void GetPath(const Point& _start, const Point& _end, PointList& list, bool abs = true) {

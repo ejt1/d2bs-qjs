@@ -20,7 +20,7 @@ CLASS_CTOR(profile) {
   const wchar_t* str2;
   const wchar_t* str3;
   const wchar_t* str4;
-  unsigned int i;
+  // unsigned int i;
 
   str1 = str2 = str3 = str4 = NULL;
   pt = PROFILETYPE_INVALID;
@@ -90,6 +90,8 @@ CLASS_CTOR(profile) {
 }
 
 JSAPI_FUNC(profile_login) {
+  (argc);
+
   JS_SET_RVAL(cx, vp, JSVAL_VOID);
   char* error;
   Profile* prof;
@@ -102,7 +104,7 @@ JSAPI_FUNC(profile_login) {
   return JS_TRUE;
 }
 
-void profile_finalize(JSFreeOp* fop, JSObject* obj) {
+void profile_finalize(JSFreeOp* /*fop*/, JSObject* obj) {
   Profile* prof;
 
   prof = (Profile*)JS_GetPrivate(obj);
@@ -119,7 +121,7 @@ JSAPI_PROP(profile_getProperty) {
   prof = (Profile*)JS_GetPrivate(cx, obj);
   jsval ID;
   JS_IdToValue(cx, id, &ID);
-  char* nStr;
+  // char* nStr;
 
   switch (JSVAL_TO_INT(ID)) {
     case PROFILE_TYPE:
@@ -154,6 +156,8 @@ JSAPI_PROP(profile_getProperty) {
 EMPTY_CTOR(profileType);
 
 JSAPI_PROP(profileType_getProperty) {
+  (obj);
+
   jsval ID;
   JS_IdToValue(cx, id, &ID);
   vp.set(ID);

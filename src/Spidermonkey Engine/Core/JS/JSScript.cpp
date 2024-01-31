@@ -23,7 +23,7 @@ JSAPI_PROP(script_getProperty) {
     return JS_TRUE;
   jsval ID;
   JS_IdToValue(cx, id, &ID);
-  char* nShortFilename = NULL;
+  // char* nShortFilename = NULL;
 
   switch (JSVAL_TO_INT(ID)) {
     case SCRIPT_FILENAME:
@@ -49,6 +49,8 @@ JSAPI_PROP(script_getProperty) {
 }
 
 JSAPI_FUNC(script_getNext) {
+  (argc);
+
   Script* iterp = (Script*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &script_class, NULL);
   sScriptEngine->LockScriptList("scrip.getNext");
   // EnterCriticalSection(&sScriptEngine->lock);
@@ -75,6 +77,8 @@ JSAPI_FUNC(script_getNext) {
 }
 
 JSAPI_FUNC(script_stop) {
+  (argc);
+
   JS_SET_RVAL(cx, vp, JSVAL_NULL);
   Script* script = (Script*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &script_class, NULL);
   if (script->IsRunning())
@@ -84,6 +88,8 @@ JSAPI_FUNC(script_stop) {
 }
 
 JSAPI_FUNC(script_pause) {
+  (argc);
+
   JS_SET_RVAL(cx, vp, JSVAL_NULL);
   Script* script = (Script*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &script_class, NULL);
 
@@ -94,6 +100,8 @@ JSAPI_FUNC(script_pause) {
 }
 
 JSAPI_FUNC(script_resume) {
+  (argc);
+
   JS_SET_RVAL(cx, vp, JSVAL_NULL);
   Script* script = (Script*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &script_class, NULL);
 
@@ -130,6 +138,8 @@ JSAPI_FUNC(script_send) {
 }
 
 JSAPI_FUNC(script_join) {
+  (argc);
+
   JS_SET_RVAL(cx, vp, JSVAL_NULL);
   Script* script = (Script*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &script_class, NULL);
 
@@ -185,6 +195,8 @@ JSAPI_FUNC(my_getScript) {
   return JS_TRUE;
 }
 JSAPI_FUNC(my_getScripts) {
+  (argc);
+
   DWORD dwArrayCount = NULL;
 
   JSObject* pReturnArray = JS_NewArrayObject(cx, 0, NULL);
@@ -205,7 +217,7 @@ JSAPI_FUNC(my_getScripts) {
   JS_EndRequest(cx);
   return JS_TRUE;
 }
-bool __fastcall FindScriptByName(Script* script, void* argv, uint argc) {
+bool __fastcall FindScriptByName(Script* script, void* argv, uint /*argc*/) {
   FindHelper* helper = (FindHelper*)argv;
   // static uint pathlen = wcslen(Vars.szScriptPath) + 1;
   const wchar_t* fname = script->GetShortFilename();
@@ -216,7 +228,7 @@ bool __fastcall FindScriptByName(Script* script, void* argv, uint argc) {
   return true;
 }
 
-bool __fastcall FindScriptByTid(Script* script, void* argv, uint argc) {
+bool __fastcall FindScriptByTid(Script* script, void* argv, uint /*argc*/) {
   FindHelper* helper = (FindHelper*)argv;
   if (script->GetThreadId() == helper->tid) {
     helper->script = script;

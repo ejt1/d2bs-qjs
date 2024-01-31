@@ -10,7 +10,7 @@
 
 EMPTY_CTOR(unit)
 
-void unit_finalize(JSFreeOp* fop, JSObject* obj) {
+void unit_finalize(JSFreeOp* /*fop*/, JSObject* obj) {
   Private* lpUnit = (Private*)JS_GetPrivate(obj);
 
   if (lpUnit) {
@@ -50,7 +50,7 @@ JSAPI_PROP(unit_getProperty) {
   jsval ID;
   JS_IdToValue(cx, id, &ID);
   JS_BeginRequest(cx);
-  char* nProfile;
+  // char* nProfile;
 
   switch (JSVAL_TO_INT(ID)) {
     case ME_PID:
@@ -525,6 +525,9 @@ JSAPI_PROP(unit_getProperty) {
 }
 
 JSAPI_STRICT_PROP(unit_setProperty) {
+  (obj);
+  (strict);
+
   jsval ID;
   JS_IdToValue(cx, id, &ID);
   switch (JSVAL_TO_INT(ID)) {
@@ -769,6 +772,8 @@ JSAPI_FUNC(unit_cancel) {
 }
 
 JSAPI_FUNC(unit_repair) {
+  (argc);
+
   myUnit* lpUnit = (myUnit*)JS_GetPrivate(cx, JS_THIS_OBJECT(cx, vp));
   JS_SET_RVAL(cx, vp, JSVAL_FALSE);
 
@@ -954,11 +959,11 @@ JSAPI_FUNC(unit_getStat) {
           continue;
 
         jsval nIndex = INT_TO_JSVAL(aStatList[i].wStatIndex);
-        jsval nSubIndex = INT_TO_JSVAL(aStatList[i].wSubIndex);
+        jsval _nSubIndex = INT_TO_JSVAL(aStatList[i].wSubIndex);
         jsval nValue = INT_TO_JSVAL(aStatList[i].dwStatValue);
 
         JS_SetElement(cx, pArrayInsert, 0, &nIndex);
-        JS_SetElement(cx, pArrayInsert, 1, &nSubIndex);
+        JS_SetElement(cx, pArrayInsert, 1, &_nSubIndex);
         JS_SetElement(cx, pArrayInsert, 2, &nValue);
 
         jsval aObj = OBJECT_TO_JSVAL(pArrayInsert);
@@ -1094,6 +1099,8 @@ void InsertStatsNow(Stat* pStat, int nStat, JSContext* cx, JSObject* pArray) {
 }
 
 JSAPI_FUNC(unit_getState) {
+  (argc);
+
   if (!WaitForGameReady())
     THROW_WARNING(cx, vp, "Game not ready");
 
@@ -1127,6 +1134,8 @@ JSAPI_FUNC(unit_getState) {
 }
 
 JSAPI_FUNC(item_getFlags) {
+  (argc);
+
   if (!WaitForGameReady())
     THROW_WARNING(cx, vp, "Game not ready");
 
@@ -1289,6 +1298,8 @@ JSAPI_FUNC(item_getItemCost) {
 }
 
 JSAPI_FUNC(unit_getItems) {
+  (argc);
+
   if (!WaitForGameReady())
     THROW_WARNING(cx, vp, "Game not ready");
 
@@ -1568,6 +1579,8 @@ JSAPI_FUNC(item_shop) {
 }
 
 JSAPI_FUNC(unit_getParent) {
+  (argc);
+
   JS_SET_RVAL(cx, vp, JSVAL_VOID);
   if (!WaitForGameReady())
     THROW_WARNING(cx, vp, "Game not ready");
@@ -1656,6 +1669,8 @@ JSAPI_FUNC(unit_getParent) {
 
 // Works only on players sinces monsters _CANT_ have mercs!
 JSAPI_FUNC(unit_getMerc) {
+  (argc);
+
   JS_SET_RVAL(cx, vp, JSVAL_VOID);
   if (!WaitForGameReady())
     THROW_WARNING(cx, vp, "Game not ready");
@@ -1687,6 +1702,8 @@ JSAPI_FUNC(unit_getMerc) {
 }
 
 JSAPI_FUNC(unit_getMercHP) {
+  (argc);
+
   if (!WaitForGameReady())
     THROW_WARNING(cx, vp, "Game not ready");
   JSObject* test = JS_THIS_OBJECT(cx, vp);
@@ -1748,6 +1765,8 @@ JSAPI_FUNC(unit_setskill) {
 }
 
 JSAPI_FUNC(my_overhead) {
+  (argc);
+
   if (!WaitForGameReady())
     THROW_WARNING(cx, vp, "Game not ready");
 
@@ -1785,6 +1804,8 @@ JSAPI_FUNC(my_overhead) {
 }
 
 JSAPI_FUNC(my_revive) {
+  (argc);
+
   if (!WaitForGameReady())
     THROW_WARNING(cx, vp, "Game not ready");
 

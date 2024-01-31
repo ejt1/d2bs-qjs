@@ -8,6 +8,8 @@
 #include "Profile.h"
 
 JSAPI_FUNC(my_login) {
+  (argc);
+
   JS_SET_RVAL(cx, vp, JSVAL_VOID);
   if (ClientState() != ClientStateMenu)
     return JS_TRUE;
@@ -153,6 +155,9 @@ JSAPI_FUNC(my_addProfile) {
 }
 
 JSAPI_FUNC(my_getOOGLocation) {
+  (cx);
+  (argc);
+
   JS_SET_RVAL(cx, vp, JSVAL_NULL);
   if (ClientState() != ClientStateMenu)
     return JS_TRUE;

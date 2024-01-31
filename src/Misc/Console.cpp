@@ -207,9 +207,9 @@ void Console::Draw(void) {
     int charwidth = size.x;
     int charheight = max(12, size.y / 2 + 2);
     // the default console height is 30% of the screen size
-    int height = ((int)(((double)ysize) * .3) / charheight) * charheight + charheight;
+    int _height = ((int)(((double)ysize) * .3) / charheight) * charheight + charheight;
     lineWidth = xsize - (2 * charwidth);
-    lineCount = height / charheight;
+    lineCount = _height / charheight;
 
     int cmdsize = 0;
     int cmdlines = 0;
@@ -223,7 +223,7 @@ void Console::Draw(void) {
       }
     }
 
-    Console::height = height + (cmdlines * charheight) + 6;
+    Console::height = _height + (cmdlines * charheight) + 6;
     // draw the box large enough to hold the whole thing
     D2GFX_DrawRectangle(0, 0, xsize, Console::height, 0xdf, 0);
 
@@ -235,7 +235,7 @@ void Console::Draw(void) {
 
     if (IsEnabled()) {
       if (cmdsplit.size() > 0) {
-        int dy = height + 3;
+        int dy = _height + 3;
         for (std::list<std::wstring>::iterator it2 = cmdsplit.begin(); it2 != cmdsplit.end(); it2++, dy += charheight)
           myDrawText(it2->c_str(), charwidth, dy, 0, Vars.dwConsoleFont);
       }

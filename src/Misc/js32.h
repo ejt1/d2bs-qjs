@@ -1,22 +1,11 @@
 #pragma comment(lib, "psapi.lib")  // Added to support GetProcessMemoryInfo()
 #pragma once
 
-#ifndef XP_WIN
-#define XP_WIN
-#endif
-
-// #ifndef DEBUG
-// #define DEBUG
-// #define WDEBUG
-// #endif
-
+#pragma warning(push, 0)
 #include "jsapi.h"
 #include "jsfriendapi.h"
-// #ifdef WDEBUG
-// #undef DEBUG
-// #undef WDEBUG
-// #endif
-// #include "Exports.hpp"
+#pragma warning(pop)
+
 #include <vector>
 #include <io.h>
 #include <string>
@@ -32,11 +21,11 @@ typedef int32_t jsint;
 typedef uint32_t jsuint;
 typedef uint16_t uint16;
 
-//#if defined(EXPORTING)
-//#define EXPORT __declspec(dllexport)
-//#else
-//#define EXPORT
-//#endif
+// #if defined(EXPORTING)
+// #define EXPORT __declspec(dllexport)
+// #else
+// #define EXPORT
+// #endif
 
 #define NUM(x) #x
 #define NAME(line, v) (__FILE__ ":" NUM(line) " -> " #v)
@@ -70,7 +59,7 @@ struct JSClassSpec {
 #define CLASS_CTOR(name) JSBool name##_ctor(JSContext* cx, uint argc, jsval* vp)
 
 // #define EMPTY_CTOR(name) JSBool name##_ctor (JSContext* cx, uint argc, jsval* vp) { return THROW_ERROR(cx, #name " is not constructable."); }
-//         #define EMPTY_CTOR(name) \
+//           #define EMPTY_CTOR(name) \
 //JSBool name##_ctor (JSContext *cx, JSObject* obj, uint argc, jsval *argv, jsval *rval) { \
 //	THROW_ERROR(cx, "Invalid Operation"); }
 
@@ -95,9 +84,9 @@ JSScript* JS_CompileFile(JSContext* cx, JSObject* globalObject, std::wstring fil
 #define JSAPI_FUNC(name) JSBool name##(JSContext * cx, uint argc, jsval * vp)
 #define FUNCTION_FLAGS JSFUN_STUB_GSOPS
 
-#define EMPTY_CTOR(name)                                    \
-  JSBool name##_ctor(JSContext* cx, uint argc, jsval* vp) { \
-    THROW_ERROR(cx, "Invalid Operation");                   \
+#define EMPTY_CTOR(name)                            \
+  JSBool name##_ctor(JSContext* cx, uint, jsval*) { \
+    THROW_ERROR(cx, "Invalid Operation");           \
   }
 
 #define JSAPI_PROP(name) JSBool name##(JSContext * cx, JSHandleObject obj, JSHandleId id, JSMutableHandleValue vp)
@@ -128,4 +117,3 @@ JSScript* JS_CompileFile(JSContext* cx, JSObject* globalObject, std::wstring fil
 
 #define JSCLASS_DEFAULT_STANDARD_MEMBERS \
   JS_PropertyStub, JS_PropertyStub, JS_PropertyStub, JS_StrictPropertyStub, JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub, JS_FinalizeStub, JSCLASS_NO_OPTIONAL_MEMBERS
-

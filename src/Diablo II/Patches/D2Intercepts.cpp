@@ -247,6 +247,8 @@ SkipInput:
 }
 
 void __declspec(naked) AddUnit_Intercept(UnitAny* lpUnit) {
+  (lpUnit);  // unreferenced formal parameter
+
   __asm
   {
 		call [D2CLIENT_GameAddUnit_I]
@@ -259,6 +261,8 @@ void __declspec(naked) AddUnit_Intercept(UnitAny* lpUnit) {
 }
 
 void __declspec(naked) RemoveUnit_Intercept(UnitAny* lpUnit) {
+  (lpUnit);  // unreferenced formal parameter
+
   __asm {
 		pushad
 		push dword ptr ds:[esi+edx*4]
@@ -270,6 +274,8 @@ void __declspec(naked) RemoveUnit_Intercept(UnitAny* lpUnit) {
   }
 }
 
+// C4740: flow in or out of inline asm code suppresses global optimization
+#pragma warning(disable : 4740)
 VOID __declspec(naked) __fastcall ClassicSTUB() {
   *p_BNCLIENT_ClassicKey = Vars.szClassic;
   __asm {
@@ -285,6 +291,7 @@ VOID __declspec(naked) __fastcall LodSTUB() {
 		jmp BNCLIENT_DLod;
   }
 }
+#pragma warning(default : 4740)
 
 void __declspec(naked) FailToJoin() {
   __asm
@@ -324,11 +331,16 @@ int EraseCacheFiles() {
 }
 
 HMODULE __stdcall Multi(LPSTR Class, LPSTR Window) {
+  (Class);   // unreferenced formal parameter
+  (Window);  // unreferenced formal parameter
+
   return 0;
 }
 
 HANDLE __stdcall Windowname(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int x, int y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu,
                             HINSTANCE hInstance, LPVOID lpParam) {
+  (lpWindowName);  // unreferenced formal parameter
+
   WCHAR szWindowName[200] = L"D2";
   WCHAR szClassName[200] = L"CNAME";
 
@@ -344,6 +356,8 @@ HANDLE __stdcall Windowname(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindow
 
 HANDLE __stdcall CacheFix(LPCSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition,
                           DWORD dwFlagsAndAttributes, HANDLE hTemplateFile) {
+  (lpFileName);
+
   EraseCacheFiles();
   CHAR path[MAX_PATH];
   GetCurrentDirectoryA(MAX_PATH, path);
@@ -398,7 +412,7 @@ LONG WINAPI MyUnhandledExceptionFilter(_In_ struct _EXCEPTION_POINTERS* Exceptio
   MiniDumpWriteDump(hProcess, ProcessId, hFile, MiniDumpNormal, &ExceptionParam, NULL, NULL);
   CloseHandle(hFile);
   exit(0);
-  return EXCEPTION_EXECUTE_HANDLER;
+  // return EXCEPTION_EXECUTE_HANDLER;
 }
 
 //  FogException(6, (int)&Default, a3, "Unrecoverable internal error %08x", a2);
@@ -409,11 +423,12 @@ void FogException() {
                    0, NULL);
   } __except (UnhandledExceptionFilter(GetExceptionInformation())) {
     exit(0);
-    exit(0);
   }
 }
 
 char __fastcall ErrorReportLaunch(const char* crash_file, int a2) {
+  (a2);  // unreferenced formal parameter
+
   GetStackWalk();
   Log(L"Crash File: %hs\n", crash_file);
   exit(0);

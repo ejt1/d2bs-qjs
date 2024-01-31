@@ -333,7 +333,7 @@ void SendKeyPress(uint type, uint key, uint ext) {
   PostMessage(D2GFX_GetHwnd(), type, key, lp);
 }
 
-DWORD __declspec(naked) __fastcall D2CLIENT_InitAutomapLayer_STUB(DWORD nLayerNo) {
+DWORD __declspec(naked) __fastcall D2CLIENT_InitAutomapLayer_STUB(DWORD /*nLayerNo*/) {
   __asm
   {
 		push edi;  // Updated 1.14d Registers changed.
@@ -706,7 +706,7 @@ CellFile* myInitCellFile(CellFile* cf) {
 // End of Sting's or Mousepad's
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-DWORD __declspec(naked) __fastcall D2CLIENT_GetUnitName_STUB(DWORD UnitAny) {
+DWORD __declspec(naked) __fastcall D2CLIENT_GetUnitName_STUB(DWORD /*UnitAny*/) {
   __asm
   {
     // mov eax, ecx
@@ -714,7 +714,7 @@ DWORD __declspec(naked) __fastcall D2CLIENT_GetUnitName_STUB(DWORD UnitAny) {
   }
 }
 
-DWORD __declspec(naked) __fastcall D2CLIENT_GetUIVar_STUB(DWORD varno) {
+DWORD __declspec(naked) __fastcall D2CLIENT_GetUIVar_STUB(DWORD /*varno*/) {
   __asm
   {
 		mov eax, ecx;
@@ -722,7 +722,7 @@ DWORD __declspec(naked) __fastcall D2CLIENT_GetUIVar_STUB(DWORD varno) {
   }
 }
 
-void __declspec(naked) __fastcall D2CLIENT_SetSelectedUnit_STUB(DWORD UnitAny) {
+void __declspec(naked) __fastcall D2CLIENT_SetSelectedUnit_STUB(DWORD /*UnitAny*/) {
   __asm
   {
 		mov eax, ecx
@@ -739,14 +739,14 @@ void __declspec(naked) __fastcall D2CLIENT_SetSelectedUnit_STUB(DWORD UnitAny) {
 //	}
 //}
 
-void __declspec(naked) __fastcall D2CLIENT_Interact_ASM(DWORD Struct) {
+void __declspec(naked) __fastcall D2CLIENT_Interact_ASM(DWORD /*Struct*/) {
   __asm {
 		mov esi, ecx
 			jmp D2CLIENT_Interact_I
   }
 }
 
-DWORD __declspec(naked) __fastcall D2CLIENT_ClickParty_ASM(DWORD RosterUnit, DWORD Mode) {
+DWORD __declspec(naked) __fastcall D2CLIENT_ClickParty_ASM(DWORD /*RosterUnit*/, DWORD /*Mode*/) {
   __asm
   {
 		mov eax, ecx
@@ -756,7 +756,7 @@ DWORD __declspec(naked) __fastcall D2CLIENT_ClickParty_ASM(DWORD RosterUnit, DWO
 
 // obsoleted - use D2CLIENT_ShopAction instead
 // This isn't finished anyway!
-void __declspec(naked) __fastcall D2CLIENT_ClickShopItem_ASM(DWORD x, DWORD y, DWORD BuyOrSell) {
+void __declspec(naked) __fastcall D2CLIENT_ClickShopItem_ASM(DWORD /*x*/, DWORD /*y*/, DWORD /*BuyOrSell*/) {
   __asm
   {
 		mov esi, ecx
@@ -770,22 +770,24 @@ void __declspec(naked) __fastcall D2CLIENT_ClickShopItem_ASM(DWORD x, DWORD y, D
   }
 }
 
-void __declspec(naked) __fastcall D2CLIENT_ShopAction_ASM(DWORD pItem, DWORD pNpc, DWORD pNPC, DWORD _1, DWORD pTable2 /* Could be also the ItemCost?*/, DWORD dwMode,
-                                                          DWORD _2, DWORD _3) {
+void __declspec(naked) __fastcall D2CLIENT_ShopAction_ASM(DWORD /*pItem*/, DWORD /*pNpc*/, DWORD /*pNPC*/, DWORD /*_1*/,
+                                                          DWORD /*pTable2*/ /* Could be also the ItemCost?*/, DWORD /*dwMode*/, DWORD /*_2*/
+                                                          ,
+                                                          DWORD /*_3*/) {
   __asm {
 		jmp D2CLIENT_ShopAction_I
   }
 }
 
-void __declspec(naked) __fastcall D2CLIENT_ClickBelt(DWORD x, DWORD y, Inventory* pInventoryData) {
+void __declspec(naked) __fastcall D2CLIENT_ClickBelt(DWORD /*x*/, DWORD /*y*/, Inventory* /*pInventoryData*/) {
   __asm {
 		mov eax, edx
 			jmp D2CLIENT_ClickBelt_I
   }
 }
 
-void __declspec(naked) __stdcall D2CLIENT_LeftClickItem(DWORD Location, UnitAny* pPlayer, Inventory* pInventory, int x, int y, DWORD dwClickType,
-                                                        InventoryLayout* pLayout) {
+void __declspec(naked) __stdcall D2CLIENT_LeftClickItem(DWORD /*Location*/, UnitAny* /*pPlayer*/, Inventory* /*pInventory*/, int /*x*/, int /*y*/, DWORD /*dwClickType*/,
+                                                        InventoryLayout* /*pLayout*/) {
   __asm
   {
 		pop eax  // pop return address
@@ -794,7 +796,7 @@ void __declspec(naked) __stdcall D2CLIENT_LeftClickItem(DWORD Location, UnitAny*
   }
 }
 
-void __declspec(naked) __fastcall D2CLIENT_ClickItemRight_ASM(DWORD x, DWORD y, DWORD Location, DWORD Player, DWORD pUnitInventory) {
+void __declspec(naked) __fastcall D2CLIENT_ClickItemRight_ASM(DWORD /*x*/, DWORD /*y*/, DWORD /*Location*/, DWORD /*Player*/, DWORD /*pUnitInventory*/) {
   __asm
   {
 		xchg edx, ecx  // x, y -> y, x
@@ -804,7 +806,7 @@ void __declspec(naked) __fastcall D2CLIENT_ClickItemRight_ASM(DWORD x, DWORD y, 
   }
 }
 
-void __declspec(naked) __fastcall D2CLIENT_ClickBeltRight_ASM(DWORD pInventory, DWORD pPlayer, DWORD HoldShift, DWORD dwPotPos) {
+void __declspec(naked) __fastcall D2CLIENT_ClickBeltRight_ASM(DWORD /*pInventory*/, DWORD /*pPlayer*/, DWORD /*HoldShift*/, DWORD /*dwPotPos*/) {
   __asm
   {
 		pop eax  // pop return address
@@ -813,7 +815,7 @@ void __declspec(naked) __fastcall D2CLIENT_ClickBeltRight_ASM(DWORD pInventory, 
   }
 }
 
-void __declspec(naked) __fastcall D2CLIENT_GetItemDesc_ASM(DWORD pUnit, wchar_t* pBuffer) {
+void __declspec(naked) __fastcall D2CLIENT_GetItemDesc_ASM(DWORD /*pUnit*/, wchar_t* /*pBuffer*/) {
   __asm
   {
 		PUSH EDI
@@ -827,7 +829,7 @@ void __declspec(naked) __fastcall D2CLIENT_GetItemDesc_ASM(DWORD pUnit, wchar_t*
   }
 }
 
-void __declspec(naked) __fastcall D2COMMON_DisplayOverheadMsg_ASM(DWORD pUnit) {
+void __declspec(naked) __fastcall D2COMMON_DisplayOverheadMsg_ASM(DWORD /*pUnit*/) {
   __asm
   {
 		LEA ESI, [ECX+0xA4]
@@ -841,7 +843,7 @@ void __declspec(naked) __fastcall D2COMMON_DisplayOverheadMsg_ASM(DWORD pUnit) {
   }
 }
 
-void __declspec(naked) __fastcall D2CLIENT_MercItemAction_ASM(DWORD bPacketType, DWORD dwSlot) {
+void __declspec(naked) __fastcall D2CLIENT_MercItemAction_ASM(DWORD /*bPacketType*/, DWORD /*dwSlot*/) {
   __asm
   {
     // mov eax, ecx
@@ -850,7 +852,7 @@ void __declspec(naked) __fastcall D2CLIENT_MercItemAction_ASM(DWORD bPacketType,
   }
 }
 
-void __declspec(naked) __fastcall D2CLIENT_PlaySound(DWORD dwSoundId) {
+void __declspec(naked) __fastcall D2CLIENT_PlaySound(DWORD /*dwSoundId*/) {
   __asm
   {
 		MOV EBX, ECX
@@ -866,7 +868,7 @@ void __declspec(naked) __fastcall D2CLIENT_PlaySound(DWORD dwSoundId) {
   }
 }
 
-__declspec(naked) void __stdcall D2CLIENT_TakeWaypoint(DWORD dwWaypointId, DWORD dwArea) {
+__declspec(naked) void __stdcall D2CLIENT_TakeWaypoint(DWORD /*dwWaypointId*/, DWORD /*dwArea*/) {
   __asm {
 		PUSH EBP
 			MOV EBP, ESP
@@ -913,7 +915,7 @@ _TakeWaypoint:
         }
 }*/
 
-void __declspec(naked) __fastcall D2GFX_DrawRectFrame_STUB(RECT* rect) {
+void __declspec(naked) __fastcall D2GFX_DrawRectFrame_STUB(RECT* /*rect*/) {
   __asm
   {
 		mov eax, ecx;
@@ -941,7 +943,7 @@ DWORD __cdecl D2CLIENT_GetMinionCount(UnitAny* pUnit, DWORD dwType) {
   return dwResult;
 }
 
-__declspec(naked) void __fastcall D2CLIENT_HostilePartyUnit(RosterUnit* pUnit, DWORD dwButton) {
+__declspec(naked) void __fastcall D2CLIENT_HostilePartyUnit(RosterUnit* /*pUnit*/, DWORD /*dwButton*/) {
   __asm
   {
 		mov eax, edx
@@ -949,7 +951,7 @@ __declspec(naked) void __fastcall D2CLIENT_HostilePartyUnit(RosterUnit* pUnit, D
   }
 }
 
-__declspec(naked) DWORD __fastcall D2CLIENT_SendGamePacket_ASM(DWORD dwLen, BYTE* bPacket) {
+__declspec(naked) DWORD __fastcall D2CLIENT_SendGamePacket_ASM(DWORD /*dwLen*/, BYTE* /*bPacket*/) {
   __asm
   {
 		push edi

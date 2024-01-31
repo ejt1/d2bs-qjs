@@ -245,6 +245,8 @@ class ImageHook : public Genhook {
   ImageHook(Script* owner, JSObject* nself, const wchar_t* nloc, uint x, uint y, ushort ncolor, bool automap = false, Align align = Left, ScreenhookState state = Perm,
             bool fromFile = true)
       : Genhook(owner, nself, x, y, 0, automap, align, state), color(ncolor), image(NULL), location(NULL) {
+    (fromFile);  // unreferenced formal parameter
+
     location = _wcsdup(nloc);
     image = LoadCellFile(location, 3);
   }
@@ -294,6 +296,9 @@ class LineHook : public Genhook {
 
  public:
   bool IsInRange(int dx, int dy) {
+    (dx);  // unreferenced formal parameter
+    (dy);  // unreferenced formal parameter
+
     return false;
   }
 

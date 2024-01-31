@@ -168,6 +168,8 @@ JSAPI_FUNC(dir_getFolders) {
 }
 
 JSAPI_FUNC(dir_create) {
+  (argc);
+
   DirData* d = (DirData*)JS_GetPrivate(cx, JS_THIS_OBJECT(cx, vp));
   wchar_t path[_MAX_PATH];
   if (!JSVAL_IS_STRING(JS_ARGV(cx, vp)[0]))
@@ -183,14 +185,16 @@ JSAPI_FUNC(dir_create) {
     JS_ReportError(cx, "Couldn't create directory %s, path %s not found", name, path);
     return JS_FALSE;
   } else {
-    DirData* d = new DirData(name);
-    JSObject* jsdir = BuildObject(cx, &folder_class, dir_methods, dir_props, d);
+    DirData* _d = new DirData(name);
+    JSObject* jsdir = BuildObject(cx, &folder_class, dir_methods, dir_props, _d);
     JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(jsdir));
   }
   return JS_TRUE;
 }
 
 JSAPI_FUNC(dir_delete) {
+  (argc);
+
   DirData* d = (DirData*)JS_GetPrivate(cx, JS_THIS_OBJECT(cx, vp));
 
   wchar_t path[_MAX_PATH];
@@ -224,7 +228,7 @@ JSAPI_PROP(dir_getProperty) {
   return JS_TRUE;
 }
 
-void dir_finalize(JSFreeOp* fop, JSObject* obj) {
+void dir_finalize(JSFreeOp* /*fop*/, JSObject* obj) {
   DirData* d = (DirData*)JS_GetPrivate(obj);
   delete d;
 }

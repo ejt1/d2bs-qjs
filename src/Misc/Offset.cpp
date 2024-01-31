@@ -18,7 +18,7 @@ void DefineOffsets() {
   } while (ptrdiff_t(++p) < ((ptrdiff_t)d2ptrs_list) + sizeof(d2ptrs_list));
 }
 
-DWORD GetDllOffset(char* DllName, int Offset) {
+DWORD GetDllOffset(char* /*DllName*/, int Offset) {
   HMODULE hMod = GetModuleHandle(NULL);
 
   if (Offset < 0)

@@ -55,6 +55,8 @@ JSAPI_PROP(party_getProperty) {
 }
 
 JSAPI_FUNC(party_getNext) {
+  (argc);
+
   if (!WaitForGameReady())
     THROW_WARNING(cx, vp, "Game not ready");
 

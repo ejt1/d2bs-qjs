@@ -6,7 +6,7 @@
 
 EMPTY_CTOR(presetunit)
 
-void presetunit_finalize(JSFreeOp* fop, JSObject* obj) {
+void presetunit_finalize(JSFreeOp* /*fop*/, JSObject* obj) {
   myPresetUnit* pUnit = (myPresetUnit*)JS_GetPrivate(obj);
 
   if (pUnit) {

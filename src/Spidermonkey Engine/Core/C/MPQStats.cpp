@@ -139,8 +139,8 @@ bool FillBaseStat(int table, int row, int column, void* result, size_t size) {
     case FIELDTYPE_NAME_TO_INDEX_2:
     case FIELDTYPE_NAME_TO_WORD_2:
       memcpy(result, (LPVOID)(dwRetValue + pTable[column].dwFieldOffset), sizeof(WORD));
-      if (((WORD)result) >= 0xFFFF)
-        *(WORD*)result = (((WORD)result) - 0xFFFF) * -1;
+      if ((*(WORD*)result) >= 0xFFFF)
+        *(WORD*)result = ((*(WORD*)result) - 0xFFFF) * -1;
       break;
     case FIELDTYPE_NAME_TO_INDEX:
     case FIELDTYPE_NAME_TO_WORD:

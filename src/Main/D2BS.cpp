@@ -47,7 +47,8 @@ BOOL WINAPI DllMain(HINSTANCE hDll, DWORD dwReason, LPVOID lpReserved) {
       sLine* command = NULL;
       Vars.bUseRawCDKey = FALSE;
 
-      if (command = GetCommand(L"-title")) {
+      command = GetCommand(L"-title");
+      if (command) {
         int len = wcslen((wchar_t*)command->szText);
         wcsncat_s(Vars.szTitle, (wchar_t*)command->szText, len);
       }
@@ -64,14 +65,16 @@ BOOL WINAPI DllMain(HINSTANCE hDll, DWORD dwReason, LPVOID lpReserved) {
       if (GetCommand(L"-ftj"))
         Vars.bReduceFTJ = TRUE;
 
-      if (command = GetCommand(L"-d2c")) {
+      command = GetCommand(L"-d2c");
+      if (command) {
         Vars.bUseRawCDKey = TRUE;
         const char* keys = UnicodeToAnsi(command->szText);
         strncat_s(Vars.szClassic, keys, strlen(keys));
         delete[] keys;
       }
 
-      if (command = GetCommand(L"-d2x")) {
+      command = GetCommand(L"-d2x");
+      if (command) {
         const char* keys = UnicodeToAnsi(command->szText);
         strncat_s(Vars.szLod, keys, strlen(keys));
         delete[] keys;

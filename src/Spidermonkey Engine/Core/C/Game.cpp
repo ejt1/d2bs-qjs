@@ -12,7 +12,7 @@ void SendGold(int nGold, int nMode) {
 }
 
 void __fastcall UseStatPoint(WORD stat, int count) {
-  if (D2COMMON_GetUnitStat(D2CLIENT_GetPlayerUnit(), STAT_STATPOINTSLEFT, 0) < count)
+  if (D2COMMON_GetUnitStat(D2CLIENT_GetPlayerUnit(), STAT_STATPOINTSLEFT, 0) < static_cast<uint32_t>(count))
     return;
 
   BYTE packet[3] = {0x3A};
@@ -26,7 +26,7 @@ void __fastcall UseStatPoint(WORD stat, int count) {
 }
 
 void __fastcall UseSkillPoint(WORD skill, int count) {
-  if (D2COMMON_GetUnitStat(D2CLIENT_GetPlayerUnit(), STAT_SKILLPOINTSLEFT, 0) < count)
+  if (D2COMMON_GetUnitStat(D2CLIENT_GetPlayerUnit(), STAT_SKILLPOINTSLEFT, 0) < static_cast<uint32_t>(count))
     return;
 
   BYTE packet[3] = {0x3B};

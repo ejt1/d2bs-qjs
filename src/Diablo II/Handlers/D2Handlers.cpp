@@ -24,7 +24,7 @@ bool __fastcall UpdatePlayerGid(Script* script, void*, uint) {
   return true;
 }
 
-DWORD WINAPI D2Thread(LPVOID lpParam) {
+DWORD WINAPI D2Thread(LPVOID /*lpParam*/) {
   sLine* command;
   bool beginStarter = true;
   bool bInGame = false;
@@ -436,13 +436,13 @@ void SetMaxDiff(void) {
   }
 }
 
-void __stdcall AddUnit(UnitAny* lpUnit) {
+void __stdcall AddUnit(UnitAny* /*lpUnit*/) {
   //	EnterCriticalSection(&Vars.cUnitListSection);
   //	Vars.vUnitList.push_back(make_pair<DWORD, DWORD>(lpUnit->dwUnitId, lpUnit->dwType));
   //	LeaveCriticalSection(&Vars.cUnitListSection);
 }
 
-void __stdcall RemoveUnit(UnitAny* lpUnit) {
+void __stdcall RemoveUnit(UnitAny* /*lpUnit*/) {
   //	EnterCriticalSection(&Vars.cUnitListSection);
   // no need to check the return--it has to be there or the real game would have bigger issues with it
   //	for(vector<pair<DWORD, DWORD> >::iterator it = Vars.vUnitList.begin(); it != Vars.vUnitList.end(); it++)
@@ -485,7 +485,7 @@ void __fastcall GamePlayerAssignment(UnitAny* pPlayer) {
   PlayerAssignEvent(pPlayer->dwUnitId);
 }
 
-void CALLBACK TimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime) {
+void CALLBACK TimerProc(HWND /*hwnd*/, UINT /*uMsg*/, UINT_PTR /*idEvent*/, DWORD /*dwTime*/) {
   if (Vars.bGameLoopEntered)
     LeaveCriticalSection(&Vars.cGameLoopSection);
   else {
@@ -522,11 +522,11 @@ BOOL __fastcall RealmPacketRecv(BYTE* pPacket, DWORD dwSize) {
   return !RealmPacketEvent(pPacket, dwSize);
 }
 
-BOOL __fastcall ChatPacketRecv(BYTE* pPacket, int len) {
+BOOL __fastcall ChatPacketRecv(BYTE* pPacket, int /*len*/) {
   bool blockPacket = false;
 
   if (pPacket[1] == 0xF) {
-    DWORD mode = pPacket[4];
+    // DWORD mode = pPacket[4];
     char* who = (char*)pPacket + 28;
     char* said = (char*)pPacket + 29 + strlen(who);
     wchar_t* wsaid = AnsiToUnicode(said, CP_ACP);

@@ -114,12 +114,12 @@ void LevelMap::AddCollisionMap(Room1* pRoom1) {
   if (map == NULL)
     return;
 
-  int x = map->dwPosGameX - posX, y = map->dwPosGameY - posY, height = map->dwPosGameX + map->dwSizeGameX - posX, width = map->dwPosGameY + map->dwSizeGameY - posY;
+  int x = map->dwPosGameX - posX, y = map->dwPosGameY - posY, _height = map->dwPosGameX + map->dwSizeGameX - posX, _width = map->dwPosGameY + map->dwSizeGameY - posY;
 
   WORD* p = map->pMapStart;
 
-  for (int i = y; i < width && p != map->pMapEnd; i++) {
-    for (int j = x; j < height && p != map->pMapEnd; j++, p++) {
+  for (int i = y; i < _width && p != map->pMapEnd; i++) {
+    for (int j = x; j < _height && p != map->pMapEnd; j++, p++) {
       if ((*p & LevelMap::ClosedDoor) == LevelMap::ClosedDoor || (*p & LevelMap::Player) == LevelMap::Player) {
         SetCollisionData(j, i, 0);
       } else if (((*p & LevelMap::FriendlyNPC) == LevelMap::FriendlyNPC || (*p & LevelMap::NPCCollision) == LevelMap::NPCCollision ||
@@ -168,18 +168,19 @@ bool LevelMap::IsGap(int x, int y, bool abs) const {
   int spaces = 0;
 
   for (int i = x - gapSize - 1; i <= x + gapSize + 1 && spaces < gapSize; i++) {
-    Point pt(i, y);
-    if (IsValidPoint(pt, abs))
-      spaces = (SpaceIsWalkable(pt, abs) ? 0 : spaces + 1);
+    Point _pt(i, y);
+    if (IsValidPoint(_pt, abs))
+      spaces = (SpaceIsWalkable(_pt, abs) ? 0 : spaces + 1);
   }
 
   if (spaces < gapSize)
     return true;
 
-  for (int i = y - gapSize - 1, spaces = 0; i <= y + gapSize + 1 && spaces < gapSize; i++) {
-    Point pt(x, i);
-    if (IsValidPoint(pt, abs))
-      spaces = (SpaceIsWalkable(pt, abs) ? 0 : spaces + 1);
+  spaces = 0;
+  for (int i = y - gapSize - 1; i <= y + gapSize + 1 && spaces < gapSize; i++) {
+    Point _pt(x, i);
+    if (IsValidPoint(_pt, abs))
+      spaces = (SpaceIsWalkable(_pt, abs) ? 0 : spaces + 1);
   }
 
   return spaces < gapSize;
@@ -456,22 +457,22 @@ void LevelMap::FindRoomLinkageExits(ExitArray& exits, RoomList& added) const {
 
   std::pair<Point, std::pair<Point, int>> currentExit;
   std::multimap<int, std::pair<Point, std::pair<Point, int>>>::iterator it = exitMap.begin();
-  int level = 0;
+  int _level = 0;
   double minDistance = -1, tmpDistance;
   do {
-    if (level == 0 && it == exitMap.end()) {
+    if (_level == 0 && it == exitMap.end()) {
       break;
     }
     if (level == 0) {
-      level = it->first;
+      _level = it->first;
       currentExit = it->second;
     }
-    if (it == exitMap.end() || level != it->first) {
-      exits.push_back(Exit(currentExit.second.first, level, Linkage, 0));
+    if (it == exitMap.end() || _level != it->first) {
+      exits.push_back(Exit(currentExit.second.first, _level, Linkage, 0));
       if (it == exitMap.end()) {
         break;
       }
-      level = it->first;
+      _level = it->first;
       currentExit = it->second;
       minDistance = -1;
     }
@@ -670,9 +671,9 @@ void LevelMap::Dump(const char* file, const PointList& points) const {
     last = *(end - 1);
   }
 
-  for (int i = 0; i < height; i++) {
+  for (int _i = 0; _i < height; _i++) {
     for (int j = 0; j < width; j++) {
-      Point pt(i, j);
+      Point pt(_i, j);
       char c = '.';
       if (SpaceHasFlag(LevelMap::Avoid, pt, false))
         c = 'A';

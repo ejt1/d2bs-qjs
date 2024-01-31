@@ -16,7 +16,7 @@ class NoPathReducer : public PathReducer {
   NoPathReducer(ActMap* map_) : map(map_) {
   }
   // the path is not reduced at all
-  inline void Reduce(const PointList& in, PointList& out, bool abs) {
+  inline void Reduce(const PointList& in, PointList& out, bool /*abs*/) {
     out = in;
   }
   // accept only walkable nodes
@@ -26,7 +26,7 @@ class NoPathReducer : public PathReducer {
                map->SpaceHasFlag(ActMap::BlockWalk, pt, abs) ||
                map->SpaceHasFlag(ActMap::BlockPlayer, pt, abs);*/
   }
-  void GetOpenNodes(const Point& center, PointList& out, const Point& endpoint) {
+  void GetOpenNodes(const Point& center, PointList& out, const Point& /*endpoint*/) {
     for (int i = 1; i >= -1; i--) {
       for (int j = 1; j >= -1; j--) {
         if (i == 0 && j == 0)
@@ -35,7 +35,7 @@ class NoPathReducer : public PathReducer {
       }
     }
   }
-  int GetPenalty(const Point& pt, bool abs) {
+  int GetPenalty(const Point& /*pt*/, bool /*abs*/) {
     return 0;
   }
   inline void MutatePoint(Point& pt, bool abs) {

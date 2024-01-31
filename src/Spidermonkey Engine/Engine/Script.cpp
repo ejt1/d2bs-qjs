@@ -325,11 +325,11 @@ bool Script::Include(const wchar_t* file) {
 
   JS_BeginRequest(cx);
 
-  JSScript* script = JS_CompileFile(cx, GetGlobalObject(), fname);
-  if (script) {
+  JSScript* _script = JS_CompileFile(cx, GetGlobalObject(), fname);
+  if (_script) {
     jsval dummy;
     inProgress[fname] = true;
-    rval = !!JS_ExecuteScript(cx, GetGlobalObject(), script, &dummy);
+    rval = !!JS_ExecuteScript(cx, GetGlobalObject(), _script, &dummy);
     if (rval)
       includes[fname] = true;
     else
@@ -495,7 +495,8 @@ JSBool operationCallback(JSContext* cx) {
         int l = 0;
         COPYDATASTRUCT aCopy = {164344, 0, str};
         if (JSVAL_IS_STRING(stack)) {
-          if (l = JS_EncodeStringToBuffer(cx, JSVAL_TO_STRING(stack), str, 1024)) {
+          l = JS_EncodeStringToBuffer(cx, JSVAL_TO_STRING(stack), str, 1024);
+          if (l) {
             str[l] = 0;
             aCopy.cbData = l + 1;
             SendMessage(debug_wnd, WM_COPYDATA, (WPARAM)D2GFX_GetHwnd(), (LPARAM)&aCopy);
@@ -503,7 +504,8 @@ JSBool operationCallback(JSContext* cx) {
           }
         } else if (JSVAL_IS_OBJECT(stack)) {
           if (JS_CallFunctionName(cx, JSVAL_TO_OBJECT(stack), "ToString", 0, NULL, &err)) {
-            if (l = JS_EncodeStringToBuffer(cx, JSVAL_TO_STRING(err), str, 1024)) {
+            l = JS_EncodeStringToBuffer(cx, JSVAL_TO_STRING(err), str, 1024);
+            if (l) {
               str[l] = 0;
               aCopy.cbData = l + 1;
               SendMessage(debug_wnd, WM_COPYDATA, (WPARAM)D2GFX_GetHwnd(), (LPARAM)&aCopy);
@@ -605,6 +607,8 @@ JSBool contextCallback(JSContext* cx, uint contextOp) {
 }
 
 void reportError(JSContext* cx, const char* message, JSErrorReport* report) {
+  (cx);
+
   bool warn = JSREPORT_IS_WARNING(report->flags);
   bool isStrict = JSREPORT_IS_STRICT(report->flags);
   const char* type = (warn ? "Warning" : "Error");
@@ -629,7 +633,7 @@ void reportError(JSContext* cx, const char* message, JSErrorReport* report) {
 }
 
 bool ExecScriptEvent(Event* evt, bool clearList) {
-  JSContext* cx;
+  JSContext* cx = nullptr;
 
   if (!clearList)
     cx = evt->owner->GetContext();

@@ -4,6 +4,8 @@
 #include "Helpers.h"
 
 JSAPI_FUNC(sandbox_ctor) {
+  (argc);
+
   sandbox* box = new sandbox;  // leaked?
   box->context = JS_NewContext(sScriptEngine->GetRuntime(), 0x2000);
   if (!box->context) {
@@ -81,6 +83,8 @@ JSAPI_PROP(sandbox_addProperty) {
 }
 
 JSAPI_PROP(sandbox_delProperty) {
+  (vp);
+
   sandbox* box = (sandbox*)JS_GetInstancePrivate(cx, obj, &sandbox_class, NULL);
   jsval ID;
   JS_IdToValue(cx, id, &ID);
@@ -137,6 +141,8 @@ JSAPI_PROP(sandbox_getProperty) {
 }
 
 JSAPI_STRICT_PROP(sandbox_setProperty) {
+  (strict);
+
   sandbox* box = (sandbox*)JS_GetInstancePrivate(cx, obj, &sandbox_class, NULL);
   jsval ID;
   JS_IdToValue(cx, id, &ID);
@@ -161,7 +167,7 @@ JSAPI_STRICT_PROP(sandbox_setProperty) {
   return JS_FALSE;
 }
 
-void sandbox_finalize(JSFreeOp* fop, JSObject* obj) {
+void sandbox_finalize(JSFreeOp* /*fop*/, JSObject* obj) {
   sandbox* box = (sandbox*)JS_GetPrivate(obj);
   if (box) {
     // bob1.8.8		JS_SetContextThread(box->context);
@@ -226,7 +232,11 @@ JSAPI_FUNC(sandbox_isIncluded) {
 }
 
 JSAPI_FUNC(sandbox_clear) {
-  sandbox* box = (sandbox*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &sandbox_class, NULL);
+  (cx);
+  (argc);
+  (vp);
+
+  //sandbox* box = (sandbox*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &sandbox_class, NULL);
   // if(box)
   //	JS_ClearScope(cx, box->innerObj);
   return JS_TRUE;

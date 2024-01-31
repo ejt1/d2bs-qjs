@@ -76,6 +76,9 @@ set(D2BS_SRCS
   "version.rc")
 
 add_library(D2BS SHARED ${D2BS_SRCS})
+
+target_compile_options(D2BS PRIVATE /W4)
+
 target_include_directories(D2BS PRIVATE
 	"${CMAKE_CURRENT_SOURCE_DIR}/src"
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/Diablo II"

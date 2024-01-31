@@ -38,7 +38,7 @@ class TeleportPathReducer : public PathReducer {
     }
   }
 
-  void Reduce(const PointList& in, PointList& out, bool abs) {
+  void Reduce(const PointList& in, PointList& out, bool /*abs*/) {
     PointList::const_iterator it = in.begin(), end = in.end();
     out.push_back(*it);
     while (it != end) {
@@ -135,7 +135,7 @@ class TeleportPathReducer : public PathReducer {
                map->SpaceHasFlag(ActMap::BlockWalk, pt, abs) ||
                map->SpaceHasFlag(ActMap::BlockPlayer, pt, abs);*/
   }
-  int GetPenalty(const Point& pt, bool abs) {
+  int GetPenalty(const Point& /*pt*/, bool /*abs*/) {
     return 0;
   }
   /*void MutatePoint(Point & pt, bool abs)
