@@ -162,12 +162,6 @@ class Script {
   inline DWORD threadId() {
     return m_threadId;
   }
-  inline DWORD& LastGC() {
-    return m_LastGC;
-  }
-  inline HANDLE& eventSignal() {
-    return m_eventSignal;
-  }
 
   int GetExecutionCount(void);
   DWORD GetThreadId(void);
@@ -199,6 +193,8 @@ class Script {
   void FireEvent(Event*);
 
   void ClearEventList();
+  // blocks the executing thread for X milliseconds, keeping the event loop running during this time
+  void BlockThread(DWORD delay);
   void ProcessAllEvents();
   void ProcessOneEvent();
 

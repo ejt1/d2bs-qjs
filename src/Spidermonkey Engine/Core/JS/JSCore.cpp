@@ -136,23 +136,24 @@ JSAPI_FUNC(my_delay) {
   int amt = nDelay - (GetTickCount() - start);
 
   if (nDelay) {        // loop so we can exec events while in delay
-    while (amt > 0) {  // had a script deadlock here, make sure were positve with amt
-      WaitForSingleObjectEx(script->eventSignal(), amt, true);
-      ResetEvent(script->eventSignal());
-      if (script->IsAborted())
-        break;
+    //while (amt > 0) {  // had a script deadlock here, make sure were positve with amt
+    //  WaitForSingleObjectEx(script->eventSignal(), amt, true);
+    //  ResetEvent(script->eventSignal());
+    //  if (script->IsAborted())
+    //    break;
 
-      script->ProcessAllEvents();
-      if (JS_GetGCParameter(script->GetRuntime(), JSGC_BYTES) - script->LastGC() > 524288)  // gc every .5 mb
-      {
-        JS_GC(JS_GetRuntime(cx));
-        script->LastGC() = JS_GetGCParameter(script->GetRuntime(), JSGC_BYTES);
-      }
-      /*else
-              JS_MaybeGC(cx);*/
-      amt = nDelay - (GetTickCount() - start);
-      // SleepEx(10,true);	// ex for delayed setTimer
-    }
+    //  script->ProcessAllEvents();
+    //  if (JS_GetGCParameter(script->GetRuntime(), JSGC_BYTES) - script->LastGC() > 524288)  // gc every .5 mb
+    //  {
+    //    JS_GC(JS_GetRuntime(cx));
+    //    script->LastGC() = JS_GetGCParameter(script->GetRuntime(), JSGC_BYTES);
+    //  }
+    //  /*else
+    //          JS_MaybeGC(cx);*/
+    //  amt = nDelay - (GetTickCount() - start);
+    //  // SleepEx(10,true);	// ex for delayed setTimer
+    //}
+    script->BlockThread(nDelay);
 
   } else
     JS_ReportWarning(cx, "delay(0) called, argument must be >= 1");

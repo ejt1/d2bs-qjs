@@ -447,6 +447,28 @@ void Script::ClearEventList() {
   ClearAllEvents();
 }
 
+void Script::BlockThread(DWORD delay) {
+  DWORD start = GetTickCount();
+  int amt = delay - (GetTickCount() - start);
+  if (IsAborted()) {
+    return;
+  }
+
+  while (amt > 0) {  // had a script deadlock here, make sure were positve with amt
+    WaitForSingleObjectEx(m_eventSignal, amt, true);
+    ResetEvent(m_eventSignal);
+    ProcessAllEvents();
+
+    if (JS_GetGCParameter(m_runtime, JSGC_BYTES) - m_LastGC > 524288)  // gc every .5 mb
+    {
+      JS_GC(m_runtime);
+      m_LastGC = JS_GetGCParameter(m_runtime, JSGC_BYTES);
+    }
+
+    amt = delay - (GetTickCount() - start);
+  }
+}
+
 void Script::ProcessAllEvents() {
   while (m_EventList.size() > 0 && !!!(JSBool)(IsAborted() || ((GetState() == InGame) && ClientState() == ClientStateMenu))) {
     ProcessOneEvent();
