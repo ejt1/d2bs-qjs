@@ -156,9 +156,7 @@ class Script {
   inline FunctionMap& functions() {
     return m_functions;
   }
-  inline bool& hasActiveCX() {
-    return m_hasActiveCX;
-  }
+
   inline DWORD threadId() {
     return m_threadId;
   }
@@ -198,6 +196,8 @@ class Script {
   void ProcessAllEvents();
   void ProcessOneEvent();
 
+  void OnDestroyContext(JSContext* ctx);
+
  private:
   std::wstring m_fileName;
   int m_execCount;
@@ -234,6 +234,6 @@ struct RUNCOMMANDSTRUCT {
 DWORD WINAPI ScriptThread(void* data);
 
 JSBool operationCallback(JSContext* cx);
-JSBool contextCallback(JSContext* cx, uint contextOp);
+JSBool contextCallback(JSContext* ctx, uint contextOp);
 void reportError(JSContext* cx, const char* message, JSErrorReport* report);
 bool ExecScriptEvent(Event* evt, bool clearList);

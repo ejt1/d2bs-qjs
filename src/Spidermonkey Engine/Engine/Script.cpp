@@ -483,6 +483,12 @@ void Script::ProcessOneEvent() {
   ExecScriptEvent(evt, false);
 }
 
+void Script::OnDestroyContext(JSContext* ctx) {
+  m_hasActiveCX = false;
+  ClearEventList();
+  Genhook::Clean(this);
+}
+
 #ifdef DEBUG
 typedef struct tagTHREADNAME_INFO {
   DWORD dwType;      // must be 0x1000
@@ -541,23 +547,23 @@ JSBool operationCallback(JSContext* cx) {
   }
 }
 
-JSBool contextCallback(JSContext* cx, uint contextOp) {
+JSBool contextCallback(JSContext* ctx, uint contextOp) {
   if (contextOp == JSCONTEXT_NEW) {
-    JS_BeginRequest(cx);
+    JS_BeginRequest(ctx);
 
-    JS_SetErrorReporter(cx, reportError);
-    JS_SetOperationCallback(cx, operationCallback);
+    JS_SetErrorReporter(ctx, reportError);
+    JS_SetOperationCallback(ctx, operationCallback);
 
-    JS_SetVersion(cx, JSVERSION_LATEST);
-    JS_SetOptions(cx, JSOPTION_METHODJIT | JSOPTION_TYPE_INFERENCE | JSOPTION_ION | JSOPTION_VAROBJFIX | JSOPTION_ASMJS | JSOPTION_STRICT);
+    JS_SetVersion(ctx, JSVERSION_LATEST);
+    JS_SetOptions(ctx, JSOPTION_METHODJIT | JSOPTION_TYPE_INFERENCE | JSOPTION_ION | JSOPTION_VAROBJFIX | JSOPTION_ASMJS | JSOPTION_STRICT);
 
     // JS_SetGCZeal(cx, 2, 1);
-    JSObject* globalObject = JS_NewGlobalObject(cx, &global_obj, NULL);
-    JS_SetGCParameter(JS_GetRuntime(cx), JSGC_MODE, 2);
+    JSObject* globalObject = JS_NewGlobalObject(ctx, &global_obj, NULL);
+    JS_SetGCParameter(JS_GetRuntime(ctx), JSGC_MODE, 2);
 
-    if (JS_InitStandardClasses(cx, globalObject) == JS_FALSE)
+    if (JS_InitStandardClasses(ctx, globalObject) == JS_FALSE)
       return JS_FALSE;
-    if (JS_DefineFunctions(cx, globalObject, global_funcs) == JS_FALSE)
+    if (JS_DefineFunctions(ctx, globalObject, global_funcs) == JS_FALSE)
       return JS_FALSE;
 
     myUnit* lpUnit = new myUnit;
@@ -571,28 +577,26 @@ JSBool contextCallback(JSContext* cx, uint contextOp) {
     lpUnit->_dwPrivateType = PRIVATE_UNIT;
 
     for (JSClassSpec* entry = global_classes; entry->classp != NULL; entry++)
-      sScriptEngine->InitClass(cx, globalObject, entry->classp, entry->methods, entry->properties, entry->static_methods, entry->static_properties);
+      sScriptEngine->InitClass(ctx, globalObject, entry->classp, entry->methods, entry->properties, entry->static_methods, entry->static_properties);
 
-    JSObject* meObject = BuildObject(cx, &unit_class, unit_methods, me_props, lpUnit);
+    JSObject* meObject = BuildObject(ctx, &unit_class, unit_methods, me_props, lpUnit);
     if (!meObject)
       return JS_FALSE;
 
-    if (JS_DefineProperty(cx, globalObject, "me", OBJECT_TO_JSVAL(meObject), NULL, NULL, JSPROP_PERMANENT_VAR) == JS_FALSE)
+    if (JS_DefineProperty(ctx, globalObject, "me", OBJECT_TO_JSVAL(meObject), NULL, NULL, JSPROP_PERMANENT_VAR) == JS_FALSE)
       return JS_FALSE;
 
-#define DEFCONST(vp) sScriptEngine->DefineConstant(cx, globalObject, #vp, vp)
+#define DEFCONST(vp) sScriptEngine->DefineConstant(ctx, globalObject, #vp, vp)
     DEFCONST(FILE_READ);
     DEFCONST(FILE_WRITE);
     DEFCONST(FILE_APPEND);
 #undef DEFCONST
 
-    JS_EndRequest(cx);
+    JS_EndRequest(ctx);
   }
   if (contextOp == JSCONTEXT_DESTROY) {
-    Script* script = (Script*)JS_GetContextPrivate(cx);
-    script->hasActiveCX() = false;
-    script->ClearEventList();
-    Genhook::Clean(script);
+    Script* script = (Script*)JS_GetContextPrivate(ctx);
+    script->OnDestroyContext(ctx);
   }
   return JS_TRUE;
 }
