@@ -1,10 +1,12 @@
-BasedOnStyle: llvm
 Language: Cpp
-SortIncludes: false
-IndentWidth: 4
-ColumnLimit: 170
-AllowShortFunctionsOnASingleLine: None
-# Force pointers to the type for C++.
-DerivePointerAlignment: false
-PointerAlignment: Left
+BasedOnStyle: Google
 
+AllowShortFunctionsOnASingleLine: None
+ColumnLimit: 170
+DerivePointerAlignment: false # make sure * and & align on the left
+IndentWidth: 2
+QualifierAlignment: Left # force east const alignment 
+PointerAlignment: Left
+SortIncludes: false
+TabWidth: 2
+UseTab: Never
