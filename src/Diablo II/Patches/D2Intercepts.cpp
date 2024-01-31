@@ -354,7 +354,7 @@ HANDLE __stdcall CacheFix(LPCSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShar
     CHAR Def[100] = "";
 
     if (strlen(szTitle) > 1) {
-      sprintf_s(Def, "\\bncache%d.dat", szTitle);
+      sprintf_s(Def, "\\bncache%s.dat", szTitle);
       strcat_s(path, Def);
     } else {
       srand(GetTickCount());

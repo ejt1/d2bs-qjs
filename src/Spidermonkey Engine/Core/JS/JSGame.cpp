@@ -1300,7 +1300,7 @@ JSAPI_FUNC(my_getMouseCoords) {
 
   JSObject* pObj = NULL;
 
-  POINT Coords = {*p_D2CLIENT_MouseX, *p_D2CLIENT_MouseY};
+  POINT Coords = {static_cast<LONG>(*p_D2CLIENT_MouseX), static_cast<LONG>(*p_D2CLIENT_MouseY)};
 
   if (nFlag) {
     Coords.x += *p_D2CLIENT_ViewportX;

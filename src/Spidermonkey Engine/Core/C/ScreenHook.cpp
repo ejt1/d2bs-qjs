@@ -306,7 +306,7 @@ void TextHook::Draw(void) {
   if (GetIsVisible() && GetX() != -1 && GetY() != -1 && text) {
     uint x = GetX(), y = GetY(), w = CalculateTextLen(text, font).x;
     x -= (alignment != Center ? (alignment != Right ? 0 : w) : w / 2);
-    POINT loc = {x, y};
+    POINT loc = {static_cast<LONG>(x), static_cast<LONG>(y)};
     if (GetIsAutomap()) {
       loc = ScreenToAutomap(x, y);
     }
@@ -339,7 +339,7 @@ void ImageHook::Draw(void) {
   if (GetIsVisible() && GetX() != -1 && GetY() != -1 && GetImage() != NULL && image != NULL) {
     uint x = GetX(), y = GetY(), w = image->cells[0]->width;
     x += (alignment != Left ? (alignment != Right ? 0 : -1 * (w / 2)) : w / 2);
-    POINT loc = {x, y};
+    POINT loc = {static_cast<LONG>(x), static_cast<LONG>(y)};
     if (GetIsAutomap()) {
       loc = ScreenToAutomap(x, y);
     }
@@ -380,8 +380,8 @@ void LineHook::Draw(void) {
   Lock();
   if (GetIsVisible() && GetX() != -1 && GetY() != -1) {
     uint x = GetX(), y = GetY(), x2 = GetX2(), y2 = GetY2();
-    POINT loc = {x, y};
-    POINT sz = {x2, y2};
+    POINT loc = {static_cast<LONG>(x), static_cast<LONG>(y)};
+    POINT sz = {static_cast<LONG>(x2), static_cast<LONG>(y2)};
     if (GetIsAutomap()) {
       loc = ScreenToAutomap(x, y);
       sz = ScreenToAutomap(x2, y2);
@@ -402,8 +402,8 @@ void BoxHook::Draw(void) {
     } else if (alignment == Right) {
       x += x2 / 2;
     }
-    POINT loc = {x, y};
-    POINT sz = {x + x2, y + y2};
+    POINT loc = {static_cast<LONG>(x), static_cast<LONG>(y)};
+    POINT sz = {static_cast<LONG>(x + x2), static_cast<LONG>(y + y2)};
     if (GetIsAutomap()) {
       loc = ScreenToAutomap(x, y);
       sz = ScreenToAutomap(x + x2, y + y2);
@@ -431,7 +431,7 @@ void FrameHook::Draw(void) {
     } else if (alignment == Right) {
       x += x2 / 2;
     }
-    RECT rect = {x, y, x + x2, y + y2};
+    RECT rect = {static_cast<LONG>(x), static_cast<LONG>(y), static_cast<LONG>(x + x2), static_cast<LONG>(y + y2)};
     EnterCriticalSection(&Vars.cFrameHookSection);
     D2GFX_DrawFrame(&rect);
     LeaveCriticalSection(&Vars.cFrameHookSection);

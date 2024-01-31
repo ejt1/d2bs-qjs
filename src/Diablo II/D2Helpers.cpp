@@ -402,7 +402,8 @@ void D2CLIENT_Interact(UnitAny* pUnit, DWORD dwMoveType) {
   if (!D2CLIENT_FindUnit(pUnit->dwUnitId, pUnit->dwType))
     return;
 
-  UnitInteraction pInteract = {dwMoveType, D2CLIENT_GetPlayerUnit(), pUnit, D2CLIENT_GetUnitX(pUnit), D2CLIENT_GetUnitY(pUnit), 0, 0};
+  UnitInteraction pInteract = {dwMoveType, D2CLIENT_GetPlayerUnit(), pUnit, static_cast<DWORD>(D2CLIENT_GetUnitX(pUnit)), static_cast<DWORD>(D2CLIENT_GetUnitY(pUnit)), 0,
+                               0};
 
   D2CLIENT_Interact_STUB(&pInteract);
 }
@@ -521,7 +522,7 @@ CellFile* LoadCellFile(const char* lpszPath, DWORD bMPQ) {
 }
 
 CellFile* LoadCellFile(const wchar_t* lpszPath, DWORD bMPQ) {
-  if (bMPQ == true) {
+  if (bMPQ != 0) {
     Log(L"Cannot specify wide character path for MPQ: %s", lpszPath);
     return NULL;
   }
@@ -558,7 +559,7 @@ CellFile* LoadCellFile(const wchar_t* lpszPath, DWORD bMPQ) {
 
 POINT GetScreenSize() {
   // HACK: p_D2CLIENT_ScreenSize is wrong for out of game, which is hardcoded to 800x600
-  POINT ingame = {*p_D2CLIENT_ScreenSizeX, *p_D2CLIENT_ScreenSizeY}, oog = {800, 600}, p = {0};
+  POINT ingame = {static_cast<LONG>(*p_D2CLIENT_ScreenSizeX), static_cast<LONG>(*p_D2CLIENT_ScreenSizeY)}, oog = {800, 600}, p = {0};
   if (ClientState() == ClientStateMenu)
     p = oog;
   else

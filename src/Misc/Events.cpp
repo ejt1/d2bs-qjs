@@ -119,7 +119,7 @@ bool __fastcall MouseClickCallback(Script* script, void* argv, uint argc) {
 }
 
 void MouseClickEvent(int button, POINT pt, bool bUp) {
-  QuadArgHelper helper = {button, pt.x, pt.y, bUp};
+  QuadArgHelper helper = {static_cast<DWORD>(button), static_cast<DWORD>(pt.x), static_cast<DWORD>(pt.y), bUp};
   sScriptEngine->ForEachScript(MouseClickCallback, &helper, 4);
 }
 
@@ -141,7 +141,7 @@ bool __fastcall MouseMoveCallback(Script* script, void* argv, uint argc) {
 void MouseMoveEvent(POINT pt) {
   if (pt.x < 1 || pt.y < 1)
     return;
-  DoubleArgHelper helper = {pt.x, pt.y};
+  DoubleArgHelper helper = {static_cast<DWORD>(pt.x), static_cast<DWORD>(pt.y)};
   sScriptEngine->ForEachScript(MouseMoveCallback, &helper, 2);
 }
 
