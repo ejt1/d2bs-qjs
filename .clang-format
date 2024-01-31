@@ -2,6 +2,7 @@ Language: Cpp
 BasedOnStyle: Google
 
 AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
 ColumnLimit: 170
 DerivePointerAlignment: false # make sure * and & align on the left
 IndentWidth: 2
