@@ -113,6 +113,8 @@ class Script {
   Script(const Script&) = delete;
   Script& operator=(const Script&) = delete;
 
+  bool Start();
+
   void Run(void);
   void Join(void);
   void Pause(void);
@@ -121,7 +123,6 @@ class Script {
   bool IsPaused(void);
   bool IsRunning(void);
   bool IsAborted(void);
-  bool BeginThread(LPTHREAD_START_ROUTINE ThreadFunc);
   void RunCommand(const wchar_t* command);
 
   inline void TriggerOperationCallback(void) {

@@ -79,6 +79,21 @@ Script::~Script(void) {
   DeleteCriticalSection(&m_lock);
 }
 
+bool Script::Start() {
+  EnterCriticalSection(&m_lock);
+  DWORD dwExitCode = STILL_ACTIVE;
+
+  if ((!GetExitCodeThread(m_threadHandle, &dwExitCode) || dwExitCode != STILL_ACTIVE) &&
+      (m_threadHandle = CreateThread(0, 0, ScriptThread, this, 0, &m_threadId)) != NULL) {
+    LeaveCriticalSection(&m_lock);
+    return true;
+  }
+
+  m_threadHandle = INVALID_HANDLE_VALUE;
+  LeaveCriticalSection(&m_lock);
+  return false;
+}
+
 void Script::Run(void) {
   try {
     m_runtime = JS_NewRuntime(Vars.dwMemUsage, JS_NO_HELPER_THREADS);
@@ -235,21 +250,6 @@ bool Script::IsRunning(void) {
 
 bool Script::IsAborted() {
   return m_isAborted;
-}
-
-bool Script::BeginThread(LPTHREAD_START_ROUTINE ThreadFunc) {
-  EnterCriticalSection(&m_lock);
-  DWORD dwExitCode = STILL_ACTIVE;
-
-  if ((!GetExitCodeThread(m_threadHandle, &dwExitCode) || dwExitCode != STILL_ACTIVE) &&
-      (m_threadHandle = CreateThread(0, 0, ThreadFunc, this, 0, &m_threadId)) != NULL) {
-    LeaveCriticalSection(&m_lock);
-    return true;
-  }
-
-  m_threadHandle = INVALID_HANDLE_VALUE;
-  LeaveCriticalSection(&m_lock);
-  return false;
 }
 
 void Script::RunCommand(const wchar_t* command) {

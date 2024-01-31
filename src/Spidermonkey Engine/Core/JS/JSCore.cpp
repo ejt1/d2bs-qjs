@@ -172,7 +172,7 @@ JSAPI_FUNC(my_load) {
   Script* newScript = sScriptEngine->NewScript(buf, scriptState, argc - 1, autoBuffer);
 
   if (newScript) {
-    newScript->BeginThread(ScriptThread);
+    newScript->Start();
     // JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(BuildObject(cx, &script_class, script_methods, script_props, newScript->GetContext())));
     JS_SET_RVAL(cx, vp, JSVAL_NULL);
   } else {

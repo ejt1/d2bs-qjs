@@ -128,7 +128,7 @@ BOOL ScriptEngine::Startup(void) {
       m_console = new Script(L"", Command);
     }
     m_scripts[L"console"] = m_console;
-    m_console->BeginThread(ScriptThread);
+    m_console->Start();
     m_state = Running;
     // LeaveCriticalSection(&lock);
     UnLockScriptList("startup - leave");
