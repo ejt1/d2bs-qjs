@@ -14,7 +14,6 @@
 #include "Events.h"
 #include "Helpers.h"
 
-using namespace std;
 // internal ForEachScript helpers
 bool __fastcall DisposeScript(Script* script, void*, uint);
 bool __fastcall StopScript(Script* script, void* argv, uint argc);
@@ -765,7 +764,7 @@ int ScriptEngine::AddDelayedEvent(Event* evt, int freq) {
 }
 
 void ScriptEngine::RemoveDelayedEvent(int key) {
-  list<Event*>::iterator it;
+  std::list<Event*>::iterator it;
   it = DelayedExecList.begin();
   while (it != DelayedExecList.end()) {
     if (*(DWORD*)(*it)->arg1 == key) {

@@ -260,9 +260,7 @@ void ActMap::FindRoomTileExits(Room2* room, ExitArray& exits) const {
 }
 
 void ActMap::FindRoomLinkageExits(ExitArray& exits) const {
-  using namespace std;
-
-  multimap<int, std::pair<Point, std::pair<Point, int>>> exitMap;  // <level, <rooms[i], <middlepoint, size> > >
+  std::multimap<int, std::pair<Point, std::pair<Point, int>>> exitMap;  // <level, <rooms[i], <middlepoint, size> > >
 
   for (Room2* room = level->pRoom2First; room; room = room->pRoom2Next) {
     Room2** rooms = room->pRoom2Near;

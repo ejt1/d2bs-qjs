@@ -11,8 +11,6 @@
 #include "D2BS.h"
 #include "MPQStats.h"
 
-using namespace std;
-
 Variables Vars = {};
 
 DWORD ReassignPlayerHandler(BYTE* pPacket, DWORD dwSize) {

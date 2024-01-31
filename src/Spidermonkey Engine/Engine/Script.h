@@ -104,7 +104,11 @@ struct Event {
 };
 
 class Script {
- private:
+  friend class ScriptEngine;
+
+  Script(const wchar_t* file, ScriptState state, uint argc = 0, JSAutoStructuredCloneBuffer** argv = NULL);
+  ~Script();
+
   std::wstring fileName;
   int execCount;
   ScriptState scriptState;
@@ -124,14 +128,11 @@ class Script {
 
   CRITICAL_SECTION lock;
 
-  // Script(const char* file, ScriptState state, uint argc = 0, JSAutoStructuredCloneBuffer** argv = NULL);
-  Script(const wchar_t* file, ScriptState state, uint argc = 0, JSAutoStructuredCloneBuffer** argv = NULL);
-  Script(const Script&);
-  ~Script(void);
-
  public:
+  Script(const Script&) = delete;
+  Script& operator=(const Script&) = delete;
+
   DWORD threadId;
-  friend class ScriptEngine;
   FunctionMap functions;
   void Run(void);
   void Join(void);

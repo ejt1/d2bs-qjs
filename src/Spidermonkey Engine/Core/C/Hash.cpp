@@ -3,8 +3,6 @@
 #include "D2Helpers.h"
 #include "Hash.h"
 
-using namespace std;
-
 char* HashString(char* dataIn, ALG_ID algo) {
   // set up the crypto environment
   HCRYPTPROV provider;

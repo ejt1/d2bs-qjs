@@ -3,7 +3,6 @@
 #include "ScreenHook.h"
 #include "Script.h"
 #include "File.h"
-using namespace std;
 
 void hook_finalize(JSFreeOp* fop, JSObject* obj) {
   Genhook* hook = (Genhook*)JS_GetPrivate(obj);

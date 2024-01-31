@@ -10,8 +10,6 @@
 #include "ScriptEngine.h"
 #include "D2BS.h"
 
-using namespace std;
-
 Script::Script(const wchar_t* file, ScriptState state, uint argc, JSAutoStructuredCloneBuffer** argv)
     : context(NULL),
       globalObject(NULL),
@@ -33,7 +31,7 @@ Script::Script(const wchar_t* file, ScriptState state, uint argc, JSAutoStructur
   eventSignal = CreateEvent(nullptr, true, false, nullptr);
 
   if (scriptState == Command && wcslen(file) < 1) {
-    fileName = wstring(L"Command Line");
+    fileName = std::wstring(L"Command Line");
   } else {
     if (_waccess(file, 0) != 0) {
       DEBUG_LOG(file);
@@ -46,7 +44,7 @@ Script::Script(const wchar_t* file, ScriptState state, uint argc, JSAutoStructur
       throw std::exception("Could not dup filename");
 
     _wcslwr_s(tmpName, wcslen(file) + 1);
-    fileName = wstring(tmpName);
+    fileName = std::wstring(tmpName);
     replace(fileName.begin(), fileName.end(), L'/', L'\\');
     free(tmpName);
   }
@@ -295,7 +293,7 @@ bool Script::IsIncluded(const wchar_t* file) {
 
   _wcslwr_s(fname, wcslen(fname) + 1);
   StringReplace(fname, '/', '\\', wcslen(fname));
-  count = includes.count(wstring(fname));
+  count = includes.count(std::wstring(fname));
   free(fname);
 
   return !!count;
@@ -311,7 +309,7 @@ bool Script::Include(const wchar_t* file) {
   StringReplace(fname, L'/', L'\\', wcslen(fname));
 
   // don't invoke the string ctor more than once...
-  wstring currentFileName = wstring(fname);
+  std::wstring currentFileName = std::wstring(fname);
   // ignore already included, 'in-progress' includes, and self-inclusion
   if (!!includes.count(fname) || !!inProgress.count(fname) || (currentFileName.compare(fileName.c_str()) == 0)) {
     LeaveCriticalSection(&lock);

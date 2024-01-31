@@ -27,8 +27,6 @@
 #include "File.h"
 #include "Helpers.h"
 
-using namespace std;
-
 EMPTY_CTOR(filetools)
 
 JSAPI_FUNC(filetools_remove) {
