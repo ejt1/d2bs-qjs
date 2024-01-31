@@ -26,9 +26,6 @@ class ScriptEngine {
   ScriptEngine(const ScriptEngine&) = delete;
   ScriptEngine& operator=(const ScriptEngine&) = delete;
 
-  ScriptMap scripts;
-
-  CRITICAL_SECTION lock;
   BOOL Startup(void);
   void Shutdown(void);
   EngineState GetState(void) {
@@ -44,6 +41,9 @@ class ScriptEngine {
   void LockScriptList(char* loc);
   void UnLockScriptList(char* loc);
 
+  ScriptMap& scripts() {
+    return m_scripts;
+  }
   bool ForEachScript(ScriptCallback callback, void* argv, uint argc);
   unsigned int GetCount(bool active = true, bool unexecuted = false);
 
@@ -61,6 +61,8 @@ class ScriptEngine {
   std::list<Event*> m_DelayedExecList;
   int m_delayedExecKey;
   CRITICAL_SECTION m_scriptListLock;
+  ScriptMap m_scripts;
+  CRITICAL_SECTION m_lock;
 };
 
 #define sScriptEngine ScriptEngine::GetInstance()

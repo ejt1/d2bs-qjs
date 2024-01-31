@@ -55,10 +55,10 @@ JSAPI_FUNC(script_getNext) {
   sScriptEngine->LockScriptList("scrip.getNext");
   // EnterCriticalSection(&sScriptEngine->lock);
 
-  for (ScriptMap::iterator it = sScriptEngine->scripts.begin(); it != sScriptEngine->scripts.end(); it++) {
+  for (ScriptMap::iterator it = sScriptEngine->scripts().begin(); it != sScriptEngine->scripts().end(); it++) {
     if (it->second == iterp) {
       it++;
-      if (it == sScriptEngine->scripts.end())
+      if (it == sScriptEngine->scripts().end())
         break;
       iterp = it->second;
       JS_SetPrivate(cx, JS_THIS_OBJECT(cx, vp), iterp);
@@ -174,10 +174,10 @@ JSAPI_FUNC(my_getScript) {
     else
       return JS_TRUE;
   } else {
-    if (sScriptEngine->scripts.size() > 0) {
+    if (sScriptEngine->scripts().size() > 0) {
       //	EnterCriticalSection(&sScriptEngine->lock);
       sScriptEngine->LockScriptList("getScript");
-      iterp = sScriptEngine->scripts.begin()->second;
+      iterp = sScriptEngine->scripts().begin()->second;
       sScriptEngine->UnLockScriptList("getScript");
       //	LeaveCriticalSection(&sScriptEngine->lock);
     }
@@ -204,7 +204,7 @@ JSAPI_FUNC(my_getScripts) {
   JS_AddRoot(cx, &pReturnArray);
   sScriptEngine->LockScriptList("getScripts");
 
-  for (ScriptMap::iterator it = sScriptEngine->scripts.begin(); it != sScriptEngine->scripts.end(); it++) {
+  for (ScriptMap::iterator it = sScriptEngine->scripts().begin(); it != sScriptEngine->scripts().end(); it++) {
     JSObject* res = BuildObject(cx, &script_class, script_methods, script_props, it->second);
     jsval a = OBJECT_TO_JSVAL(res);
     JS_SetElement(cx, pReturnArray, dwArrayCount, &a);

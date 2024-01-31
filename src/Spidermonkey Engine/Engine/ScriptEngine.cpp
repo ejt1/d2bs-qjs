@@ -16,7 +16,7 @@
 bool __fastcall DisposeScript(Script* script, void*, uint);
 bool __fastcall StopScript(Script* script, void* argv, uint argc);
 
-ScriptEngine::ScriptEngine() : m_console(NULL), scripts(), m_state(Stopped), lock({0}), m_scriptListLock({0}), m_DelayedExecList(), m_delayedExecKey() {
+ScriptEngine::ScriptEngine() : m_console(NULL), m_scripts(), m_state(Stopped), m_lock({0}), m_scriptListLock({0}), m_DelayedExecList(), m_delayedExecKey() {
 }
 
 ScriptEngine::~ScriptEngine() {
@@ -35,15 +35,15 @@ Script* ScriptEngine::CompileFile(const wchar_t* file, ScriptState _state, uint 
   _wcslwr_s(fileName, wcslen(file) + 1);
 
   try {
-    if (scripts.count(fileName))
-      scripts[fileName]->Stop();
+    if (m_scripts.count(fileName))
+      m_scripts[fileName]->Stop();
 
     Script* script = new Script(fileName, _state, argc, argv);
-    scripts[fileName] = script;
+    m_scripts[fileName] = script;
     free(fileName);
     return script;
   } catch (std::exception e) {
-    LeaveCriticalSection(&lock);
+    LeaveCriticalSection(&m_lock);
     wchar_t* what = AnsiToUnicode(e.what());
     Print(what);
     delete[] what;
@@ -72,8 +72,8 @@ void ScriptEngine::DisposeScript(Script* script) {
 
   const wchar_t* nFilename = script->GetFilename();
 
-  if (scripts.count(nFilename))
-    scripts.erase(nFilename);
+  if (m_scripts.count(nFilename))
+    m_scripts.erase(nFilename);
 
   UnLockScriptList("DisposeScript");
 
@@ -100,8 +100,8 @@ unsigned int ScriptEngine::GetCount(bool active, bool unexecuted) {
     return 0;
   LockScriptList("getCount");
   // EnterCriticalSection(&lock);
-  int count = scripts.size();
-  for (ScriptMap::iterator it = scripts.begin(); it != scripts.end(); it++) {
+  int count = m_scripts.size();
+  for (ScriptMap::iterator it = m_scripts.begin(); it != m_scripts.end(); it++) {
     if (!active && it->second->IsRunning() && !it->second->IsAborted())
       count--;
     if (!unexecuted && it->second->GetExecutionCount() == 0 && !it->second->IsRunning())
@@ -127,7 +127,7 @@ BOOL ScriptEngine::Startup(void) {
     } else {
       m_console = new Script(L"", Command);
     }
-    scripts[L"console"] = m_console;
+    m_scripts[L"console"] = m_console;
     m_console->BeginThread(ScriptThread);
     m_state = Running;
     // LeaveCriticalSection(&lock);
@@ -148,12 +148,12 @@ void ScriptEngine::Shutdown(void) {
     // clear all scripts now that they're stopped
     ForEachScript(::DisposeScript, NULL, 0);
 
-    if (!scripts.empty())
-      scripts.clear();
+    if (!m_scripts.empty())
+      m_scripts.clear();
 
     UnLockScriptList("shutdown");
     // LeaveCriticalSection(&lock);
-    DeleteCriticalSection(&lock);
+    DeleteCriticalSection(&m_lock);
     m_state = Stopped;
   }
 }
@@ -195,7 +195,7 @@ void ScriptEngine::FlushCache(void) {
 }
 
 bool ScriptEngine::ForEachScript(ScriptCallback callback, void* argv, uint argc) {
-  if (callback == NULL || scripts.size() < 1)
+  if (callback == NULL || m_scripts.size() < 1)
     return false;
   bool block = false;
   // EnterCriticalSection(&lock);
@@ -204,7 +204,7 @@ bool ScriptEngine::ForEachScript(ScriptCallback callback, void* argv, uint argc)
 
   // damn std::list not supporting operator[]...
   std::vector<Script*> list;
-  for (ScriptMap::iterator it = scripts.begin(); it != scripts.end(); it++) list.push_back(it->second);
+  for (ScriptMap::iterator it = m_scripts.begin(); it != m_scripts.end(); it++) list.push_back(it->second);
 
   UnLockScriptList("forEachScript");
 
