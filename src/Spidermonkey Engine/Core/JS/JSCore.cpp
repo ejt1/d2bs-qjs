@@ -155,9 +155,9 @@ JSAPI_FUNC(my_load) {
     return JS_FALSE;
   }
 
-  ScriptState scriptState = script->GetState();
-  if (scriptState == Command)
-    scriptState = (ClientState() == ClientStateInGame ? InGame : OutOfGame);
+  ScriptMode scriptState = script->GetMode();
+  if (scriptState == kScriptModeCommand)
+    scriptState = (ClientState() == ClientStateInGame ? kScriptModeGame : kScriptModeMenu);
 
   wchar_t buf[_MAX_PATH + _MAX_FNAME];
   swprintf_s(buf, _countof(buf), L"%s\\%s", Vars.szScriptPath, file);

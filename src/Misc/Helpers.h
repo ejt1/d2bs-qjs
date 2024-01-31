@@ -17,7 +17,7 @@ bool SwitchToProfile(const wchar_t* profile);
 void InitSettings(void);
 bool InitHooks(void);
 bool ExecCommand(const wchar_t* command);
-bool StartScript(const wchar_t* script, ScriptState state);
+bool StartScript(const wchar_t* script, ScriptMode mode);
 void Reload(void);
 bool ProcessCommand(const wchar_t* command, bool unprocessedIsCommand);
 void ResumeProcess();

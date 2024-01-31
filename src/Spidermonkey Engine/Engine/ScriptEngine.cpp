@@ -27,7 +27,7 @@ ScriptEngine* ScriptEngine::GetInstance() {
   return &instance;
 }
 
-Script* ScriptEngine::NewScript(const wchar_t* file, ScriptState _state, uint argc, JSAutoStructuredCloneBuffer** argv, bool /*recompile*/) {
+Script* ScriptEngine::NewScript(const wchar_t* file, ScriptMode mode, uint argc, JSAutoStructuredCloneBuffer** argv, bool /*recompile*/) {
   if (GetState() != Running)
     return NULL;
 
@@ -38,7 +38,7 @@ Script* ScriptEngine::NewScript(const wchar_t* file, ScriptState _state, uint ar
     if (m_scripts.count(fileName))
       m_scripts[fileName]->Stop();
 
-    Script* script = new Script(fileName, _state, argc, argv);
+    Script* script = new Script(fileName, mode, argc, argv);
     m_scripts[fileName] = script;
     free(fileName);
     return script;
@@ -123,9 +123,9 @@ BOOL ScriptEngine::Startup(void) {
     if (wcslen(Vars.szConsole) > 0) {
       wchar_t file[_MAX_FNAME + _MAX_PATH];
       swprintf_s(file, _countof(file), L"%s\\%s", Vars.szScriptPath, Vars.szConsole);
-      m_console = new Script(file, Command);
+      m_console = new Script(file, kScriptModeCommand);
     } else {
-      m_console = new Script(L"", Command);
+      m_console = new Script(L"", kScriptModeCommand);
     }
     m_scripts[L"console"] = m_console;
     m_console->Start();
@@ -238,13 +238,13 @@ bool __fastcall DisposeScript(Script* script, void*, uint) {
 
 bool __fastcall StopScript(Script* script, void* argv, uint /*argc*/) {
   script->TriggerOperationCallback();
-  if (script->GetState() != Command)
+  if (script->GetMode() != kScriptModeCommand)
     script->Stop(*(bool*)(argv), sScriptEngine->GetState() == Stopping);
   return true;
 }
 
 bool __fastcall StopIngameScript(Script* script, void*, uint) {
-  if (script->GetState() == InGame)
+  if (script->GetMode() == kScriptModeGame)
     script->Stop(true);
   return true;
 }

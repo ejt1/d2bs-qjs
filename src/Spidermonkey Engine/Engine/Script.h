@@ -10,7 +10,6 @@
 #include "AutoRoot.h"
 #include "JSUnit.h"
 #include "Events.h"
-enum ScriptState { InGame, OutOfGame, Command };
 
 class Script;
 
@@ -103,10 +102,20 @@ struct Event {
   };
 };
 
+enum ScriptMode { kScriptModeGame, kScriptModeMenu, kScriptModeCommand };
+
+enum ScriptState {
+  kScriptStateUninitialized,
+  kScriptStateStarted,
+  kScriptStateRunning,
+  kScriptStateRequestStop,
+  kScriptStateStopped,
+};
+
 class Script {
   friend class ScriptEngine;
 
-  Script(const wchar_t* file, ScriptState state, uint argc = 0, JSAutoStructuredCloneBuffer** argv = NULL);
+  Script(const wchar_t* file, ScriptMode mode, uint argc = 0, JSAutoStructuredCloneBuffer** argv = NULL);
   ~Script();
 
  public:
@@ -114,13 +123,12 @@ class Script {
   Script& operator=(const Script&) = delete;
 
   bool Start();
+  void Stop(bool force = false, bool reallyForce = false);
+  void Run();
 
-  void Run(void);
   void Join(void);
   void Pause(void);
   void Resume(void);
-  void Stop(bool force = false, bool reallyForce = false);
-  bool IsPaused(void);
   bool IsRunning(void);
   bool IsAborted(void);
   void RunCommand(const wchar_t* command);
@@ -144,8 +152,8 @@ class Script {
   inline JSRuntime* GetRuntime(void) {
     return m_runtime;
   }
-  inline ScriptState GetState(void) {
-    return m_scriptState;
+  inline ScriptMode GetMode(void) {
+    return m_scriptMode;
   }
 
   int GetExecutionCount(void);
@@ -174,13 +182,24 @@ class Script {
 
   void OnDestroyContext();
 
+  // public because PacketEventCallback calls this directly
+  bool HandleEvent(Event* evt, bool clearList);
+
  private:
+  bool Initialize();
+  void RunMain();
+  bool RunEventLoop();
+  void Shutdown();
+
+  static JSBool InterruptHandler(JSContext* ctx);
+
   std::wstring m_fileName;
   int m_execCount;
-  ScriptState m_scriptState;
+  ScriptMode m_scriptMode;
+  std::atomic<ScriptState> m_scriptState;
+  JSRuntime* m_runtime;
   JSContext* m_context;
   JSScript* m_script;
-  JSRuntime* m_runtime;
   myUnit* m_me;
   uint m_argc;
   JSAutoStructuredCloneBuffer** m_argv;
@@ -193,8 +212,8 @@ class Script {
   HANDLE m_eventSignal;
   std::list<Event*> m_EventList;
 
-  JSObject *m_globalObject, *m_scriptObject;
-  bool m_isLocked, m_isPaused, m_isReallyPaused, m_isAborted;
+  JSObject *m_globalObject;
+  bool m_isLocked, m_isPaused, m_isReallyPaused;
 
   IncludeList m_includes, m_inProgress;
 
@@ -210,7 +229,5 @@ struct RUNCOMMANDSTRUCT {
 
 DWORD WINAPI ScriptThread(void* data);
 
-JSBool operationCallback(JSContext* cx);
 JSBool contextCallback(JSContext* ctx, uint contextOp);
 void reportError(JSContext* cx, const char* message, JSErrorReport* report);
-bool ExecScriptEvent(Event* evt, bool clearList);

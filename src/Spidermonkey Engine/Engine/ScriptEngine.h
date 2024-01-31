@@ -34,7 +34,7 @@ class ScriptEngine {
 
   void FlushCache(void);
 
-  Script* NewScript(const wchar_t* file, ScriptState state, uint argc = 0, JSAutoStructuredCloneBuffer** argv = NULL, bool recompile = false);
+  Script* NewScript(const wchar_t* file, ScriptMode mode, uint argc = 0, JSAutoStructuredCloneBuffer** argv = NULL, bool recompile = false);
 
   void RunCommand(const wchar_t* command);
   void DisposeScript(Script* script);

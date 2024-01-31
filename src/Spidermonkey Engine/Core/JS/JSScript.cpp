@@ -30,7 +30,7 @@ JSAPI_PROP(script_getProperty) {
       vp.setString(JS_InternUCString(cx, script->GetShortFilename()));
       break;
     case SCRIPT_GAMETYPE:
-      vp.setBoolean(script->GetState() == InGame ? false : true);
+      vp.setBoolean(script->GetMode() == kScriptModeGame ? false : true);
       break;
     case SCRIPT_RUNNING:
       vp.setBoolean(script->IsRunning());
@@ -105,8 +105,7 @@ JSAPI_FUNC(script_resume) {
   JS_SET_RVAL(cx, vp, JSVAL_NULL);
   Script* script = (Script*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &script_class, NULL);
 
-  if (script->IsPaused())
-    script->Resume();
+  script->Resume();
 
   return JS_TRUE;
 }

@@ -14,16 +14,16 @@
 
 #include <chrono>
 
-Script::Script(const wchar_t* file, ScriptState state, uint argc, JSAutoStructuredCloneBuffer** argv)
-    : m_context(NULL),
+Script::Script(const wchar_t* file, ScriptMode mode, uint argc, JSAutoStructuredCloneBuffer** argv)
+    : m_runtime(NULL),
+      m_context(NULL),
       m_globalObject(NULL),
-      m_scriptObject(NULL),
       m_script(NULL),
       m_execCount(0),
-      m_isAborted(false),
       m_isPaused(false),
       m_isReallyPaused(false),
-      m_scriptState(state),
+      m_scriptMode(mode),
+      m_scriptState(kScriptStateUninitialized),
       m_threadHandle(INVALID_HANDLE_VALUE),
       m_threadId(0),
       m_argc(argc),
@@ -34,7 +34,7 @@ Script::Script(const wchar_t* file, ScriptState state, uint argc, JSAutoStructur
   m_hasActiveCX = false;
   m_eventSignal = CreateEvent(nullptr, true, false, nullptr);
 
-  if (m_scriptState == Command && wcslen(file) < 1) {
+  if (m_scriptMode == kScriptModeCommand && wcslen(file) < 1) {
     m_fileName = std::wstring(L"Command Line");
   } else {
     if (_waccess(file, 0) != 0) {
@@ -55,7 +55,6 @@ Script::Script(const wchar_t* file, ScriptState state, uint argc, JSAutoStructur
 }
 
 Script::~Script(void) {
-  m_isAborted = true;
   m_hasActiveCX = false;
   // JS_SetPendingException(context, JSVAL_NULL);
   if (JS_IsInRequest(m_runtime))
@@ -68,7 +67,6 @@ Script::~Script(void) {
   JS_DestroyRuntime(m_runtime);
 
   m_context = NULL;
-  m_scriptObject = NULL;
   m_globalObject = NULL;
   m_script = NULL;
   CloseHandle(m_eventSignal);
@@ -94,131 +92,16 @@ bool Script::Start() {
   return false;
 }
 
-void Script::Run(void) {
-  try {
-    m_runtime = JS_NewRuntime(Vars.dwMemUsage, JS_NO_HELPER_THREADS);
-    // JS_SetNativeStackQuota(runtime, (size_t)50000);
-    //  JS_SetRuntimeThread(runtime);
-    JS_SetContextCallback(m_runtime, contextCallback);
-
-    m_context = JS_NewContext(m_runtime, 0x800000);
-    if (!m_context)
-      throw std::exception("Couldn't create the context");
-
-    JS_SetErrorReporter(m_context, reportError);
-    JS_SetOperationCallback(m_context, operationCallback);
-    JS_SetOptions(m_context, JSOPTION_STRICT | JSOPTION_VAROBJFIX);
-    JS_SetVersion(m_context, JSVERSION_LATEST);
-    //
-
-    JS_SetContextPrivate(m_context, this);
-
-    JS_BeginRequest(m_context);
-
-    m_globalObject = JS_GetGlobalObject(m_context);
-    jsval meVal = JSVAL_VOID;
-    if (JS_GetProperty(GetContext(), m_globalObject, "me", &meVal) != JS_FALSE) {
-      JSObject* meObject = JSVAL_TO_OBJECT(meVal);
-      m_me = (myUnit*)JS_GetPrivate(GetContext(), meObject);
-    }
-
-    if (m_scriptState == Command) {
-      if (wcslen(Vars.szConsole) > 0) {
-        m_script = JS_CompileFile(m_context, m_globalObject, m_fileName);
-      } else {
-        char* cmd = "function main() {print('ÿc2D2BSÿc0 :: Started Console'); while (true){delay(10000)};}  ";
-        m_script = JS_CompileScript(m_context, m_globalObject, cmd, strlen(cmd), "Command Line", 1);
-      }
-      JS_AddNamedScriptRoot(m_context, &m_script, "console script");
-    } else
-      m_script = JS_CompileFile(m_context, m_globalObject, m_fileName);
-
-    if (!m_script)
-      throw std::exception("Couldn't compile the script");
-
-    JS_EndRequest(m_context);
-    // JS_RemoveScriptRoot(context, &script);
-
-  } catch (std::exception&) {
-    if (m_scriptObject)
-      JS_RemoveRoot(m_context, &m_scriptObject);
-    if (m_context) {
-      JS_EndRequest(m_context);
-      JS_DestroyContext(m_context);
-    }
-    LeaveCriticalSection(&m_lock);
-    throw;
-  }
-  // only let the script run if it's not already running
-  if (IsRunning())
-    return;
-  m_hasActiveCX = true;
-  m_isAborted = false;
-
-  jsval main = INT_TO_JSVAL(1), dummy = INT_TO_JSVAL(1);
-  JS_BeginRequest(GetContext());
-
-  // args passed from load
-  jsval* argvalue = new jsval[m_argc];
-  for (uint i = 0; i < m_argc; i++) m_argv[i]->read(m_context, &argvalue[i]);
-
-  for (uint j = 0; j < m_argc; j++) JS_AddValueRoot(m_context, &argvalue[j]);
-
-  JS_AddValueRoot(GetContext(), &main);
-  JS_AddValueRoot(GetContext(), &dummy);
-  if (JS_ExecuteScript(GetContext(), m_globalObject, m_script, &dummy) != JS_FALSE && JS_GetProperty(GetContext(), m_globalObject, "main", &main) != JS_FALSE &&
-      JSVAL_IS_FUNCTION(GetContext(), main)) {
-    JS_CallFunctionValue(GetContext(), m_globalObject, main, this->m_argc, argvalue, &dummy);
-  }
-  JS_RemoveValueRoot(GetContext(), &main);
-  JS_RemoveValueRoot(GetContext(), &dummy);
-  for (uint j = 0; j < m_argc; j++) JS_RemoveValueRoot(GetContext(), &argvalue[j]);
-
-  /*for(uint i = 0; i < argc; i++)  //crashes spidermonkey cleans itself up?
-  {
-          argv[i]->clear();
-          delete argv[i];
-  }*/
-
-  JS_EndRequest(GetContext());
-
-  m_execCount++;
-  // Stop();
-}
-
-void Script::Join() {
-  EnterCriticalSection(&m_lock);
-  HANDLE hThread = m_threadHandle;
-  LeaveCriticalSection(&m_lock);
-
-  if (hThread != INVALID_HANDLE_VALUE)
-    WaitForSingleObject(hThread, INFINITE);
-}
-
-void Script::Pause(void) {
-  if (!IsAborted() && !IsPaused())
-    m_isPaused = true;
-  TriggerOperationCallback();
-  SetEvent(m_eventSignal);
-}
-
-void Script::Resume(void) {
-  if (!IsAborted() && IsPaused())
-    m_isPaused = false;
-  TriggerOperationCallback();
-  SetEvent(m_eventSignal);
-}
-
 void Script::Stop(bool force, bool reallyForce) {
   // if we've already stopped, just return
-  if (m_isAborted)
+  if (m_scriptState == kScriptStateStopped)
     return;
   EnterCriticalSection(&m_lock);
   // tell everyone else that the script is aborted FIRST
-  m_isAborted = true;
+  m_scriptState = kScriptStateRequestStop;
   m_isPaused = false;
   m_isReallyPaused = false;
-  if (GetState() != Command) {
+  if (m_scriptMode != kScriptModeCommand) {
     const wchar_t* displayName = m_fileName.c_str() + wcslen(Vars.szScriptPath) + 1;
     Print(L"Script %s ended", displayName);
   }
@@ -240,38 +123,51 @@ void Script::Stop(bool force, bool reallyForce) {
   LeaveCriticalSection(&m_lock);
 }
 
-bool Script::IsPaused(void) {
-  return m_isPaused;
+void Script::Run(void) {
+  if (Initialize()) {
+    RunMain();
+  }
+  Shutdown();
+}
+
+void Script::Join() {
+  // TODO(ejt): investigate if locking here is necessary
+  EnterCriticalSection(&m_lock);
+  HANDLE hThread = m_threadHandle;
+  LeaveCriticalSection(&m_lock);
+
+  if (hThread != INVALID_HANDLE_VALUE)
+    WaitForSingleObject(hThread, INFINITE);
+}
+
+void Script::Pause(void) {
+  if (!(m_scriptState == kScriptStateRunning) && !m_isPaused)
+    m_isPaused = true;
+  TriggerOperationCallback();
+  SetEvent(m_eventSignal);
+}
+
+void Script::Resume(void) {
+  if (!(m_scriptState == kScriptStateRunning) && m_isPaused)
+    m_isPaused = false;
+  TriggerOperationCallback();
+  SetEvent(m_eventSignal);
 }
 
 bool Script::IsRunning(void) {
-  return m_context && !(IsAborted() || IsPaused() || !m_hasActiveCX);
+  return m_context && !(m_scriptState != kScriptStateRunning || m_isPaused || !m_hasActiveCX);
 }
 
 bool Script::IsAborted() {
-  return m_isAborted;
+  return m_scriptState == kScriptStateStopped;
 }
 
 void Script::RunCommand(const wchar_t* command) {
-  // RUNCOMMANDSTRUCT* rcs = new RUNCOMMANDSTRUCT;
-  // rcs->script = this;
-  // rcs->command = _wcsdup(command);
-
-  if (m_isAborted) {  // this should never happen -bob
-    // RUNCOMMANDSTRUCT* rcs = new RUNCOMMANDSTRUCT;
-
-    // rcs->script = this;
-    // rcs->command = _wcsdup(L"delay(1000000);");
-
-    Log(L"Console Aborted HELP!");
-  }
-
   Event* evt = new Event;
-  evt->owner = this;
   evt->argc = m_argc;
   evt->name = _strdup("Command");
   evt->arg1 = _wcsdup(command);
-  evt->owner->FireEvent(evt);
+  FireEvent(evt);
 }
 
 const wchar_t* Script::GetShortFilename() {
@@ -427,11 +323,11 @@ void Script::ClearAllEvents(void) {
 void Script::FireEvent(Event* evt) {
   // EnterCriticalSection(&sScriptEngine->lock);
   EnterCriticalSection(&Vars.cEventSection);
-  evt->owner->m_EventList.push_front(evt);
+  m_EventList.push_front(evt);
   LeaveCriticalSection(&Vars.cEventSection);
 
-  if (evt->owner && evt->owner->IsRunning()) {
-    evt->owner->TriggerOperationCallback();
+  if (IsRunning()) {
+    TriggerOperationCallback();
   }
   SetEvent(m_eventSignal);
   // LeaveCriticalSection(&sScriptEngine->lock);
@@ -443,7 +339,7 @@ void Script::ClearEventList() {
     Event* evt = m_EventList.back();
     m_EventList.pop_back();
     LeaveCriticalSection(&Vars.cEventSection);
-    ExecScriptEvent(evt, true);  // clean list and pop events
+    HandleEvent(evt, true);  // clean list and pop events
   }
 
   ClearAllEvents();
@@ -452,7 +348,7 @@ void Script::ClearEventList() {
 void Script::BlockThread(DWORD delay) {
   DWORD start = GetTickCount();
   int amt = delay - (GetTickCount() - start);
-  if (IsAborted()) {
+  if (m_scriptState == kScriptStateStopped) {
     return;
   }
 
@@ -472,7 +368,7 @@ void Script::BlockThread(DWORD delay) {
 }
 
 void Script::ProcessAllEvents() {
-  while (m_EventList.size() > 0 && !!!(JSBool)(IsAborted() || ((GetState() == InGame) && ClientState() == ClientStateMenu))) {
+  while (m_EventList.size() > 0 && !!!(JSBool)(m_scriptState == kScriptStateStopped || ((m_scriptMode == kScriptModeGame) && ClientState() == ClientStateMenu))) {
     ProcessOneEvent();
   }
 }
@@ -482,7 +378,7 @@ void Script::ProcessOneEvent() {
   Event* evt = m_EventList.back();
   m_EventList.pop_back();
   LeaveCriticalSection(&Vars.cEventSection);
-  ExecScriptEvent(evt, false);
+  HandleEvent(evt, false);
 }
 
 void Script::ExecuteEvent(char* evtName, int argc, jsval* argv, bool* block) {
@@ -501,150 +397,10 @@ void Script::OnDestroyContext() {
   Genhook::Clean(this);
 }
 
-#ifdef DEBUG
-typedef struct tagTHREADNAME_INFO {
-  DWORD dwType;      // must be 0x1000
-  LPCWSTR szName;    // pointer to name (in user addr space)
-  DWORD dwThreadID;  // thread ID (-1=caller thread)
-  DWORD dwFlags;     // reserved for future use, must be zero
-} THREADNAME_INFO;
-
-void SetThreadName(DWORD dwThreadID, LPCWSTR szThreadName) {
-  THREADNAME_INFO info;
-  info.dwType = 0x1000;
-  info.szName = szThreadName;
-  info.dwThreadID = dwThreadID;
-  info.dwFlags = 0;
-
-  __try {
-    RaiseException(0x406D1388, 0, sizeof(info) / sizeof(DWORD), (DWORD*)&info);
-  } __except (EXCEPTION_CONTINUE_EXECUTION) {
-  }
-}
-#endif
-
-DWORD WINAPI ScriptThread(void* data) {
-  Script* script = (Script*)data;
-  if (script) {
-#ifdef DEBUG
-    SetThreadName(0xFFFFFFFF, script->GetShortFilename());
-#endif
-    script->Run();
-    if (Vars.bDisableCache)
-      sScriptEngine->DisposeScript(script);
-  }
-  return 0;
-}
-
-JSBool operationCallback(JSContext* cx) {
-  Script* script = (Script*)JS_GetContextPrivate(cx);
-  static int callBackCount = 0;
-  callBackCount++;
-  bool pause = script->IsPaused();
-
-  if (pause)
-    script->SetPauseState(true);
-  while (script->IsPaused()) {
-    Sleep(50);
-    JS_MaybeGC(cx);
-  }
-  if (pause)
-    script->SetPauseState(false);
-
-  if (!!!(JSBool)(script->IsAborted() || ((script->GetState() == InGame) && ClientState() == ClientStateMenu))) {
-    script->ProcessAllEvents();
-    return !!!(JSBool)(script->IsAborted() || ((script->GetState() == InGame) && ClientState() == ClientStateMenu));
-  } else {
-    return false;
-  }
-}
-
-JSBool contextCallback(JSContext* ctx, uint contextOp) {
-  if (contextOp == JSCONTEXT_NEW) {
-    JS_BeginRequest(ctx);
-
-    JS_SetErrorReporter(ctx, reportError);
-    JS_SetOperationCallback(ctx, operationCallback);
-
-    JS_SetVersion(ctx, JSVERSION_LATEST);
-    JS_SetOptions(ctx, JSOPTION_METHODJIT | JSOPTION_TYPE_INFERENCE | JSOPTION_ION | JSOPTION_VAROBJFIX | JSOPTION_ASMJS | JSOPTION_STRICT);
-
-    // JS_SetGCZeal(cx, 2, 1);
-    JSObject* globalObject = JS_NewGlobalObject(ctx, &global_obj, NULL);
-    JS_SetGCParameter(JS_GetRuntime(ctx), JSGC_MODE, 2);
-
-    if (JS_InitStandardClasses(ctx, globalObject) == JS_FALSE)
-      return JS_FALSE;
-    if (JS_DefineFunctions(ctx, globalObject, global_funcs) == JS_FALSE)
-      return JS_FALSE;
-
-    myUnit* lpUnit = new myUnit;
-    memset(lpUnit, NULL, sizeof(myUnit));
-
-    UnitAny* player = D2CLIENT_GetPlayerUnit();
-    lpUnit->dwMode = (DWORD)-1;
-    lpUnit->dwClassId = (DWORD)-1;
-    lpUnit->dwType = UNIT_PLAYER;
-    lpUnit->dwUnitId = player ? player->dwUnitId : NULL;
-    lpUnit->_dwPrivateType = PRIVATE_UNIT;
-
-    for (JSClassSpec* entry = global_classes; entry->classp != NULL; entry++)
-      sScriptEngine->InitClass(ctx, globalObject, entry->classp, entry->methods, entry->properties, entry->static_methods, entry->static_properties);
-
-    JSObject* meObject = BuildObject(ctx, &unit_class, unit_methods, me_props, lpUnit);
-    if (!meObject)
-      return JS_FALSE;
-
-    if (JS_DefineProperty(ctx, globalObject, "me", OBJECT_TO_JSVAL(meObject), NULL, NULL, JSPROP_PERMANENT_VAR) == JS_FALSE)
-      return JS_FALSE;
-
-#define DEFCONST(vp) sScriptEngine->DefineConstant(ctx, globalObject, #vp, vp)
-    DEFCONST(FILE_READ);
-    DEFCONST(FILE_WRITE);
-    DEFCONST(FILE_APPEND);
-#undef DEFCONST
-
-    JS_EndRequest(ctx);
-  }
-  if (contextOp == JSCONTEXT_DESTROY) {
-    Script* script = (Script*)JS_GetContextPrivate(ctx);
-    script->OnDestroyContext();
-  }
-  return JS_TRUE;
-}
-
-void reportError(JSContext* cx, const char* message, JSErrorReport* report) {
-  (cx);
-
-  bool warn = JSREPORT_IS_WARNING(report->flags);
-  bool isStrict = JSREPORT_IS_STRICT(report->flags);
-  const char* type = (warn ? "Warning" : "Error");
-  const char* strict = (isStrict ? "Strict " : "");
-  wchar_t* filename = report->filename ? AnsiToUnicode(report->filename) : _wcsdup(L"<unknown>");
-  wchar_t* displayName = filename;
-  if (_wcsicmp(L"Command Line", filename) != 0 && _wcsicmp(L"<unknown>", filename) != 0)
-    displayName = filename + wcslen(Vars.szPath);
-
-  Log(L"[%hs%hs] Code(%d) File(%s:%d) %hs\nLine: %hs", strict, type, report->errorNumber, filename, report->lineno, message, report->linebuf);
-  Print(L"[\u00FFc%d%hs%hs\u00FFc0 (%d)] File(%s:%d) %hs", (warn ? 9 : 1), strict, type, report->errorNumber, displayName, report->lineno, message);
-
-  if (filename[0] == L'<')
-    free(filename);
-  else
-    delete[] filename;
-
-  if (Vars.bQuitOnError && !JSREPORT_IS_WARNING(report->flags) && ClientState() == ClientStateInGame)
-    D2CLIENT_ExitGame();
-  else
-    Console::ShowBuffer();
-}
-
-bool ExecScriptEvent(Event* evt, bool clearList) {
-  JSContext* cx = nullptr;
-
-  if (!clearList)
-    cx = evt->owner->GetContext();
+bool Script::HandleEvent(Event* evt, bool clearList) {
+  JSContext* cx = m_context;
   char* evtName = (char*)evt->name;
+
   if (strcmp(evtName, "itemaction") == 0) {
     if (!clearList) {
       DWORD* gid = (DWORD*)evt->arg1;
@@ -662,7 +418,7 @@ bool ExecScriptEvent(Event* evt, bool clearList) {
       for (int j = 0; j < 4; j++) JS_AddValueRoot(cx, &argv[j]);
 
       bool block;
-      evt->owner->ExecuteEvent(evtName, 4, argv, &block);
+      ExecuteEvent(evtName, 4, argv, &block);
       JS_EndRequest(cx);
       for (int j = 0; j < 4; j++) JS_RemoveValueRoot(cx, &argv[j]);
     }
@@ -686,7 +442,7 @@ bool ExecScriptEvent(Event* evt, bool clearList) {
 
       for (int j = 0; j < 5; j++) JS_AddValueRoot(cx, &argv[j]);
 
-      evt->owner->ExecuteEvent(evtName, 5, argv);
+      ExecuteEvent(evtName, 5, argv);
 
       JS_EndRequest(cx);
       for (int j = 0; j < 5; j++) JS_RemoveValueRoot(cx, &argv[j]);
@@ -709,7 +465,7 @@ bool ExecScriptEvent(Event* evt, bool clearList) {
 
       for (int j = 0; j < 2; j++) JS_AddValueRoot(cx, &argv[j]);
 
-      evt->owner->ExecuteEvent(evtName, 2, argv);
+      ExecuteEvent(evtName, 2, argv);
       JS_EndRequest(cx);
       for (int j = 0; j < 2; j++) JS_RemoveValueRoot(cx, &argv[j]);
     }
@@ -730,7 +486,7 @@ bool ExecScriptEvent(Event* evt, bool clearList) {
 
       for (int j = 0; j < 2; j++) JS_AddValueRoot(cx, &argv[j]);
 
-      evt->owner->ExecuteEvent(evtName, 2, argv, &block);
+      ExecuteEvent(evtName, 2, argv, &block);
       JS_EndRequest(cx);
       for (int j = 0; j < 2; j++) JS_RemoveValueRoot(cx, &argv[j]);
     }
@@ -755,9 +511,9 @@ bool ExecScriptEvent(Event* evt, bool clearList) {
       for (int j = 0; j < 2; j++) JS_AddValueRoot(cx, &argv[j]);
 
       if (strcmp(evtName, "ScreenHookHover") == 0) {
-        evt->owner->ExecuteEvent(evtName, evt->argc + 1, argv);
+        ExecuteEvent(evtName, evt->argc + 1, argv);
       } else {
-        evt->owner->ExecuteEvent(evtName, 2, argv);
+        ExecuteEvent(evtName, 2, argv);
       }
       JS_EndRequest(cx);
       for (int j = 0; j < 2; j++) JS_RemoveValueRoot(cx, &argv[j]);
@@ -779,7 +535,7 @@ bool ExecScriptEvent(Event* evt, bool clearList) {
 
       for (uint j = 0; j < evt->argc; j++) JS_AddValueRoot(cx, &argv[j]);
 
-      evt->owner->ExecuteEvent(evtName, 4, argv);
+      ExecuteEvent(evtName, 4, argv);
       JS_EndRequest(cx);
       for (int j = 0; j < 4; j++) JS_RemoveValueRoot(cx, &argv[j]);
     }
@@ -799,7 +555,7 @@ bool ExecScriptEvent(Event* evt, bool clearList) {
       JS_BeginRequest(cx);
       argv[0] = JS_NumberValue(*(DWORD*)evt->arg1);
       JS_AddValueRoot(cx, &argv[0]);
-      evt->owner->ExecuteEvent(evtName, 1, argv, &block);
+      ExecuteEvent(evtName, 1, argv, &block);
       JS_EndRequest(cx);
       JS_RemoveValueRoot(cx, &argv[0]);
     }
@@ -869,7 +625,7 @@ bool ExecScriptEvent(Event* evt, bool clearList) {
 
       for (uint j = 0; j < *argc; j++) JS_AddValueRoot(cx, &argv[j]);
 
-      evt->owner->ExecuteEvent(evtName, *argc, argv);
+      ExecuteEvent(evtName, *argc, argv);
       JS_EndRequest(cx);
 
       for (uint j = 0; j < *argc; j++) JS_RemoveValueRoot(cx, &argv[j]);
@@ -903,7 +659,7 @@ bool ExecScriptEvent(Event* evt, bool clearList) {
       // evt->argv[0]->read(cx, &argv[0]);
       // JS_AddValueRoot(cx, &argv[0]);
 
-      evt->owner->ExecuteEvent(evtName, 1, &argv, &block);
+      ExecuteEvent(evtName, 1, &argv, &block);
       *(DWORD*)evt->arg4 = block;
       JS_RemoveRoot(cx, &arr);
       SetEvent(Vars.eventSignal);
@@ -921,7 +677,7 @@ bool ExecScriptEvent(Event* evt, bool clearList) {
     if (!clearList) {
       JS_BeginRequest(cx);
       jsval dummy;
-      evt->owner->ExecuteEvent(evtName, 0, &dummy);
+      ExecuteEvent(evtName, 0, &dummy);
       JS_EndRequest(cx);
     }
 
@@ -932,8 +688,240 @@ bool ExecScriptEvent(Event* evt, bool clearList) {
     return true;
   }
   if (strcmp(evtName, "DisposeMe") == 0) {
-    sScriptEngine->DisposeScript(evt->owner);
+    sScriptEngine->DisposeScript(this);
   }
 
   return true;
+}
+
+bool Script::Initialize() {
+  m_runtime = JS_NewRuntime(Vars.dwMemUsage, JS_NO_HELPER_THREADS);
+  JS_SetContextCallback(m_runtime, contextCallback);
+
+  m_context = JS_NewContext(m_runtime, 0x800000);
+  if (!m_context) {
+    Log(L"Couldn't create the context");
+    return false;
+  }
+  JS_SetContextPrivate(m_context, this);
+  JS_SetErrorReporter(m_context, reportError);
+  JS_SetOperationCallback(m_context, InterruptHandler);
+  JS_SetOptions(m_context, JSOPTION_STRICT | JSOPTION_VAROBJFIX);
+  JS_SetVersion(m_context, JSVERSION_LATEST);
+
+  JSAutoRequest request(m_context);
+
+  m_globalObject = JS_NewGlobalObject(m_context, &global_obj, NULL);
+  JS_SetGCParameter(JS_GetRuntime(m_context), JSGC_MODE, 2);
+
+  if (JS_InitStandardClasses(m_context, m_globalObject) == JS_FALSE) {
+    Log(L"failed to init standard classes");
+    return false;
+  }
+  if (JS_DefineFunctions(m_context, m_globalObject, global_funcs) == JS_FALSE) {
+    Log(L"failed to define functions globalObject");
+    return false;
+  }
+  for (JSClassSpec* entry = global_classes; entry->classp != NULL; entry++) {
+    if (!JS_InitClass(m_context, m_globalObject, NULL, entry->classp, entry->classp->construct, 0, entry->properties, entry->methods, entry->static_properties,
+                      entry->static_methods)) {
+      Log(L"Couldn't initialize the class");
+      return false;
+    }
+  }
+
+#define DEFCONST(vp)                                                                                            \
+  if (!JS_DefineProperty(m_context, m_globalObject, #vp, INT_TO_JSVAL(vp), NULL, NULL, JSPROP_PERMANENT_VAR)) { \
+    Log(L"Couldn't initialize the constant");                                                                   \
+    return false;                                                                                               \
+  }
+  DEFCONST(FILE_READ);
+  DEFCONST(FILE_WRITE);
+  DEFCONST(FILE_APPEND);
+#undef DEFCONST
+
+  // define 'me' property
+  m_me = new myUnit;
+  memset(m_me, NULL, sizeof(myUnit));
+
+  UnitAny* player = D2CLIENT_GetPlayerUnit();
+  m_me->dwMode = (DWORD)-1;
+  m_me->dwClassId = (DWORD)-1;
+  m_me->dwType = UNIT_PLAYER;
+  m_me->dwUnitId = player ? player->dwUnitId : NULL;
+  m_me->_dwPrivateType = PRIVATE_UNIT;
+
+  JSObject* meObject = BuildObject(m_context, &unit_class, unit_methods, me_props, m_me);
+  if (!meObject) {
+    Log(L"failed to build object 'me'");
+    return false;
+  }
+
+  if (JS_DefineProperty(m_context, m_globalObject, "me", OBJECT_TO_JSVAL(meObject), NULL, NULL, JSPROP_PERMANENT_VAR) == JS_FALSE) {
+    Log(L"failed to define property 'me'");
+    return false;
+  }
+
+  // compile script file
+  if (m_scriptMode == kScriptModeCommand) {
+    if (wcslen(Vars.szConsole) > 0) {
+      m_script = JS_CompileFile(m_context, m_globalObject, m_fileName);
+    } else {
+      char* cmd = "function main() {print('ÿc2D2BSÿc0 :: Started Console'); while (true){delay(10000)};}  ";
+      m_script = JS_CompileScript(m_context, m_globalObject, cmd, strlen(cmd), "Command Line", 1);
+    }
+    JS_AddNamedScriptRoot(m_context, &m_script, "console script");
+  } else
+    m_script = JS_CompileFile(m_context, m_globalObject, m_fileName);
+
+  if (!m_script) {
+    Log(L"Couldn't compile the script");
+    return false;
+  }
+
+  // TODO(ejt): revisit these
+  m_scriptState = kScriptStateRunning;
+  m_hasActiveCX = true;
+
+  return true;
+}
+
+void Script::RunMain() {
+  JSAutoRequest request(m_context);
+  JS::RootedValue main(m_context, INT_TO_JSVAL(1));
+  JS::RootedValue dummy(m_context, INT_TO_JSVAL(1));
+
+  // args passed from load
+  JS::AutoValueVector args(m_context);
+  args.resize(m_argc);
+  for (uint i = 0; i < m_argc; i++) {
+    jsval v;
+    m_argv[i]->read(m_context, &v);
+    args.append(v);
+  }
+
+  if (JS_ExecuteScript(m_context, m_globalObject, m_script, dummy.address()) != JS_FALSE &&
+      JS_GetProperty(m_context, m_globalObject, "main", main.address()) != JS_FALSE && JSVAL_IS_FUNCTION(m_context, main)) {
+    JS_CallFunctionValue(m_context, m_globalObject, main, args.length(), args.begin(), dummy.address());
+  }
+
+  m_execCount++;
+}
+
+// return false to stop the script
+bool Script::RunEventLoop() {
+  bool pause = m_isPaused;
+  if (pause)
+    SetPauseState(true);
+  while (m_isPaused) {
+    Sleep(50);
+    JS_MaybeGC(m_context);
+  }
+  if (pause)
+    SetPauseState(false);
+
+  // run loop until there are no more events
+  while (!m_EventList.empty()) {
+    if (m_scriptState == kScriptStateRequestStop) {
+      return false;
+    }
+
+    if (m_scriptMode == kScriptModeGame && ClientState() == ClientStateMenu) {
+      return false;
+    }
+
+    ProcessOneEvent();
+  }
+
+  if (m_scriptState == kScriptStateRequestStop) {
+    return false;
+  }
+
+  if (m_scriptMode == kScriptModeGame && ClientState() == ClientStateMenu) {
+    return false;
+  }
+
+  return true;
+}
+
+void Script::Shutdown() {
+  m_scriptState = kScriptStateStopped;
+}
+
+JSBool Script::InterruptHandler(JSContext* ctx) {
+  Script* script = (Script*)JS_GetContextPrivate(ctx);
+  if (!script->RunEventLoop()) {
+    return JS_FALSE;
+  }
+  return JS_TRUE;
+}
+
+#ifdef DEBUG
+typedef struct tagTHREADNAME_INFO {
+  DWORD dwType;      // must be 0x1000
+  LPCWSTR szName;    // pointer to name (in user addr space)
+  DWORD dwThreadID;  // thread ID (-1=caller thread)
+  DWORD dwFlags;     // reserved for future use, must be zero
+} THREADNAME_INFO;
+
+void SetThreadName(DWORD dwThreadID, LPCWSTR szThreadName) {
+  THREADNAME_INFO info;
+  info.dwType = 0x1000;
+  info.szName = szThreadName;
+  info.dwThreadID = dwThreadID;
+  info.dwFlags = 0;
+
+  __try {
+    RaiseException(0x406D1388, 0, sizeof(info) / sizeof(DWORD), (DWORD*)&info);
+  } __except (EXCEPTION_CONTINUE_EXECUTION) {
+  }
+}
+#endif
+
+DWORD WINAPI ScriptThread(LPVOID lpThreadParameter) {
+  Script* script = static_cast<Script*>(lpThreadParameter);
+  // TODO(ejt): necessary? script should ALWAYS be here otherwise it's a critical error!
+  if (script) {
+#ifdef DEBUG
+    SetThreadName(0xFFFFFFFF, script->GetShortFilename());
+#endif
+    script->Run();
+    if (Vars.bDisableCache)
+      sScriptEngine->DisposeScript(script);
+  }
+  return 0;
+}
+
+JSBool contextCallback(JSContext* ctx, uint contextOp) {
+  if (contextOp == JSCONTEXT_DESTROY) {
+    Script* script = (Script*)JS_GetContextPrivate(ctx);
+    script->OnDestroyContext();
+  }
+  return JS_TRUE;
+}
+
+void reportError(JSContext* cx, const char* message, JSErrorReport* report) {
+  (cx);
+
+  bool warn = JSREPORT_IS_WARNING(report->flags);
+  bool isStrict = JSREPORT_IS_STRICT(report->flags);
+  const char* type = (warn ? "Warning" : "Error");
+  const char* strict = (isStrict ? "Strict " : "");
+  wchar_t* filename = report->filename ? AnsiToUnicode(report->filename) : _wcsdup(L"<unknown>");
+  wchar_t* displayName = filename;
+  if (_wcsicmp(L"Command Line", filename) != 0 && _wcsicmp(L"<unknown>", filename) != 0)
+    displayName = filename + wcslen(Vars.szPath);
+
+  Log(L"[%hs%hs] Code(%d) File(%s:%d) %hs\nLine: %hs", strict, type, report->errorNumber, filename, report->lineno, message, report->linebuf);
+  Print(L"[\u00FFc%d%hs%hs\u00FFc0 (%d)] File(%s:%d) %hs", (warn ? 9 : 1), strict, type, report->errorNumber, displayName, report->lineno, message);
+
+  if (filename[0] == L'<')
+    free(filename);
+  else
+    delete[] filename;
+
+  if (Vars.bQuitOnError && !JSREPORT_IS_WARNING(report->flags) && ClientState() == ClientStateInGame)
+    D2CLIENT_ExitGame();
+  else
+    Console::ShowBuffer();
 }
