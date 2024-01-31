@@ -12,36 +12,35 @@
 #include "Console.h"
 
 bool SplitLines(const std::wstring& str, size_t maxWidth, const wchar_t delim, std::list<std::wstring>& lst) {
-  using namespace std;
-  wstring tmp(str);
+  std::wstring tmp(str);
 
   if (str.length() < 1 || maxWidth < 40)
     return false;
 
   // base case
-  if (CalculateTextLen(str.c_str(), Vars.dwConsoleFont).x < maxWidth) {
+  if (CalculateTextLen(str.c_str(), Vars.dwConsoleFont).x < static_cast<int>(maxWidth)) {
     lst.push_back(tmp);
     return true;
   }
 
   int byteIdx = MaxLineFit(str, 0, str.length() + 1, maxWidth);
-  wstring ts = str.substr(0, byteIdx);
-  uint cmdsize = CalculateTextLen(ts.c_str(), Vars.dwConsoleFont).x;
-  int numchars = ts.length();
-  int sizechar = (cmdsize + numchars - 1) / numchars;
-  int maxLength = (maxWidth + sizechar - 1) / sizechar - 1;
+  //std::wstring ts = str.substr(0, byteIdx);
+  //uint cmdsize = CalculateTextLen(ts.c_str(), Vars.dwConsoleFont).x;
+  //int numchars = ts.length();
+  //int sizechar = (cmdsize + numchars - 1) / numchars;
+  //int maxLength = (maxWidth + sizechar - 1) / sizechar - 1;
 
   // byteIdx-1 since std::string::npos indexes from 0
   int pos = tmp.find_last_of(delim, byteIdx - 1);
-  if (!pos || pos == string::npos) {
+  if (!pos || pos == std::string::npos) {
     // Target delimiter was not found, breaking at byteIdx
-    wstring ts = tmp.substr(0, byteIdx);
-    lst.push_back(ts);
+    std::wstring _ts = tmp.substr(0, byteIdx);
+    lst.push_back(_ts);
     tmp.erase(0, byteIdx);
   } else {
     // We found the last delimiter before byteIdx
-    wstring ts = tmp.substr(0, pos);
-    lst.push_back(ts);
+    std::wstring _ts = tmp.substr(0, pos);
+    lst.push_back(_ts);
     tmp.erase(0, pos);
   }
 
@@ -64,7 +63,7 @@ void Print(const wchar_t* szFormat, ...) {
   delete[] str;
 }
 
-void __declspec(naked) __fastcall Say_ASM(DWORD dwPtr) {
+void __declspec(naked) __fastcall Say_ASM(DWORD /*dwPtr*/) {
   __asm
   {
 		POP EAX
@@ -194,7 +193,7 @@ void LoadMPQ(const wchar_t* mpq) {
 int UTF8FindByteIndex(std::string str, int maxutf8len) {
   int utf8len = 0, byteIndex = 0;
   const char* tstr = str.c_str();
-  size_t strlen = str.size();
+  int strlen = static_cast<int>(str.size());
 
   for (byteIndex = 0; byteIndex < strlen; byteIndex++) {
     if ((tstr[byteIndex] & 0xc0) != 0x80)

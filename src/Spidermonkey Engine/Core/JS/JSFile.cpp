@@ -131,6 +131,8 @@ JSAPI_PROP(file_getProperty) {
 }
 
 JSAPI_STRICT_PROP(file_setProperty) {
+  (strict);
+
   FileData* fdata = (FileData*)JS_GetInstancePrivate(cx, obj, &file_class, NULL);
   if (fdata) {
     jsval ID;
@@ -231,6 +233,8 @@ JSAPI_FUNC(file_open) {
 }
 
 JSAPI_FUNC(file_close) {
+  (argc);
+
   FileData* fdata = (FileData*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &file_class, NULL);
   if (fdata) {
     if (fdata->fptr) {
@@ -240,10 +244,12 @@ JSAPI_FUNC(file_close) {
         fdata->lockLocation = __FILE__;
         fdata->line = __LINE__;
 #endif
-        if (!!fclose(fdata->fptr))
-          THROW_ERROR(cx, _strerror("Close failed"));
-      } else if (!!_fclose_nolock(fdata->fptr))
-        THROW_ERROR(cx, _strerror("Close failed"));
+        if (!!fclose(fdata->fptr)) {
+          THROW_ERROR(cx, "Close failed");
+        }
+      } else if (!!_fclose_nolock(fdata->fptr)) {
+        THROW_ERROR(cx, "Close failed");
+      }
       fdata->fptr = NULL;
     } else
       THROW_ERROR(cx, "File is not open");
@@ -253,6 +259,8 @@ JSAPI_FUNC(file_close) {
 }
 
 JSAPI_FUNC(file_reopen) {
+  (argc);
+
   FileData* fdata = (FileData*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &file_class, NULL);
   if (fdata)
     if (!fdata->fptr) {
@@ -296,7 +304,7 @@ JSAPI_FUNC(file_read) {
 
       if (size != (uint32)count && ferror(fdata->fptr)) {
         delete[] result;
-        THROW_ERROR(cx, _strerror("Read failed"));
+        THROW_ERROR(cx, "Read failed");
       }
       if (count == 1)
         JS_SET_RVAL(cx, vp, INT_TO_JSVAL(result[0]));
@@ -338,10 +346,10 @@ JSAPI_FUNC(file_read) {
 
       if (size != (uint32)count && ferror(fdata->fptr)) {
         delete[] result;
-        THROW_ERROR(cx, _strerror("Read failed"));
+        THROW_ERROR(cx, "Read failed");
       }
 
-      if (begin && size > 2 && result[0] == (char)0xEF && result[1] == (char)0xBB && result[2] == (char)0xBF) {  // skip BOM
+      if (begin && size > 2 && result[0] == '\xEF' && result[1] == '\xBB' && result[2] == '\xBF') {  // skip BOM
         offset = 3;
       }
       wchar_t* wresult = AnsiToUnicode(result + offset);
@@ -354,6 +362,8 @@ JSAPI_FUNC(file_read) {
 }
 
 JSAPI_FUNC(file_readLine) {
+  (argc);
+
   FileData* fdata = (FileData*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &file_class, NULL);
   if (fdata && fdata->fptr) {
     uint size = 0;
@@ -370,9 +380,9 @@ JSAPI_FUNC(file_readLine) {
 
     char* line = readLine(fdata->fptr, fdata->locked);
     if (!line)
-      THROW_ERROR(cx, _strerror("Read failed"));
+      THROW_ERROR(cx, "Read failed");
 
-    if (begin && strlen(line) > 2 && line[0] == (char)0xEF && line[1] == (char)0xBB && line[2] == (char)0xBF) {  // skip BOM
+    if (begin && strlen(line) > 2 && line[0] == '\xEF' && line[1] == '\xBB' && line[2] == '\xBF') {  // skip BOM
       offset = 3;
     }
 
@@ -385,6 +395,8 @@ JSAPI_FUNC(file_readLine) {
 }
 
 JSAPI_FUNC(file_readAllLines) {
+  (argc);
+
   FileData* fdata = (FileData*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &file_class, NULL);
   if (fdata && fdata->fptr) {
     JSObject* arr = JS_NewArrayObject(cx, 0, NULL);
@@ -406,9 +418,9 @@ JSAPI_FUNC(file_readAllLines) {
 
       char* line = readLine(fdata->fptr, fdata->locked);
       if (!line)
-        THROW_ERROR(cx, _strerror("Read failed"));
+        THROW_ERROR(cx, "Read failed");
 
-      if (begin && strlen(line) > 2 && line[0] == (char)0xEF && line[1] == (char)0xBB && line[2] == (char)0xBF) {  // skip BOM
+      if (begin && strlen(line) > 2 && line[0] == '\xEF' && line[1] == '\xBB' && line[2] == '\xBF') {  // skip BOM
         offset = 3;
       }
 
@@ -424,6 +436,8 @@ JSAPI_FUNC(file_readAllLines) {
 }
 
 JSAPI_FUNC(file_readAll) {
+  (argc);
+
   FileData* fdata = (FileData*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &file_class, NULL);
   if (fdata && fdata->fptr) {
     uint size = 0;
@@ -465,10 +479,10 @@ JSAPI_FUNC(file_readAll) {
 
     if (count != size && ferror(fdata->fptr)) {
       delete[] contents;
-      THROW_ERROR(cx, _strerror("Read failed"));
+      THROW_ERROR(cx, "Read failed");
     }
     JS_BeginRequest(cx);
-    if (begin && count > 2 && contents[0] == (char)0xEF && contents[1] == (char)0xBB && contents[2] == (char)0xBF) {  // skip BOM
+    if (begin && count > 2 && contents[0] == '\xEF' && contents[1] == '\xBB' && contents[2] == '\xBF') {  // skip BOM
       offset = 3;
     }
     wchar_t* wcontents = AnsiToUnicode(contents + offset);
@@ -514,9 +528,9 @@ JSAPI_FUNC(file_seek) {
 
       if (!isLines) {
         if (fdata->locked && fseek(fdata->fptr, bytes, SEEK_CUR)) {
-          THROW_ERROR(cx, _strerror("Seek failed"));
+          THROW_ERROR(cx, "Seek failed");
         } else if (_fseek_nolock(fdata->fptr, bytes, SEEK_CUR))
-          THROW_ERROR(cx, _strerror("Seek failed"));
+          THROW_ERROR(cx, "Seek failed");
       } else {
         // semi-ugly hack to seek to the specified line
         // if I were unlazy I wouldn't be allocating/deallocating all this memory, but for now it's ok
@@ -530,6 +544,8 @@ JSAPI_FUNC(file_seek) {
 }
 
 JSAPI_FUNC(file_flush) {
+  (argc);
+
   FileData* fdata = (FileData*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &file_class, NULL);
   if (fdata && fdata->fptr)
     if (fdata->locked)
@@ -542,30 +558,34 @@ JSAPI_FUNC(file_flush) {
 }
 
 JSAPI_FUNC(file_reset) {
+  (argc);
+
   FileData* fdata = (FileData*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &file_class, NULL);
   if (fdata && fdata->fptr) {
     if (fdata->locked && fseek(fdata->fptr, 0L, SEEK_SET)) {
-      THROW_ERROR(cx, _strerror("Seek failed"));
+      THROW_ERROR(cx, "Seek failed");
     } else if (_fseek_nolock(fdata->fptr, 0L, SEEK_SET))
-      THROW_ERROR(cx, _strerror("Seek failed"));
+      THROW_ERROR(cx, "Seek failed");
   }
   JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(JS_THIS_OBJECT(cx, vp)));
   return JS_TRUE;
 }
 
 JSAPI_FUNC(file_end) {
+  (argc);
+
   FileData* fdata = (FileData*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &file_class, NULL);
   if (fdata && fdata->fptr) {
     if (fdata->locked && fseek(fdata->fptr, 0L, SEEK_END)) {
-      THROW_ERROR(cx, _strerror("Seek failed"));
+      THROW_ERROR(cx, "Seek failed");
     } else if (_fseek_nolock(fdata->fptr, 0L, SEEK_END))
-      THROW_ERROR(cx, _strerror("Seek failed"));
+      THROW_ERROR(cx, "Seek failed");
   }
   JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(JS_THIS_OBJECT(cx, vp)));
   return JS_TRUE;
 }
 
-void file_finalize(JSFreeOp* fop, JSObject* obj) {
+void file_finalize(JSFreeOp* /*fop*/, JSObject* obj) {
   FileData* fdata = (FileData*)JS_GetPrivate(obj);
   if (fdata) {
     free(fdata->path);

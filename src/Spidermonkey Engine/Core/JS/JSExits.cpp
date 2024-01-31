@@ -2,7 +2,7 @@
 
 EMPTY_CTOR(exit)
 
-void exit_finalize(JSFreeOp* fop, JSObject* obj) {
+void exit_finalize(JSFreeOp* /*fop*/, JSObject* obj) {
   myExit* pExit = (myExit*)JS_GetPrivate(obj);
   delete pExit;
 }

@@ -19,7 +19,6 @@
 #endif
 
 static HANDLE hD2Thread = INVALID_HANDLE_VALUE;
-static HANDLE hEventThread = INVALID_HANDLE_VALUE;
 BOOL WINAPI DllMain(HINSTANCE hDll, DWORD dwReason, LPVOID lpReserved) {
   switch (dwReason) {
     case DLL_PROCESS_ATTACH: {
@@ -48,7 +47,8 @@ BOOL WINAPI DllMain(HINSTANCE hDll, DWORD dwReason, LPVOID lpReserved) {
       sLine* command = NULL;
       Vars.bUseRawCDKey = FALSE;
 
-      if (command = GetCommand(L"-title")) {
+      command = GetCommand(L"-title");
+      if (command) {
         int len = wcslen((wchar_t*)command->szText);
         wcsncat_s(Vars.szTitle, (wchar_t*)command->szText, len);
       }
@@ -65,14 +65,16 @@ BOOL WINAPI DllMain(HINSTANCE hDll, DWORD dwReason, LPVOID lpReserved) {
       if (GetCommand(L"-ftj"))
         Vars.bReduceFTJ = TRUE;
 
-      if (command = GetCommand(L"-d2c")) {
+      command = GetCommand(L"-d2c");
+      if (command) {
         Vars.bUseRawCDKey = TRUE;
         const char* keys = UnicodeToAnsi(command->szText);
         strncat_s(Vars.szClassic, keys, strlen(keys));
         delete[] keys;
       }
 
-      if (command = GetCommand(L"-d2x")) {
+      command = GetCommand(L"-d2x");
+      if (command) {
         const char* keys = UnicodeToAnsi(command->szText);
         strncat_s(Vars.szLod, keys, strlen(keys));
         delete[] keys;
@@ -136,7 +138,7 @@ BOOL Startup(void) {
 
   if ((hD2Thread = CreateThread(NULL, NULL, D2Thread, NULL, NULL, NULL)) == NULL)
     return FALSE;
-  //	hEventThread = CreateThread(0, 0, EventThread, NULL, 0, 0);
+
   return TRUE;
 }
 

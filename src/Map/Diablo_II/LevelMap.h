@@ -102,7 +102,7 @@ class LevelMap : public Map {
   void DrillExits();
 
   LevelMap(const Level* level);
-  ~LevelMap(void);
+  virtual ~LevelMap(void);
 
  public:
   static LevelMap* GetMap(Level* level);

@@ -6,6 +6,8 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
+
 #include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -63,6 +65,12 @@ JSAPI_PROP(socket_getProperty) {
 }
 
 JSAPI_STRICT_PROP(socket_setProperty) {
+  (cx);
+  (id);
+  (obj);
+  (strict);
+  (vp);
+
   return JS_TRUE;
 }
 
@@ -98,7 +106,7 @@ JSAPI_FUNC(socket_open) {
   if (host == NULL)
     THROW_ERROR(cx, "Cannot find host");
   SOCKADDR_IN SockAddr;
-  SockAddr.sin_port = htons(port);
+  SockAddr.sin_port = htons(static_cast<u_short>(port));
   SockAddr.sin_family = AF_INET;
   SockAddr.sin_addr.s_addr = *((unsigned long*)host->h_addr);
   Sdata->mode = Sdata->socket;
@@ -118,6 +126,8 @@ JSAPI_FUNC(socket_open) {
 }
 
 JSAPI_FUNC(socket_close) {
+  (argc);
+
   SocketData* sData = (SocketData*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &socket_class, NULL);
 
   closesocket(sData->socket);
@@ -127,6 +137,8 @@ JSAPI_FUNC(socket_close) {
 }
 
 JSAPI_FUNC(socket_send) {
+  (argc);
+
   SocketData* sData = (SocketData*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &socket_class, NULL);
   char* msg = NULL;
 
@@ -139,11 +151,13 @@ JSAPI_FUNC(socket_send) {
 }
 
 JSAPI_FUNC(socket_read) {
+  (argc);
+
   SocketData* sData = (SocketData*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &socket_class, NULL);
 
   char buffer[10000] = {0};
   std::string returnVal;
-  int nDataLength;
+  //int nDataLength;
 
   int iResult = 0;
   do {
@@ -162,7 +176,7 @@ JSAPI_FUNC(socket_read) {
   return JS_TRUE;
 }
 
-void socket_finalize(JSFreeOp* fop, JSObject* obj) {
+void socket_finalize(JSFreeOp* /*fop*/, JSObject* obj) {
   SocketData* sData = (SocketData*)JS_GetPrivate(obj);
   if (sData) {
     closesocket(sData->socket);

@@ -51,6 +51,8 @@ JSAPI_PROP(room_getProperty) {
 }
 
 JSAPI_FUNC(room_getNext) {
+  (argc);
+
   Room2* pRoom2 = (Room2*)JS_GetPrivate(cx, JS_THIS_OBJECT(cx, vp));
   if (!pRoom2) {
     JS_SET_RVAL(cx, vp, JSVAL_FALSE);
@@ -134,6 +136,8 @@ JSAPI_FUNC(room_getPresetUnits) {
   return JS_TRUE;
 }
 JSAPI_FUNC(room_getCollisionTypeArray) {
+  (argc);
+
   Room2* pRoom2 = (Room2*)JS_GetPrivate(cx, JS_THIS_OBJECT(cx, vp));
 
   bool bAdded = FALSE;
@@ -209,6 +213,8 @@ JSAPI_FUNC(room_getCollisionTypeArray) {
   return JS_TRUE;
 }
 JSAPI_FUNC(room_getCollision) {
+  (argc);
+
   Room2* pRoom2 = (Room2*)JS_GetPrivate(cx, JS_THIS_OBJECT(cx, vp));
 
   bool bAdded = FALSE;
@@ -297,6 +303,8 @@ JSAPI_FUNC(room_getCollision) {
 }
 
 JSAPI_FUNC(room_getNearby) {
+  (argc);
+
   Room2* pRoom2 = (Room2*)JS_GetPrivate(cx, JS_THIS_OBJECT(cx, vp));
   JSObject* jsobj = JS_NewArrayObject(cx, NULL, NULL);
 
@@ -390,6 +398,8 @@ JSAPI_FUNC(room_getStat) {
 }
 
 JSAPI_FUNC(room_getFirst) {
+  (argc);
+
   JS_SET_RVAL(cx, vp, JSVAL_VOID);
   Room2* pRoom2 = (Room2*)JS_GetPrivate(cx, JS_THIS_OBJECT(cx, vp));
   if (!pRoom2 || !pRoom2->pLevel || !pRoom2->pLevel->pRoom2First)

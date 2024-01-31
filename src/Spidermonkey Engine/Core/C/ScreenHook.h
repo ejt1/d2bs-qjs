@@ -49,7 +49,7 @@ class Genhook {
 
  public:
   Genhook::Genhook(Script* nowner, JSObject* nself, uint x, uint y, ushort nopacity, bool nisAutomap = false, Align nalign = Left, ScreenhookState ngameState = Perm);
-  ~Genhook(void);
+  virtual ~Genhook(void);
 
   friend bool __fastcall DrawHook(Genhook* hook, void* argv, uint argc);
   friend bool __fastcall CleanHook(Genhook* hook, void* argv, uint argc);
@@ -245,6 +245,8 @@ class ImageHook : public Genhook {
   ImageHook(Script* owner, JSObject* nself, const wchar_t* nloc, uint x, uint y, ushort ncolor, bool automap = false, Align align = Left, ScreenhookState state = Perm,
             bool fromFile = true)
       : Genhook(owner, nself, x, y, 0, automap, align, state), color(ncolor), image(NULL), location(NULL) {
+    (fromFile);  // unreferenced formal parameter
+
     location = _wcsdup(nloc);
     image = LoadCellFile(location, 3);
   }
@@ -294,6 +296,9 @@ class LineHook : public Genhook {
 
  public:
   bool IsInRange(int dx, int dy) {
+    (dx);  // unreferenced formal parameter
+    (dy);  // unreferenced formal parameter
+
     return false;
   }
 

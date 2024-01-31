@@ -20,7 +20,7 @@ class JSPathReducer : public PathReducer {
  public:
   JSPathReducer(const JSPathReducer&);
   JSPathReducer& operator=(const JSPathReducer&);
-  JSPathReducer(ActMap* m, JSContext* cx, JSObject* obj, jsval _reject, jsval _reduce, jsval _mutate) : reject(_reject), reduce(_reduce), mutate(_mutate) {
+  JSPathReducer(ActMap* /*m*/, JSContext* cx, JSObject* /*obj*/, jsval _reject, jsval _reduce, jsval _mutate) : reject(_reject), reduce(_reduce), mutate(_mutate) {
     JS_AddRoot(cx, &reject);
     JS_AddRoot(cx, &reduce);
     JS_AddRoot(cx, &mutate);
@@ -31,7 +31,7 @@ class JSPathReducer : public PathReducer {
     JS_RemoveRoot(cx, &mutate);
   }
 
-  void Reduce(const PointList& in, PointList& out, bool abs) {
+  void Reduce(const PointList& in, PointList& out, bool /*abs*/) {
     // create the initial array to pass to the js function
     int count = in.size();
 
@@ -62,13 +62,13 @@ class JSPathReducer : public PathReducer {
     //		JS_LeaveLocalRootScope(cx);
     delete[] vec;
   }
-  bool Reject(const Point& pt, bool abs) {
+  bool Reject(const Point& pt, bool /*abs*/) {
     jsval rval = JSVAL_FALSE;
     jsval argv[] = {INT_TO_JSVAL(pt.first), INT_TO_JSVAL(pt.second)};
     JS_CallFunctionValue(cx, obj, reject, 2, argv, &rval);
     return !!JSVAL_TO_BOOLEAN(rval);
   }
-  void GetOpenNodes(const Point& center, PointList& out, const Point& endpoint) {
+  void GetOpenNodes(const Point& center, PointList& out, const Point& /*endpoint*/) {
     for (int i = 1; i >= -1; i--) {
       for (int j = 1; j >= -1; j--) {
         if (i == 0 && j == 0)
@@ -77,10 +77,10 @@ class JSPathReducer : public PathReducer {
       }
     }
   }
-  int GetPenalty(const Point& pt, bool abs) {
+  int GetPenalty(const Point& /*pt*/, bool /*abs*/) {
     return 0;
   }
-  void MutatePoint(Point& pt, bool abs) {
+  void MutatePoint(Point& pt, bool /*abs*/) {
     jsval rval = JSVAL_FALSE;
     jsval argv[] = {INT_TO_JSVAL(pt.first), INT_TO_JSVAL(pt.second)};
     JS_CallFunctionValue(cx, obj, mutate, 2, argv, &rval);

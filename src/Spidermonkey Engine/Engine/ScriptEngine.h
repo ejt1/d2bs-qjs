@@ -1,6 +1,4 @@
 #pragma once
-#ifndef __SCRIPTENGINE_H__
-#define __SCRIPTENGINE_H__
 
 #include <list>
 #include <map>
@@ -17,72 +15,66 @@ typedef bool(__fastcall* ScriptCallback)(Script*, void*, uint);
 enum EngineState { Starting, Running, Paused, Stopping, Stopped };
 
 class ScriptEngine {
-  ScriptEngine(void){};
-  virtual ~ScriptEngine(void) = 0;
-  ScriptEngine(const ScriptEngine&);
-  ScriptEngine& operator=(const ScriptEngine&);
-  static JSRuntime* runtime;
-  static JSContext* context;
-  static Script* console;
-  static EngineState state;
-  static std::list<Event*> DelayedExecList;
-  static int delayedExecKey;
-  static CRITICAL_SECTION scriptListLock;
+  friend class Script;
+
+  ScriptEngine();
+  virtual ~ScriptEngine();
 
  public:
-  friend class Script;
-  static ScriptMap scripts;
+  static ScriptEngine* GetInstance();
 
-  static CRITICAL_SECTION lock;
-  static BOOL Startup(void);
-  static void Shutdown(void);
-  static EngineState GetState(void) {
-    return state;
+  ScriptEngine(const ScriptEngine&) = delete;
+  ScriptEngine& operator=(const ScriptEngine&) = delete;
+
+  BOOL Startup(void);
+  void Shutdown(void);
+  EngineState GetState(void) {
+    return m_state;
   }
 
-  static void FlushCache(void);
+  void FlushCache(void);
 
-  static Script* CompileFile(const wchar_t* file, ScriptState state, uint argc = 0, JSAutoStructuredCloneBuffer** argv = NULL, bool recompile = false);
-  static void RunCommand(const wchar_t* command);
-  static void DisposeScript(Script* script);
+  Script* CompileFile(const wchar_t* file, ScriptState state, uint argc = 0, JSAutoStructuredCloneBuffer** argv = NULL, bool recompile = false);
+  void RunCommand(const wchar_t* command);
+  void DisposeScript(Script* script);
 
-  static void LockScriptList(char* loc);
-  static void UnLockScriptList(char* loc);
+  void LockScriptList(char* loc);
+  void UnLockScriptList(char* loc);
 
-  static bool ForEachScript(ScriptCallback callback, void* argv, uint argc);
-  static unsigned int GetCount(bool active = true, bool unexecuted = false);
-
-  static JSRuntime* GetRuntime(void) {
-    return runtime;
+  ScriptMap& scripts() {
+    return m_scripts;
   }
-  static JSContext* GetGlobalContext(void) {
-    return context;
-  }
+  bool ForEachScript(ScriptCallback callback, void* argv, uint argc);
+  unsigned int GetCount(bool active = true, bool unexecuted = false);
 
-  static void StopAll(bool forceStop = false);
-  static void ExecEventAsync(char* evtName, AutoRoot** argv, uint argc);
-  static void InitClass(JSContext* context, JSObject* globalObject, JSClass* classp, JSFunctionSpec* methods, JSPropertySpec* props, JSFunctionSpec* s_methods,
-                        JSPropertySpec* s_props);
-  static void DefineConstant(JSContext* context, JSObject* globalObject, const char* name, int value);
-  static void UpdateConsole();
-  static int AddDelayedEvent(Event* evt, int freq);
-  static void RemoveDelayedEvent(int key);
-  JSGCCallback gcCallback(JSRuntime* rt, JSGCStatus status);
+  void StopAll(bool forceStop = false);
+  void InitClass(JSContext* context, JSObject* globalObject, JSClass* classp, JSFunctionSpec* methods, JSPropertySpec* props, JSFunctionSpec* s_methods,
+                 JSPropertySpec* s_props);
+  void DefineConstant(JSContext* context, JSObject* globalObject, const char* name, int value);
+  void UpdateConsole();
+  int AddDelayedEvent(Event* evt, int freq);
+  void RemoveDelayedEvent(int key);
+
+ private:
+  Script* m_console;
+  EngineState m_state;
+  std::list<Event*> m_DelayedExecList;
+  int m_delayedExecKey;
+  CRITICAL_SECTION m_scriptListLock;
+  ScriptMap m_scripts;
+  CRITICAL_SECTION m_lock;
 };
+
+#define sScriptEngine ScriptEngine::GetInstance()
 
 // these ForEachScript helpers are exposed in case they can be of use somewhere
 bool __fastcall StopIngameScript(Script* script, void*, uint);
-bool __fastcall ExecEventOnScript(Script* script, void* argv, uint argc);
+
 struct EventHelper {
   char* evtName;
   AutoRoot** argv;
   uint argc;
   bool executed;
 };
-JSBool operationCallback(JSContext* cx);
-JSBool contextCallback(JSContext* cx, uint contextOp);
-// gcCallback(JSContext* cx, JSGCStatus status);
-void reportError(JSContext* cx, const char* message, JSErrorReport* report);
-bool ExecScriptEvent(Event* evt, bool clearList);
+
 void CALLBACK EventTimerProc(LPVOID lpArg, DWORD dwTimerLowValue, DWORD dwTimerHighValue);
-#endif

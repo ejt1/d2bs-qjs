@@ -35,7 +35,7 @@ JSScript* JS_CompileFile(JSContext* cx, JSObject* globalObject, std::wstring fil
   int ch3 = t.get();
 
   t.seekg(0, std::ios::end);
-  str.resize(t.tellg());
+  str.resize(static_cast<size_t>(t.tellg()));
   t.seekg(0, std::ios::beg);
 
   str.assign((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
@@ -62,9 +62,9 @@ JSScript* JS_CompileFile(JSContext* cx, JSObject* globalObject, std::wstring fil
 JSBool JSVAL_IS_OBJECT(jsval v) {
   return !JSVAL_IS_PRIMITIVE(v);
 }
-void* JS_GetPrivate(JSContext* cx, JSObject* obj) {
+void* JS_GetPrivate(JSContext* /*cx*/, JSObject* obj) {
   return JS_GetPrivate(obj);
 }
-void JS_SetPrivate(JSContext* cx, JSObject* obj, void* data) {
+void JS_SetPrivate(JSContext* /*cx*/, JSObject* obj, void* data) {
   return JS_SetPrivate(obj, data);
 }

@@ -4,8 +4,11 @@
 #include "Helpers.h"
 
 JSAPI_FUNC(sandbox_ctor) {
+  (argc);
+
   sandbox* box = new sandbox;  // leaked?
-  box->context = JS_NewContext(ScriptEngine::GetRuntime(), 0x2000);
+  box->rt = JS_NewRuntime(0, JS_NO_HELPER_THREADS);
+  box->context = JS_NewContext(box->rt, 0x2000);
   if (!box->context) {
     delete box;
     return JS_TRUE;
@@ -81,6 +84,8 @@ JSAPI_PROP(sandbox_addProperty) {
 }
 
 JSAPI_PROP(sandbox_delProperty) {
+  (vp);
+
   sandbox* box = (sandbox*)JS_GetInstancePrivate(cx, obj, &sandbox_class, NULL);
   jsval ID;
   JS_IdToValue(cx, id, &ID);
@@ -116,18 +121,18 @@ JSAPI_PROP(sandbox_getProperty) {
     char name[32];
     _itoa_s(i, name, 32, 10);
     vp.set(JSVAL_VOID);
-    if (box && JS_LookupProperty(box->context, box->innerObj, name, &vp.get()))
+    if (box && JS_LookupProperty(box->context, box->innerObj, name, vp.address()))
       return JS_TRUE;
-    if (JSVAL_IS_VOID(vp.get()) && JS_LookupProperty(cx, obj, name, &vp.get()))
+    if (JSVAL_IS_VOID(vp.get()) && JS_LookupProperty(cx, obj, name, vp.address()))
       return JS_TRUE;
   } else if (JSVAL_IS_STRING(ID)) {
     char* name = JS_EncodeStringToUTF8(cx, JSVAL_TO_STRING(ID));
     vp.set(JSVAL_VOID);
-    if (box && (JS_LookupProperty(box->context, box->innerObj, name, &vp.get()))) {
+    if (box && (JS_LookupProperty(box->context, box->innerObj, name, vp.address()))) {
       JS_free(cx, name);
       return JS_TRUE;
     }
-    if (JSVAL_IS_VOID(vp.get()) && JS_LookupProperty(cx, obj, name, &vp.get())) {
+    if (JSVAL_IS_VOID(vp.get()) && JS_LookupProperty(cx, obj, name, vp.address())) {
       JS_free(cx, name);
       return JS_TRUE;
     }
@@ -137,6 +142,8 @@ JSAPI_PROP(sandbox_getProperty) {
 }
 
 JSAPI_STRICT_PROP(sandbox_setProperty) {
+  (strict);
+
   sandbox* box = (sandbox*)JS_GetInstancePrivate(cx, obj, &sandbox_class, NULL);
   jsval ID;
   JS_IdToValue(cx, id, &ID);
@@ -148,11 +155,11 @@ JSAPI_STRICT_PROP(sandbox_setProperty) {
     char name[32];
     _itoa_s(i, name, 32, 10);
     if (box)
-      if (JS_SetProperty(box->context, box->innerObj, name, &vp.get()))
+      if (JS_SetProperty(box->context, box->innerObj, name, vp.address()))
         return JS_TRUE;
   } else if (JSVAL_IS_STRING(ID)) {
     char* name = JS_EncodeStringToUTF8(cx, JSVAL_TO_STRING(ID));
-    if (box && JS_SetProperty(box->context, box->innerObj, name, &vp.get())) {
+    if (box && JS_SetProperty(box->context, box->innerObj, name, vp.address())) {
       JS_free(cx, name);
       return JS_TRUE;
     }
@@ -161,7 +168,7 @@ JSAPI_STRICT_PROP(sandbox_setProperty) {
   return JS_FALSE;
 }
 
-void sandbox_finalize(JSFreeOp* fop, JSObject* obj) {
+void sandbox_finalize(JSFreeOp* /*fop*/, JSObject* obj) {
   sandbox* box = (sandbox*)JS_GetPrivate(obj);
   if (box) {
     // bob1.8.8		JS_SetContextThread(box->context);
@@ -226,8 +233,12 @@ JSAPI_FUNC(sandbox_isIncluded) {
 }
 
 JSAPI_FUNC(sandbox_clear) {
-  sandbox* box = (sandbox*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &sandbox_class, NULL);
-  // if(box)
+  (cx);
+  (argc);
+  (vp);
+
+  // sandbox* box = (sandbox*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &sandbox_class, NULL);
+  //  if(box)
   //	JS_ClearScope(cx, box->innerObj);
   return JS_TRUE;
 }

@@ -30,11 +30,11 @@ char* UnicodeToAnsi(const wchar_t* str, UINT codepage) {
 }
 
 void StringToLower(char* p) {
-  for (; *p; ++p) *p = tolower(*p);
+  for (; *p; ++p) *p = static_cast<char>(tolower(*p));
 }
 
 void StringToLower(wchar_t* p) {
-  for (; *p; ++p) *p = towlower(*p);
+  for (; *p; ++p) *p = static_cast<wchar_t>(towlower(*p));
 }
 
 bool StringToBool(const char* str) {
@@ -188,7 +188,7 @@ bool InitHooks(void) {
       continue;
 
     if (Vars.hKeybHook && Vars.hMouseHook) {
-      if (!ScriptEngine::Startup())
+      if (!sScriptEngine->Startup())
         return false;
 
       Vars.bActive = TRUE;
@@ -215,25 +215,25 @@ ScriptState GetStarterScriptState(void) {
 }
 
 bool ExecCommand(const wchar_t* command) {
-  ScriptEngine::RunCommand(command);
+  sScriptEngine->RunCommand(command);
   return true;
 }
 
 bool StartScript(const wchar_t* scriptname, ScriptState state) {
   wchar_t file[_MAX_FNAME + _MAX_PATH];
   swprintf_s(file, _countof(file), L"%s\\%s", Vars.szScriptPath, scriptname);
-  Script* script = ScriptEngine::CompileFile(file, state);
+  Script* script = sScriptEngine->CompileFile(file, state);
   return (script && script->BeginThread(ScriptThread));
 }
 
 void Reload(void) {
-  if (ScriptEngine::GetCount() > 0)
+  if (sScriptEngine->GetCount() > 0)
     Print(L"\u00FFc2D2BS\u00FFc0 :: Stopping all scripts");
-  ScriptEngine::StopAll();
+  sScriptEngine->StopAll();
 
   if (Vars.bDisableCache != TRUE)
     Print(L"\u00FFc2D2BS\u00FFc0 :: Flushing the script cache");
-  ScriptEngine::FlushCache();
+  sScriptEngine->FlushCache();
 
   // wait for things to catch up
   Sleep(500);
@@ -265,14 +265,14 @@ bool ProcessCommand(const wchar_t* command, bool unprocessedIsCommand) {
       Print(L"\u00FFc2D2BS\u00FFc0 :: Failed to start %s", script);
     result = true;
   } else if (_wcsicmp(argv, L"stop") == 0) {
-    if (ScriptEngine::GetCount() > 0)
+    if (sScriptEngine->GetCount() > 0)
       Print(L"\u00FFc2D2BS\u00FFc0 :: Stopping all scripts");
-    ScriptEngine::StopAll();
+    sScriptEngine->StopAll();
     result = true;
   } else if (_wcsicmp(argv, L"flush") == 0) {
     if (Vars.bDisableCache != TRUE)
       Print(L"\u00FFc2D2BS\u00FFc0 :: Flushing the script cache");
-    ScriptEngine::FlushCache();
+    sScriptEngine->FlushCache();
     result = true;
   } else if (_wcsicmp(argv, L"load") == 0) {
     const wchar_t* script = command + 5;
@@ -381,7 +381,7 @@ char* DllLoadAddrStrs() {
   result[0] = '\0';
 
   for (i = 0; i < sizeof(dlls) / sizeof(dlls[0]); ++i) {
-    sprintf_s(lineBuf, sizeof(lineBuf), "%s loaded at: 0x%08x.", dlls[i], GetModuleHandle(dlls[i]));
+    sprintf_s(lineBuf, sizeof(lineBuf), "%s loaded at: 0x%08x.", dlls[i], (uint32_t)(GetModuleHandle(dlls[i])));
     strcat_s(result, strMaxLen, lineBuf);
     if (i != (sizeof(dlls) / sizeof(dlls[0]) - 1)) {
       strcat_s(result, strMaxLen, "\n");
@@ -409,7 +409,7 @@ LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* ptrs) {
       "\tEIP: 0x%08x, ESP: 0x%08x\n"
       "\tCS: 0x%04x, DS: 0x%04x, ES: 0x%04x, SS: 0x%04x, FS: 0x%04x, GS: 0x%04x\n"
       "\tEAX: 0x%08x, EBX: 0x%08x, ECX: 0x%08x, EDX: 0x%08x, ESI: 0x%08x, EDI: 0x%08x, EBP: 0x%08x, FLG: 0x%08x\n",
-      rec->ExceptionCode, rec->ExceptionAddress, base, ctx->Eip, ctx->Esp, ctx->SegCs, ctx->SegDs, ctx->SegEs, ctx->SegSs, ctx->SegFs, ctx->SegGs, ctx->Eax, ctx->Ebx,
+      rec->ExceptionCode, (uint32_t)rec->ExceptionAddress, base, ctx->Eip, ctx->Esp, ctx->SegCs, ctx->SegDs, ctx->SegEs, ctx->SegSs, ctx->SegFs, ctx->SegGs, ctx->Eax, ctx->Ebx,
       ctx->Ecx, ctx->Edx, ctx->Esi, ctx->Edi, ctx->Ebp, ctx->EFlags);
 
   szString = new char[len + 1];
@@ -420,7 +420,7 @@ LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* ptrs) {
             "\tEIP: 0x%08x, ESP: 0x%08x\n"
             "\tCS: 0x%04x, DS: 0x%04x, ES: 0x%04x, SS: 0x%04x, FS: 0x%04x, GS: 0x%04x\n"
             "\tEAX: 0x%08x, EBX: 0x%08x, ECX: 0x%08x, EDX: 0x%08x, ESI: 0x%08x, EDI: 0x%08x, EBP: 0x%08x, FLG: 0x%08x\n",
-            rec->ExceptionCode, rec->ExceptionAddress, base, ctx->Eip, ctx->Esp, ctx->SegCs, ctx->SegDs, ctx->SegEs, ctx->SegSs, ctx->SegFs, ctx->SegGs, ctx->Eax,
+            rec->ExceptionCode, (uint32_t)rec->ExceptionAddress, base, ctx->Eip, ctx->Esp, ctx->SegCs, ctx->SegDs, ctx->SegEs, ctx->SegSs, ctx->SegFs, ctx->SegGs, ctx->Eax,
             ctx->Ebx, ctx->Ecx, ctx->Edx, ctx->Esi, ctx->Edi, ctx->Ebp, ctx->EFlags);
 
   dllAddrs = DllLoadAddrStrs();

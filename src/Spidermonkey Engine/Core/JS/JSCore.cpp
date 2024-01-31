@@ -89,7 +89,7 @@ JSAPI_FUNC(my_setTimeout) {
     evt->owner = self;
     evt->name = _strdup("setTimeout");
     evt->arg3 = new jsval(JS_ARGV(cx, vp)[0]);
-    JS_SET_RVAL(cx, vp, INT_TO_JSVAL(ScriptEngine::AddDelayedEvent(evt, freq)));
+    JS_SET_RVAL(cx, vp, INT_TO_JSVAL(sScriptEngine->AddDelayedEvent(evt, freq)));
   }
 
   return JS_TRUE;
@@ -109,7 +109,7 @@ JSAPI_FUNC(my_setInterval) {
     evt->owner = self;
     evt->name = _strdup("setInterval");
     evt->arg3 = new jsval(JS_ARGV(cx, vp)[0]);
-    JS_SET_RVAL(cx, vp, INT_TO_JSVAL(ScriptEngine::AddDelayedEvent(evt, freq)));
+    JS_SET_RVAL(cx, vp, INT_TO_JSVAL(sScriptEngine->AddDelayedEvent(evt, freq)));
   }
 
   return JS_TRUE;
@@ -119,7 +119,7 @@ JSAPI_FUNC(my_clearInterval) {
   if (argc != 1 || !JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[0]))
     JS_ReportError(cx, "invalid params passed to clearInterval");
 
-  ScriptEngine::RemoveDelayedEvent(JSVAL_TO_INT(JS_ARGV(cx, vp)[0]));
+  sScriptEngine->RemoveDelayedEvent(JSVAL_TO_INT(JS_ARGV(cx, vp)[0]));
   return JS_TRUE;
 }
 JSAPI_FUNC(my_delay) {
@@ -137,8 +137,8 @@ JSAPI_FUNC(my_delay) {
 
   if (nDelay) {        // loop so we can exec events while in delay
     while (amt > 0) {  // had a script deadlock here, make sure were positve with amt
-      WaitForSingleObjectEx(script->eventSignal, amt, true);
-      ResetEvent(script->eventSignal);
+      WaitForSingleObjectEx(script->eventSignal(), amt, true);
+      ResetEvent(script->eventSignal());
       if (script->IsAborted())
         break;
 
@@ -149,10 +149,10 @@ JSAPI_FUNC(my_delay) {
         LeaveCriticalSection(&Vars.cEventSection);
         ExecScriptEvent(evt, false);
       }
-      if (JS_GetGCParameter(script->GetRuntime(), JSGC_BYTES) - script->LastGC > 524288)  // gc every .5 mb
+      if (JS_GetGCParameter(script->GetRuntime(), JSGC_BYTES) - script->LastGC() > 524288)  // gc every .5 mb
       {
         JS_GC(JS_GetRuntime(cx));
-        script->LastGC = JS_GetGCParameter(script->GetRuntime(), JSGC_BYTES);
+        script->LastGC() = JS_GetGCParameter(script->GetRuntime(), JSGC_BYTES);
       }
       /*else
               JS_MaybeGC(cx);*/
@@ -195,7 +195,7 @@ JSAPI_FUNC(my_load) {
     autoBuffer[i - 1]->write(cx, JS_ARGV(cx, vp)[i]);
   }
 
-  Script* newScript = ScriptEngine::CompileFile(buf, scriptState, argc - 1, autoBuffer);
+  Script* newScript = sScriptEngine->CompileFile(buf, scriptState, argc - 1, autoBuffer);
 
   if (newScript) {
     newScript->BeginThread(ScriptThread);
@@ -210,6 +210,8 @@ JSAPI_FUNC(my_load) {
 }
 
 JSAPI_FUNC(my_include) {
+  (argc);
+
   JS_SET_RVAL(cx, vp, JSVAL_FALSE);
 
   Script* script = (Script*)JS_GetContextPrivate(cx);
@@ -241,18 +243,23 @@ JSAPI_FUNC(my_stop) {
     if (script)
       script->Stop();
   } else
-    ScriptEngine::StopAll();
+    sScriptEngine->StopAll();
 
   return JS_FALSE;
 }
 
 JSAPI_FUNC(my_stacktrace) {
+  (cx);
+  (argc);
+
   JS_SET_RVAL(cx, vp, JSVAL_TRUE);
   GetStackWalk();
   return JS_TRUE;
 }
 
 JSAPI_FUNC(my_beep) {
+  (cx);
+
   jsint nBeepId = NULL;
 
   if (argc > 0 && JSVAL_IS_INT(JS_ARGV(cx, vp)[0]))
@@ -264,6 +271,8 @@ JSAPI_FUNC(my_beep) {
 }
 
 JSAPI_FUNC(my_getTickCount) {
+  (argc);
+
   JS_BeginRequest(cx);
   jsval rval;
   rval = JS_NumberValue((jsdouble)GetTickCount());
@@ -273,11 +282,16 @@ JSAPI_FUNC(my_getTickCount) {
 }
 
 JSAPI_FUNC(my_getThreadPriority) {
+  (cx);
+  (argc);
+
   JS_SET_RVAL(cx, vp, INT_TO_JSVAL((uint)GetCurrentThread()));
   return JS_TRUE;
 }
 
 JSAPI_FUNC(my_isIncluded) {
+  (argc);
+
   const wchar_t* file = JS_GetStringCharsZ(cx, JSVAL_TO_STRING(JS_ARGV(cx, vp)[0]));
 
   if (wcslen(file) > (_MAX_FNAME + _MAX_PATH - wcslen(Vars.szScriptPath) - 6)) {
@@ -333,6 +347,8 @@ JSAPI_FUNC(my_debugLog) {
   return JS_TRUE;
 }
 JSAPI_FUNC(my_copy) {
+  (argc);
+
   char* data = JS_EncodeStringToUTF8(cx, JSVAL_TO_STRING(JS_ARGV(cx, vp)[0]));
 
   JS_ValueToString(cx, JS_ARGV(cx, vp)[0]);
@@ -352,6 +368,8 @@ JSAPI_FUNC(my_copy) {
   return JS_TRUE;
 }
 JSAPI_FUNC(my_paste) {
+  (argc);
+
   OpenClipboard(NULL);
   HANDLE foo = GetClipboardData(CF_TEXT);
   CloseClipboard();
@@ -406,7 +424,7 @@ JSAPI_FUNC(my_sendCopyData) {
   if (data == NULL)
     data = "";
 
-  COPYDATASTRUCT aCopy = {nModeId, strlen(data) + 1, data};
+  COPYDATASTRUCT aCopy = {static_cast<ULONG_PTR>(nModeId), strlen(data) + 1, data};
 
   // bob20	 jsrefcount depth = JS_SuspendRequest(cx);
   JS_SET_RVAL(cx, vp, INT_TO_JSVAL(SendMessage(hWnd, WM_COPYDATA, (WPARAM)D2GFX_GetHwnd(), (LPARAM)&aCopy)));
@@ -417,13 +435,15 @@ JSAPI_FUNC(my_sendCopyData) {
 }
 
 JSAPI_FUNC(my_sendDDE) {
+  (argc);
+
   JS_SET_RVAL(cx, vp, JSVAL_FALSE);
-  jsint mode;
+  int32_t mode = 0;
   char *pszDDEServer = "\"\"", *pszTopic = "\"\"", *pszItem = "\"\"", *pszData = "\"\"";
   JS_BeginRequest(cx);
 
   if (JSVAL_IS_INT(JS_ARGV(cx, vp)[0]))
-    JS_ValueToECMAUint32(cx, JS_ARGV(cx, vp)[1], (uint32*)&mode);
+    JS_ValueToECMAInt32(cx, JS_ARGV(cx, vp)[1], &mode);
 
   if (JSVAL_IS_STRING(JS_ARGV(cx, vp)[1]))
     pszDDEServer = JS_EncodeStringToUTF8(cx, JSVAL_TO_STRING(JS_ARGV(cx, vp)[1]));
@@ -458,6 +478,8 @@ JSAPI_FUNC(my_sendDDE) {
 }
 
 JSAPI_FUNC(my_keystate) {
+  (cx);
+
   JS_SET_RVAL(cx, vp, JSVAL_FALSE);
   if (argc < 1 || !JSVAL_IS_INT(JS_ARGV(cx, vp)[0]))
     return JS_TRUE;
@@ -468,6 +490,8 @@ JSAPI_FUNC(my_keystate) {
 }
 
 JSAPI_FUNC(my_addEventListener) {
+  (argc);
+
   if (JSVAL_IS_STRING(JS_ARGV(cx, vp)[0]) && JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[1])) {
     char* evtName = JS_EncodeStringToUTF8(cx, JSVAL_TO_STRING(JS_ARGV(cx, vp)[0]));
     if (evtName && strlen(evtName)) {
@@ -481,6 +505,8 @@ JSAPI_FUNC(my_addEventListener) {
 }
 
 JSAPI_FUNC(my_removeEventListener) {
+  (argc);
+
   if (JSVAL_IS_STRING(JS_ARGV(cx, vp)[0]) && JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[1])) {
     char* evtName = JS_EncodeStringToUTF8(cx, JSVAL_TO_STRING(JS_ARGV(cx, vp)[0]));
     if (evtName && strlen(evtName)) {
@@ -494,6 +520,8 @@ JSAPI_FUNC(my_removeEventListener) {
 }
 
 JSAPI_FUNC(my_clearEvent) {
+  (argc);
+
   if (JSVAL_IS_STRING(JS_ARGV(cx, vp)[0])) {
     Script* self = (Script*)JS_GetContextPrivate(cx);
     char* evt = JS_EncodeStringToUTF8(cx, JSVAL_TO_STRING(JS_ARGV(cx, vp)[0]));
@@ -504,6 +532,8 @@ JSAPI_FUNC(my_clearEvent) {
 }
 
 JSAPI_FUNC(my_clearAllEvents) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+
   Script* self = (Script*)JS_GetContextPrivate(cx);
   self->ClearAllEvents();
   return JS_TRUE;
@@ -539,23 +569,34 @@ JSAPI_FUNC(my_scriptBroadcast) {
 }
 
 JSAPI_FUNC(my_showConsole) {
+  (cx);
+  (argc);
+
   JS_SET_RVAL(cx, vp, JSVAL_NULL);
   Console::Show();
   return JS_TRUE;
 }
 
 JSAPI_FUNC(my_hideConsole) {
+  (cx);
+  (argc);
+
   JS_SET_RVAL(cx, vp, JSVAL_NULL);
   Console::Hide();
   return JS_TRUE;
 }
 
 JSAPI_FUNC(my_handler) {
+  (cx);
+  (argc);
+
   JS_SET_RVAL(cx, vp, UINT_TO_JSVAL((uint32_t)Vars.hHandle));
   return JS_TRUE;
 }
 
 JSAPI_FUNC(my_loadMpq) {
+  (argc);
+
   JS_SET_RVAL(cx, vp, JSVAL_NULL);
   const wchar_t* path = JS_GetStringCharsZ(cx, JSVAL_TO_STRING(JS_ARGV(cx, vp)[0]));
 
@@ -658,6 +699,8 @@ JSAPI_FUNC(my_getPacket) {
 
 #pragma comment(lib, "wininet")
 JSAPI_FUNC(my_getIP) {
+  (argc);
+
   HINTERNET hInternet, hFile;
   DWORD rSize;
   char buffer[32];

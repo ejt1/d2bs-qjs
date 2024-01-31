@@ -6,7 +6,7 @@
 
 EMPTY_CTOR(area)
 
-void area_finalize(JSFreeOp* fop, JSObject* obj) {
+void area_finalize(JSFreeOp* /*fop*/, JSObject* obj) {
   myArea* pArea = (myArea*)JS_GetPrivate(obj);
 
   if (pArea) {

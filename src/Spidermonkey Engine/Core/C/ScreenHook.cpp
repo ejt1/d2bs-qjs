@@ -6,8 +6,6 @@
 
 #include <vector>
 
-using namespace std;
-
 bool Genhook::init = false;
 HookList Genhook::visible = HookList();
 HookList Genhook::invisible = HookList();
@@ -25,24 +23,24 @@ bool zOrderSort(Genhook* first, Genhook* second) {
   return first->GetZOrder() < second->GetZOrder();
 }
 
-bool __fastcall HoverHook(Genhook* hook, void* argv, uint argc) {
+bool __fastcall HoverHook(Genhook* hook, void* argv, uint /*argc*/) {
   HookClickHelper* helper = (HookClickHelper*)argv;
   hook->Hover(&helper->point);
   return true;
 }
 
-bool __fastcall ClickHook(Genhook* hook, void* argv, uint argc) {
+bool __fastcall ClickHook(Genhook* hook, void* argv, uint /*argc*/) {
   HookClickHelper* helper = (HookClickHelper*)argv;
   return hook->Click(helper->button, &helper->point);
 }
 
-bool __fastcall DrawHook(Genhook* hook, void* argv, uint argc) {
+bool __fastcall DrawHook(Genhook* hook, void* argv, uint /*argc*/) {
   if ((hook->GetGameState() == (ScreenhookState)(int)argv || hook->GetGameState() == Perm) && (!hook->GetIsAutomap() || (hook->GetIsAutomap() && *p_D2CLIENT_AutomapOn)))
     hook->Draw();
   return true;
 }
 
-bool __fastcall CleanHook(Genhook* hook, void* argv, uint argc) {
+bool __fastcall CleanHook(Genhook* hook, void* argv, uint /*argc*/) {
   if (hook->owner == (Script*)argv)
     hook->SetIsVisible(false);
   return true;
@@ -145,7 +143,7 @@ void Genhook::Clean(Script* owner) {
   HookIterator it = visible.begin();
   while (it != visible.end()) {
     if ((*it)->owner->IsAborted()) {
-      Genhook* i = *it;
+      // Genhook* i = *it;
       it = invisible.erase(it);
       //	delete(i);
     } else
@@ -155,7 +153,7 @@ void Genhook::Clean(Script* owner) {
   it = invisible.begin();
   while (it != invisible.end()) {
     if ((*it)->owner == owner) {
-      Genhook* i = *it;
+      // Genhook* i = *it;
       it = invisible.erase(it);
       // delete(i);
 
@@ -247,7 +245,7 @@ void Genhook::Hover(POINT* loc) {
     Event* evt = new Event;
     evt->owner = owner;
     evt->argc = 2;
-    evt->functions.push_back(new AutoRoot((owner->GetContext(), hovered)));
+    evt->functions.push_back(new AutoRoot(owner->GetContext(), hovered));
     evt->name = _strdup("ScreenHookHover");
     evt->arg1 = new DWORD((DWORD)loc->x);
     evt->arg2 = new DWORD((DWORD)loc->y);
@@ -262,7 +260,7 @@ void Genhook::SetClickHandler(jsval handler) {
     return;
   Lock();
 
-  JSContext* cx = owner->GetContext();
+  //JSContext* cx = owner->GetContext();
   // if(JSVAL_IS_FUNCTION(cx, handler))
   //	JS_RemoveRoot(owner->GetContext(), &clicked);
   // JS_SetContextThread(cx);
@@ -308,7 +306,7 @@ void TextHook::Draw(void) {
   if (GetIsVisible() && GetX() != -1 && GetY() != -1 && text) {
     uint x = GetX(), y = GetY(), w = CalculateTextLen(text, font).x;
     x -= (alignment != Center ? (alignment != Right ? 0 : w) : w / 2);
-    POINT loc = {x, y};
+    POINT loc = {static_cast<LONG>(x), static_cast<LONG>(y)};
     if (GetIsAutomap()) {
       loc = ScreenToAutomap(x, y);
     }
@@ -341,7 +339,7 @@ void ImageHook::Draw(void) {
   if (GetIsVisible() && GetX() != -1 && GetY() != -1 && GetImage() != NULL && image != NULL) {
     uint x = GetX(), y = GetY(), w = image->cells[0]->width;
     x += (alignment != Left ? (alignment != Right ? 0 : -1 * (w / 2)) : w / 2);
-    POINT loc = {x, y};
+    POINT loc = {static_cast<LONG>(x), static_cast<LONG>(y)};
     if (GetIsAutomap()) {
       loc = ScreenToAutomap(x, y);
     }
@@ -381,12 +379,12 @@ void ImageHook::SetImage(const wchar_t* nimage) {
 void LineHook::Draw(void) {
   Lock();
   if (GetIsVisible() && GetX() != -1 && GetY() != -1) {
-    uint x = GetX(), y = GetY(), x2 = GetX2(), y2 = GetY2();
-    POINT loc = {x, y};
-    POINT sz = {x2, y2};
+    uint x = GetX(), y = GetY(), _x2 = GetX2(), _y2 = GetY2();
+    POINT loc = {static_cast<LONG>(x), static_cast<LONG>(y)};
+    POINT sz = {static_cast<LONG>(_x2), static_cast<LONG>(_y2)};
     if (GetIsAutomap()) {
       loc = ScreenToAutomap(x, y);
-      sz = ScreenToAutomap(x2, y2);
+      sz = ScreenToAutomap(_x2, _y2);
     }
     EnterCriticalSection(&Vars.cLineHookSection);
     D2GFX_DrawLine(loc.x, loc.y, sz.x, sz.y, color, 0xFF);
@@ -404,8 +402,8 @@ void BoxHook::Draw(void) {
     } else if (alignment == Right) {
       x += x2 / 2;
     }
-    POINT loc = {x, y};
-    POINT sz = {x + x2, y + y2};
+    POINT loc = {static_cast<LONG>(x), static_cast<LONG>(y)};
+    POINT sz = {static_cast<LONG>(x + x2), static_cast<LONG>(y + y2)};
     if (GetIsAutomap()) {
       loc = ScreenToAutomap(x, y);
       sz = ScreenToAutomap(x + x2, y + y2);
@@ -433,7 +431,7 @@ void FrameHook::Draw(void) {
     } else if (alignment == Right) {
       x += x2 / 2;
     }
-    RECT rect = {x, y, x + x2, y + y2};
+    RECT rect = {static_cast<LONG>(x), static_cast<LONG>(y), static_cast<LONG>(x + x2), static_cast<LONG>(y + y2)};
     EnterCriticalSection(&Vars.cFrameHookSection);
     D2GFX_DrawFrame(&rect);
     LeaveCriticalSection(&Vars.cFrameHookSection);

@@ -86,6 +86,8 @@ set(NSPR_SRCS
 
 add_library(nspr ${NSPR_SRCS})
 
+target_compile_options(nspr PRIVATE /W0)
+
 target_include_directories(nspr
   PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include/md

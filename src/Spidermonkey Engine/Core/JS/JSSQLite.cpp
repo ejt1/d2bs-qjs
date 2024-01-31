@@ -21,8 +21,6 @@
 #include "File.h"
 #include "Helpers.h"
 
-using namespace std;
-
 struct SqliteDB;
 struct DBStmt;
 typedef std::set<DBStmt*> StmtList;
@@ -65,11 +63,16 @@ void close_db_stmt(DBStmt* stmt) {
 }
 
 JSAPI_FUNC(my_sqlite_version) {
+  (argc);
+
   JS_SET_RVAL(cx, vp, STRING_TO_JSVAL(JS_InternString(cx, sqlite3_version)));
   return JS_TRUE;
 }
 
 JSAPI_FUNC(my_sqlite_memusage) {
+  (cx);
+  (argc);
+
   jsval rval = JS_RVAL(cx, vp);
   rval = JS_NumberValue((jsdouble)sqlite3_memory_used());
   return JS_TRUE;
@@ -217,6 +220,8 @@ JSAPI_FUNC(sqlite_query) {
 }
 
 JSAPI_FUNC(sqlite_close) {
+  (argc);
+
   SqliteDB* dbobj = (SqliteDB*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &sqlite_db, NULL);
   if (!clean_sqlite_db(dbobj)) {
     char msg[1024];
@@ -228,6 +233,8 @@ JSAPI_FUNC(sqlite_close) {
 }
 
 JSAPI_FUNC(sqlite_open) {
+  (argc);
+
   SqliteDB* dbobj = (SqliteDB*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &sqlite_db, NULL);
   if (!dbobj->open) {
     if (SQLITE_OK != sqlite3_open16(dbobj->path, &dbobj->db)) {
@@ -253,7 +260,7 @@ JSAPI_PROP(sqlite_getProperty) {
       vp.setBoolean(dbobj->open);
       break;
     case SQLITE_LASTROWID:
-      vp.setInt32(sqlite3_last_insert_rowid(dbobj->db));
+      vp.setInt32(static_cast<int32_t>(sqlite3_last_insert_rowid(dbobj->db)));
       break;
     case SQLITE_STMTS: {
       JS_BeginRequest(cx);
@@ -277,7 +284,7 @@ JSAPI_PROP(sqlite_getProperty) {
   return JS_TRUE;
 }
 
-void sqlite_finalize(JSFreeOp* fop, JSObject* obj) {
+void sqlite_finalize(JSFreeOp* /*fop*/, JSObject* obj) {
   SqliteDB* dbobj = (SqliteDB*)JS_GetPrivate(obj);
   JS_SetPrivate(obj, NULL);
   if (dbobj) {
@@ -305,6 +312,8 @@ void sqlite_finalize(JSFreeOp* fop, JSObject* obj) {
 //}
 
 JSAPI_FUNC(sqlite_stmt_getobject) {
+  (argc);
+
   DBStmt* stmtobj = (DBStmt*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &sqlite_stmt, NULL);
   sqlite3_stmt* stmt = stmtobj->stmt;
 
@@ -368,6 +377,8 @@ JSAPI_FUNC(sqlite_stmt_getobject) {
 }
 
 JSAPI_FUNC(sqlite_stmt_colcount) {
+  (argc);
+
   DBStmt* stmtobj = (DBStmt*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &sqlite_stmt, NULL);
   sqlite3_stmt* stmt = stmtobj->stmt;
 
@@ -434,6 +445,8 @@ JSAPI_FUNC(sqlite_stmt_colname) {
 }
 
 JSAPI_FUNC(sqlite_stmt_execute) {
+  (argc);
+
   DBStmt* stmtobj = (DBStmt*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &sqlite_stmt, NULL);
 
   int res = sqlite3_step(stmtobj->stmt);
@@ -492,6 +505,8 @@ JSAPI_FUNC(sqlite_stmt_bind) {
 }
 
 JSAPI_FUNC(sqlite_stmt_next) {
+  (argc);
+
   DBStmt* stmtobj = (DBStmt*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &sqlite_stmt, NULL);
 
   int res = sqlite3_step(stmtobj->stmt);
@@ -530,6 +545,8 @@ JSAPI_FUNC(sqlite_stmt_skip) {
 }
 
 JSAPI_FUNC(sqlite_stmt_reset) {
+  (argc);
+
   DBStmt* stmtobj = (DBStmt*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &sqlite_stmt, NULL);
   if (SQLITE_OK != sqlite3_reset(stmtobj->stmt))
     THROW_ERROR(cx, sqlite3_errmsg(stmtobj->assoc_db->db));
@@ -539,6 +556,8 @@ JSAPI_FUNC(sqlite_stmt_reset) {
 }
 
 JSAPI_FUNC(sqlite_stmt_close) {
+  (argc);
+
   JSObject* obj = JS_THIS_OBJECT(cx, vp);
   DBStmt* stmtobj = (DBStmt*)JS_GetInstancePrivate(cx, obj, &sqlite_stmt, NULL);
   if (stmtobj->current_row)
@@ -574,7 +593,7 @@ JSAPI_PROP(sqlite_stmt_getProperty) {
   return JS_TRUE;
 }
 
-void sqlite_stmt_finalize(JSFreeOp* fop, JSObject* obj) {
+void sqlite_stmt_finalize(JSFreeOp* /*fop*/, JSObject* obj) {
   DBStmt* stmtobj = (DBStmt*)JS_GetPrivate(obj);
   JS_SetPrivate(obj, NULL);
   if (stmtobj) {

@@ -3,9 +3,8 @@
 #include "ScreenHook.h"
 #include "Script.h"
 #include "File.h"
-using namespace std;
 
-void hook_finalize(JSFreeOp* fop, JSObject* obj) {
+void hook_finalize(JSFreeOp* /*fop*/, JSObject* obj) {
   Genhook* hook = (Genhook*)JS_GetPrivate(obj);
   Genhook::EnterGlobalSection();
   if (hook) {
@@ -16,6 +15,8 @@ void hook_finalize(JSFreeOp* fop, JSObject* obj) {
 }
 
 JSAPI_FUNC(hook_remove) {
+  (argc);
+
   JSObject* obj = JS_THIS_OBJECT(cx, vp);
   Genhook::EnterGlobalSection();
   Genhook* hook = (Genhook*)JS_GetPrivate(cx, obj);
@@ -118,6 +119,8 @@ JSAPI_PROP(frame_getProperty) {
 }
 
 JSAPI_STRICT_PROP(frame_setProperty) {
+  (strict);
+
   FrameHook* pFramehook = (FrameHook*)JS_GetPrivate(cx, obj);
   if (!pFramehook)
     return JS_TRUE;
@@ -260,6 +263,8 @@ JSAPI_PROP(box_getProperty) {
 }
 
 JSAPI_STRICT_PROP(box_setProperty) {
+  (strict);
+
   BoxHook* pBoxHook = (BoxHook*)JS_GetPrivate(cx, obj);
   if (!pBoxHook)
     return JS_TRUE;
@@ -400,6 +405,8 @@ JSAPI_PROP(line_getProperty) {
 }
 
 JSAPI_STRICT_PROP(line_setProperty) {
+  (strict);
+
   LineHook* pLineHook = (LineHook*)JS_GetPrivate(cx, obj);
   if (!pLineHook)
     return JS_TRUE;
@@ -541,6 +548,8 @@ JSAPI_PROP(text_getProperty) {
 }
 
 JSAPI_STRICT_PROP(text_setProperty) {
+  (strict);
+
   TextHook* pTextHook = (TextHook*)JS_GetPrivate(cx, obj);
   if (!pTextHook)
     return JS_TRUE;
@@ -637,7 +646,7 @@ JSAPI_FUNC(image_ctor) {
   if (!hook)
     THROW_ERROR(cx, "Failed to create image object");
 
-  ImageHook* pImageHook = new ImageHook(script, hook, path, x, y, color, automap, align, state, 3);
+  ImageHook* pImageHook = new ImageHook(script, hook, path, x, y, color, automap, align, state, true);
 
   if (!pImageHook)
     THROW_ERROR(cx, "Failed to create ImageHook");
@@ -688,6 +697,8 @@ JSAPI_PROP(image_getProperty) {
 }
 
 JSAPI_STRICT_PROP(image_setProperty) {
+  (strict);
+
   ImageHook* pImageHook = (ImageHook*)JS_GetPrivate(cx, obj);
   if (!pImageHook)
     return JS_TRUE;

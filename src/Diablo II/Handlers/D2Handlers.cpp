@@ -19,14 +19,12 @@
 #include "CommandLine.h"
 #include "Control.h"
 
-using namespace std;
-
 bool __fastcall UpdatePlayerGid(Script* script, void*, uint) {
   script->UpdatePlayerGid();
   return true;
 }
 
-DWORD WINAPI D2Thread(LPVOID lpParam) {
+DWORD WINAPI D2Thread(LPVOID /*lpParam*/) {
   sLine* command;
   bool beginStarter = true;
   bool bInGame = false;
@@ -81,8 +79,8 @@ DWORD WINAPI D2Thread(LPVOID lpParam) {
           Sleep(500);
 
           D2CLIENT_InitInventory();
-          ScriptEngine::ForEachScript(UpdatePlayerGid, NULL, 0);
-          ScriptEngine::UpdateConsole();
+          sScriptEngine->ForEachScript(UpdatePlayerGid, NULL, 0);
+          sScriptEngine->UpdateConsole();
           Vars.bQuitting = false;
           GameJoined();
 
@@ -107,13 +105,13 @@ DWORD WINAPI D2Thread(LPVOID lpParam) {
         break;
     }
     Sleep(50);
-    /*	EnterCriticalSection(&ScriptEngine::lock);
-            for(ScriptMap::iterator it = ScriptEngine::scripts.begin(); it != ScriptEngine::scripts.end(); it++)
+    /*	EnterCriticalSection(&sScriptEngine->lock);
+            for(ScriptMap::iterator it = sScriptEngine->scripts.begin(); it != sScriptEngine->scripts.end(); it++)
                     JS_TriggerOperationCallback(it->second->GetContext());
-            LeaveCriticalSection(&ScriptEngine::lock);  */
+            LeaveCriticalSection(&sScriptEngine->lock);  */
   }
 
-  ScriptEngine::Shutdown();
+  sScriptEngine->Shutdown();
 
   return NULL;
 }
@@ -183,10 +181,10 @@ LONG WINAPI GameEventHandler(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         wchar_t* lpwData = AnsiToUnicode((const char*)pCopy->lpData);
         if (pCopy->dwData == 0x1337)  // 0x1337 = Execute Script
         {
-          while (!Vars.bActive || (ScriptEngine::GetState() != Running)) {
+          while (!Vars.bActive || (sScriptEngine->GetState() != Running)) {
             Sleep(100);
           }
-          ScriptEngine::RunCommand(lpwData);
+          sScriptEngine->RunCommand(lpwData);
         } else if (pCopy->dwData == 0x31337)  // 0x31337 = Set Profile
           if (SwitchToProfile(lpwData))
             Print(L"\u00FFc2D2BS\u00FFc0 :: Switched to profile %s", lpwData);
@@ -365,9 +363,9 @@ void FlushPrint() {
     std::wstring str = clean.front();
 
     // Break into lines through \n.
-    list<wstring> lines;
-    wstring temp;
-    wstringstream ss(str);
+    std::list<std::wstring> lines;
+    std::wstring temp;
+    std::wstringstream ss(str);
 
     if (Vars.bUseGamePrint && ClientState() == ClientStateInGame) {
       while (getline(ss, temp)) {
@@ -376,7 +374,7 @@ void FlushPrint() {
       }
 
       // Convert and send every line.
-      for (list<wstring>::iterator it = lines.begin(); it != lines.end(); ++it) {
+      for (std::list<std::wstring>::iterator it = lines.begin(); it != lines.end(); ++it) {
         D2CLIENT_PrintGameString((wchar_t*)it->c_str(), 0);
       }
       /*} else if (Vars.bUseGamePrint && ClientState() == ClientStateMenu && findControl(4, (const wchar_t*)NULL, -1, 28, 410, 354, 298)) {
@@ -438,13 +436,13 @@ void SetMaxDiff(void) {
   }
 }
 
-void __stdcall AddUnit(UnitAny* lpUnit) {
+void __stdcall AddUnit(UnitAny* /*lpUnit*/) {
   //	EnterCriticalSection(&Vars.cUnitListSection);
   //	Vars.vUnitList.push_back(make_pair<DWORD, DWORD>(lpUnit->dwUnitId, lpUnit->dwType));
   //	LeaveCriticalSection(&Vars.cUnitListSection);
 }
 
-void __stdcall RemoveUnit(UnitAny* lpUnit) {
+void __stdcall RemoveUnit(UnitAny* /*lpUnit*/) {
   //	EnterCriticalSection(&Vars.cUnitListSection);
   // no need to check the return--it has to be there or the real game would have bigger issues with it
   //	for(vector<pair<DWORD, DWORD> >::iterator it = Vars.vUnitList.begin(); it != Vars.vUnitList.end(); it++)
@@ -487,7 +485,7 @@ void __fastcall GamePlayerAssignment(UnitAny* pPlayer) {
   PlayerAssignEvent(pPlayer->dwUnitId);
 }
 
-void CALLBACK TimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime) {
+void CALLBACK TimerProc(HWND /*hwnd*/, UINT /*uMsg*/, UINT_PTR /*idEvent*/, DWORD /*dwTime*/) {
   if (Vars.bGameLoopEntered)
     LeaveCriticalSection(&Vars.cGameLoopSection);
   else {
@@ -506,15 +504,15 @@ void GameLeave(void) {
   //	else
   //		Vars.bGameLoopEntered = true;
 
-  /*EnterCriticalSection(&ScriptEngine::lock);
+  /*EnterCriticalSection(&sScriptEngine->lock);
   std::vector<Script*> list;
-  for(ScriptMap::iterator it = ScriptEngine::scripts.begin(); it != ScriptEngine::scripts.end(); it++)
+  for(ScriptMap::iterator it = sScriptEngine->scripts.begin(); it != sScriptEngine->scripts.end(); it++)
           if(it->second->GetState() == InGame)
                   it->second->Stop(true);
 
-  LeaveCriticalSection(&ScriptEngine::lock); */
+  LeaveCriticalSection(&sScriptEngine->lock); */
   Vars.bQuitting = false;
-  ScriptEngine::ForEachScript(StopIngameScript, NULL, 0);
+  sScriptEngine->ForEachScript(StopIngameScript, NULL, 0);
   ActMap::ClearCache();
 
   //	EnterCriticalSection(&Vars.cGameLoopSection);
@@ -524,11 +522,11 @@ BOOL __fastcall RealmPacketRecv(BYTE* pPacket, DWORD dwSize) {
   return !RealmPacketEvent(pPacket, dwSize);
 }
 
-BOOL __fastcall ChatPacketRecv(BYTE* pPacket, int len) {
+BOOL __fastcall ChatPacketRecv(BYTE* pPacket, int /*len*/) {
   bool blockPacket = false;
 
   if (pPacket[1] == 0xF) {
-    DWORD mode = pPacket[4];
+    // DWORD mode = pPacket[4];
     char* who = (char*)pPacket + 28;
     char* said = (char*)pPacket + 29 + strlen(who);
     wchar_t* wsaid = AnsiToUnicode(said, CP_ACP);

@@ -145,6 +145,8 @@ JSAPI_FUNC(my_acceptTrade) {
 }
 
 JSAPI_FUNC(my_tradeOk) {
+  (argc);
+
   if (!WaitForGameReady())
     THROW_WARNING(cx, vp, "Game not ready");
 
@@ -168,13 +170,15 @@ JSAPI_FUNC(my_tradeOk) {
 }
 
 JSAPI_FUNC(my_getDialogLines) {
+  (argc);
+
   JS_SET_RVAL(cx, vp, JSVAL_VOID);
 
   TransactionDialogsInfo_t* pTdi = *p_D2CLIENT_pTransactionDialogsInfo;
   unsigned int i;
   JSObject* pReturnArray;
   JSObject* line;
-  jsval js_text, js_selectable, js_line, js_handler, js_addr;
+  jsval js_text, js_selectable, js_line /*, js_handler*/, js_addr;
   JSFunction* jsf_handler;
   JSObject* jso_addr;
 
@@ -210,6 +214,8 @@ JSAPI_FUNC(my_getDialogLines) {
   return JS_TRUE;
 }
 JSAPI_FUNC(my_clickDialog) {
+  (argc);
+
   TransactionDialogsLine_t* tdl;
 
   tdl = (TransactionDialogsLine_t*)JSVAL_TO_PRIVATE(JS_GetReservedSlot(JSVAL_TO_OBJECT(JS_THIS(cx, vp)), 0));
@@ -846,6 +852,8 @@ JSAPI_FUNC(my_checkCollision) {
 }
 
 JSAPI_FUNC(my_getCursorType) {
+  (cx);
+
   jsint nType = NULL;
 
   if (argc > 0)
@@ -1004,6 +1012,9 @@ JSAPI_FUNC(my_getWaypoint) {
 }
 
 JSAPI_FUNC(my_quitGame) {
+  (cx);
+  (argc);
+
   JS_SET_RVAL(cx, vp, JSVAL_FALSE);
   if (ClientState() != ClientStateMenu)
     D2CLIENT_ExitGame();
@@ -1016,6 +1027,9 @@ JSAPI_FUNC(my_quitGame) {
 }
 
 JSAPI_FUNC(my_quit) {
+  (cx);
+  (argc);
+
   JS_SET_RVAL(cx, vp, JSVAL_FALSE);
   Vars.bQuitting = true;
   if (ClientState() != ClientStateMenu)
@@ -1025,13 +1039,15 @@ JSAPI_FUNC(my_quit) {
 }
 
 JSAPI_FUNC(my_playSound) {
+  (cx);
+
   // I need to take a closer look at the D2CLIENT_PlaySound function
   if (argc < 1 || !JSVAL_IS_INT(JS_ARGV(cx, vp)[0])) {
     JS_SET_RVAL(cx, vp, JSVAL_FALSE);
     return JS_TRUE;
   }
 
-  jsint nSoundId = JSVAL_TO_INT(JS_ARGV(cx, vp)[0]);
+  // jsint nSoundId = JSVAL_TO_INT(JS_ARGV(cx, vp)[0]);
   // D2CLIENT_PlaySound(nSoundId);
 
   JS_SET_RVAL(cx, vp, JSVAL_TRUE);
@@ -1253,6 +1269,8 @@ JSAPI_FUNC(my_weaponSwitch) {
 }
 
 JSAPI_FUNC(my_transmute) {
+  (argc);
+
   JS_SET_RVAL(cx, vp, JSVAL_NULL);
   if (!WaitForGameReady())
     THROW_WARNING(cx, vp, "Game not ready");
@@ -1300,7 +1318,7 @@ JSAPI_FUNC(my_getMouseCoords) {
 
   JSObject* pObj = NULL;
 
-  POINT Coords = {*p_D2CLIENT_MouseX, *p_D2CLIENT_MouseY};
+  POINT Coords = {static_cast<LONG>(*p_D2CLIENT_MouseX), static_cast<LONG>(*p_D2CLIENT_MouseY)};
 
   if (nFlag) {
     Coords.x += *p_D2CLIENT_ViewportX;
@@ -1339,6 +1357,8 @@ JSAPI_FUNC(my_getMouseCoords) {
 }
 
 JSAPI_FUNC(my_submitItem) {
+  (argc);
+
   JS_SET_RVAL(cx, vp, JSVAL_NULL);
   if (!WaitForGameReady())
     THROW_WARNING(cx, vp, "Game not ready");
@@ -1373,6 +1393,8 @@ JSAPI_FUNC(my_submitItem) {
 }
 
 JSAPI_FUNC(my_getIsTalkingNPC) {
+  (argc);
+
   if (!WaitForGameReady())
     THROW_WARNING(cx, vp, "Game not ready");
 
@@ -1381,6 +1403,8 @@ JSAPI_FUNC(my_getIsTalkingNPC) {
 }
 
 JSAPI_FUNC(my_getInteractedNPC) {
+  (argc);
+
   if (!WaitForGameReady())
     THROW_WARNING(cx, vp, "Game not ready");
 
@@ -1411,6 +1435,10 @@ JSAPI_FUNC(my_getInteractedNPC) {
 }
 
 JSAPI_FUNC(my_takeScreenshot) {
+  (cx);
+
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+
   Vars.bTakeScreenshot = true;
 
   return JS_TRUE;
@@ -1451,6 +1479,8 @@ JSAPI_FUNC(my_moveNPC) {
 }
 
 JSAPI_FUNC(my_revealLevel) {
+  (cx);
+
   UnitAny* unit = D2CLIENT_GetPlayerUnit();
 
   if (!unit) {

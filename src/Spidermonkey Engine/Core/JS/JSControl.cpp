@@ -5,7 +5,7 @@
 
 EMPTY_CTOR(control)
 
-void control_finalize(JSFreeOp* fop, JSObject* obj) {
+void control_finalize(JSFreeOp* /*fop*/, JSObject* obj) {
   ControlData* pData = ((ControlData*)JS_GetPrivate(obj));
 
   if (pData) {
@@ -30,7 +30,7 @@ JSAPI_PROP(control_getProperty) {
   JS_IdToValue(cx, id, &ID);
   JS_BeginRequest(cx);
 
-  JSType a = JS_TypeOfValue(cx, ID);
+  //JSType a = JS_TypeOfValue(cx, ID);
 
   if (JSID_IS_STRING(id)) {
     // TODO: Figure out what this is for
@@ -95,6 +95,8 @@ JSAPI_PROP(control_getProperty) {
 }
 
 JSAPI_STRICT_PROP(control_setProperty) {
+  (strict);
+
   if (ClientState() != ClientStateMenu)
     return JS_FALSE;
 
@@ -152,6 +154,8 @@ JSAPI_STRICT_PROP(control_setProperty) {
 }
 
 JSAPI_FUNC(control_getNext) {
+  (argc);
+
   if (ClientState() != ClientStateMenu)
     return JS_TRUE;
 
@@ -239,6 +243,8 @@ JSAPI_FUNC(control_setText) {
 }
 
 JSAPI_FUNC(control_getText) {
+  (argc);
+
   JS_SET_RVAL(cx, vp, JSVAL_VOID);
   if (ClientState() != ClientStateMenu)
     return JS_TRUE;
@@ -323,6 +329,8 @@ JSAPI_FUNC(my_getControl) {
   return JS_TRUE;
 }
 JSAPI_FUNC(my_getControls) {
+  (argc);
+
   JS_SET_RVAL(cx, vp, JSVAL_VOID);
 
   if (ClientState() != ClientStateMenu)
