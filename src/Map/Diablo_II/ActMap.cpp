@@ -567,7 +567,7 @@ void ActMap::Dump(const char* file, const PointList& points) const {
       else if (it == end1)
         pathMap.insert(std::pair<Point, char>(*it, 'E'));  // end
       else
-        pathMap.insert(std::pair<Point, char>(*it, 49 + (i % 9)));  // 1 - 9 (0 is too close to O)
+        pathMap.insert(std::pair<Point, char>(*it, static_cast<char>(49 + (i % 9))));  // 1 - 9 (0 is too close to O)
       i++;
       it++;
     }
