@@ -157,10 +157,6 @@ class Script {
     return m_functions;
   }
 
-  inline DWORD threadId() {
-    return m_threadId;
-  }
-
   int GetExecutionCount(void);
   DWORD GetThreadId(void);
 
@@ -196,7 +192,7 @@ class Script {
   void ProcessAllEvents();
   void ProcessOneEvent();
 
-  void OnDestroyContext(JSContext* ctx);
+  void OnDestroyContext();
 
  private:
   std::wstring m_fileName;

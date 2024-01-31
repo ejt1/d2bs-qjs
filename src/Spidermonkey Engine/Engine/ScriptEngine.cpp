@@ -77,7 +77,7 @@ void ScriptEngine::DisposeScript(Script* script) {
 
   UnLockScriptList("DisposeScript");
 
-  if (GetCurrentThreadId() == script->threadId())
+  if (GetCurrentThreadId() == script->GetThreadId())
     delete script;
   else {
     // bad things happen if we delete from another thread

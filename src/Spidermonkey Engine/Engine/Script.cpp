@@ -483,7 +483,7 @@ void Script::ProcessOneEvent() {
   ExecScriptEvent(evt, false);
 }
 
-void Script::OnDestroyContext(JSContext* ctx) {
+void Script::OnDestroyContext() {
   m_hasActiveCX = false;
   ClearEventList();
   Genhook::Clean(this);
@@ -596,7 +596,7 @@ JSBool contextCallback(JSContext* ctx, uint contextOp) {
   }
   if (contextOp == JSCONTEXT_DESTROY) {
     Script* script = (Script*)JS_GetContextPrivate(ctx);
-    script->OnDestroyContext(ctx);
+    script->OnDestroyContext();
   }
   return JS_TRUE;
 }
