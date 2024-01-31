@@ -27,7 +27,7 @@ ScriptEngine* ScriptEngine::GetInstance() {
   return &instance;
 }
 
-Script* ScriptEngine::CompileFile(const wchar_t* file, ScriptState _state, uint argc, JSAutoStructuredCloneBuffer** argv, bool /*recompile*/) {
+Script* ScriptEngine::NewScript(const wchar_t* file, ScriptState _state, uint argc, JSAutoStructuredCloneBuffer** argv, bool /*recompile*/) {
   if (GetState() != Running)
     return NULL;
 

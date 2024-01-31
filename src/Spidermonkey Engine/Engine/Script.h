@@ -119,6 +119,8 @@ class Script {
   void Resume(void);
   void Stop(bool force = false, bool reallyForce = false);
   bool IsPaused(void);
+  bool IsRunning(void);
+  bool IsAborted(void);
   bool BeginThread(LPTHREAD_START_ROUTINE ThreadFunc);
   void RunCommand(const wchar_t* command);
 
@@ -129,9 +131,6 @@ class Script {
 
   inline void SetPauseState(bool reallyPaused) {
     m_isReallyPaused = reallyPaused;
-  }
-  inline bool IsReallyPaused(void) {
-    return m_isReallyPaused;
   }
 
   inline const wchar_t* GetFilename(void) {
@@ -144,17 +143,8 @@ class Script {
   inline JSRuntime* GetRuntime(void) {
     return m_runtime;
   }
-  inline JSObject* GetGlobalObject(void) {
-    return m_globalObject;
-  }
-  inline JSObject* GetScriptObject(void) {
-    return m_scriptObject;
-  }
   inline ScriptState GetState(void) {
     return m_scriptState;
-  }
-  inline FunctionMap& functions() {
-    return m_functions;
   }
 
   int GetExecutionCount(void);
@@ -162,19 +152,7 @@ class Script {
 
   // UGLY HACK to fix up the player gid on game join for cached scripts/oog scripts
   void UpdatePlayerGid(void);
-  // Hack. Include from console needs to run on the RunCommandThread / cx.
-  //		 a better solution may be to keep a list of threadId / cx and have a GetCurrentThreadCX()
-  inline void SetContext(JSContext* cx) {
-    m_context = cx;
-  }
-  bool IsRunning(void);
-  bool IsAborted(void);
-  void Lock() {
-    EnterCriticalSection(&m_lock);
-  }  // needed for events walking function list
-  void Unlock() {
-    LeaveCriticalSection(&m_lock);
-  }
+
   bool IsIncluded(const wchar_t* file);
   bool Include(const wchar_t* file);
 
@@ -191,6 +169,7 @@ class Script {
   void BlockThread(DWORD delay);
   void ProcessAllEvents();
   void ProcessOneEvent();
+  void ExecuteEvent(char* evtName, int argc, jsval* argv, bool* block = nullptr);
 
   void OnDestroyContext();
 
@@ -208,6 +187,7 @@ class Script {
   DWORD m_threadId;
   FunctionMap m_functions;
   DWORD m_LastGC;
+  // wtf is this trying to do anyway, why not just check m_context or m_runtime?
   bool m_hasActiveCX;  // hack to get away from JS_IsRunning
   HANDLE m_eventSignal;
   std::list<Event*> m_EventList;

@@ -169,7 +169,7 @@ JSAPI_FUNC(my_load) {
     autoBuffer[i - 1]->write(cx, JS_ARGV(cx, vp)[i]);
   }
 
-  Script* newScript = sScriptEngine->CompileFile(buf, scriptState, argc - 1, autoBuffer);
+  Script* newScript = sScriptEngine->NewScript(buf, scriptState, argc - 1, autoBuffer);
 
   if (newScript) {
     newScript->BeginThread(ScriptThread);

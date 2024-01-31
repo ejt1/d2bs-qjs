@@ -222,7 +222,7 @@ bool ExecCommand(const wchar_t* command) {
 bool StartScript(const wchar_t* scriptname, ScriptState state) {
   wchar_t file[_MAX_FNAME + _MAX_PATH];
   swprintf_s(file, _countof(file), L"%s\\%s", Vars.szScriptPath, scriptname);
-  Script* script = sScriptEngine->CompileFile(file, state);
+  Script* script = sScriptEngine->NewScript(file, state);
   return (script && script->BeginThread(ScriptThread));
 }
 
