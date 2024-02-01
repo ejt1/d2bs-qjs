@@ -80,6 +80,8 @@ bool Engine::Initialize(HMODULE hModule) {
 
   MH_Initialize();
   // win32 hooks
+  // stop game from replacing our exception handler
+  MH_CreateHookApi(L"kernel32.dll", "SetUnhandledExceptionFilter", HandleSetUnhandledExceptionFilter, nullptr);
 
   // game hooks
   size_t base = reinterpret_cast<size_t>(GetModuleHandle(nullptr));
@@ -124,6 +126,7 @@ void Engine::Shutdown() {
   MH_RemoveHook(HandleGameDrawMenu);
   MH_RemoveHook(HandleGameDraw);
   MH_RemoveHook(HandleCreateWindow);
+  MH_RemoveHook(HandleSetUnhandledExceptionFilter);
   MH_Uninitialize();
 
   RemovePatches();
@@ -295,6 +298,10 @@ void Engine::FlushPrint() {
 
     clean.pop();
   }
+}
+
+LPTOP_LEVEL_EXCEPTION_FILTER __stdcall Engine::HandleSetUnhandledExceptionFilter(LPTOP_LEVEL_EXCEPTION_FILTER lpTopLevelExceptionFilter) {
+  return lpTopLevelExceptionFilter;
 }
 
 LRESULT __stdcall Engine::HandleWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
