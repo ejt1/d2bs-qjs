@@ -35,7 +35,7 @@ class Script {
   Script& operator=(const Script&) = delete;
 
   bool Start();
-  void Stop(bool force = false, bool reallyForce = false);
+  void Stop(bool force = false);
   void Run();
 
   void Join(void);

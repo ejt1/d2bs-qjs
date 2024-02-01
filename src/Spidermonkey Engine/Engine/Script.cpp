@@ -91,7 +91,7 @@ bool Script::Start() {
   return false;
 }
 
-void Script::Stop(bool force, bool reallyForce) {
+void Script::Stop(bool force) {
   // make sure the script is actually running
   if (m_scriptState != kScriptStateRunning)
     return;
@@ -111,7 +111,7 @@ void Script::Stop(bool force, bool reallyForce) {
   SetEvent(m_eventSignal);
 
   // normal wait: 500ms, forced wait: 300ms, really forced wait: 100ms
-  int maxCount = (force ? (reallyForce ? 10 : 30) : 50);
+  int maxCount = (force ? 10 : 30);
   if (GetCurrentThreadId() != GetThreadId()) {
     for (int i = 0; m_hasActiveCX == true; i++) {
       // if we pass the time frame, just ignore the wait because the thread will end forcefully anyway

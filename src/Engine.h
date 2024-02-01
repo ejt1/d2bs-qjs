@@ -152,4 +152,5 @@ class Engine final {
   static void HandleGameDrawMenu();
 
   HMODULE m_hModule;
+  std::unique_ptr<ScriptEngine> m_pScriptEngine;
 };

@@ -25,7 +25,7 @@
 #include <MinHook.h>
 #include <mutex>
 
-Engine::Engine() : m_hModule(nullptr) {
+Engine::Engine() : m_hModule(nullptr), m_pScriptEngine(std::make_unique<ScriptEngine>()) {
   m_instance = this;
   m_fnWndProc = nullptr;
   m_fnCreateWindow = nullptr;
@@ -193,7 +193,7 @@ void Engine::Shutdown() {
 void Engine::OnUpdate() {
   static std::once_flag of;
   std::call_once(of, []() {
-    if (!sScriptEngine->Startup()) {
+    if (!sScriptEngine->Initialize()) {
       wcscpy_s(Vars.szPath, MAX_PATH, L"common");
       Log(L"D2BS Engine startup failed. %s", Vars.szCommandLine);
       Print(L"\u00FFc2D2BS\u00FFc0 :: Engine startup failed!");
@@ -472,20 +472,17 @@ LRESULT __stdcall Engine::HandleWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
 
       if (pCopy) {
         wchar_t* lpwData = AnsiToUnicode((const char*)pCopy->lpData);
-        if (pCopy->dwData == 0x1337)  // 0x1337 = Execute Script
-        {
-          // TODO(ejt): This could deadlock
-          while (sScriptEngine->GetState() != Running) {
-            Sleep(100);
-          }
+        if (pCopy->dwData == 0x1337) {  // 0x1337 = Execute Script
           sScriptEngine->RunCommand(lpwData);
-        } else if (pCopy->dwData == 0x31337)  // 0x31337 = Set Profile
-          if (SwitchToProfile(lpwData))
+        } else if (pCopy->dwData == 0x31337) {  // 0x31337 = Set Profile
+          if (SwitchToProfile(lpwData)) {
             Print(L"\u00FFc2D2BS\u00FFc0 :: Switched to profile %s", lpwData);
-          else
+          } else {
             Print(L"\u00FFc2D2BS\u00FFc0 :: Profile %s not found", lpwData);
-        else
+          }
+        } else {
           CopyDataEvent(pCopy->dwData, lpwData);
+        }
         delete[] lpwData;
       }
       return TRUE;

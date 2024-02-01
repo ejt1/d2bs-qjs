@@ -17,24 +17,21 @@ enum EngineState { Starting, Running, Paused, Stopping, Stopped };
 class ScriptEngine {
   friend class Script;
 
+ public:
   ScriptEngine();
   virtual ~ScriptEngine();
-
- public:
-  static ScriptEngine* GetInstance();
 
   ScriptEngine(const ScriptEngine&) = delete;
   ScriptEngine& operator=(const ScriptEngine&) = delete;
 
-  BOOL Startup(void);
-  void Shutdown(void);
-  EngineState GetState(void) {
-    return m_state;
-  }
+  static ScriptEngine* GetInstance();
 
-  void FlushCache(void);
+  BOOL Initialize();
+  void Shutdown();
 
   Script* NewScript(const wchar_t* file, ScriptMode mode, uint argc = 0, JSAutoStructuredCloneBuffer** argv = NULL, bool recompile = false);
+
+  void FlushCache(void);
 
   void RunCommand(const wchar_t* command);
   void DisposeScript(Script* script);
@@ -49,19 +46,11 @@ class ScriptEngine {
   unsigned int GetCount(bool active = true, bool unexecuted = false);
 
   void StopAll(bool forceStop = false);
-  void InitClass(JSContext* context, JSObject* globalObject, JSClass* classp, JSFunctionSpec* methods, JSPropertySpec* props, JSFunctionSpec* s_methods,
-                 JSPropertySpec* s_props);
-  void DefineConstant(JSContext* context, JSObject* globalObject, const char* name, int value);
   void UpdateConsole();
 
-  //int AddDelayedEvent(Event* evt, int freq);
-  //void RemoveDelayedEvent(int key);
-
  private:
+  inline static ScriptEngine* m_instance;
   Script* m_console;
-  EngineState m_state;
-  //std::list<Event*> m_DelayedExecList;
-  //int m_delayedExecKey;
   CRITICAL_SECTION m_scriptListLock;
   ScriptMap m_scripts;
   CRITICAL_SECTION m_lock;
@@ -71,5 +60,3 @@ class ScriptEngine {
 
 // these ForEachScript helpers are exposed in case they can be of use somewhere
 bool __fastcall StopIngameScript(Script* script, void*, uint);
-
-//void CALLBACK EventTimerProc(LPVOID lpArg, DWORD dwTimerLowValue, DWORD dwTimerHighValue);
