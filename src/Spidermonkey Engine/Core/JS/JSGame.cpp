@@ -622,7 +622,7 @@ JSAPI_FUNC(my_clickItem) {
       {
         int z = -1;
 
-        for (UINT i = 0; i < ArraySize(Belt); i++) {
+        for (UINT i = 0; i < _countof(Belt); i++) {
           if (Belt[i].x == nX && Belt[i].y == nY) {
             z = (int)i;
             break;
@@ -872,7 +872,7 @@ JSAPI_FUNC(my_getSkillByName) {
   if (!lpszText || lpszText[0])
     THROW_ERROR(cx, "Could not convert string");
 
-  for (int i = 0; i < ArraySize(Game_Skills); i++) {
+  for (int i = 0; i < _countof(Game_Skills); i++) {
     if (!_strcmpi(Game_Skills[i].name, lpszText)) {
       JS_SET_RVAL(cx, vp, INT_TO_JSVAL(Game_Skills[i].skillID));
       break;

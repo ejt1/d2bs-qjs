@@ -18,11 +18,8 @@ BOOL WINAPI DllMain(HINSTANCE hModule, DWORD dwReason, LPVOID lpReserved) {
       break;
 
     case DLL_PROCESS_DETACH:
-      if (Vars.bNeedShutdown) {
-        Vars.bShutdownFromDllMain = TRUE;
-        kEngineInstance->Shutdown();
-        kEngineInstance.reset();
-      }
+      kEngineInstance->Shutdown();
+      kEngineInstance.reset();
       break;
   }
 

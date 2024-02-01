@@ -5,10 +5,6 @@
 
 #define D2BS_VERSION L"1.6.4U"
 
-// struct Variables;
-
-#define ArraySize(x) (sizeof((x)) / sizeof((x)[0]))
-
 class Engine final {
  public:
   Engine();

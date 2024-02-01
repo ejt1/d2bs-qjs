@@ -40,11 +40,9 @@ bool Engine::Initialize(HMODULE hModule) {
   m_hModule = hModule;
 
   // start of old DllMain DLL_PROCESS_ATTACH
-  Vars.hModule = hModule;
   GetModuleFileNameW(hModule, Vars.szPath, MAX_PATH);
   PathRemoveFileSpecW(Vars.szPath);
   wcscat_s(Vars.szPath, MAX_PATH, L"\\");
-  Vars.bLoadedWithCGuard = FALSE;
 
   swprintf_s(Vars.szLogPath, _countof(Vars.szLogPath), L"%slogs\\", Vars.szPath);
   CreateDirectoryW(Vars.szLogPath, NULL);
@@ -98,7 +96,6 @@ bool Engine::Initialize(HMODULE hModule) {
 		freopen_s(&f, errlog, "a+t", f);
 #endif
 
-  Vars.bShutdownFromDllMain = FALSE;
   SetUnhandledExceptionFilter(ExceptionHandler);
 
   MH_Initialize();
@@ -113,9 +110,6 @@ bool Engine::Initialize(HMODULE hModule) {
 
   // start of old Startup function
   InitializeCriticalSection(&Vars.cEventSection);
-  InitializeCriticalSection(&Vars.cRoomSection);
-  InitializeCriticalSection(&Vars.cMiscSection);
-  InitializeCriticalSection(&Vars.cScreenhookSection);
   InitializeCriticalSection(&Vars.cPrintSection);
   InitializeCriticalSection(&Vars.cBoxHookSection);
   InitializeCriticalSection(&Vars.cFrameHookSection);
@@ -125,10 +119,8 @@ bool Engine::Initialize(HMODULE hModule) {
   InitializeCriticalSection(&Vars.cFlushCacheSection);
   InitializeCriticalSection(&Vars.cConsoleSection);
   InitializeCriticalSection(&Vars.cGameLoopSection);
-  InitializeCriticalSection(&Vars.cUnitListSection);
   InitializeCriticalSection(&Vars.cFileSection);
 
-  Vars.bNeedShutdown = TRUE;
   Vars.bChangedAct = FALSE;
   Vars.bGameLoopEntered = FALSE;
   Vars.SectionCount = 0;
@@ -148,9 +140,6 @@ void Engine::Shutdown() {
   // TODO(ejt): while proper shutdown is not strictly required for D2BS to function it's good practice to cleanup as best we can.
   // During restructuring it is not a priority so revisit this in the future.
 
-  if (!Vars.bNeedShutdown)
-    return;
-
   MH_DisableHook(MH_ALL_HOOKS);
   MH_RemoveHook(HandleGameDrawMenu);
   MH_RemoveHook(HandleGameDraw);
@@ -161,9 +150,6 @@ void Engine::Shutdown() {
   Genhook::Destroy();
   ShutdownDdeServer();
 
-  DeleteCriticalSection(&Vars.cRoomSection);
-  DeleteCriticalSection(&Vars.cMiscSection);
-  DeleteCriticalSection(&Vars.cScreenhookSection);
   DeleteCriticalSection(&Vars.cPrintSection);
   DeleteCriticalSection(&Vars.cBoxHookSection);
   DeleteCriticalSection(&Vars.cFrameHookSection);
@@ -173,11 +159,9 @@ void Engine::Shutdown() {
   DeleteCriticalSection(&Vars.cFlushCacheSection);
   DeleteCriticalSection(&Vars.cConsoleSection);
   DeleteCriticalSection(&Vars.cGameLoopSection);
-  DeleteCriticalSection(&Vars.cUnitListSection);
   DeleteCriticalSection(&Vars.cFileSection);
 
   Log(L"D2BS Shutdown complete.");
-  Vars.bNeedShutdown = false;
 }
 
 void Engine::OnUpdate() {
@@ -194,7 +178,6 @@ void Engine::OnUpdate() {
       clickControl(*p_D2WIN_FirstControl);
 
     *p_D2CLIENT_Lang = D2CLIENT_GetGameLanguageCode();
-    Vars.dwLocale = *p_D2CLIENT_Lang;
 
     sLine* command;
     ParseCommandLine(Vars.szCommandLine);

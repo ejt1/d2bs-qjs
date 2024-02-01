@@ -149,7 +149,7 @@ JSAPI_PROP(unit_getProperty) {
       vp.setInt32(*p_D2CLIENT_FPS);
       break;
     case ME_LOCALE:
-      vp.setInt32(Vars.dwLocale);
+      vp.setInt32(*p_D2CLIENT_Lang);
       break;
     case OOG_INGAME:
       vp.setBoolean((ClientState() == ClientStateMenu ? false : true));

@@ -11,17 +11,13 @@
 struct Variables {
   int nChickenHP;
   int nChickenMP;
-  DWORD dwInjectTime;
   DWORD dwGameTime;
   BOOL bDontCatchNextMsg;
   BOOL bClickAction;
-  BOOL bNeedShutdown;
   BOOL bUseGamePrint;
-  BOOL bShutdownFromDllMain;
-  BOOL bChangedAct;
-  BOOL bGameLoopEntered;
+  BOOL bChangedAct; // TODO(ejt): check if this and its hooks are necessary
+  BOOL bGameLoopEntered; // TODO(ejt): get rid of this, find better way to run in main thread
   DWORD dwGameThreadId;
-  DWORD dwLocale;
 
   DWORD dwMaxGameTime;
   DWORD dwGameTimeout;
@@ -35,7 +31,6 @@ struct Variables {
   BOOL bBlockMouse;
   BOOL bDisableCache;
   BOOL bUseProfileScript;
-  BOOL bLoadedWithCGuard;
   BOOL bLogConsole;
   BOOL bEnableUnsupported;
   BOOL bForwardMessageBox;
@@ -48,7 +43,6 @@ struct Variables {
   int dwMemUsage;
   int dwConsoleFont;
   HANDLE eventSignal;
-  HMODULE hModule;
   HWND hHandle;
 
   wchar_t szPath[_MAX_PATH];
@@ -71,9 +65,6 @@ struct Variables {
   std::vector<std::pair<DWORD, DWORD>> vUnitList;
   // std::list<Event*> EventList;
   CRITICAL_SECTION cEventSection;
-  CRITICAL_SECTION cRoomSection;
-  CRITICAL_SECTION cMiscSection;
-  CRITICAL_SECTION cScreenhookSection;
   CRITICAL_SECTION cPrintSection;
   CRITICAL_SECTION cTextHookSection;
   CRITICAL_SECTION cImageHookSection;
