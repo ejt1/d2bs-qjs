@@ -33,26 +33,28 @@ enum room_tinyid {
   ROOM_CORRECTTOMB,
 };
 
-static JSPropertySpec room_props[] = {{"number", ROOM_NUM, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(room_getProperty), JSOP_NULLWRAPPER},
-                                      {"x", ROOM_XPOS, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(room_getProperty), JSOP_NULLWRAPPER},
-                                      {"y", ROOM_YPOS, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(room_getProperty), JSOP_NULLWRAPPER},
-                                      {"xsize", ROOM_XSIZE, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(room_getProperty), JSOP_NULLWRAPPER},
-                                      {"ysize", ROOM_YSIZE, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(room_getProperty), JSOP_NULLWRAPPER},
-                                      {"subnumber", ROOM_SUBNUMBER, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(room_getProperty), JSOP_NULLWRAPPER},
-                                      {"area", ROOM_AREA, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(room_getProperty), JSOP_NULLWRAPPER},
-                                      {"level", ROOM_LEVEL, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(room_getProperty), JSOP_NULLWRAPPER},
-                                      {"correcttomb", ROOM_CORRECTTOMB, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(room_getProperty), JSOP_NULLWRAPPER},
-                                      {0, 0, 0, JSOP_NULLWRAPPER, JSOP_NULLWRAPPER}};
+static JSPropertySpec room_props[] = {
+    JS_CGETSET_MAGIC_DEF("number", room_getProperty, nullptr, ROOM_NUM),
+    JS_CGETSET_MAGIC_DEF("x", room_getProperty, nullptr, ROOM_XPOS),
+    JS_CGETSET_MAGIC_DEF("y", room_getProperty, nullptr, ROOM_YPOS),
+    JS_CGETSET_MAGIC_DEF("xsize", room_getProperty, nullptr, ROOM_XSIZE),
+    JS_CGETSET_MAGIC_DEF("ysize", room_getProperty, nullptr, ROOM_YSIZE),
+    JS_CGETSET_MAGIC_DEF("subnumber", room_getProperty, nullptr, ROOM_SUBNUMBER),
+    JS_CGETSET_MAGIC_DEF("area", room_getProperty, nullptr, ROOM_AREA),
+    JS_CGETSET_MAGIC_DEF("level", room_getProperty, nullptr, ROOM_LEVEL),
+    JS_CGETSET_MAGIC_DEF("correcttomb", room_getProperty, nullptr, ROOM_CORRECTTOMB),
+};
 
-static JSFunctionSpec room_methods[] = {JS_FS("getNext", room_getNext, 0, FUNCTION_FLAGS),
-                                        JS_FS("reveal", room_reveal, 1, FUNCTION_FLAGS),
-                                        JS_FS("getPresetUnits", room_getPresetUnits, 0, FUNCTION_FLAGS),
-                                        JS_FS("getCollision", room_getCollision, 0, FUNCTION_FLAGS),
-                                        JS_FS("getCollisionA", room_getCollisionTypeArray, 0, FUNCTION_FLAGS),
-                                        JS_FS("getNearby", room_getNearby, 0, FUNCTION_FLAGS),
-                                        JS_FS("getStat", room_getStat, 0, FUNCTION_FLAGS),
-                                        JS_FS("getFirst", room_getFirst, 0, FUNCTION_FLAGS),
-                                        JS_FS("unitInRoom", room_unitInRoom, 1, FUNCTION_FLAGS),
-                                        JS_FS_END};
+static JSFunctionSpec room_methods[] = {
+    JS_FS("getNext", room_getNext, 0, FUNCTION_FLAGS),
+    JS_FS("reveal", room_reveal, 1, FUNCTION_FLAGS),
+    JS_FS("getPresetUnits", room_getPresetUnits, 0, FUNCTION_FLAGS),
+    JS_FS("getCollision", room_getCollision, 0, FUNCTION_FLAGS),
+    JS_FS("getCollisionA", room_getCollisionTypeArray, 0, FUNCTION_FLAGS),
+    JS_FS("getNearby", room_getNearby, 0, FUNCTION_FLAGS),
+    JS_FS("getStat", room_getStat, 0, FUNCTION_FLAGS),
+    JS_FS("getFirst", room_getFirst, 0, FUNCTION_FLAGS),
+    JS_FS("unitInRoom", room_unitInRoom, 1, FUNCTION_FLAGS),
+};
 
 #endif

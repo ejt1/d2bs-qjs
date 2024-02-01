@@ -29,13 +29,14 @@ JSAPI_FUNC(filetools_readText);
 JSAPI_FUNC(filetools_writeText);
 JSAPI_FUNC(filetools_appendText);
 
-static JSFunctionSpec filetools_s_methods[] = {JS_FS("remove", filetools_remove, 1, FUNCTION_FLAGS),
-                                               JS_FS("rename", filetools_rename, 2, FUNCTION_FLAGS),
-                                               JS_FS("copy", filetools_copy, 2, FUNCTION_FLAGS),
-                                               JS_FS("exists", filetools_exists, 1, FUNCTION_FLAGS),
-                                               JS_FS("readText", filetools_readText, 1, FUNCTION_FLAGS),
-                                               JS_FS("writeText", filetools_writeText, 2, FUNCTION_FLAGS),
-                                               JS_FS("appendText", filetools_appendText, 2, FUNCTION_FLAGS),
-                                               JS_FS_END};
+static JSFunctionSpec filetools_s_methods[] = {
+    JS_FS("remove", filetools_remove, 1, FUNCTION_FLAGS),
+    JS_FS("rename", filetools_rename, 2, FUNCTION_FLAGS),
+    JS_FS("copy", filetools_copy, 2, FUNCTION_FLAGS),
+    JS_FS("exists", filetools_exists, 1, FUNCTION_FLAGS),
+    JS_FS("readText", filetools_readText, 1, FUNCTION_FLAGS),
+    JS_FS("writeText", filetools_writeText, 2, FUNCTION_FLAGS),
+    JS_FS("appendText", filetools_appendText, 2, FUNCTION_FLAGS),
+};
 
 #endif

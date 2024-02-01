@@ -68,7 +68,7 @@ void ScriptEngine::Shutdown(void) {
   DeleteCriticalSection(&m_lock);
 }
 
-Script* ScriptEngine::NewScript(const wchar_t* file, ScriptMode mode, uint argc, JSAutoStructuredCloneBuffer** argv, bool /*recompile*/) {
+Script* ScriptEngine::NewScript(const wchar_t* file, ScriptMode mode/*, uint argc, JSAutoStructuredCloneBuffer** argv*/, bool /*recompile*/) {
   wchar_t* fileName = _wcsdup(file);
   _wcslwr_s(fileName, wcslen(file) + 1);
 
@@ -76,7 +76,7 @@ Script* ScriptEngine::NewScript(const wchar_t* file, ScriptMode mode, uint argc,
     if (m_scripts.count(fileName))
       m_scripts[fileName]->Stop();
 
-    Script* script = new Script(fileName, mode, argc, argv);
+    Script* script = new Script(fileName, mode/*, argc, argv*/);
     m_scripts[fileName] = script;
     free(fileName);
     return script;

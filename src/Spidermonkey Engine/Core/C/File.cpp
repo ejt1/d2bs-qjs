@@ -50,123 +50,85 @@ bool writeValue(FILE* fptr, JSContext* cx, jsval value, bool isBinary, bool lock
   jsdouble dval = 0;
   bool bval;
 
-  switch (JS_TypeOfValue(cx, value)) {
-    case JSTYPE_VOID:
-    case JSTYPE_NULL:
-      if (locking)
-        result = fwrite(&ival, sizeof(int), 1, fptr);
-      else
-        result = _fwrite_nolock(&ival, sizeof(int), 1, fptr);
-      if (result == 1)
-        return true;
-      break;
-    case JSTYPE_STRING: {
-      char* str = JS_EncodeStringToUTF8(cx, JSVAL_TO_STRING(value));
+  // TODO(ejt): better method to detect int or double
+  if (JS_IsNull(value) || JS_IsUndefined(value)) {
+    if (locking)
+      result = fwrite(&ival, sizeof(int), 1, fptr);
+    else
+      result = _fwrite_nolock(&ival, sizeof(int), 1, fptr);
+    if (result == 1)
+      return true;
+  } else if (JS_IsString(value)) {
+    size_t len2;
+    const char* str = JS_ToCStringLen(cx, &len2, value);
+    if (locking)
+      result = fwrite(str, sizeof(char), len2, fptr);
+    else
+      result = _fwrite_nolock(str, sizeof(char), len2, fptr);
+    JS_FreeCString(cx, str);
+    return len2 == static_cast<size_t>(result);
+  } else if (JS_IsNumber(value)) {
+    if (isBinary) {
+      if (!JS_ToInt32(cx, &ival, value)) {
+        if (locking)
+          result = fwrite(&ival, sizeof(int32), 1, fptr);
+        else
+          result = _fwrite_nolock(&dval, sizeof(int32), 1, fptr);
+        return result == 1;
+      } else if (!JS_ToFloat64(cx, &dval, value)) {
+        if (locking)
+          result = fwrite(&dval, sizeof(jsdouble), 1, fptr);
+        else
+          result = _fwrite_nolock(&dval, sizeof(jsdouble), 1, fptr);
+        return result == 1;
+      }
+      return false;
+    } else {
+      if (!JS_ToInt32(cx, &ival, value)) {
+        char* str = new char[16];
+        _itoa_s(ival, str, 16, 10);
+        len = strlen(str);
+        if (locking)
+          result = fwrite(str, sizeof(char), len, fptr);
+        else
+          result = _fwrite_nolock(str, sizeof(char), len, fptr);
+        delete[] str;
+        if (result == len)
+          return true;
+      } else if (!JS_ToFloat64(cx, &dval, value)) {
+        // jsdouble will never be a 64-char string, but I'd rather be safe than sorry
+        char* str = new char[64];
+        sprintf_s(str, 64, "%.16f", dval);
+        len = strlen(str);
+        if (locking)
+          result = fwrite(str, sizeof(char), len, fptr);
+        else
+          result = _fwrite_nolock(str, sizeof(char), len, fptr);
+        delete[] str;
+        if (result == len)
+          return true;
+      }
+      return false;
+    }
+  } else if (JS_IsBool(value)) {
+    if (!isBinary) {
+      bval = !!JS_ToBool(cx, value);
+      const char* str = bval ? "true" : "false";
       if (locking)
         result = fwrite(str, sizeof(char), strlen(str), fptr);
       else
         result = _fwrite_nolock(str, sizeof(char), strlen(str), fptr);
-
-      JS_free(cx, str);
       return (int)strlen(str) == result;
+    } else {
+      bval = !!JS_ToBool(cx, value);
+      if (locking)
+        result = fwrite(&bval, sizeof(bool), 1, fptr);
+      else
+        result = _fwrite_nolock(&bval, sizeof(bool), 1, fptr);
+      return result == 1;
     }
-      break;
-    case JSTYPE_NUMBER:
-      if (isBinary) {
-        if (JSVAL_IS_DOUBLE(value)) {
-          if (JS_ValueToNumber(cx, value, &dval)) {
-            if (locking)
-              result = fwrite(&dval, sizeof(jsdouble), 1, fptr);
-            else
-              result = _fwrite_nolock(&dval, sizeof(jsdouble), 1, fptr);
-            return result == 1;
-          } else
-            return false;
-        } else if (JSVAL_IS_INT(value)) {
-          if (JS_ValueToInt32(cx, value, &ival)) {
-            if (locking)
-              result = fwrite(&ival, sizeof(int32), 1, fptr);
-            else
-              result = _fwrite_nolock(&dval, sizeof(int32), 1, fptr);
-            return result == 1;
-          } else
-            return false;
-        }
-      } else {
-        if (JSVAL_IS_DOUBLE(value)) {
-          if (JS_ValueToNumber(cx, value, &dval) == JS_FALSE)
-            return false;
-          // jsdouble will never be a 64-char string, but I'd rather be safe than sorry
-          char* str = new char[64];
-          sprintf_s(str, 64, "%.16f", dval);
-          len = strlen(str);
-          if (locking)
-            result = fwrite(str, sizeof(char), len, fptr);
-          else
-            result = _fwrite_nolock(str, sizeof(char), len, fptr);
-          delete[] str;
-          if (result == len)
-            return true;
-        } else if (JSVAL_IS_INT(value)) {
-          if (JS_ValueToInt32(cx, value, &ival) == JS_FALSE)
-            return false;
-          char* str = new char[16];
-          _itoa_s(ival, str, 16, 10);
-          len = strlen(str);
-          if (locking)
-            result = fwrite(str, sizeof(char), len, fptr);
-          else
-            result = _fwrite_nolock(str, sizeof(char), len, fptr);
-          delete[] str;
-          if (result == len)
-            return true;
-        }
-      }
-      break;
-    case JSTYPE_BOOLEAN:
-      if (!isBinary) {
-        bval = !!JSVAL_TO_BOOLEAN(value);
-        const char* str = bval ? "true" : "false";
-        if (locking)
-          result = fwrite(str, sizeof(char), strlen(str), fptr);
-        else
-          result = _fwrite_nolock(str, sizeof(char), strlen(str), fptr);
-        return (int)strlen(str) == result;
-      } else {
-        bval = !!JSVAL_TO_BOOLEAN(value);
-        if (locking)
-          result = fwrite(&bval, sizeof(bool), 1, fptr);
-        else
-          result = _fwrite_nolock(&bval, sizeof(bool), 1, fptr);
-        return result == 1;
-      }
-      break;
-      /*		case JSTYPE_OBJECT:
-                              JSObject *arr = JSVAL_TO_OBJECT(value);
-                              if(JS_IsArrayObject(cx, arr)) {
-                                      JS_GetArrayLength(cx, arr, &uival);
-                                      for(jsuint i = 0; i < uival; i++)
-                                      {
-                                              jsval val;
-                                              JS_GetElement(cx, arr, i, &val);
-                                              if(!writeValue(fptr, cx, val, isBinary))
-                                                      return false;
-                                      }
-                                      return true;
-                              }
-                              else
-                              {
-                                      JSString* jsstr = JS_ValueToString(cx, value);
-                                      str = JS_EncodeString(cx,jsstr);
-                                      if(locking)
-                                              result = fwrite(str, sizeof(char), strlen(str), fptr);
-                                      else
-                                              result = _fwrite_nolock(str, sizeof(char), strlen(str), fptr);
-                                      return strlen(str) == result;
-                              }
-                              break;
-      */
   }
+
   return false;
 }
 

@@ -163,14 +163,12 @@ void Genhook::Clean(Script* owner) {
   LeaveCriticalSection(&globalSection);
 }
 
-Genhook::Genhook(Script* nowner, JSObject* nself, uint x, uint y, ushort nopacity, bool nisAutomap, Align nalign, ScreenhookState ngameState)
+Genhook::Genhook(Script* nowner, JSValue nself, uint x, uint y, ushort nopacity, bool nisAutomap, Align nalign, ScreenhookState ngameState)
     : owner(nowner), isAutomap(nisAutomap), isVisible(true), alignment(nalign), opacity(nopacity), gameState(ngameState), zorder(1) {
   // InitializeCriticalSection(&hookSection);
-  clicked = JSVAL_VOID;
-  hovered = JSVAL_VOID;
-  self = nself;
-  // JS_AddObjectRoot(owner->GetContext(),&self);
-  // JS_AddRoot(&self);
+  clicked = JS_UNDEFINED;
+  hovered = JS_UNDEFINED;
+  self = JS_DupValue(nowner->GetContext(), nself);
   SetX(x);
   SetY(y);
   EnterCriticalSection(&globalSection);
@@ -180,12 +178,11 @@ Genhook::Genhook(Script* nowner, JSObject* nself, uint x, uint y, ushort nopacit
 
 Genhook::~Genhook(void) {
   Lock();
-  // if(owner && !JSVAL_IS_FUNCTION(owner->GetContext(), clicked))
-  //	JS_RemoveRoot(owner->GetContext(), &clicked);
-  // if(owner && !JSVAL_IS_FUNCTION(owner->GetContext(), hovered))
-  //	JS_RemoveRoot(owner->GetContext(), &hovered);
-  // JS_RemoveObjectRoot(owner->GetContext(), &self);
-  // JS_RemoveRoot(&self);
+  if (owner && !JS_IsFunction(owner->GetContext(), clicked))
+    JS_FreeValue(owner->GetContext(), clicked);
+  if (owner && !JS_IsFunction(owner->GetContext(), hovered))
+    JS_FreeValue(owner->GetContext(), hovered);
+  JS_FreeValue(owner->GetContext(), self);
 
   EnterCriticalSection(&globalSection);
 
@@ -200,7 +197,6 @@ Genhook::~Genhook(void) {
   LeaveCriticalSection(&globalSection);
 
   Unlock();
-  // DeleteCriticalSection(&hookSection);
 }
 
 bool Genhook::Click(int button, POINT* loc) {
@@ -208,9 +204,9 @@ bool Genhook::Click(int button, POINT* loc) {
     return false;
 
   bool block = false;
-  if (owner && JSVAL_IS_FUNCTION(owner->GetContext(), clicked)) {
+  if (owner && JS_IsFunction(owner->GetContext(), clicked)) {
     Event* evt = new Event;
-    //evt->owner = owner;
+    // evt->owner = owner;
     evt->argc = 3;
     evt->name = "ScreenHookClick";
     evt->arg1 = new DWORD((DWORD)button);
@@ -219,8 +215,7 @@ bool Genhook::Click(int button, POINT* loc) {
     evt->arg4 = new DWORD(false);
 
     ResetEvent(Vars.eventSignal);
-    AutoRoot* root = new AutoRoot(owner->GetContext(), clicked);
-    evt->functions.push_back(root);
+    evt->functions.push_back(JS_DupValue(owner->GetContext(), clicked));
     owner->FireEvent(evt);
 
     if (WaitForSingleObject(Vars.eventSignal, 3000) == WAIT_TIMEOUT)
@@ -231,7 +226,7 @@ bool Genhook::Click(int button, POINT* loc) {
     delete evt->arg2;
     delete evt->arg3;
     delete evt->arg4;
-    delete root;
+    JS_FreeValue(owner->GetContext(), clicked);
     delete evt;
   }
   return block;
@@ -241,11 +236,11 @@ void Genhook::Hover(POINT* loc) {
   if (!IsInRange(loc))
     return;
 
-  if (owner && JSVAL_IS_FUNCTION(owner->GetContext(), hovered)) {
+  if (owner && JS_IsFunction(owner->GetContext(), hovered)) {
     Event* evt = new Event;
-    //evt->owner = owner;
+    // evt->owner = owner;
     evt->argc = 2;
-    evt->functions.push_back(new AutoRoot(owner->GetContext(), hovered));
+    evt->functions.push_back(JS_DupValue(owner->GetContext(), hovered));
     evt->name = "ScreenHookHover";
     evt->arg1 = new DWORD((DWORD)loc->x);
     evt->arg2 = new DWORD((DWORD)loc->y);
@@ -256,17 +251,17 @@ void Genhook::Hover(POINT* loc) {
 void Genhook::SetClickHandler(jsval handler) {
   if (!owner)
     return;
-  if (JSVAL_IS_VOID(handler))
+  if (JS_IsUndefined(handler))
     return;
   Lock();
 
-  //JSContext* cx = owner->GetContext();
-  // if(JSVAL_IS_FUNCTION(cx, handler))
-  //	JS_RemoveRoot(owner->GetContext(), &clicked);
-  // JS_SetContextThread(cx);
-  // JS_BeginRequest(cx);
-
-  clicked = handler;
+  JSContext* cx = owner->GetContext();
+  if (JS_IsFunction(cx, handler)) {
+    if (JS_IsFunction(owner->GetContext(), clicked)) {
+      JS_FreeValue(owner->GetContext(), clicked);
+    }
+    clicked = JS_DupValue(cx, handler);
+  }
   //	if(!JSVAL_IS_VOID(clicked))
   //	{
   //		if(JS_AddRoot(owner->GetContext(),&clicked) == JS_FALSE)
@@ -285,20 +280,18 @@ void Genhook::SetClickHandler(jsval handler) {
 void Genhook::SetHoverHandler(jsval handler) {
   if (!owner)
     return;
-  if (JSVAL_IS_VOID(handler))
+  if (JS_IsUndefined(handler))
     return;
   Lock();
-  if (!JSVAL_IS_VOID(hovered))
-    JS_RemoveRoot(owner->GetContext(), &hovered);
-  if (JSVAL_IS_FUNCTION(owner->GetContext(), handler))
-    hovered = handler;
-  if (!JSVAL_IS_VOID(hovered)) {
-    if (JS_AddRoot(owner->GetContext(), &hovered) == JS_FALSE) {
-      Unlock();
-      return;
+
+  JSContext* cx = owner->GetContext();
+  if (JS_IsFunction(cx, handler)) {
+    if (JS_IsFunction(owner->GetContext(), hovered)) {
+      JS_FreeValue(owner->GetContext(), hovered);
     }
+    hovered = JS_DupValue(cx, handler);
   }
-  Unlock();
+   Unlock();
 }
 
 void TextHook::Draw(void) {

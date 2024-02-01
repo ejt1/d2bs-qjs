@@ -1,5 +1,4 @@
-#ifndef __JSFILE_H__
-#define __JSFILE_H__
+#pragma once
 
 #include "js32.h"
 
@@ -8,7 +7,7 @@
 //////////////////////////////////////////////////////////////////
 
 CLASS_CTOR(file);
-JSBool file_equality(JSContext* cx, JSObject* obj, jsval v, JSBool* bp);
+CLASS_FINALIZER(file);
 
 JSAPI_PROP(file_getProperty);
 JSAPI_STRICT_PROP(file_setProperty);
@@ -25,8 +24,6 @@ JSAPI_FUNC(file_seek);
 JSAPI_FUNC(file_flush);
 JSAPI_FUNC(file_reset);
 JSAPI_FUNC(file_end);
-
-void file_finalize(JSFreeOp* fop, JSObject* obj);
 
 /**
 File object:
@@ -47,20 +44,23 @@ or optionally lines, in the file, optionally from the start of the file, stops a
 to disk File file.reset() - object - seek to the beginning of the file File file.end() - object - seek to the end of the file
 **/
 
-static JSFunctionSpec file_methods[] = {JS_FN("close", file_close, 0, FUNCTION_FLAGS),
-                                        JS_FN("reopen", file_reopen, 0, FUNCTION_FLAGS),
-                                        JS_FN("read", file_read, 1, FUNCTION_FLAGS),
-                                        JS_FN("readLine", file_readLine, 0, FUNCTION_FLAGS),
-                                        JS_FN("readAllLines", file_readAllLines, 0, FUNCTION_FLAGS),
-                                        JS_FN("readAll", file_readAll, 0, FUNCTION_FLAGS),
-                                        JS_FN("write", file_write, 1, FUNCTION_FLAGS),
-                                        JS_FN("seek", file_seek, 1, FUNCTION_FLAGS),
-                                        JS_FN("flush", file_flush, 0, FUNCTION_FLAGS),
-                                        JS_FN("reset", file_reset, 0, FUNCTION_FLAGS),
-                                        JS_FN("end", file_end, 0, FUNCTION_FLAGS),
-                                        JS_FS_END};
+static JSFunctionSpec file_methods[] = {
+    JS_FN("close", file_close, 0, FUNCTION_FLAGS),
+    JS_FN("reopen", file_reopen, 0, FUNCTION_FLAGS),
+    JS_FN("read", file_read, 1, FUNCTION_FLAGS),
+    JS_FN("readLine", file_readLine, 0, FUNCTION_FLAGS),
+    JS_FN("readAllLines", file_readAllLines, 0, FUNCTION_FLAGS),
+    JS_FN("readAll", file_readAll, 0, FUNCTION_FLAGS),
+    JS_FN("write", file_write, 1, FUNCTION_FLAGS),
+    JS_FN("seek", file_seek, 1, FUNCTION_FLAGS),
+    JS_FN("flush", file_flush, 0, FUNCTION_FLAGS),
+    JS_FN("reset", file_reset, 0, FUNCTION_FLAGS),
+    JS_FN("end", file_end, 0, FUNCTION_FLAGS),
+};
 
-static JSFunctionSpec file_s_methods[] = {JS_FN("open", file_open, 2, FUNCTION_FLAGS), JS_FS_END};
+static JSFunctionSpec file_s_methods[] = {
+    JS_FN("open", file_open, 2, FUNCTION_FLAGS),
+};
 
 // ensure that read/write/append get the correct values
 enum {
@@ -95,19 +95,18 @@ int file.position - object - the current position in the file
 bool file.eof - object - determines if the file is at end-of-file or not
 **/
 
-static JSPropertySpec file_props[] = {{"readable", FILE_READABLE, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(file_getProperty), JSOP_NULLWRAPPER},
-                                      {"writeable", FILE_WRITEABLE, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(file_getProperty), JSOP_NULLWRAPPER},
-                                      {"seekable", FILE_SEEKABLE, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(file_getProperty), JSOP_NULLWRAPPER},
-                                      {"mode", FILE_MODE, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(file_getProperty), JSOP_NULLWRAPPER},
-                                      {"binaryMode", FILE_BINARYMODE, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(file_getProperty), JSOP_NULLWRAPPER},
-                                      {"length", FILE_LENGTH, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(file_getProperty), JSOP_NULLWRAPPER},
-                                      {"path", FILE_PATH, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(file_getProperty), JSOP_NULLWRAPPER},
-                                      {"position", FILE_POSITION, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(file_getProperty), JSOP_NULLWRAPPER},
-                                      {"eof", FILE_EOF, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(file_getProperty), JSOP_NULLWRAPPER},
-                                      {"accessed", FILE_ACCESSED, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(file_getProperty), JSOP_NULLWRAPPER},
-                                      {"created", FILE_CREATED, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(file_getProperty), JSOP_NULLWRAPPER},
-                                      {"modified", FILE_MODIFIED, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(file_getProperty), JSOP_NULLWRAPPER},
-                                      {"autoflush", FILE_AUTOFLUSH, JSPROP_STATIC_VAR, JSOP_WRAPPER(file_getProperty), JSOP_WRAPPER(file_setProperty)},
-                                      {0, 0, 0, JSOP_NULLWRAPPER, JSOP_NULLWRAPPER}};
-
-#endif
+static JSPropertySpec file_props[] = {
+    JS_CGETSET_MAGIC_DEF("readable", file_getProperty, nullptr, FILE_READABLE),
+    JS_CGETSET_MAGIC_DEF("writeable", file_getProperty, nullptr, FILE_WRITEABLE),
+    JS_CGETSET_MAGIC_DEF("seekable", file_getProperty, nullptr, FILE_SEEKABLE),
+    JS_CGETSET_MAGIC_DEF("mode", file_getProperty, nullptr, FILE_MODE),
+    JS_CGETSET_MAGIC_DEF("binaryMode", file_getProperty, nullptr, FILE_BINARYMODE),
+    JS_CGETSET_MAGIC_DEF("length", file_getProperty, nullptr, FILE_LENGTH),
+    JS_CGETSET_MAGIC_DEF("path", file_getProperty, nullptr, FILE_PATH),
+    JS_CGETSET_MAGIC_DEF("position", file_getProperty, nullptr, FILE_POSITION),
+    JS_CGETSET_MAGIC_DEF("eof", file_getProperty, nullptr, FILE_EOF),
+    JS_CGETSET_MAGIC_DEF("accessed", file_getProperty, nullptr, FILE_ACCESSED),
+    JS_CGETSET_MAGIC_DEF("created", file_getProperty, nullptr, FILE_CREATED),
+    JS_CGETSET_MAGIC_DEF("modified", file_getProperty, nullptr, FILE_MODIFIED),
+    JS_CGETSET_MAGIC_DEF("autoflush", file_getProperty, file_setProperty, FILE_AUTOFLUSH),
+};

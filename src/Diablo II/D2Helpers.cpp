@@ -273,7 +273,7 @@ BOOL SetSkill(JSContext* cx, WORD wSkillId, BOOL bLeft, DWORD dwItemId) {
 }
 
 // Compare the skillname to the Game_Skills struct to find the right skill ID to return
-WORD GetSkillByName(char* skillname) {
+WORD GetSkillByName(const char* skillname) {
   for (int i = 0; i < 216; i++)
     if (_stricmp(Game_Skills[i].name, skillname) == 0)
       return Game_Skills[i].skillID;

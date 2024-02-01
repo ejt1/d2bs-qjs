@@ -38,143 +38,148 @@ struct FileData {
 
 EMPTY_CTOR(file)
 
-// JSBool file_equality(JSContext *cx, JSObject *obj, jsval v, JSBool *bp)
-//{
-//	*bp = JS_FALSE;
-//	if(JSVAL_IS_OBJECT(v) && !JSVAL_IS_VOID(v) && !JSVAL_IS_NULL(v))
-//	{
-//		FileData* ptr = (FileData*)JS_GetInstancePrivate(cx, obj, &file_class, NULL);
-//		FileData* ptr2 = (FileData*)JS_GetInstancePrivate(cx, JSVAL_TO_OBJECT(v), &file_class, NULL);
-//		if(ptr && ptr2 && !_strcmpi(ptr->path, ptr2->path) && ptr->mode == ptr2->mode)
-//			*bp = JS_TRUE;
-//	}
-//	return JS_TRUE;
-//}
+CLASS_FINALIZER(file) {
+  FileData* fdata = (FileData*)JS_GetPrivate(val);
+  if (fdata) {
+    free(fdata->path);
+    if (fdata->fptr) {
+      if (fdata->locked) {
+        _unlock_file(fdata->fptr);
+#if DEBUG
+        fdata->lockLocation = __FILE__;
+        fdata->line = __LINE__;
+#endif
+        fclose(fdata->fptr);
+      } else
+        _fclose_nolock(fdata->fptr);
+    }
+    delete fdata;
+  }
+}
 
 JSAPI_PROP(file_getProperty) {
-  FileData* fdata = (FileData*)JS_GetInstancePrivate(cx, obj, &file_class, NULL);
+  FileData* fdata = (FileData*)JS_GetInstancePrivate(ctx, this_val, file_class_id, NULL);
   struct _stat filestat = {0};
   if (fdata) {
-    jsval ID;
-    JS_IdToValue(cx, id, &ID);
-    JS_BeginRequest(cx);
-    switch (JSVAL_TO_INT(ID)) {
+    switch (magic) {
       case FILE_READABLE:
-        vp.setBoolean((fdata->fptr && !feof(fdata->fptr) && !ferror(fdata->fptr)));
+        return JS_NewBool(ctx, (fdata->fptr && !feof(fdata->fptr) && !ferror(fdata->fptr)));
         break;
       case FILE_WRITEABLE:
-        vp.setBoolean((fdata->fptr && !ferror(fdata->fptr) && (fdata->mode % 3) > FILE_READ));
+        return JS_NewBool(ctx, (fdata->fptr && !ferror(fdata->fptr) && (fdata->mode % 3) > FILE_READ));
         break;
       case FILE_SEEKABLE:
-        vp.setBoolean((fdata->fptr && !ferror(fdata->fptr)));
+        return JS_NewBool(ctx, (fdata->fptr && !ferror(fdata->fptr)));
         break;
       case FILE_MODE:
-        vp.setInt32((fdata->mode % 3));
+        return JS_NewInt32(ctx, (fdata->mode % 3));
         break;
       case FILE_BINARYMODE:
-        vp.setBoolean((fdata->mode > 2));
+        return JS_NewBool(ctx, (fdata->mode > 2));
         break;
       case FILE_LENGTH:
         if (fdata->fptr)
-          vp.setInt32(_filelength(_fileno(fdata->fptr)));
+          return JS_NewInt32(ctx, _filelength(_fileno(fdata->fptr)));
         else
-          vp.setInt32(0);  //= JSVAL_ZERO;
+          return JS_NewInt32(ctx, 0);  //= JSVAL_ZERO;
         break;
       case FILE_PATH:
-        vp.setString(JS_NewUCStringCopyZ(cx, fdata->path + 1));
+        return JS_NewString(ctx, fdata->path + 1);
         break;
       case FILE_POSITION:
         if (fdata->fptr) {
           if (fdata->locked)
-            vp.setInt32(ftell(fdata->fptr));
+            return JS_NewInt32(ctx, ftell(fdata->fptr));
           else
-            vp.setInt32(_ftell_nolock(fdata->fptr));
+            return JS_NewInt32(ctx, _ftell_nolock(fdata->fptr));
         } else
-          vp.setInt32(0);  //= JSVAL_ZERO;
+          return JS_NewInt32(ctx, 0);  //= JSVAL_ZERO;
         break;
       case FILE_EOF:
         if (fdata->fptr)
-          vp.setBoolean(!!feof(fdata->fptr));
+          return JS_NewBool(ctx, !!feof(fdata->fptr));
         else
-          vp.set(JSVAL_TRUE);
+          return JS_TRUE;
         break;
       case FILE_AUTOFLUSH:
-        vp.setBoolean(fdata->autoflush);
+        return JS_NewBool(ctx, fdata->autoflush);
         break;
       case FILE_ACCESSED:
         if (fdata->fptr) {
           _fstat(_fileno(fdata->fptr), &filestat);
-          vp.setNumber((jsdouble)filestat.st_atime);
+          return JS_NewFloat64(ctx, (jsdouble)filestat.st_atime);
         } else
-          vp.setInt32(0);  //= JSVAL_ZERO;
+          return JS_NewInt32(ctx, 0);  //= JSVAL_ZERO;
         break;
       case FILE_MODIFIED:
         if (fdata->fptr) {
           _fstat(_fileno(fdata->fptr), &filestat);
-          vp.setNumber((jsdouble)filestat.st_mtime);
+          return JS_NewFloat64(ctx, (jsdouble)filestat.st_mtime);
         } else
-          vp.setInt32(0);
+          return JS_NewInt32(ctx, 0);
         break;
       case FILE_CREATED:
         if (fdata->fptr) {
           _fstat(_fileno(fdata->fptr), &filestat);
-          vp.setDouble((jsdouble)filestat.st_ctime);
+          return JS_NewFloat64(ctx, (jsdouble)filestat.st_ctime);
         } else
-          vp.setInt32(0);
+          return JS_NewInt32(ctx, 0);
         break;
     }
-    JS_EndRequest(cx);
   } else
-    THROW_ERROR(cx, "Couldn't get file object");
+    THROW_ERROR(ctx, "Couldn't get file object");
 
   return JS_TRUE;
 }
 
 JSAPI_STRICT_PROP(file_setProperty) {
-  (strict);
-
-  FileData* fdata = (FileData*)JS_GetInstancePrivate(cx, obj, &file_class, NULL);
+  FileData* fdata = (FileData*)JS_GetInstancePrivate(ctx, this_val, file_class_id, NULL);
   if (fdata) {
-    jsval ID;
-    JS_IdToValue(cx, id, &ID);
-    switch (JSVAL_TO_INT(ID)) {
+    switch (magic) {
       case FILE_AUTOFLUSH:
-        if (vp.isBoolean())
-          fdata->autoflush = !!vp.toBoolean();
+        if (JS_IsBool(val))
+          fdata->autoflush = !!JS_ToBool(ctx, val);
         break;
     }
   } else
-    THROW_ERROR(cx, "Couldn't get file object");
+    THROW_ERROR(ctx, "Couldn't get file object");
 
   return JS_TRUE;
 }
 
 JSAPI_FUNC(file_open) {
   if (argc < 2)
-    THROW_ERROR(cx, "Not enough parameters, 2 or more expected");
-  if (!JSVAL_IS_STRING(JS_ARGV(cx, vp)[0]))
-    THROW_ERROR(cx, "Parameter 1 not a string");
-  if (!JSVAL_IS_INT(JS_ARGV(cx, vp)[1]))
-    THROW_ERROR(cx, "Parameter 2 not a mode");
+    THROW_ERROR(ctx, "Not enough parameters, 2 or more expected");
+  if (!JS_IsString(argv[0]))
+    THROW_ERROR(ctx, "Parameter 1 not a string");
+  if (!JS_IsNumber(argv[1]))
+    THROW_ERROR(ctx, "Parameter 2 not a mode");
 
   // Convert from JS params to C values
-  const wchar_t* file = JS_GetStringCharsZ(cx, JSVAL_TO_STRING(JS_ARGV(cx, vp)[0]));
+  const char* szFile = JS_ToCString(ctx, argv[0]);
+  const wchar_t* file = AnsiToUnicode(szFile);
+  JS_FreeCString(ctx, szFile);
+
   int32 mode;
-  if (JS_ValueToInt32(cx, JS_ARGV(cx, vp)[1], &mode) == JS_FALSE)
-    THROW_ERROR(cx, "Could not convert parameter 2");
+  if (JS_ToInt32(ctx, &mode, argv[1])) {
+    delete[] file;
+    return JS_EXCEPTION;
+  }
   bool binary = false;
   bool autoflush = false;
   bool lockFile = false;
-  if (argc > 2 && JSVAL_IS_BOOLEAN(JS_ARGV(cx, vp)[2]))
-    binary = !!JSVAL_TO_BOOLEAN(JS_ARGV(cx, vp)[2]);
-  if (argc > 3 && JSVAL_IS_BOOLEAN(JS_ARGV(cx, vp)[3]))
-    autoflush = !!JSVAL_TO_BOOLEAN(JS_ARGV(cx, vp)[3]);
-  if (argc > 4 && JSVAL_IS_BOOLEAN(JS_ARGV(cx, vp)[4]))
-    lockFile = !!JSVAL_TO_BOOLEAN(JS_ARGV(cx, vp)[4]);
+  if (argc > 2 && JS_IsBool(argv[2]))
+    binary = !!JS_ToBool(ctx, argv[2]);
+  if (argc > 3 && JS_IsBool(argv[3]))
+    autoflush = !!JS_ToBool(ctx, argv[3]);
+  if (argc > 4 && JS_IsBool(argv[4]))
+    lockFile = !!JS_ToBool(ctx, argv[4]);
 
   // Check that the path looks basically ok, validation is handled later
-  if (file == NULL || file[0] == '\0')
-    THROW_ERROR(cx, "Invalid file name");
+  if (file == NULL || file[0] == '\0') {
+    delete[] file;
+    THROW_ERROR(ctx, "Invalid file name");
+  }
 
   // this could be simplified to: mode > FILE_APPEND || mode < FILE_READ
   // but then it takes a hit for readability
@@ -186,23 +191,27 @@ JSAPI_FUNC(file_open) {
       break;
     // Bad modes
     default:
-      THROW_ERROR(cx, "Invalid file mode");
+      delete[] file;
+      THROW_ERROR(ctx, "Invalid file mode");
   }
 
   if (binary)
     mode += 3;
 
   static const wchar_t* modes[] = {L"rt", L"w+t", L"a+t", L"rb", L"w+b", L"a+b"};
-  FILE* fptr = fileOpenRelScript(file, modes[mode], cx);
+  FILE* fptr = fileOpenRelScript(file, modes[mode], ctx);
 
   // If fileOpenRelScript failed, it already reported the error
-  if (fptr == NULL)
+  if (fptr == NULL) {
+    delete[] file;
     return JS_FALSE;
+  }
 
   FileData* fdata = new FileData;
   if (!fdata) {
+    delete[] file;
     fclose(fptr);
-    THROW_ERROR(cx, "Couldn't allocate memory for the FileData object");
+    THROW_ERROR(ctx, "Couldn't allocate memory for the FileData object");
   }
 
   fdata->mode = mode;
@@ -217,25 +226,23 @@ JSAPI_FUNC(file_open) {
     fdata->line = __LINE__;
 #endif
   }
+  delete[] file;
 
-  JSObject* res = BuildObject(cx, &file_class, file_methods, file_props, fdata);
-  if (!res) {
+  JSValue res = BuildObject(ctx, file_class_id, file_methods, _countof(file_methods), file_props, _countof(file_props), fdata);
+  if (JS_IsException(res)) {
     if (lockFile)
       fclose(fptr);
     else
       _fclose_nolock(fptr);
     free(fdata->path);
     delete fdata;
-    THROW_ERROR(cx, "Failed to define the file object");
+    THROW_ERROR(ctx, "Failed to define the file object");
   }
-  JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(res));
-  return JS_TRUE;
+  return res;
 }
 
 JSAPI_FUNC(file_close) {
-  (argc);
-
-  FileData* fdata = (FileData*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &file_class, NULL);
+  FileData* fdata = (FileData*)JS_GetInstancePrivate(ctx, this_val, file_class_id, NULL);
   if (fdata) {
     if (fdata->fptr) {
       if (fdata->locked) {
@@ -245,31 +252,30 @@ JSAPI_FUNC(file_close) {
         fdata->line = __LINE__;
 #endif
         if (!!fclose(fdata->fptr)) {
-          THROW_ERROR(cx, "Close failed");
+          THROW_ERROR(ctx, "Close failed");
         }
       } else if (!!_fclose_nolock(fdata->fptr)) {
-        THROW_ERROR(cx, "Close failed");
+        THROW_ERROR(ctx, "Close failed");
       }
       fdata->fptr = NULL;
     } else
-      THROW_ERROR(cx, "File is not open");
+      THROW_ERROR(ctx, "File is not open");
   }
-  JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(JS_THIS_OBJECT(cx, vp)));
-  return JS_TRUE;
+  return JS_DupValue(ctx, this_val);
 }
 
 JSAPI_FUNC(file_reopen) {
   (argc);
 
-  FileData* fdata = (FileData*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &file_class, NULL);
+  FileData* fdata = (FileData*)JS_GetInstancePrivate(ctx, this_val, file_class_id, NULL);
   if (fdata)
     if (!fdata->fptr) {
       static const wchar_t* modes[] = {L"rt", L"w+t", L"a+t", L"rb", L"w+b", L"a+b"};
-      fdata->fptr = fileOpenRelScript(fdata->path, modes[fdata->mode], cx);
+      fdata->fptr = fileOpenRelScript(fdata->path, modes[fdata->mode], ctx);
 
       // If fileOpenRelScript failed, it already reported the error
       if (fdata->fptr == NULL)
-        return JS_FALSE;
+        return JS_EXCEPTION;
 
       if (fdata->locked) {
         _lock_file(fdata->fptr);
@@ -279,18 +285,17 @@ JSAPI_FUNC(file_reopen) {
 #endif
       }
     } else
-      THROW_ERROR(cx, "File is not closed");
-  JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(JS_THIS_OBJECT(cx, vp)));
-  return JS_TRUE;
+      THROW_ERROR(ctx, "File is not closed");
+  return JS_DupValue(ctx, this_val);
 }
 
 JSAPI_FUNC(file_read) {
-  FileData* fdata = (FileData*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &file_class, NULL);
+  FileData* fdata = (FileData*)JS_GetInstancePrivate(ctx, this_val, file_class_id, NULL);
   if (fdata && fdata->fptr) {
     clearerr(fdata->fptr);
     int32 count = 1;
-    if (!(argc > 0 && JSVAL_TO_INT(JS_ARGV(cx, vp)[0]) > 0 && JS_ValueToInt32(cx, JS_ARGV(cx, vp)[0], &count)))
-      THROW_ERROR(cx, "Invalid arguments");
+    if (!(argc > 0 && JS_ToInt32(ctx, &count, argv[0])))
+      THROW_ERROR(ctx, "Invalid arguments");
 
     if (fdata->mode > 2) {
       // binary mode
@@ -304,19 +309,16 @@ JSAPI_FUNC(file_read) {
 
       if (size != (uint32)count && ferror(fdata->fptr)) {
         delete[] result;
-        THROW_ERROR(cx, "Read failed");
+        THROW_ERROR(ctx, "Read failed");
       }
       if (count == 1)
-        JS_SET_RVAL(cx, vp, INT_TO_JSVAL(result[0]));
+        return JS_NewInt32(ctx, result[0]);
       else {
-        JS_BeginRequest(cx);
-        JSObject* arr = JS_NewArrayObject(cx, 0, NULL);
-        JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(arr));
+        JSValue arr = JS_NewArray(ctx);
         for (int i = 0; i < count; i++) {
-          jsval val = INT_TO_JSVAL(result[i]);
-          JS_SetElement(cx, arr, i, &val);
+          JS_SetPropertyUint32(ctx, arr, i, JS_NewInt32(ctx, result[i]));
         }
-        JS_EndRequest(cx);
+        return arr;
       }
     } else {
       uint size = 0;
@@ -346,25 +348,24 @@ JSAPI_FUNC(file_read) {
 
       if (size != (uint32)count && ferror(fdata->fptr)) {
         delete[] result;
-        THROW_ERROR(cx, "Read failed");
+        THROW_ERROR(ctx, "Read failed");
       }
 
       if (begin && size > 2 && result[0] == '\xEF' && result[1] == '\xBB' && result[2] == '\xBF') {  // skip BOM
         offset = 3;
       }
       wchar_t* wresult = AnsiToUnicode(result + offset);
-      JS_SET_RVAL(cx, vp, STRING_TO_JSVAL(JS_NewUCStringCopyZ(cx, wresult)));
+      JSValue rval = JS_NewString(ctx, wresult);
       delete[] wresult;
       delete[] result;
+      return rval;
     }
   }
   return JS_TRUE;
 }
 
 JSAPI_FUNC(file_readLine) {
-  (argc);
-
-  FileData* fdata = (FileData*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &file_class, NULL);
+  FileData* fdata = (FileData*)JS_GetInstancePrivate(ctx, this_val, file_class_id, NULL);
   if (fdata && fdata->fptr) {
     uint size = 0;
     int offset = 0;
@@ -380,29 +381,26 @@ JSAPI_FUNC(file_readLine) {
 
     char* line = readLine(fdata->fptr, fdata->locked);
     if (!line)
-      THROW_ERROR(cx, "Read failed");
+      THROW_ERROR(ctx, "Read failed");
 
     if (begin && strlen(line) > 2 && line[0] == '\xEF' && line[1] == '\xBB' && line[2] == '\xBF') {  // skip BOM
       offset = 3;
     }
 
     wchar_t* wline = AnsiToUnicode(line + offset);
-    JS_SET_RVAL(cx, vp, STRING_TO_JSVAL(JS_NewUCStringCopyZ(cx, wline)));
+    JSValue rval = JS_NewString(ctx, wline);
     delete[] wline;
     free(line);
+    return rval;
   }
   return JS_TRUE;
 }
 
 JSAPI_FUNC(file_readAllLines) {
-  (argc);
-
-  FileData* fdata = (FileData*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &file_class, NULL);
+  FileData* fdata = (FileData*)JS_GetInstancePrivate(ctx, this_val, file_class_id, NULL);
   if (fdata && fdata->fptr) {
-    JSObject* arr = JS_NewArrayObject(cx, 0, NULL);
-    JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(arr));
+    JSValue arr = JS_NewArray(ctx);
     int i = 0;
-    JS_BeginRequest(cx);
     while (!feof(fdata->fptr)) {
       uint size = 0;
       int offset = 0;
@@ -418,27 +416,24 @@ JSAPI_FUNC(file_readAllLines) {
 
       char* line = readLine(fdata->fptr, fdata->locked);
       if (!line)
-        THROW_ERROR(cx, "Read failed");
+        THROW_ERROR(ctx, "Read failed");
 
       if (begin && strlen(line) > 2 && line[0] == '\xEF' && line[1] == '\xBB' && line[2] == '\xBF') {  // skip BOM
         offset = 3;
       }
 
       wchar_t* wline = AnsiToUnicode(line + offset);
-      jsval val = STRING_TO_JSVAL(JS_NewUCStringCopyZ(cx, wline));
-      JS_SetElement(cx, arr, i++, &val);
+      JS_SetPropertyUint32(ctx, arr, i++, JS_NewString(ctx, wline));
       delete[] wline;
       free(line);
     }
-    JS_EndRequest(cx);
+    return arr;
   }
   return JS_TRUE;
 }
 
 JSAPI_FUNC(file_readAll) {
-  (argc);
-
-  FileData* fdata = (FileData*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &file_class, NULL);
+  FileData* fdata = (FileData*)JS_GetInstancePrivate(ctx, this_val, file_class_id, NULL);
   if (fdata && fdata->fptr) {
     uint size = 0;
     int offset = 0;
@@ -479,25 +474,24 @@ JSAPI_FUNC(file_readAll) {
 
     if (count != size && ferror(fdata->fptr)) {
       delete[] contents;
-      THROW_ERROR(cx, "Read failed");
+      THROW_ERROR(ctx, "Read failed");
     }
-    JS_BeginRequest(cx);
     if (begin && count > 2 && contents[0] == '\xEF' && contents[1] == '\xBB' && contents[2] == '\xBF') {  // skip BOM
       offset = 3;
     }
     wchar_t* wcontents = AnsiToUnicode(contents + offset);
-    JS_SET_RVAL(cx, vp, STRING_TO_JSVAL(JS_NewUCStringCopyN(cx, wcontents, wcslen(wcontents))));
-    JS_EndRequest(cx);
+    JSValue rval = JS_NewString(ctx, wcontents);
     delete[] wcontents;
     delete[] contents;
+    return rval;
   }
   return JS_TRUE;
 }
 
 JSAPI_FUNC(file_write) {
-  FileData* fdata = (FileData*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &file_class, NULL);
+  FileData* fdata = (FileData*)JS_GetInstancePrivate(ctx, this_val, file_class_id, NULL);
   if (fdata && fdata->fptr) {
-    for (uint i = 0; i < argc; i++) writeValue(fdata->fptr, cx, JS_ARGV(cx, vp)[i], !!(fdata->mode > 2), fdata->locked);
+    for (int i = 0; i < argc; i++) writeValue(fdata->fptr, ctx, argv[i], !!(fdata->mode > 2), fdata->locked);
 
     if (fdata->autoflush) {
       if (fdata->locked)
@@ -506,100 +500,75 @@ JSAPI_FUNC(file_write) {
         _fflush_nolock(fdata->fptr);
     }
   }
-  JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(JS_THIS_OBJECT(cx, vp)));
-  return JS_TRUE;
+  return JS_DupValue(ctx, this_val);
 }
 
 JSAPI_FUNC(file_seek) {
-  FileData* fdata = (FileData*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &file_class, NULL);
+  FileData* fdata = (FileData*)JS_GetInstancePrivate(ctx, this_val, file_class_id, NULL);
   if (fdata && fdata->fptr) {
     if (argc > 0) {
       int32 bytes;
       bool isLines = false, fromStart = false;
-      if (JS_ValueToInt32(cx, JS_ARGV(cx, vp)[0], &bytes) == JS_FALSE)
-        THROW_ERROR(cx, "Could not convert parameter 1");
-      if (argc > 1 && JSVAL_IS_BOOLEAN(JS_ARGV(cx, vp)[1]))
-        isLines = !!JSVAL_TO_BOOLEAN(JS_ARGV(cx, vp)[1]);
-      if (argc > 2 && JSVAL_IS_BOOLEAN(JS_ARGV(cx, vp)[2]))
-        fromStart = !!JSVAL_TO_BOOLEAN(JS_ARGV(cx, vp)[2]);
+      if (JS_ToInt32(ctx, &bytes, argv[0])) {
+        THROW_ERROR(ctx, "Could not convert parameter 1");
+      }
+      if (argc > 1 && JS_IsBool(argv[1]))
+        isLines = !!JS_ToBool(ctx, argv[1]);
+      if (argc > 2 && JS_IsBool(argv[2]))
+        fromStart = !!JS_ToBool(ctx, argv[2]);
 
       if (fromStart)
         rewind(fdata->fptr);
 
       if (!isLines) {
         if (fdata->locked && fseek(fdata->fptr, bytes, SEEK_CUR)) {
-          THROW_ERROR(cx, "Seek failed");
+          THROW_ERROR(ctx, "Seek failed");
         } else if (_fseek_nolock(fdata->fptr, bytes, SEEK_CUR))
-          THROW_ERROR(cx, "Seek failed");
+          THROW_ERROR(ctx, "Seek failed");
       } else {
         // semi-ugly hack to seek to the specified line
         // if I were unlazy I wouldn't be allocating/deallocating all this memory, but for now it's ok
         while (bytes--) free(readLine(fdata->fptr, fdata->locked));
       }
     } else
-      THROW_ERROR(cx, "Not enough parameters");
+      THROW_ERROR(ctx, "Not enough parameters");
   }
-  JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(JS_THIS_OBJECT(cx, vp)));
-  return JS_TRUE;
+  return JS_DupValue(ctx, this_val);
 }
 
 JSAPI_FUNC(file_flush) {
-  (argc);
-
-  FileData* fdata = (FileData*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &file_class, NULL);
+  FileData* fdata = (FileData*)JS_GetInstancePrivate(ctx, this_val, file_class_id, NULL);
   if (fdata && fdata->fptr)
     if (fdata->locked)
       fflush(fdata->fptr);
     else
       _fflush_nolock(fdata->fptr);
 
-  JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(JS_THIS_OBJECT(cx, vp)));
-  return JS_TRUE;
+  return JS_DupValue(ctx, this_val);
 }
 
 JSAPI_FUNC(file_reset) {
   (argc);
 
-  FileData* fdata = (FileData*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &file_class, NULL);
+  FileData* fdata = (FileData*)JS_GetInstancePrivate(ctx, this_val, file_class_id, NULL);
   if (fdata && fdata->fptr) {
     if (fdata->locked && fseek(fdata->fptr, 0L, SEEK_SET)) {
-      THROW_ERROR(cx, "Seek failed");
+      THROW_ERROR(ctx, "Seek failed");
     } else if (_fseek_nolock(fdata->fptr, 0L, SEEK_SET))
-      THROW_ERROR(cx, "Seek failed");
+      THROW_ERROR(ctx, "Seek failed");
   }
-  JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(JS_THIS_OBJECT(cx, vp)));
-  return JS_TRUE;
+  return JS_DupValue(ctx, this_val);
 }
 
 JSAPI_FUNC(file_end) {
   (argc);
 
-  FileData* fdata = (FileData*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &file_class, NULL);
+  FileData* fdata = (FileData*)JS_GetInstancePrivate(ctx, this_val, file_class_id, NULL);
   if (fdata && fdata->fptr) {
     if (fdata->locked && fseek(fdata->fptr, 0L, SEEK_END)) {
-      THROW_ERROR(cx, "Seek failed");
+      THROW_ERROR(ctx, "Seek failed");
     } else if (_fseek_nolock(fdata->fptr, 0L, SEEK_END))
-      THROW_ERROR(cx, "Seek failed");
+      THROW_ERROR(ctx, "Seek failed");
   }
-  JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(JS_THIS_OBJECT(cx, vp)));
-  return JS_TRUE;
-}
-
-void file_finalize(JSFreeOp* /*fop*/, JSObject* obj) {
-  FileData* fdata = (FileData*)JS_GetPrivate(obj);
-  if (fdata) {
-    free(fdata->path);
-    if (fdata->fptr) {
-      if (fdata->locked) {
-        _unlock_file(fdata->fptr);
-#if DEBUG
-        fdata->lockLocation = __FILE__;
-        fdata->line = __LINE__;
-#endif
-        fclose(fdata->fptr);
-      } else
-        _fclose_nolock(fdata->fptr);
-    }
-    delete fdata;
-  }
+  return JS_DupValue(ctx, this_val);
 }

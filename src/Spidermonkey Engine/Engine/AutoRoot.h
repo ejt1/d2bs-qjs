@@ -13,7 +13,7 @@ class AutoRoot {
   AutoRoot(const AutoRoot&);
 
  public:
-  AutoRoot() : var(JSVAL_NULL), count(0) {
+  AutoRoot() : var(JS_NULL), count(0) {
   }
   AutoRoot(JSContext* cx, jsval var);
   ~AutoRoot();

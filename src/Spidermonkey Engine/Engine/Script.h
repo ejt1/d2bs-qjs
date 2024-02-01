@@ -27,7 +27,7 @@ enum ScriptState {
 class Script {
   friend class ScriptEngine;
 
-  Script(const wchar_t* file, ScriptMode mode, uint argc = 0, JSAutoStructuredCloneBuffer** argv = NULL);
+  Script(const wchar_t* file, ScriptMode mode/*, uint argc = 0, JSAutoStructuredCloneBuffer** argv = NULL*/);
   ~Script();
 
  public:
@@ -47,8 +47,8 @@ class Script {
   void RunCommand(const wchar_t* command);
 
   inline void TriggerOperationCallback(void) {
-    if (m_hasActiveCX)
-      JS_TriggerOperationCallback(m_runtime);
+    //if (m_hasActiveCX)
+    //  JS_TriggerOperationCallback(m_runtime);
   }
 
   inline void SetPauseState(bool reallyPaused) {
@@ -93,7 +93,7 @@ class Script {
   // blocks the executing thread for X milliseconds, keeping the event loop running during this time
   void BlockThread(DWORD delay);
   void ExecuteEvent(char* evtName, int argc, const jsval* argv, bool* block = nullptr);
-  void ExecuteEvent(char* evtName, const JS::AutoValueVector& args, bool* block = nullptr);
+  //void ExecuteEvent(char* evtName, const JS::AutoValueVector& args, bool* block = nullptr);
 
   void OnDestroyContext();
 
@@ -108,7 +108,7 @@ class Script {
   bool RunEventLoop();
   bool ProcessAllEvents();
 
-  static JSBool InterruptHandler(JSContext* ctx);
+  static int InterruptHandler(JSRuntime* rt, void* opaque);
 
   std::wstring m_fileName;
   ScriptMode m_scriptMode;
@@ -116,11 +116,11 @@ class Script {
 
   JSRuntime* m_runtime;
   JSContext* m_context;
-  JSObject* m_globalObject;
-  JSScript* m_script;
+  JSValue m_globalObject;
+  JSValue m_script;
   myUnit* m_me;
   uint m_argc;
-  JSAutoStructuredCloneBuffer** m_argv;
+  //JSAutoStructuredCloneBuffer** m_argv;
   DWORD m_LastGC;
   // wtf is this trying to do anyway, why not just check m_context or m_runtime?
   bool m_hasActiveCX;  // hack to get away from JS_IsRunning
@@ -144,7 +144,7 @@ struct RUNCOMMANDSTRUCT {
   const wchar_t* command;
 };
 
-DWORD WINAPI ScriptThread(void* data);
+DWORD WINAPI ScriptThread(LPVOID lpThreadParameter);
 
-JSBool contextCallback(JSContext* ctx, uint contextOp);
-void reportError(JSContext* cx, const char* message, JSErrorReport* report);
+//JSBool contextCallback(JSContext* ctx, uint contextOp);
+//void reportError(JSContext* cx, const char* message, JSErrorReport* report);

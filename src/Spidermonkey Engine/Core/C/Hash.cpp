@@ -3,7 +3,7 @@
 #include "D2Helpers.h"
 #include "Hash.h"
 
-char* HashString(char* dataIn, ALG_ID algo) {
+char* HashString(const char* dataIn, ALG_ID algo) {
   // set up the crypto environment
   HCRYPTPROV provider;
   HCRYPTHASH hash;
@@ -123,19 +123,19 @@ char* HashFile(wchar_t* file, ALG_ID algo) {
   return szBuffer1;
 }
 
-char* md5(char* str) {
+char* md5(const char* str) {
   return HashString(str, CALG_MD5);
 }
-char* sha1(char* str) {
+char* sha1(const char* str) {
   return HashString(str, CALG_SHA1);
 }
-char* sha256(char* str) {
+char* sha256(const char* str) {
   return HashString(str, CALG_SHA_256);
 }
-char* sha384(char* str) {
+char* sha384(const char* str) {
   return HashString(str, CALG_SHA_384);
 }
-char* sha512(char* str) {
+char* sha512(const char* str) {
   return HashString(str, CALG_SHA_512);
 }
 

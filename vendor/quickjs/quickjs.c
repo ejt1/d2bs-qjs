@@ -6495,7 +6495,7 @@ static void build_backtrace(JSContext *ctx, JSValueConst error_obj,
     
     js_dbuf_init(ctx, &dbuf);
     if (filename) {
-        dbuf_printf(&dbuf, "    at %s", filename);
+        dbuf_printf(&dbuf, "    at @%s", filename);
         if (line_num != -1)
             dbuf_printf(&dbuf, ":%d", line_num);
         dbuf_putc(&dbuf, '\n');
@@ -6533,7 +6533,7 @@ static void build_backtrace(JSContext *ctx, JSValueConst error_obj,
                 line_num1 = find_line_num(ctx, b,
                                           sf->cur_pc - b->byte_code_buf - 1);
                 atom_str = JS_AtomToCString(ctx, b->debug.filename);
-                dbuf_printf(&dbuf, " (%s",
+                dbuf_printf(&dbuf, " (@%s",
                             atom_str ? atom_str : "<null>");
                 JS_FreeCString(ctx, atom_str);
                 if (line_num1 != -1)

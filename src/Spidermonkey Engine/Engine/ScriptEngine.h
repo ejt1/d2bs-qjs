@@ -29,7 +29,7 @@ class ScriptEngine {
   BOOL Initialize();
   void Shutdown();
 
-  Script* NewScript(const wchar_t* file, ScriptMode mode, uint argc = 0, JSAutoStructuredCloneBuffer** argv = NULL, bool recompile = false);
+  Script* NewScript(const wchar_t* file, ScriptMode mode/*, uint argc = 0, JSAutoStructuredCloneBuffer** argv = NULL*/, bool recompile = false);
 
   void FlushCache(void);
 

@@ -1020,7 +1020,7 @@ typedef struct JSCFunctionListEntry {
 #define JS_CFUNC_SPECIAL_DEF(name, length, cproto, func1) { name, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE, .def_type = JS_DEF_CFUNC, .magic = 0, .u = { .func = { length, JS_CFUNC_ ## cproto, { .cproto = func1 } } } }
 #define JS_ITERATOR_NEXT_DEF(vname, vlength, func1, vmagic) { .name = vname, .prop_flags = JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE, .def_type = JS_DEF_CFUNC, .magic = vmagic, .u = { .func = { .length = vlength, .cproto = JS_CFUNC_iterator_next, .cfunc = { .iterator_next = func1 } } } }
 #define JS_CGETSET_DEF(vname, fgetter, fsetter) { .name = vname, .prop_flags = JS_PROP_CONFIGURABLE, .def_type = JS_DEF_CGETSET, .magic = 0, .u = { .getset = { .get = { .getter = fgetter }, .set = { .setter = fsetter } } } }
-#define JS_CGETSET_MAGIC_DEF(vname, fgetter, fsetter, vmagic) { .name = vname, JS_PROP_CONFIGURABLE, JS_DEF_CGETSET_MAGIC, .magic = vmagic, .u = { .getset = { .get = { .getter_magic = fgetter }, .set = { .setter_magic = fsetter } } } }
+#define JS_CGETSET_MAGIC_DEF(vname, fgetter, fsetter, vmagic) { .name = vname, .prop_flags = JS_PROP_CONFIGURABLE, .def_type = JS_DEF_CGETSET_MAGIC, .magic = vmagic, .u = { .getset = { .get = { .getter_magic = fgetter }, .set = { .setter_magic = fsetter } } } }
 #define JS_PROP_STRING_DEF(vname, cstr, vprop_flags) { .name = vname, .prop_flags = vprop_flags, .def_type = JS_DEF_PROP_STRING, .magic = 0, .u = { .str = cstr } }
 #define JS_PROP_INT32_DEF(vname, val, vprop_flags) { .name = vname, .prop_flags = vprop_flags, .def_type = JS_DEF_PROP_INT32, .magic = 0, .u = { .i32 = val } }
 #define JS_PROP_INT64_DEF(vname, val, vprop_flags) { .name = vname, .prop_flags = vprop_flags, JS_DEF_PROP_INT64, 0, .u = { .i64 = val } }

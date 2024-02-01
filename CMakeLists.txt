@@ -119,7 +119,7 @@ target_link_libraries(D2BS PRIVATE
   shlwapi
 
   # vendor dependencies
-  minhook
-  js)
+  libquickjs
+  minhook)
 
 install(TARGETS D2BS RUNTIME DESTINATION bin/d2bs)

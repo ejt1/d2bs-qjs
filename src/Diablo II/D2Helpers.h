@@ -38,7 +38,7 @@ int GetItemLocation(UnitAny* pItem);
 int GetSkill(WORD wSkillId);
 BOOL SetSkill(JSContext* cx, WORD wSkillId, BOOL bLeft, DWORD dwItemId = 0xFFFFFFFF);
 char* GetSkillByID(WORD id);
-WORD GetSkillByName(char* szSkillName);
+WORD GetSkillByName(const char* szSkillName);
 
 const char* GetUnitName(UnitAny* pUnit, char* szBuf, size_t bufSize);
 void GetItemCode(UnitAny* pUnit, char* szBuf);

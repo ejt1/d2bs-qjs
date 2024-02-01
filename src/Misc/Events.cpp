@@ -153,11 +153,11 @@ bool __fastcall BCastEventCallback(Script* script, void* argv, uint argc) {
     evt->argc = argc;
     evt->name = "scriptmsg";
     evt->arg1 = new DWORD(argc);
-    evt->argv = new JSAutoStructuredCloneBuffer*[argc];
-    for (uint i = 0; i < argc; i++) {
-      evt->argv[i] = new JSAutoStructuredCloneBuffer;
-      evt->argv[i]->write(helper->cx, helper->argv[i]);
-    }
+    //evt->argv = new JSAutoStructuredCloneBuffer*[argc];
+    //for (uint i = 0; i < argc; i++) {
+    //  evt->argv[i] = new JSAutoStructuredCloneBuffer;
+    //  evt->argv[i]->write(helper->cx, helper->argv[i]);
+    //}
 
     script->FireEvent(evt);
   }

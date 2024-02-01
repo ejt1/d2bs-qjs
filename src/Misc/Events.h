@@ -4,12 +4,12 @@
 
 #include <windows.h>
 
-typedef std::list<AutoRoot*> FunctionList;
+typedef std::list<JSValue> FunctionList;
 
 struct Event {
   Event() : argv(nullptr), argc(0), arg1(nullptr), arg2(nullptr), arg3(nullptr), arg4(nullptr), arg5(nullptr){};
   FunctionList functions;
-  JSAutoStructuredCloneBuffer** argv;
+  JSValue* argv;
   uint argc;
   std::string name;
   void* arg1;

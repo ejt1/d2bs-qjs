@@ -17,138 +17,128 @@
 #include <cmath>
 
 JSAPI_FUNC(my_copyUnit) {
-  JS_SET_RVAL(cx, vp, JSVAL_VOID);
-
-  if (argc >= 1 && JSVAL_IS_OBJECT(JS_ARGV(cx, vp)[0]) && !JSVAL_IS_NULL(JS_ARGV(cx, vp)[0])) {
-    JS_SET_RVAL(cx, vp, JSVAL_VOID);
-    Private* myPrivate = (Private*)JS_GetPrivate(cx, JSVAL_TO_OBJECT(JS_ARGV(cx, vp)[0]));
+  if (argc >= 1 && JS_IsObject(argv[0]) && !JS_IsNull(argv[0])) {
+    Private* myPrivate = (Private*)JS_GetPrivate(ctx, argv[0]);
 
     if (!myPrivate)
-      return JS_TRUE;
+      return JS_UNDEFINED;
 
     if (myPrivate->dwPrivateType == PRIVATE_UNIT) {
-      myUnit* lpOldUnit = (myUnit*)JS_GetPrivate(cx, JSVAL_TO_OBJECT(JS_ARGV(cx, vp)[0]));
+      myUnit* lpOldUnit = (myUnit*)JS_GetPrivate(ctx, argv[0]);
       myUnit* lpUnit = new myUnit;
 
       if (lpUnit) {
         memcpy(lpUnit, lpOldUnit, sizeof(myUnit));
-        JSObject* jsunit = BuildObject(cx, &unit_class, unit_methods, unit_props, lpUnit);
-        if (!jsunit) {
+        JSValue jsunit = BuildObject(ctx, unit_class_id, unit_methods, _countof(unit_methods), unit_props, _countof(unit_props), lpUnit);
+        if (JS_IsException(jsunit)) {
           delete lpUnit;
           lpUnit = NULL;
-          THROW_ERROR(cx, "Couldn't copy unit");
+          THROW_ERROR(ctx, "Couldn't copy unit");
         }
-        JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(jsunit));
+        return jsunit;
       }
     } else if (myPrivate->dwPrivateType == PRIVATE_ITEM) {
-      invUnit* lpOldUnit = (invUnit*)JS_GetPrivate(cx, JSVAL_TO_OBJECT(JS_ARGV(cx, vp)[0]));
+      invUnit* lpOldUnit = (invUnit*)JS_GetPrivate(ctx, argv[0]);
       invUnit* lpUnit = new invUnit;
 
       if (lpUnit) {
         memcpy(lpUnit, lpOldUnit, sizeof(invUnit));
-        JSObject* jsunit = BuildObject(cx, &unit_class, unit_methods, unit_props, lpUnit);
-        if (!jsunit) {
+        JSValue jsunit = BuildObject(ctx, unit_class_id, unit_methods, _countof(unit_methods), unit_props, _countof(unit_props), lpUnit);
+        if (JS_IsException(jsunit)) {
           delete lpUnit;
           lpUnit = NULL;
-          THROW_ERROR(cx, "Couldn't copy unit");
+          THROW_ERROR(ctx, "Couldn't copy unit");
         }
-        JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(jsunit));
+        return jsunit;
       }
     }
   }
 
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(my_clickMap) {
   if (!WaitForGameReady())
-    THROW_WARNING(cx, vp, "Game not ready");
+    THROW_WARNING(ctx, "Game not ready");
 
-  uint16 nClickType = NULL, nShift = NULL, nX = NULL, nY = NULL;
-
-  JS_SET_RVAL(cx, vp, JSVAL_FALSE);
+  uint32_t nClickType = NULL, nShift = NULL, nX = NULL, nY = NULL;
 
   if (argc < 3)
-    return JS_TRUE;
-  JS_BeginRequest(cx);
-  if (JSVAL_IS_INT(JS_ARGV(cx, vp)[0]))
-    JS_ValueToUint16(cx, JS_ARGV(cx, vp)[0], &nClickType);
-  if (JSVAL_IS_INT(JS_ARGV(cx, vp)[1]) || JSVAL_IS_BOOLEAN(JS_ARGV(cx, vp)[1]))
-    JS_ValueToUint16(cx, JS_ARGV(cx, vp)[1], &nShift);
-  if (JSVAL_IS_INT(JS_ARGV(cx, vp)[2]))
-    JS_ValueToUint16(cx, JS_ARGV(cx, vp)[2], &nX);
-  if (JSVAL_IS_INT(JS_ARGV(cx, vp)[3]))
-    JS_ValueToUint16(cx, JS_ARGV(cx, vp)[3], &nY);
-  JS_EndRequest(cx);
-  if (argc == 3 && JSVAL_IS_INT(JS_ARGV(cx, vp)[0]) && (JSVAL_IS_INT(JS_ARGV(cx, vp)[1]) || JSVAL_IS_BOOLEAN(JS_ARGV(cx, vp)[1])) &&
-      JSVAL_IS_OBJECT(JS_ARGV(cx, vp)[2]) && !JSVAL_IS_NULL(JS_ARGV(cx, vp)[2])) {
-    myUnit* mypUnit = (myUnit*)JS_GetPrivate(cx, JSVAL_TO_OBJECT(JS_ARGV(cx, vp)[2]));
+    return JS_FALSE;
+  if (JS_IsNumber(argv[0]))
+    JS_ToUint32(ctx, &nClickType, argv[0]);
+  if (JS_IsNumber(argv[1]) || JS_IsBool(argv[1]))
+    JS_ToUint32(ctx, &nShift, argv[1]);
+  if (JS_IsNumber(argv[2]))
+    JS_ToUint32(ctx, &nX, argv[2]);
+  if (JS_IsNumber(argv[3]))
+    JS_ToUint32(ctx, &nY, argv[3]);
+
+  if (argc == 3 && JS_IsNumber(argv[0]) && (JS_IsNumber(argv[1]) || JS_IsBool(argv[1])) && JS_IsObject(argv[2]) && !JS_IsNull(argv[2])) {
+    myUnit* mypUnit = (myUnit*)JS_GetPrivate(ctx, argv[2]);
 
     if (!mypUnit || (mypUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
-      return JS_TRUE;
+      return JS_FALSE;
 
     UnitAny* pUnit = D2CLIENT_FindUnit(mypUnit->dwUnitId, mypUnit->dwType);
 
     if (!pUnit)
-      return JS_TRUE;
+      return JS_FALSE;
 
     Vars.dwSelectedUnitId = NULL;
     Vars.dwSelectedUnitType = NULL;
-    JS_SET_RVAL(cx, vp, BOOLEAN_TO_JSVAL(ClickMap(nClickType, nX, nY, nShift, pUnit)));
-  } else if (argc > 3 && JSVAL_IS_INT(JS_ARGV(cx, vp)[0]) && (JSVAL_IS_INT(JS_ARGV(cx, vp)[1]) || JSVAL_IS_BOOLEAN(JS_ARGV(cx, vp)[1])) &&
-             JSVAL_IS_INT(JS_ARGV(cx, vp)[2]) && JSVAL_IS_INT(JS_ARGV(cx, vp)[3])) {
-    JS_SET_RVAL(cx, vp, BOOLEAN_TO_JSVAL(ClickMap(nClickType, nX, nY, nShift, NULL)));
+    return JS_NewBool(ctx, ClickMap(nClickType, nX, nY, nShift, pUnit));
+  } else if (argc > 3 && JS_IsNumber(argv[0]) && (JS_IsNumber(argv[1]) || JS_IsBool(argv[1])) && JS_IsNumber(argv[2]) && JS_IsNumber(argv[3])) {
+    return JS_NewBool(ctx, ClickMap(nClickType, nX, nY, nShift, NULL));
   }
 
-  return JS_TRUE;
+  return JS_FALSE;
 }
 
 JSAPI_FUNC(my_acceptTrade) {
   if (!WaitForGameReady())
-    THROW_WARNING(cx, vp, "Game not ready");
+    THROW_WARNING(ctx, "Game not ready");
 
   // TODO: Fix this nonsense.
-  if (argc > 0 && JSVAL_TO_INT(JS_ARGV(cx, vp)[0]) == 1)  // Called with a '1' it will return if we already accepted it or not
-  {
-    JS_SET_RVAL(cx, vp, BOOLEAN_TO_JSVAL((*p_D2CLIENT_bTradeAccepted)));
-    return JS_TRUE;
-  } else if (JSVAL_TO_INT(JS_ARGV(cx, vp)[0]) == 2)  // Called with a '2' it will return the trade flag
-  {
-    JS_SET_RVAL(cx, vp, INT_TO_JSVAL((*p_D2CLIENT_RecentTradeId)));
-    return JS_TRUE;
-  } else if (JSVAL_TO_INT(JS_ARGV(cx, vp)[0]) == 3)  // Called with a '3' it will return if the 'check' is red or not
-  {
-    JS_SET_RVAL(cx, vp, BOOLEAN_TO_JSVAL((*p_D2CLIENT_bTradeBlock)));
-    return JS_TRUE;
+
+  if (argc > 0) {
+    int32_t test = 0;
+    JS_ToInt32(ctx, &test, argv[0]);
+    if (test == 1) {  // Called with a '1' it will return if we already accepted it or not
+      return JS_NewBool(ctx, *p_D2CLIENT_bTradeAccepted);
+    } else if (test == 2) {  // Called with a '2' it will return the trade flag
+      return JS_NewInt32(ctx, *p_D2CLIENT_RecentTradeId);
+    } else if (test == 3) {  // Called with a '3' it will return if the 'check' is red or not
+      return JS_NewBool(ctx, *p_D2CLIENT_bTradeBlock);
+    }
   }
 
   AutoCriticalRoom* cRoom = new AutoCriticalRoom;
 
   if ((*p_D2CLIENT_RecentTradeId) == 3 || (*p_D2CLIENT_RecentTradeId) == 5 || (*p_D2CLIENT_RecentTradeId) == 7) {
+    JSValue rval = JS_FALSE;
     if ((*p_D2CLIENT_bTradeBlock)) {
       // Don't operate if we can't trade anyway ...
-      JS_SET_RVAL(cx, vp, JSVAL_FALSE);
+      rval = JS_FALSE;
     } else if ((*p_D2CLIENT_bTradeAccepted)) {
       (*p_D2CLIENT_bTradeAccepted) = FALSE;
       D2CLIENT_CancelTrade();
-      JS_SET_RVAL(cx, vp, JSVAL_TRUE);
+      rval = JS_TRUE;
     } else {
       (*p_D2CLIENT_bTradeAccepted) = TRUE;
       D2CLIENT_AcceptTrade();
-      JS_SET_RVAL(cx, vp, JSVAL_TRUE);
+      rval = JS_TRUE;
     }
     delete cRoom;
-    return JS_TRUE;
+    return rval;
   }
   delete cRoom;
-  THROW_ERROR(cx, "Invalid parameter passed to acceptTrade!");
+  return JS_ThrowInternalError(ctx, "Invalid parameter passed to acceptTrade!");
 }
 
 JSAPI_FUNC(my_tradeOk) {
-  (argc);
-
   if (!WaitForGameReady())
-    THROW_WARNING(cx, vp, "Game not ready");
+    THROW_WARNING(ctx, "Game not ready");
 
   AutoCriticalRoom* cRoom = new AutoCriticalRoom;
   TransactionDialogsInfo_t* pTdi = *p_D2CLIENT_pTransactionDialogsInfo;
@@ -166,90 +156,68 @@ JSAPI_FUNC(my_tradeOk) {
     }
   }
   delete cRoom;
-  THROW_ERROR(cx, "Not in proper state to click ok to trade.");
+  return JS_ThrowInternalError(ctx, "Not in proper state to click ok to trade.");
 }
 
 JSAPI_FUNC(my_getDialogLines) {
-  (argc);
-
-  JS_SET_RVAL(cx, vp, JSVAL_VOID);
-
+  JSValue rval = JS_UNDEFINED;
   TransactionDialogsInfo_t* pTdi = *p_D2CLIENT_pTransactionDialogsInfo;
   unsigned int i;
-  JSObject* pReturnArray;
-  JSObject* line;
-  jsval js_text, js_selectable, js_line /*, js_handler*/, js_addr;
-  JSFunction* jsf_handler;
-  JSObject* jso_addr;
+  JSValue pReturnArray;
+  JSValue line;
 
   AutoCriticalRoom* cRoom = new AutoCriticalRoom;
 
   if (pTdi != NULL) {
-    pReturnArray = JS_NewArrayObject(cx, 0, NULL);
-    JS_AddObjectRoot(cx, &pReturnArray);
+    pReturnArray = JS_NewArray(ctx);
+
     for (i = 0; i < pTdi->numLines; ++i) {
-      js_text = STRING_TO_JSVAL(JS_NewUCStringCopyZ(cx, pTdi->dialogLines[i].text));
-      js_selectable = BOOLEAN_TO_JSVAL(pTdi->dialogLines[i].bMaybeSelectable);
+      line = BuildObject(ctx, dialogLine_class_id, 0, 0, 0, 0, &pTdi->dialogLines[i]);
+      JS_SetPropertyStr(ctx, line, "text", JS_NewString(ctx, pTdi->dialogLines[i].text));
+      JS_SetPropertyStr(ctx, line, "selectable", JS_NewBool(ctx, pTdi->dialogLines[i].bMaybeSelectable));
 
-      line = BuildObject(cx, &dialogLine_class, 0, 0, 0, 0);
-      JS_SetProperty(cx, line, "text", &js_text);
-      JS_SetProperty(cx, line, "selectable", &js_selectable);
-
-      jsf_handler = JS_DefineFunction(cx, line, "handler", my_clickDialog, 0, JSPROP_ENUMERATE);
-      js_addr = OBJECT_TO_JSVAL(jso_addr = JS_NewObject(cx, 0, 0, pReturnArray));
-      // line -> JS_GetFunctionObject(jsf_handler) in 1.8.5
-
-      // handler() or clickDialog() needs the private handler val stored somewhere
-      JS_SetReservedSlot(line, 0, PRIVATE_TO_JSVAL(&pTdi->dialogLines[i]));
-      // these privates dident work dident have private slots
-      // JS_SetPrivate(cx, JS_GetFunctionObject(jsf_handler), &pTdi->dialogLines[i]);
-      // JS_SetPrivate(cx, line,  &pTdi->dialogLines[i]);
-      js_line = OBJECT_TO_JSVAL(line);
-      JS_SetElement(cx, pReturnArray, i, &js_line);
+      JS_SetPropertyStr(ctx, line, "handler", JS_NewCFunction(ctx, my_clickDialog, "handler", 0));
+      JS_SetPropertyUint32(ctx, pReturnArray, i, line);
     }
-    JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(pReturnArray));
-    JS_RemoveObjectRoot(cx, &pReturnArray);
+    rval = pReturnArray;
   }
   delete cRoom;
-  return JS_TRUE;
+  return rval;
 }
-JSAPI_FUNC(my_clickDialog) {
-  (argc);
 
+JSAPI_FUNC(my_clickDialog) {
   TransactionDialogsLine_t* tdl;
 
-  tdl = (TransactionDialogsLine_t*)JSVAL_TO_PRIVATE(JS_GetReservedSlot(JSVAL_TO_OBJECT(JS_THIS(cx, vp)), 0));
+  tdl = (TransactionDialogsLine_t*)JS_GetOpaque2(ctx, this_val, dialogLine_class_id);
 
-  JS_SET_RVAL(cx, vp, JSVAL_VOID);
   if (tdl != NULL && tdl->bMaybeSelectable)
     tdl->handler();
   else
-    THROW_ERROR(cx, "That dialog is not currently clickable.");
+    THROW_ERROR(ctx, "That dialog is not currently clickable.");
 
-  JS_SET_RVAL(cx, vp, JSVAL_TRUE);
   return JS_TRUE;
 }
 
 JSAPI_FUNC(my_getPath) {
   if (!WaitForGameReady())
-    THROW_WARNING(cx, vp, "Game not ready");
+    THROW_WARNING(ctx, "Game not ready");
 
   if (argc < 5)
-    THROW_ERROR(cx, "Not enough parameters were passed to getPath!");
+    THROW_ERROR(ctx, "Not enough parameters were passed to getPath!");
 
   uint lvl = 0, x = 0, y = 0, dx = 0, dy = 0, reductionType = 0, radius = 20;
-
-  JS_BeginRequest(cx);
-  if (!JS_ConvertArguments(cx, argc, JS_ARGV(cx, vp), "uuuuu/uu", &lvl, &x, &y, &dx, &dy, &reductionType, &radius)) {
-    JS_EndRequest(cx);
-    return JS_FALSE;
+  uint* args[] = {&lvl, &x, &y, &dx, &dy, &reductionType, &radius};
+  for (int i = 0; i < argc && i < _countof(args); ++i) {
+    if (JS_IsNumber(argv[i]) && JS_ToUint32(ctx, args[i], argv[i])) {
+      return JS_EXCEPTION;
+    }
   }
-  JS_EndRequest(cx);
-  if (reductionType == 3 && !(JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[7]) && JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[8]) && JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[9]))) {
-    THROW_ERROR(cx, "Invalid function values for reduction type");
+
+  if (reductionType == 3 && !(JS_IsFunction(ctx, argv[7]) && JS_IsFunction(ctx, argv[8]) && JS_IsFunction(ctx, argv[9]))) {
+    THROW_ERROR(ctx, "Invalid function values for reduction type");
   }
   if (lvl == 0) {
-    THROW_ERROR(cx, "Invalid level passed to getPath");
+    THROW_ERROR(ctx, "Invalid level passed to getPath");
   }
   Level* level = GetLevel(lvl);
 
@@ -272,10 +240,10 @@ JSAPI_FUNC(my_getPath) {
       reducer = new NoPathReducer(map);
       break;
     case 3:
-      reducer = new JSPathReducer(map, cx, JS_THIS_OBJECT(cx, vp), JS_ARGV(cx, vp)[7], JS_ARGV(cx, vp)[8], JS_ARGV(cx, vp)[9]);
+      reducer = new JSPathReducer(map, ctx, this_val, argv[7], argv[8], argv[9]);
       break;
     default:
-      THROW_ERROR(cx, "Invalid path reducer value!");
+      THROW_ERROR(ctx, "Invalid path reducer value!");
       break;
   }
 
@@ -302,46 +270,39 @@ JSAPI_FUNC(my_getPath) {
 
   int count = list.size();
 
-  //	JS_EnterLocalRootScope(cx);
-
-  jsval* vec = new jsval[count];
+  JSValue arr = JS_NewArray(ctx);
   for (int i = 0; i < count; i++) {
-    jsval jx = INT_TO_JSVAL(list[i].first), jy = INT_TO_JSVAL(list[i].second);
+    jsval jx = JS_NewInt32(ctx, list[i].first), jy = JS_NewInt32(ctx, list[i].second);
 
-    JSObject* point = BuildObject(cx);
-    JS_SetProperty(cx, point, "x", &jx);
-    JS_SetProperty(cx, point, "y", &jy);
+    JSValue point = JS_NewObject(ctx);
+    JS_SetPropertyStr(ctx, point, "x", jx);
+    JS_SetPropertyStr(ctx, point, "y", jy);
 
-    vec[i] = OBJECT_TO_JSVAL(point);
+    JS_SetPropertyUint32(ctx, arr, i, point);
   }
-
-  JSObject* arr = JS_NewArrayObject(cx, count, vec);
-  JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(arr));
-
-  //	JS_LeaveLocalRootScope(cx);
 
   delete reducer;
   map->CleanUp();
-  return JS_TRUE;
+  return arr;
 }
 
 JSAPI_FUNC(my_getCollision) {
   if (!WaitForGameReady()) {
-    THROW_WARNING(cx, vp, "Game not ready");
+    THROW_WARNING(ctx, "Game not ready");
   }
 
   uint32 nLevelId, nX, nY;
-  JS_BeginRequest(cx);
-  if (!JS_ConvertArguments(cx, argc, JS_ARGV(cx, vp), "uuu", &nLevelId, &nX, &nY)) {
-    JS_EndRequest(cx);
-    return JS_FALSE;
+  uint* args[] = {&nLevelId, &nX, &nY};
+  for (int i = 0; i < argc && i < _countof(args); ++i) {
+    if (JS_IsNumber(argv[i]) && JS_ToUint32(ctx, args[i], argv[i])) {
+      return JS_EXCEPTION;
+    }
   }
-  JS_EndRequest(cx);
 
   Point point(nX, nY);
   Level* level = GetLevel(nLevelId);
   if (!level) {
-    THROW_ERROR(cx, "Level Not loaded");
+    THROW_ERROR(ctx, "Level Not loaded");
   }
 
   ActMap* map = ActMap::GetMap(level);
@@ -349,28 +310,24 @@ JSAPI_FUNC(my_getCollision) {
   //	{ map->CleanUp(); THROW_ERROR(cx, "Invalid point!");}
 
   jsval rval;
-  JS_BeginRequest(cx);
-  rval = JS_NumberValue(map->GetMapData(point, true));
-  JS_EndRequest(cx);
-  JS_SET_RVAL(cx, vp, rval);
+  rval = JS_NewInt32(ctx, map->GetMapData(point, true));
   map->CleanUp();
-
-  return JS_TRUE;
+  return rval;
 }
 
 JSAPI_FUNC(my_clickItem) {
+  JSValue rval = JS_NULL;
   typedef void __fastcall clickequip(UnitAny * pPlayer, Inventory * pIventory, int loc);
 
   if (!WaitForGameReady())
-    THROW_WARNING(cx, vp, "Game not ready");
-  JS_SET_RVAL(cx, vp, JSVAL_NULL);
+    THROW_WARNING(ctx, "Game not ready");
 
   AutoCriticalRoom* cRoom = new AutoCriticalRoom;
 
   if (*p_D2CLIENT_TransactionDialog != 0 || *p_D2CLIENT_TransactionDialogs != 0 || *p_D2CLIENT_TransactionDialogs_2 != 0) {
+    rval = JS_FALSE;
     delete cRoom;
-    JS_SET_RVAL(cx, vp, JSVAL_FALSE);
-    return JS_TRUE;
+    return rval;
   }
 
   myUnit* pmyUnit = NULL;
@@ -403,41 +360,43 @@ JSAPI_FUNC(my_clickItem) {
   *p_D2CLIENT_CursorHoverX = 0xFFFFFFFF;
   *p_D2CLIENT_CursorHoverY = 0xFFFFFFFF;
 
-  if (argc == 1 && JSVAL_IS_OBJECT(JS_ARGV(cx, vp)[0])) {
-    pmyUnit = (myUnit*)JS_GetPrivate(cx, JSVAL_TO_OBJECT(JS_ARGV(cx, vp)[0]));
+  if (argc == 1 && JS_IsObject(argv[0])) {
+    pmyUnit = (myUnit*)JS_GetPrivate(ctx, argv[0]);
 
     if (!pmyUnit || (pmyUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT) {
       delete cRoom;
-      return JS_TRUE;
+      return rval;
     }
 
     pUnit = D2CLIENT_FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
 
     if (!pUnit) {
       delete cRoom;
-      return JS_TRUE;
+      return rval;
     }
 
     clickequip* click = (clickequip*)*(DWORD*)(D2CLIENT_BodyClickTable + (4 * pUnit->pItemData->BodyLocation));
 
     if (!click) {
       delete cRoom;
-      return JS_TRUE;
+      return rval;
     }
 
     click(D2CLIENT_GetPlayerUnit(), D2CLIENT_GetPlayerUnit()->pInventory, pUnit->pItemData->BodyLocation);
     delete cRoom;
-    return JS_TRUE;
-  } else if (argc == 2 && JSVAL_IS_INT(JS_ARGV(cx, vp)[0]) && JSVAL_IS_INT(JS_ARGV(cx, vp)[1])) {
-    jsint nClickType = JSVAL_TO_INT(JS_ARGV(cx, vp)[0]);
-    jsint nBodyLoc = JSVAL_TO_INT(JS_ARGV(cx, vp)[1]);
+    return rval;
+  } else if (argc == 2 && JS_IsNumber(argv[0]) && JS_IsNumber(argv[1])) {
+    jsint nClickType;
+    jsint nBodyLoc;
+    JS_ToInt32(ctx, &nClickType, argv[0]);
+    JS_ToInt32(ctx, &nBodyLoc, argv[1]);
 
     if (nClickType == NULL) {
       clickequip* click = (clickequip*)*(DWORD*)(D2CLIENT_BodyClickTable + (4 * nBodyLoc));
 
       if (!click) {
         delete cRoom;
-        return JS_TRUE;
+        return rval;
       }
 
       click(D2CLIENT_GetPlayerUnit(), D2CLIENT_GetPlayerUnit()->pInventory, nBodyLoc);
@@ -450,27 +409,28 @@ JSAPI_FUNC(my_clickItem) {
 
         if (pMerc) {
           D2CLIENT_MercItemAction(0x61, nBodyLoc);
-          JS_SET_RVAL(cx, vp, JSVAL_TRUE);
+          rval = JS_TRUE;
         }
       }
     }
     delete cRoom;
-    return JS_TRUE;
-  } else if (argc == 2 && JSVAL_IS_INT(JS_ARGV(cx, vp)[0]) && JSVAL_IS_OBJECT(JS_ARGV(cx, vp)[1])) {
-    pmyUnit = (myUnit*)JS_GetPrivate(cx, JSVAL_TO_OBJECT(JS_ARGV(cx, vp)[1]));
+    return rval;
+  } else if (argc == 2 && JS_IsNumber(argv[0]) && JS_IsObject(argv[1])) {
+    pmyUnit = (myUnit*)JS_GetPrivate(ctx, argv[1]);
 
     if (!pmyUnit || (pmyUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT) {
       delete cRoom;
-      return JS_TRUE;
+      return rval;
     }
 
     pUnit = D2CLIENT_FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
 
-    jsint nClickType = JSVAL_TO_INT(JS_ARGV(cx, vp)[0]);
+    jsint nClickType;
+    JS_ToInt32(ctx, &nClickType, argv[0]);
 
     if (!pUnit || !(pUnit->dwType == UNIT_ITEM) || !pUnit->pItemData) {
       delete cRoom;
-      THROW_ERROR(cx, "Object is not an item!");
+      THROW_ERROR(ctx, "Object is not an item!");
     }
 
     int InventoryLocation = GetItemLocation(pUnit);
@@ -490,11 +450,11 @@ JSAPI_FUNC(my_clickItem) {
       if (pMerc)
         if (pUnit->pItemData && pUnit->pItemData->pOwner)
           if (pUnit->pItemData->pOwner->dwUnitId == pMerc->dwUnitId) {
-            JS_SET_RVAL(cx, vp, JSVAL_TRUE);
+            rval = JS_TRUE;
             D2CLIENT_MercItemAction(0x61, pUnit->pItemData->BodyLocation);
           }
       delete cRoom;
-      return JS_TRUE;
+      return rval;
     } else if (InventoryLocation == LOCATION_INVENTORY || InventoryLocation == LOCATION_STASH || InventoryLocation == LOCATION_CUBE) {
       switch (InventoryLocation) {
         case LOCATION_INVENTORY:
@@ -527,7 +487,7 @@ JSAPI_FUNC(my_clickItem) {
 
       if (i < 0 || i > 0x0F) {
         delete cRoom;
-        return JS_TRUE;
+        return rval;
       }
 
       if (D2GFX_GetScreenSize() == 2) {
@@ -544,24 +504,28 @@ JSAPI_FUNC(my_clickItem) {
     } else if (D2CLIENT_GetCursorItem() == pUnit) {
       if (nClickType < 1 || nClickType > 12) {
         delete cRoom;
-        return JS_TRUE;
+        return rval;
       }
 
       clickequip* click = (clickequip*)*(DWORD*)(D2CLIENT_BodyClickTable + (4 * nClickType));
 
       if (!click) {
         delete cRoom;
-        return JS_TRUE;
+        return rval;
       }
 
       click(D2CLIENT_GetPlayerUnit(), D2CLIENT_GetPlayerUnit()->pInventory, nClickType);
     }
   } else if (argc == 4) {
-    if (JSVAL_IS_INT(JS_ARGV(cx, vp)[0]) && JSVAL_IS_INT(JS_ARGV(cx, vp)[1]) && JSVAL_IS_INT(JS_ARGV(cx, vp)[2]) && JSVAL_IS_INT(JS_ARGV(cx, vp)[3])) {
-      jsint nButton = JSVAL_TO_INT(JS_ARGV(cx, vp)[0]);
-      jsint nX = JSVAL_TO_INT(JS_ARGV(cx, vp)[1]);
-      jsint nY = JSVAL_TO_INT(JS_ARGV(cx, vp)[2]);
-      jsint nLoc = JSVAL_TO_INT(JS_ARGV(cx, vp)[3]);
+    if (JS_IsNumber(argv[0]) && JS_IsNumber(argv[1]) && JS_IsNumber(argv[2]) && JS_IsNumber(argv[3])) {
+      jsint nButton;
+      jsint nX;
+      jsint nY;
+      jsint nLoc;
+      JS_ToInt32(ctx, &nButton, argv[0]);
+      JS_ToInt32(ctx, &nX, argv[1]);
+      JS_ToInt32(ctx, &nY, argv[2]);
+      JS_ToInt32(ctx, &nLoc, argv[3]);
 
       int clickTarget = LOCATION_NULL;
       InventoryLayout* pLayout = NULL;
@@ -616,7 +580,6 @@ JSAPI_FUNC(my_clickItem) {
           D2CLIENT_LeftClickItem(clickTarget, D2CLIENT_GetPlayerUnit(), D2CLIENT_GetPlayerUnit()->pInventory, x, y, 5, pLayout);
 
         delete cRoom;
-        JS_SET_RVAL(cx, vp, JSVAL_TRUE);
         return JS_TRUE;
       } else if (nLoc == LOCATION_BELT)  // Belt
       {
@@ -631,7 +594,7 @@ JSAPI_FUNC(my_clickItem) {
 
         if (z == -1) {
           delete cRoom;
-          return JS_TRUE;
+          return rval;
         }
 
         int x = NULL;
@@ -653,34 +616,27 @@ JSAPI_FUNC(my_clickItem) {
           D2CLIENT_ClickBeltRight(D2CLIENT_GetPlayerUnit(), D2CLIENT_GetPlayerUnit()->pInventory, TRUE, z);
 
         delete cRoom;
-        JS_SET_RVAL(cx, vp, JSVAL_TRUE);
         return JS_TRUE;
       }
     }
   }
-  JS_SET_RVAL(cx, vp, JSVAL_TRUE);
   delete cRoom;
   return JS_TRUE;
 }
 
 JSAPI_FUNC(my_getLocaleString) {
-  if (argc < 1 || !JSVAL_IS_INT(JS_ARGV(cx, vp)[0]))
+  if (argc < 1 || !JS_IsNumber(argv[0]))
     return JS_TRUE;
 
-  uint16 localeId;
-  JS_BeginRequest(cx);
-  JS_ValueToUint16(cx, JS_ARGV(cx, vp)[0], &localeId);
-  wchar_t* wString = D2LANG_GetLocaleText(localeId);
-  JS_SET_RVAL(cx, vp, STRING_TO_JSVAL(JS_NewUCStringCopyZ(cx, wString)));
-  JS_EndRequest(cx);
-
-  return JS_TRUE;
+  uint32_t localeId;
+  JS_ToUint32(ctx, &localeId, argv[0]);
+  wchar_t* wString = D2LANG_GetLocaleText(static_cast<uint16_t>(localeId));
+  return JS_NewString(ctx, wString);
 }
 
 JSAPI_FUNC(my_rand) {
-  if (argc < 2 || !JSVAL_IS_INT(JS_ARGV(cx, vp)[0]) || !JSVAL_IS_INT(JS_ARGV(cx, vp)[1])) {
-    JS_SET_RVAL(cx, vp, INT_TO_JSVAL(0));
-    return JS_TRUE;
+  if (argc < 2 || !JS_IsNumber(argv[0]) || !JS_IsNumber(argv[1])) {
+    return JS_NewInt32(ctx, 0);
   }
 
   // only seed the rng once
@@ -698,25 +654,20 @@ JSAPI_FUNC(my_rand) {
 
   jsint high;
   jsint low;
-  JS_BeginRequest(cx);
-  if (JS_ConvertArguments(cx, 2, JS_ARGV(cx, vp), "ii", &low, &high) == JS_FALSE) {
-    JS_EndRequest(cx);
-    THROW_ERROR(cx, "Could not convert Rand aruments");
-  }
-  JS_EndRequest(cx);
+  JS_ToInt32(ctx, &low, argv[0]);
+  JS_ToInt32(ctx, &high, argv[1]);
 
   if (high > low + 1) {
     int i = (seed % (high - low + 1)) + low;
-    JS_SET_RVAL(cx, vp, INT_TO_JSVAL(i));
-  } else
-    JS_SET_RVAL(cx, vp, INT_TO_JSVAL(high));
+    return JS_NewInt32(ctx, i);
+  }
 
-  return JS_TRUE;
+  return JS_NewInt32(ctx, high);
 }
 
 JSAPI_FUNC(my_getDistance) {
   if (!WaitForGameReady())
-    THROW_WARNING(cx, vp, "Game not ready");
+    THROW_WARNING(ctx, "Game not ready");
 
   // TODO: Add the type of distance to the api design
   jsint nX1 = NULL;
@@ -724,39 +675,36 @@ JSAPI_FUNC(my_getDistance) {
   jsint nY1 = NULL;
   jsint nY2 = NULL;
 
-  if (argc == 1 && JSVAL_IS_OBJECT(JS_ARGV(cx, vp)[0])) {
-    jsval x1, y1;
-    if (JS_GetProperty(cx, JSVAL_TO_OBJECT(JS_ARGV(cx, vp)[0]), "x", &x1) && JS_GetProperty(cx, JSVAL_TO_OBJECT(JS_ARGV(cx, vp)[0]), "y", &y1)) {
+  if (argc == 1 && JS_IsObject(argv[0])) {
+    JSValue x1 = JS_GetPropertyStr(ctx, argv[0], "x");
+    JSValue y1 = JS_GetPropertyStr(ctx, argv[0], "y");
+    if (JS_IsNumber(x1) && JS_IsNumber(y1)) {
       nX1 = D2CLIENT_GetUnitX(D2CLIENT_GetPlayerUnit());
       nY1 = D2CLIENT_GetUnitY(D2CLIENT_GetPlayerUnit());
-      JS_BeginRequest(cx);
-      JS_ValueToECMAInt32(cx, x1, &nX2);
-      JS_ValueToECMAInt32(cx, y1, &nY2);
-      JS_EndRequest(cx);
+      JS_ToInt32(ctx, &nX2, x1);
+      JS_ToInt32(ctx, &nY2, y1);
     }
   } else if (argc == 2) {
-    if (JSVAL_IS_INT(JS_ARGV(cx, vp)[0]) && JSVAL_IS_INT(JS_ARGV(cx, vp)[1])) {
+    if (JS_IsNumber(argv[0]) && JS_IsNumber(argv[1])) {
       nX1 = D2CLIENT_GetUnitX(D2CLIENT_GetPlayerUnit());
       nY1 = D2CLIENT_GetUnitY(D2CLIENT_GetPlayerUnit());
-      JS_BeginRequest(cx);
-      JS_ValueToECMAInt32(cx, JS_ARGV(cx, vp)[0], &nX2);
-      JS_ValueToECMAInt32(cx, JS_ARGV(cx, vp)[1], &nY2);
-      JS_EndRequest(cx);
-    } else if (JSVAL_IS_OBJECT(JS_ARGV(cx, vp)[0]) && JSVAL_IS_OBJECT(JS_ARGV(cx, vp)[1])) {
-      jsval x, y, x2, y2;
-      if (JS_GetProperty(cx, JSVAL_TO_OBJECT(JS_ARGV(cx, vp)[0]), "x", &x) && JS_GetProperty(cx, JSVAL_TO_OBJECT(JS_ARGV(cx, vp)[0]), "y", &y) &&
-          JS_GetProperty(cx, JSVAL_TO_OBJECT(JS_ARGV(cx, vp)[1]), "x", &x2) && JS_GetProperty(cx, JSVAL_TO_OBJECT(JS_ARGV(cx, vp)[1]), "y", &y2)) {
-        JS_BeginRequest(cx);
-        JS_ValueToECMAInt32(cx, x, &nX1);
-        JS_ValueToECMAInt32(cx, y, &nY1);
-        JS_ValueToECMAInt32(cx, x2, &nX2);
-        JS_ValueToECMAInt32(cx, y2, &nY2);
-        JS_EndRequest(cx);
+      JS_ToInt32(ctx, &nX2, argv[0]);
+      JS_ToInt32(ctx, &nY2, argv[1]);
+    } else if (JS_IsObject(argv[0]) && JS_IsObject(argv[1])) {
+      JSValue x = JS_GetPropertyStr(ctx, argv[0], "x");
+      JSValue y = JS_GetPropertyStr(ctx, argv[0], "y");
+      JSValue x2 = JS_GetPropertyStr(ctx, argv[1], "x");
+      JSValue y2 = JS_GetPropertyStr(ctx, argv[1], "y");
+      if (JS_IsNumber(x) && JS_IsNumber(y) && JS_IsNumber(x2) && JS_IsNumber(y2)) {
+        JS_ToInt32(ctx, &nX1, x);
+        JS_ToInt32(ctx, &nY1, y);
+        JS_ToInt32(ctx, &nX2, x2);
+        JS_ToInt32(ctx, &nY2, y2);
       }
     }
   } else if (argc == 3) {
-    if (JSVAL_IS_OBJECT(JS_ARGV(cx, vp)[0]) && JSVAL_IS_INT(JS_ARGV(cx, vp)[1]) && JSVAL_IS_INT(JS_ARGV(cx, vp)[2])) {
-      myUnit* pUnit1 = (myUnit*)JS_GetPrivate(cx, JSVAL_TO_OBJECT(JS_ARGV(cx, vp)[0]));
+    if (JS_IsObject(argv[0]) && JS_IsNumber(argv[1]) && JS_IsNumber(argv[2])) {
+      myUnit* pUnit1 = (myUnit*)JS_GetPrivate(ctx, argv[0]);
 
       if (!pUnit1 || (pUnit1->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
         return JS_TRUE;
@@ -768,12 +716,10 @@ JSAPI_FUNC(my_getDistance) {
 
       nX1 = D2CLIENT_GetUnitX(pUnitA);
       nY1 = D2CLIENT_GetUnitY(pUnitA);
-      JS_BeginRequest(cx);
-      JS_ValueToECMAInt32(cx, JS_ARGV(cx, vp)[1], &nX2);
-      JS_ValueToECMAInt32(cx, JS_ARGV(cx, vp)[2], &nY2);
-      JS_EndRequest(cx);
-    } else if (JSVAL_IS_INT(JS_ARGV(cx, vp)[0]) && JSVAL_IS_INT(JS_ARGV(cx, vp)[1]) && JSVAL_IS_OBJECT(JS_ARGV(cx, vp)[2])) {
-      myUnit* pUnit1 = (myUnit*)JS_GetPrivate(cx, JSVAL_TO_OBJECT(JS_ARGV(cx, vp)[2]));
+      JS_ToInt32(ctx, &nX2, argv[1]);
+      JS_ToInt32(ctx, &nY2, argv[2]);
+    } else if (JS_IsNumber(argv[0]) && JS_IsNumber(argv[1]) && JS_IsObject(argv[2])) {
+      myUnit* pUnit1 = (myUnit*)JS_GetPrivate(ctx, argv[2]);
 
       if (!pUnit1 || (pUnit1->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
         return JS_TRUE;
@@ -785,42 +731,32 @@ JSAPI_FUNC(my_getDistance) {
 
       nX1 = D2CLIENT_GetUnitX(pUnitA);
       nY1 = D2CLIENT_GetUnitY(pUnitA);
-      JS_BeginRequest(cx);
-      JS_ValueToECMAInt32(cx, JS_ARGV(cx, vp)[0], &nX2);
-      JS_ValueToECMAInt32(cx, JS_ARGV(cx, vp)[1], &nY2);
-      JS_EndRequest(cx);
+      JS_ToInt32(ctx, &nX2, argv[0]);
+      JS_ToInt32(ctx, &nY2, argv[1]);
     }
   } else if (argc == 4) {
-    if (JSVAL_IS_INT(JS_ARGV(cx, vp)[0]) && JSVAL_IS_INT(JS_ARGV(cx, vp)[1]) && JSVAL_IS_INT(JS_ARGV(cx, vp)[2]) && JSVAL_IS_INT(JS_ARGV(cx, vp)[3])) {
-      JS_BeginRequest(cx);
-      JS_ValueToECMAInt32(cx, JS_ARGV(cx, vp)[0], &nX1);
-      JS_ValueToECMAInt32(cx, JS_ARGV(cx, vp)[1], &nY1);
-      JS_ValueToECMAInt32(cx, JS_ARGV(cx, vp)[2], &nX2);
-      JS_ValueToECMAInt32(cx, JS_ARGV(cx, vp)[3], &nY2);
-      JS_EndRequest(cx);
+    if (JS_IsNumber(argv[0]) && JS_IsNumber(argv[1]) && JS_IsNumber(argv[2]) && JS_IsNumber(argv[3])) {
+      JS_ToInt32(ctx, &nX1, argv[0]);
+      JS_ToInt32(ctx, &nY1, argv[1]);
+      JS_ToInt32(ctx, &nX2, argv[2]);
+      JS_ToInt32(ctx, &nY2, argv[3]);
     }
   }
-  jsdouble jsdist = (jsdouble)abs(GetDistance(nX1, nY1, nX2, nY2));
-  jsval rval;
-  JS_BeginRequest(cx);
-  rval = JS_NumberValue(jsdist);
-  JS_EndRequest(cx);
-  JS_SET_RVAL(cx, vp, rval);
-  return JS_TRUE;
+  return JS_NewFloat64(ctx, abs(GetDistance(nX1, nY1, nX2, nY2)));
 }
 
 JSAPI_FUNC(my_gold) {
   if (!WaitForGameReady())
-    THROW_WARNING(cx, vp, "Game not ready");
+    THROW_WARNING(ctx, "Game not ready");
 
   jsint nGold = NULL;
   jsint nMode = 1;
 
-  if (argc > 0 && JSVAL_IS_INT(JS_ARGV(cx, vp)[0]))
-    nGold = JSVAL_TO_INT(JS_ARGV(cx, vp)[0]);
+  if (argc > 0 && JS_IsNumber(argv[0]))
+    JS_ToInt32(ctx, &nGold, argv[0]);
 
-  if (argc > 1 && JSVAL_IS_INT(JS_ARGV(cx, vp)[1]))
-    nMode = JSVAL_TO_INT(JS_ARGV(cx, vp)[1]);
+  if (argc > 1 && JS_IsNumber(argv[1]))
+    JS_ToInt32(ctx, &nMode, argv[1]);
 
   SendGold(nGold, nMode);
   return JS_TRUE;
@@ -828,12 +764,13 @@ JSAPI_FUNC(my_gold) {
 
 JSAPI_FUNC(my_checkCollision) {
   if (!WaitForGameReady())
-    THROW_WARNING(cx, vp, "Game not ready");
+    THROW_WARNING(ctx, "Game not ready");
 
-  if (argc == 3 && JSVAL_IS_OBJECT(JS_ARGV(cx, vp)[0]) && JSVAL_IS_OBJECT(JS_ARGV(cx, vp)[1]) && JSVAL_IS_INT(JS_ARGV(cx, vp)[2])) {
-    myUnit* pUnitA = (myUnit*)JS_GetPrivate(cx, JSVAL_TO_OBJECT(JS_ARGV(cx, vp)[0]));
-    myUnit* pUnitB = (myUnit*)JS_GetPrivate(cx, JSVAL_TO_OBJECT(JS_ARGV(cx, vp)[1]));
-    jsint nBitMask = JSVAL_TO_INT(JS_ARGV(cx, vp)[2]);
+  if (argc == 3 && JS_IsObject(argv[0]) && JS_IsObject(argv[1]) && JS_IsNumber(argv[2])) {
+    myUnit* pUnitA = (myUnit*)JS_GetPrivate(ctx, argv[0]);
+    myUnit* pUnitB = (myUnit*)JS_GetPrivate(ctx, argv[1]);
+    jsint nBitMask;
+    JS_ToInt32(ctx, &nBitMask, argv[2]);
 
     if (!pUnitA || (pUnitA->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT || !pUnitB || (pUnitB->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
       return JS_TRUE;
@@ -844,262 +781,209 @@ JSAPI_FUNC(my_checkCollision) {
     if (!pUnit1 || !pUnit2)
       return JS_TRUE;
 
-    JS_SET_RVAL(cx, vp, INT_TO_JSVAL(D2COMMON_CheckUnitCollision(pUnit1, pUnit2, (WORD)nBitMask)));
-    return JS_TRUE;
+    return JS_NewInt32(ctx, D2COMMON_CheckUnitCollision(pUnit1, pUnit2, (WORD)nBitMask));
   }
 
   return JS_TRUE;
 }
 
 JSAPI_FUNC(my_getCursorType) {
-  (cx);
-
   jsint nType = NULL;
 
   if (argc > 0)
-    nType = JSVAL_TO_INT(JS_ARGV(cx, vp)[0]);
+    JS_ToInt32(ctx, &nType, argv[0]);
 
-  JS_SET_RVAL(cx, vp, INT_TO_JSVAL(nType == 1 ? *p_D2CLIENT_ShopCursorType : *p_D2CLIENT_RegularCursorType));
-
-  return JS_TRUE;
+  return JS_NewInt32(ctx, nType == 1 ? *p_D2CLIENT_ShopCursorType : *p_D2CLIENT_RegularCursorType);
 }
 
 JSAPI_FUNC(my_getSkillByName) {
-  if (argc < 1 || !JSVAL_IS_STRING(JS_ARGV(cx, vp)[0]))
+  if (argc < 1 || !JS_IsString(argv[0]))
     return JS_TRUE;
 
-  char* lpszText = JS_EncodeStringToUTF8(cx, JS_ValueToString(cx, JS_ARGV(cx, vp)[0]));
+  const char* lpszText = JS_ToCString(ctx, argv[0]);
   if (!lpszText || lpszText[0])
-    THROW_ERROR(cx, "Could not convert string");
+    THROW_ERROR(ctx, "Could not convert string");
 
   for (int i = 0; i < _countof(Game_Skills); i++) {
     if (!_strcmpi(Game_Skills[i].name, lpszText)) {
-      JS_SET_RVAL(cx, vp, INT_TO_JSVAL(Game_Skills[i].skillID));
-      break;
+      JS_FreeCString(ctx, lpszText);
+      return JS_NewInt32(ctx, Game_Skills[i].skillID);
     }
   }
 
-  JS_free(cx, lpszText);
-  return JS_TRUE;
+  JS_FreeCString(ctx, lpszText);
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(my_getSkillById) {
-  if (argc < 1 || !JSVAL_IS_INT(JS_ARGV(cx, vp)[0]))
+  if (argc < 1 || !JS_IsNumber(argv[0]))
     return JS_TRUE;
 
-  jsint nId = JSVAL_TO_INT(JS_ARGV(cx, vp)[0]);
-  JS_BeginRequest(cx);
-  JS_SET_RVAL(cx, vp, STRING_TO_JSVAL(JS_NewStringCopyZ(cx, "Unknown")));
-  JS_EndRequest(cx);
+  jsint nId;
+  JS_ToInt32(ctx, &nId, argv[0]);
+
   int row = 0;
   if (FillBaseStat("skills", nId, "skilldesc", &row, sizeof(int))) {
     if (FillBaseStat("skilldesc", row, "str name", &row, sizeof(int))) {
       wchar_t* szName = D2LANG_GetLocaleText((WORD)row);
-      JS_SET_RVAL(cx, vp, STRING_TO_JSVAL(JS_NewUCStringCopyZ(cx, szName)));
+      return JS_NewString(ctx, szName);
     }
   }
 
-  return JS_TRUE;
+  return JS_NewString(ctx, "Unknown");
 }
 
 JSAPI_FUNC(my_getTextSize) {
-  if (argc < 2 || !JSVAL_IS_STRING(JS_ARGV(cx, vp)[0]) || !JSVAL_IS_INT(JS_ARGV(cx, vp)[1])) {
-    JS_SET_RVAL(cx, vp, JSVAL_FALSE);
-    return JS_TRUE;
+  if (argc < 2 || !JS_IsString(argv[0]) || !JS_IsNumber(argv[1])) {
+    return JS_FALSE;
   }
 
-  const wchar_t* pString = JS_GetStringCharsZ(cx, JS_ValueToString(cx, JS_ARGV(cx, vp)[0]));
+  const char* szString = JS_ToCString(ctx, argv[0]);
+  const wchar_t* pString = AnsiToUnicode(szString);
+  JS_FreeCString(ctx, szString);
   if (!pString)
-    THROW_ERROR(cx, "Could not convert string");
+    THROW_ERROR(ctx, "Could not convert string");
 
-  POINT r = CalculateTextLen(pString, JSVAL_TO_INT(JS_ARGV(cx, vp)[1]));
-  jsval x = INT_TO_JSVAL(r.x);
-  jsval y = INT_TO_JSVAL(r.y);
+  int font;
+  JS_ToInt32(ctx, &font, argv[1]);
+  POINT r = CalculateTextLen(pString, font);
+  delete[] pString;
+  jsval x = JS_NewInt64(ctx, r.x);
+  jsval y = JS_NewInt64(ctx, r.y);
 
-  JSObject* pObj = NULL;
-  if (argc > 2 && JSVAL_IS_BOOLEAN(JS_ARGV(cx, vp)[2]) && JSVAL_TO_BOOLEAN(JS_ARGV(cx, vp)[2]) == TRUE) {
+  JSValue pObj = NULL;
+  if (argc > 2 && JS_IsBool(argv[2]) && JS_ToBool(ctx, argv[2]) == TRUE) {
     // return an object with a height/width rather than an array
-    pObj = BuildObject(cx, NULL);
-    if (!pObj)
-      THROW_ERROR(cx, "Could not build object");
-    JS_AddRoot(cx, &pObj);
-    if (JS_SetProperty(cx, pObj, "width", &x) == JS_FALSE)
-      THROW_ERROR(cx, "Could not set width property");
-    if (JS_SetProperty(cx, pObj, "height", &y) == JS_FALSE)
-      THROW_ERROR(cx, "Could not set height property");
+    pObj = JS_NewObject(ctx);
+    JS_SetPropertyStr(ctx, pObj, "width", x);
+    JS_SetPropertyStr(ctx, pObj, "height", y);
   } else {
-    JS_BeginRequest(cx);
-    pObj = JS_NewArrayObject(cx, NULL, NULL);
-    JS_AddRoot(cx, &pObj);
-    JS_SetElement(cx, pObj, 0, &x);
-    JS_SetElement(cx, pObj, 1, &y);
-    JS_EndRequest(cx);
+    pObj = JS_NewArray(ctx);
+    JS_SetPropertyUint32(ctx, pObj, 0, x);
+    JS_SetPropertyUint32(ctx, pObj, 1, y);
   }
-  JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(pObj));
-  JS_RemoveRoot(cx, &pObj);
-  return JS_TRUE;
+  return pObj;
 }
 
 JSAPI_FUNC(my_getTradeInfo) {
-  // set default return value to false
-  JS_SET_RVAL(cx, vp, JSVAL_FALSE);
-
   if (argc < 1)
-    return JS_TRUE;
+    return JS_FALSE;
 
   if (!WaitForGameReady())
-    THROW_WARNING(cx, vp, "Game not ready");
+    THROW_WARNING(ctx, "Game not ready");
 
-  if (!JSVAL_IS_INT(JS_ARGV(cx, vp)[0]))
-    return JS_TRUE;
+  if (!JS_IsNumber(argv[0]))
+    return JS_FALSE;
 
-  jsint nMode = JSVAL_TO_INT(JS_ARGV(cx, vp)[0]);
-
+  jsint nMode;
+  JS_ToInt32(ctx, &nMode, argv[0]);
   switch (nMode) {
     case 0:
-      JS_SET_RVAL(cx, vp, INT_TO_JSVAL((*p_D2CLIENT_RecentTradeId)));
-      break;
-    case 1: {
+      return JS_NewInt32(ctx, *p_D2CLIENT_RecentTradeId);
+    case 1:
       // FIXME
       // char* tmp = UnicodeToAnsi((wchar_t*)(*p_D2CLIENT_RecentTradeName));
       //*rval = STRING_TO_JSVAL(JS_NewStringCopyZ(cx, tmp));
       // delete[] tmp;
       // Temporary return value to keep it kosher
-      JS_SET_RVAL(cx, vp, JSVAL_NULL);
-    } break;
+      return JS_NULL;
     case 2:
-      JS_SET_RVAL(cx, vp, INT_TO_JSVAL((*p_D2CLIENT_RecentTradeId)));
-      break;
-    default:
-      JS_SET_RVAL(cx, vp, JSVAL_FALSE);
-      break;
+      return JS_NewInt32(ctx, *p_D2CLIENT_RecentTradeId);
   }
-  return JS_TRUE;
+  return JS_FALSE;
 }
 
 JSAPI_FUNC(my_getUIFlag) {
-  if (argc < 1 || !JSVAL_IS_INT(JS_ARGV(cx, vp)[0])) {
-    JS_SET_RVAL(cx, vp, JSVAL_VOID);
-    return JS_TRUE;
+  if (argc < 1 || !JS_IsNumber(argv[0])) {
+    return JS_UNDEFINED;
   }
 
   if (!WaitForGameReady())
-    THROW_WARNING(cx, vp, "Game not ready");
+    THROW_WARNING(ctx, "Game not ready");
 
-  jsint nUIId = JSVAL_TO_INT(JS_ARGV(cx, vp)[0]);
-  JS_SET_RVAL(cx, vp, BOOLEAN_TO_JSVAL(D2CLIENT_GetUIState(nUIId)));
-
-  return JS_TRUE;
+  jsint nUIId;
+  JS_ToInt32(ctx, &nUIId, argv[0]);
+  return JS_NewBool(ctx, D2CLIENT_GetUIState(nUIId));
 }
 
 JSAPI_FUNC(my_getWaypoint) {
-  if (argc < 1 || !JSVAL_IS_INT(JS_ARGV(cx, vp)[0])) {
-    JS_SET_RVAL(cx, vp, JSVAL_FALSE);
-    return JS_TRUE;
+  if (argc < 1 || !JS_IsNumber(argv[0])) {
+    return JS_FALSE;
   }
 
   if (!WaitForGameReady())
-    THROW_WARNING(cx, vp, "Game not ready");
+    THROW_WARNING(ctx, "Game not ready");
 
-  jsint nWaypointId = JSVAL_TO_INT(JS_ARGV(cx, vp)[0]);
+  jsint nWaypointId;
+  JS_ToInt32(ctx, &nWaypointId, argv[0]);
 
   if (nWaypointId > 40)
     nWaypointId = NULL;
 
-  JS_SET_RVAL(cx, vp, BOOLEAN_TO_JSVAL(!!D2COMMON_CheckWaypoint((*p_D2CLIENT_WaypointTable), nWaypointId)));
-
-  return JS_TRUE;
+  return JS_NewBool(ctx, (!!D2COMMON_CheckWaypoint((*p_D2CLIENT_WaypointTable), nWaypointId)));
 }
 
 JSAPI_FUNC(my_quitGame) {
-  (cx);
-  (argc);
-
-  JS_SET_RVAL(cx, vp, JSVAL_FALSE);
   if (ClientState() != ClientStateMenu)
     D2CLIENT_ExitGame();
 
   // give the core a chance to shut down
-  // TODO(ejt): commented out Shutdown while refactoring to Engine
-  //Shutdown();
+  // TODO(ejt): commented out Shutdown while refactoring the Engine
+  // Shutdown();
   TerminateProcess(GetCurrentProcess(), 0);
 
-  return JS_TRUE;
+  return JS_FALSE;
 }
 
 JSAPI_FUNC(my_quit) {
-  (cx);
-  (argc);
-
-  JS_SET_RVAL(cx, vp, JSVAL_FALSE);
   Vars.bQuitting = true;
   if (ClientState() != ClientStateMenu)
     D2CLIENT_ExitGame();
 
-  return JS_TRUE;
+  return JS_FALSE;
 }
 
 JSAPI_FUNC(my_playSound) {
-  (cx);
-
   // I need to take a closer look at the D2CLIENT_PlaySound function
-  if (argc < 1 || !JSVAL_IS_INT(JS_ARGV(cx, vp)[0])) {
-    JS_SET_RVAL(cx, vp, JSVAL_FALSE);
-    return JS_TRUE;
+  if (argc < 1 || !JS_IsNumber(argv[0])) {
+    return JS_FALSE;
   }
 
   // jsint nSoundId = JSVAL_TO_INT(JS_ARGV(cx, vp)[0]);
   // D2CLIENT_PlaySound(nSoundId);
 
-  JS_SET_RVAL(cx, vp, JSVAL_TRUE);
   return JS_TRUE;
 }
 
 JSAPI_FUNC(my_say) {
-  JS_SET_RVAL(cx, vp, JSVAL_FALSE);
-
-  for (uint i = 0; i < argc; i++) {
-    if (!JSVAL_IS_NULL(JS_ARGV(cx, vp)[i])) {
-      JS_BeginRequest(cx);
-      if (!JS_ConvertValue(cx, JS_ARGV(cx, vp)[i], JSTYPE_STRING, &(JS_ARGV(cx, vp)[i]))) {
-        JS_EndRequest(cx);
-        JS_ReportError(cx, "Converting to string failed");
-        return JS_FALSE;
-      }
-
-      const wchar_t* Text = JS_GetStringCharsZ(cx, JS_ValueToString(cx, JS_ARGV(cx, vp)[i]));
-      if (Text == NULL) {
-        JS_EndRequest(cx);
-        JS_ReportError(cx, "Could not get string for value");
-        return JS_FALSE;
-      }
-      JS_EndRequest(cx);
-      // box18jsrefcount depth = JS_SuspendRequest(cx);
-      if (Text)
-        Say(L"%s", Text);
-      // box18JS_ResumeRequest(cx, depth);
+  for (int32_t i = 0; i < argc; i++) {
+    const char* str = JS_ToCString(ctx, argv[i]);
+    if (!str) {
+      return JS_EXCEPTION;
     }
+    wchar_t* unicode_str = AnsiToUnicode(str);
+    JS_FreeCString(ctx, str);
+    Say(L"%s", unicode_str);
+    delete[] unicode_str;
   }
-
-  JS_SET_RVAL(cx, vp, JSVAL_TRUE);
   return JS_TRUE;
 }
 
 JSAPI_FUNC(my_clickParty) {
-  JS_SET_RVAL(cx, vp, JSVAL_FALSE);
+  JSValue rval = JS_FALSE;
 
-  if (argc < 2 || !JSVAL_IS_OBJECT(JS_ARGV(cx, vp)[0]) || !JSVAL_IS_INT(JS_ARGV(cx, vp)[1]))
-    return JS_TRUE;
+  if (argc < 2 || !JS_IsObject(argv[0]) || !JS_IsNumber(argv[1]))
+    return rval;
 
   if (!WaitForGameReady())
-    THROW_WARNING(cx, vp, "Game not ready");
+    THROW_WARNING(ctx, "Game not ready");
 
   UnitAny* myUnit = D2CLIENT_GetPlayerUnit();
-  RosterUnit* pUnit = (RosterUnit*)JS_GetPrivate(cx, JSVAL_TO_OBJECT(JS_ARGV(cx, vp)[0]));
+  RosterUnit* pUnit = (RosterUnit*)JS_GetPrivate(ctx, argv[0]);
   RosterUnit* mypUnit = *p_D2CLIENT_PlayerUnitList;
 
   if (!pUnit || !mypUnit)
-    return JS_TRUE;
+    return rval;
 
   BOOL bFound = FALSE;
 
@@ -1108,35 +992,36 @@ JSAPI_FUNC(my_clickParty) {
       bFound = TRUE;
 
   if (!bFound)
-    return JS_TRUE;
+    return rval;
 
-  jsint nMode = JSVAL_TO_INT(JS_ARGV(cx, vp)[1]);
+  jsint nMode;
+  JS_ToInt32(ctx, &nMode, argv[1]);
 
   BnetData* pData = (*p_D2LAUNCH_BnData);
 
   // Attempt to loot player, check first if it's hardcore
   if (nMode == 0 && pData && !(pData->nCharFlags & PLAYER_TYPE_HARDCORE))
-    return JS_TRUE;
+    return rval;
 
   // Attempt to party a player who is already in party ^_~
   if (nMode == 2 && pUnit->wPartyId != 0xFFFF && mypUnit->wPartyId == pUnit->wPartyId && pUnit->wPartyId != 0xFFFF)
-    return JS_TRUE;
+    return rval;
 
   // don't leave a party if we are in none!
   if (nMode == 3 && pUnit->wPartyId == 0xFFFF)
-    return JS_TRUE;
+    return rval;
   else if (nMode == 3 && pUnit->wPartyId != 0xFFFF) {
-    JS_SET_RVAL(cx, vp, JSVAL_TRUE);
+    rval = JS_TRUE;
     D2CLIENT_LeaveParty();
-    return JS_TRUE;
+    return rval;
   }
 
   if (nMode < 0 || nMode > 5)
-    return JS_TRUE;
+    return rval;
 
   // Trying to click self
   if (pUnit->dwUnitId == myUnit->dwUnitId)
-    return JS_TRUE;
+    return rval;
 
   if (nMode == 0)
     D2CLIENT_HostilePartyUnit(pUnit, 2);
@@ -1149,105 +1034,90 @@ JSAPI_FUNC(my_clickParty) {
   else
     D2CLIENT_ClickParty(pUnit, nMode);
 
-  JS_SET_RVAL(cx, vp, JSVAL_TRUE);
-
-  return JS_TRUE;
+  rval = JS_TRUE;
+  return rval;
 }
 
 JSAPI_FUNC(my_useStatPoint) {
   if (!WaitForGameReady())
-    THROW_WARNING(cx, vp, "Game not ready");
+    THROW_WARNING(ctx, "Game not ready");
 
-  WORD stat = 0;
+  uint32_t stat = 0;
   int32 count = 1;
-  JS_BeginRequest(cx);
-  if (!JS_ConvertArguments(cx, argc, JS_ARGV(cx, vp), "c/u", &stat, &count)) {
-    JS_EndRequest(cx);
-    return JS_FALSE;
+  JS_ToUint32(ctx, &stat, argv[0]);
+  if (argc > 1) {
+    JS_ToInt32(ctx, &count, argv[1]);
   }
-  JS_EndRequest(cx);
-  UseStatPoint(stat, count);
+
+  UseStatPoint(static_cast<WORD>(stat), count);
   return JS_TRUE;
 }
 
 JSAPI_FUNC(my_useSkillPoint) {
   if (!WaitForGameReady())
-    THROW_WARNING(cx, vp, "Game not ready");
+    THROW_WARNING(ctx, "Game not ready");
 
-  WORD skill = 0;
+  uint32_t skill = 0;
   int32 count = 1;
-  JS_BeginRequest(cx);
-  if (!JS_ConvertArguments(cx, argc, JS_ARGV(cx, vp), "c/u", &skill, &count)) {
-    JS_EndRequest(cx);
-    return JS_FALSE;
+  JS_ToUint32(ctx, &skill, argv[0]);
+  if (argc > 1) {
+    JS_ToInt32(ctx, &count, argv[1]);
   }
-  JS_EndRequest(cx);
-  UseSkillPoint(skill, count);
+
+  UseSkillPoint(static_cast<WORD>(skill), count);
   return JS_TRUE;
 }
 
 JSAPI_FUNC(my_getBaseStat) {
   if (argc > 2) {
-    char *szStatName = NULL, *szTableName = NULL;
+    const char *szStatName = NULL, *szTableName = NULL;
     jsint nBaseStat = 0;
     jsint nClassId = 0;
     jsint nStat = -1;
-    JS_BeginRequest(cx);
-    if (JSVAL_IS_STRING(JS_ARGV(cx, vp)[0])) {
-      szTableName = JS_EncodeStringToUTF8(cx, JS_ValueToString(cx, JS_ARGV(cx, vp)[0]));
+    if (JS_IsString(argv[0])) {
+      szTableName = JS_ToCString(ctx, argv[0]);
       if (!szTableName) {
-        JS_EndRequest(cx);
-        THROW_ERROR(cx, "Invalid table value");
+        THROW_ERROR(ctx, "Invalid table value");
       }
-    } else if (JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[0]))
-      JS_ValueToECMAInt32(cx, JS_ARGV(cx, vp)[0], &nBaseStat);
+    } else if (JS_IsNumber(argv[0]))
+      JS_ToInt32(ctx, &nBaseStat, argv[0]);
     else {
-      JS_EndRequest(cx);
-      THROW_ERROR(cx, "Invalid table value");
+      THROW_ERROR(ctx, "Invalid table value");
     }
 
-    JS_ValueToECMAInt32(cx, JS_ARGV(cx, vp)[1], &nClassId);
+    JS_ToInt32(ctx, &nClassId, argv[1]);
 
-    if (JSVAL_IS_STRING(JS_ARGV(cx, vp)[2])) {
-      szStatName = JS_EncodeStringToUTF8(cx, JS_ValueToString(cx, JS_ARGV(cx, vp)[2]));
+    if (JS_IsString(argv[2])) {
+      szStatName = JS_ToCString(ctx, argv[2]);
       if (!szStatName) {
-        JS_EndRequest(cx);
-        JS_free(cx, szTableName);
-        THROW_ERROR(cx, "Invalid column value");
+        JS_FreeCString(ctx, szTableName);
+        THROW_ERROR(ctx, "Invalid column value");
       }
-    } else if (JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[2]))
-      JS_ValueToECMAInt32(cx, JS_ARGV(cx, vp)[2], &nStat);
+    } else if (JS_IsNumber(argv[2]))
+      JS_ToInt32(ctx, &nStat, argv[2]);
     else {
-      JS_EndRequest(cx);
-      JS_free(cx, szTableName);
-      THROW_ERROR(cx, "Invalid column value");
+      JS_FreeCString(ctx, szTableName);
+      THROW_ERROR(ctx, "Invalid column value");
     }
     jsval rval;
-    FillBaseStat(cx, &rval, nBaseStat, nClassId, nStat, szTableName, szStatName);
-    JS_SET_RVAL(cx, vp, rval);
-    JS_EndRequest(cx);
-
-    JS_free(cx, szTableName);
-    JS_free(cx, szStatName);
+    FillBaseStat(ctx, &rval, nBaseStat, nClassId, nStat, szTableName, szStatName);
+    JS_FreeCString(ctx, szTableName);
+    JS_FreeCString(ctx, szStatName);
+    return rval;
   }
 
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(my_weaponSwitch) {
-  JS_SET_RVAL(cx, vp, JSVAL_FALSE);
-
   if (!WaitForGameReady())
-    THROW_WARNING(cx, vp, "Game not ready");
+    THROW_WARNING(ctx, "Game not ready");
 
   jsint nParameter = NULL;
   if (argc > 0) {
-    JS_BeginRequest(cx);
-    if (JS_ValueToInt32(cx, JS_ARGV(cx, vp)[0], &nParameter) == JS_FALSE) {
-      JS_EndRequest(cx);
-      THROW_ERROR(cx, "Could not convert value");
+    if (JS_ToInt32(ctx, &nParameter, argv[0])) {
+      THROW_ERROR(ctx, "Could not convert value");
     }
-    JS_EndRequest(cx);
   }
 
   if (nParameter == NULL) {
@@ -1255,26 +1125,21 @@ JSAPI_FUNC(my_weaponSwitch) {
     BnetData* pData = (*p_D2LAUNCH_BnData);
     if (pData) {
       if (!(pData->nCharFlags & PLAYER_TYPE_EXPAC))
-        return JS_TRUE;
+        return JS_FALSE;
     } else
-      THROW_ERROR(cx, "Could not acquire BnData");
+      THROW_ERROR(ctx, "Could not acquire BnData");
 
     BYTE aPacket[1];
     aPacket[0] = 0x60;
     D2NET_SendPacket(1, 1, aPacket);
-    JS_SET_RVAL(cx, vp, JSVAL_TRUE);
-  } else
-    JS_SET_RVAL(cx, vp, INT_TO_JSVAL((*p_D2CLIENT_bWeapSwitch)));
-
-  return JS_TRUE;
+    return JS_TRUE;
+  }
+  return JS_NewInt32(ctx, *p_D2CLIENT_bWeapSwitch);
 }
 
 JSAPI_FUNC(my_transmute) {
-  (argc);
-
-  JS_SET_RVAL(cx, vp, JSVAL_NULL);
   if (!WaitForGameReady())
-    THROW_WARNING(cx, vp, "Game not ready");
+    THROW_WARNING(ctx, "Game not ready");
 
   bool cubeOn = !!D2CLIENT_GetUIState(UI_CUBE);
   if (!cubeOn)
@@ -1285,39 +1150,35 @@ JSAPI_FUNC(my_transmute) {
   if (!cubeOn)
     D2CLIENT_SetUIState(UI_CUBE, FALSE);
 
-  return JS_TRUE;
+  return JS_NULL;
 }
 
 JSAPI_FUNC(my_getPlayerFlag) {
-  if (argc != 3 || !JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[0]) || !JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1]) || !JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[2]))
-    return JS_TRUE;
+  if (argc != 3 || !JS_IsNumber(argv[0]) || !JS_IsNumber(argv[1]) || !JS_IsNumber(argv[2]))
+    return JS_UNDEFINED;
 
   if (!WaitForGameReady())
-    THROW_WARNING(cx, vp, "Game not ready");
+    THROW_WARNING(ctx, "Game not ready");
 
   uint32 nFirstUnitId = (uint32)-1;
   uint32 nSecondUnitId = (uint32)-1;
-  JS_BeginRequest(cx);
-  JS_ValueToECMAUint32(cx, JS_ARGV(cx, vp)[0], &nFirstUnitId);
-  JS_ValueToECMAUint32(cx, JS_ARGV(cx, vp)[1], &nSecondUnitId);
-  JS_EndRequest(cx);
+  uint32_t nFlag;
+  JS_ToUint32(ctx, &nFirstUnitId, argv[0]);
+  JS_ToUint32(ctx, &nSecondUnitId, argv[1]);
+  JS_ToUint32(ctx, &nFlag, argv[2]);
 
-  DWORD nFlag = JSVAL_TO_INT(JS_ARGV(cx, vp)[2]);
-
-  JS_SET_RVAL(cx, vp, BOOLEAN_TO_JSVAL(D2CLIENT_TestPvpFlag(nFirstUnitId, nSecondUnitId, nFlag)));
-
-  return JS_TRUE;
+  return JS_NewBool(ctx, D2CLIENT_TestPvpFlag(nFirstUnitId, nSecondUnitId, nFlag));
 }
 
 JSAPI_FUNC(my_getMouseCoords) {
   bool nFlag = false, nReturn = false;
 
-  if (argc > 0 && JSVAL_IS_INT(JS_ARGV(cx, vp)[0]) || JSVAL_IS_BOOLEAN(JS_ARGV(cx, vp)[0]))
-    nFlag = !!JSVAL_TO_BOOLEAN(JS_ARGV(cx, vp)[0]);
-  if (argc > 1 && JSVAL_IS_INT(JS_ARGV(cx, vp)[1]) || JSVAL_IS_BOOLEAN(JS_ARGV(cx, vp)[1]))
-    nReturn = !!JSVAL_TO_BOOLEAN(JS_ARGV(cx, vp)[1]);
+  if (argc > 0 && JS_IsNumber(argv[0]) || JS_IsBool(argv[0]))
+    nFlag = !!JS_ToBool(ctx, argv[0]);
+  if (argc > 1 && JS_IsNumber(argv[1]) || JS_IsBool(argv[1]))
+    nReturn = !!JS_ToBool(ctx, argv[1]);
 
-  JSObject* pObj = NULL;
+  JSValue pObj = NULL;
 
   POINT Coords = {static_cast<LONG>(*p_D2CLIENT_MouseX), static_cast<LONG>(*p_D2CLIENT_MouseY)};
 
@@ -1328,41 +1189,27 @@ JSAPI_FUNC(my_getMouseCoords) {
     D2COMMON_AbsScreenToMap(&Coords.x, &Coords.y);
   }
 
-  jsval jsX = INT_TO_JSVAL(Coords.x);
-  jsval jsY = INT_TO_JSVAL(Coords.y);
+  jsval jsX = JS_NewInt64(ctx, Coords.x);
+  jsval jsY = JS_NewInt64(ctx, Coords.y);
 
   if (nReturn) {
-    pObj = BuildObject(cx, NULL);
-    JS_AddRoot(cx, &pObj);
-    if (!pObj)
-      THROW_ERROR(cx, "Could not build object");
-    if (JS_SetProperty(cx, pObj, "x", &jsX) == JS_FALSE)
-      THROW_ERROR(cx, "Could not set x property");
-    if (JS_SetProperty(cx, pObj, "y", &jsY) == JS_FALSE)
-      THROW_ERROR(cx, "Could not set y property");
+    pObj = JS_NewObject(ctx);
+    JS_SetPropertyStr(ctx, pObj, "x", jsX);
+    JS_SetPropertyStr(ctx, pObj, "y", jsY);
   } else {
-    JS_BeginRequest(cx);
-    pObj = JS_NewArrayObject(cx, NULL, NULL);
-    JS_AddRoot(cx, &pObj);
-    JS_SetElement(cx, pObj, 0, &jsX);
-    JS_SetElement(cx, pObj, 1, &jsY);
-    JS_EndRequest(cx);
+    pObj = JS_NewArray(ctx);
+    JS_SetPropertyUint32(ctx, pObj, 0, jsX);
+    JS_SetPropertyUint32(ctx, pObj, 1, jsY);
   }
 
-  if (!pObj)
-    return JS_TRUE;
-
-  JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(pObj));
-  JS_RemoveRoot(cx, &pObj);
-  return JS_TRUE;
+  return pObj;
 }
 
 JSAPI_FUNC(my_submitItem) {
-  (argc);
+  JSValue rval = JS_NULL;
 
-  JS_SET_RVAL(cx, vp, JSVAL_NULL);
   if (!WaitForGameReady())
-    THROW_WARNING(cx, vp, "Game not ready");
+    THROW_WARNING(ctx, "Game not ready");
 
   if (UnitAny* pUnit = D2CLIENT_GetCursorItem()) {
     if (D2CLIENT_GetPlayerUnit()->dwAct == 1) {
@@ -1375,49 +1222,43 @@ JSAPI_FUNC(my_submitItem) {
         *(DWORD*)&aPacket[9] = pUnit->dwUnitId;
         *(DWORD*)&aPacket[13] = 3;
         D2NET_SendPacket(17, 1, aPacket);
-        JS_SET_RVAL(cx, vp, JSVAL_TRUE);
+        rval = JS_TRUE;
       } else
-        JS_SET_RVAL(cx, vp, JSVAL_FALSE);
+        rval = JS_FALSE;
     } else if (D2CLIENT_GetPlayerUnit()->dwAct == 0 || D2CLIENT_GetPlayerUnit()->dwAct == 4)  // dwAct is 0-4, not 1-5
     {
       if (*p_D2CLIENT_RecentInteractId && D2COMMON_IsTownByLevelNo(GetPlayerArea())) {
         D2CLIENT_SubmitItem(pUnit->dwUnitId);
-        JS_SET_RVAL(cx, vp, JSVAL_TRUE);
+        rval = JS_TRUE;
       } else
-        JS_SET_RVAL(cx, vp, JSVAL_FALSE);
+        rval = JS_FALSE;
     } else
-      JS_SET_RVAL(cx, vp, JSVAL_FALSE);
+      rval = JS_FALSE;
   } else
-    JS_SET_RVAL(cx, vp, JSVAL_FALSE);
+    rval = JS_FALSE;
 
-  return JS_TRUE;
+  return rval;
 }
 
 JSAPI_FUNC(my_getIsTalkingNPC) {
-  (argc);
-
   if (!WaitForGameReady())
-    THROW_WARNING(cx, vp, "Game not ready");
+    THROW_WARNING(ctx, "Game not ready");
 
-  JS_SET_RVAL(cx, vp, BOOLEAN_TO_JSVAL(IsScrollingText()));
-  return JS_TRUE;
+  return JS_NewBool(ctx, IsScrollingText());
 }
 
 JSAPI_FUNC(my_getInteractedNPC) {
-  (argc);
-
   if (!WaitForGameReady())
-    THROW_WARNING(cx, vp, "Game not ready");
+    THROW_WARNING(ctx, "Game not ready");
 
   UnitAny* pNPC = D2CLIENT_GetCurrentInteractingNPC();
   if (!pNPC) {
-    JS_SET_RVAL(cx, vp, JSVAL_FALSE);
-    return JS_TRUE;
+    return JS_FALSE;
   }
 
   myUnit* pmyUnit = new myUnit;  // leaked?
   if (!pmyUnit)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
   char szName[256] = "";
   pmyUnit->_dwPrivateType = PRIVATE_UNIT;
@@ -1427,45 +1268,37 @@ JSAPI_FUNC(my_getInteractedNPC) {
   pmyUnit->dwUnitId = pNPC->dwUnitId;
   strcpy_s(pmyUnit->szName, sizeof(pmyUnit->szName), szName);
 
-  JSObject* jsunit = BuildObject(cx, &unit_class, unit_methods, unit_props, pmyUnit);
-  if (!jsunit)
-    return JS_TRUE;
-
-  JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(jsunit));
-  return JS_TRUE;
+  return BuildObject(ctx, unit_class_id, unit_methods, _countof(unit_methods), unit_props, _countof(unit_props), pmyUnit);
 }
 
 JSAPI_FUNC(my_takeScreenshot) {
-  (cx);
-
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
   Vars.bTakeScreenshot = true;
-
   return JS_TRUE;
 }
+
 JSAPI_FUNC(my_moveNPC) {
   if (!WaitForGameReady())
-    THROW_WARNING(cx, vp, "Game not ready");
+    THROW_WARNING(ctx, "Game not ready");
 
   if (!Vars.bEnableUnsupported) {
-    THROW_WARNING(cx, vp, "moveNPC requires EnableUnsupported = true in d2bs.ini");
+    THROW_WARNING(ctx, "moveNPC requires EnableUnsupported = true in d2bs.ini");
   }
 
   if (argc < 2)
-    THROW_ERROR(cx, "Not enough parameters were passed to moveNPC!");
+    THROW_ERROR(ctx, "Not enough parameters were passed to moveNPC!");
 
-  JS_SET_RVAL(cx, vp, JSVAL_FALSE);
-  myUnit* pNpc = (myUnit*)JS_GetPrivate(cx, JSVAL_TO_OBJECT(JS_ARGV(cx, vp)[0]));
+  myUnit* pNpc = (myUnit*)JS_GetPrivate(ctx, argv[0]);
 
   if (!pNpc || pNpc->dwType != 1)
-    THROW_ERROR(cx, "Invalid NPC passed to moveNPC!");
+    THROW_ERROR(ctx, "Invalid NPC passed to moveNPC!");
 
-  DWORD dwX = JSVAL_TO_INT(JS_ARGV(cx, vp)[1]);
-  DWORD dwY = JSVAL_TO_INT(JS_ARGV(cx, vp)[2]);
+  uint32_t dwX;
+  uint32_t dwY;
+  JS_ToUint32(ctx, &dwX, argv[1]);
+  JS_ToUint32(ctx, &dwY, argv[2]);
 
   if (!WaitForGameReady())
-    THROW_WARNING(cx, vp, "Game not ready");
+    THROW_WARNING(ctx, "Game not ready");
 
   BYTE aPacket[17];
   aPacket[0] = 0x59;
@@ -1475,39 +1308,36 @@ JSAPI_FUNC(my_moveNPC) {
   *(DWORD*)&aPacket[13] = dwY;
 
   D2NET_SendPacket(sizeof(aPacket), 1, aPacket);
-  JS_SET_RVAL(cx, vp, JSVAL_TRUE);
   return JS_TRUE;
 }
 
 JSAPI_FUNC(my_revealLevel) {
-  (cx);
-
   UnitAny* unit = D2CLIENT_GetPlayerUnit();
 
   if (!unit) {
-    return JS_TRUE;
+    return JS_UNDEFINED;
   }
 
   Level* level = unit->pPath->pRoom1->pRoom2->pLevel;
 
   if (!level) {
-    return JS_TRUE;
+    return JS_UNDEFINED;
   }
 
   BOOL bDrawPresets = false;
 
-  if (argc == 1 && JSVAL_IS_BOOLEAN(JS_ARGV(cx, vp)[0])) {
-    bDrawPresets = !!JSVAL_TO_BOOLEAN(JS_ARGV(cx, vp)[0]);
+  if (argc == 1 && JS_IsBool(argv[0])) {
+    bDrawPresets = !!JS_ToBool(ctx, argv[0]);
   }
   AutoCriticalRoom* cRoom = new AutoCriticalRoom;
   if (!GameReady()) {
     delete cRoom;
-    return JS_TRUE;
+    return JS_UNDEFINED;
   }
 
   for (Room2* room = level->pRoom2First; room; room = room->pRoom2Next) {
     RevealRoom(room, bDrawPresets);
   }
   delete cRoom;
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }

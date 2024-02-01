@@ -6,18 +6,18 @@
 
 EMPTY_CTOR(area)
 
-void area_finalize(JSFreeOp* /*fop*/, JSObject* obj) {
-  myArea* pArea = (myArea*)JS_GetPrivate(obj);
+CLASS_FINALIZER(area) {
+  myArea* pArea = (myArea*)JS_GetPrivate(val);
 
   if (pArea) {
-    JS_SetPrivate(obj, NULL);
+    JS_SetPrivate(val, NULL);
     delete pArea;
   }
 }
 
 JSAPI_PROP(area_getProperty) {
-  myArea* pArea = (myArea*)JS_GetPrivate(cx, obj);
-  ;
+  myArea* pArea = (myArea*)JS_GetPrivate(ctx, this_val);
+
   if (!pArea)
     return JS_FALSE;
 
@@ -25,14 +25,10 @@ JSAPI_PROP(area_getProperty) {
   if (!pLevel)
     return JS_FALSE;
 
-  jsval ID;
-  JS_IdToValue(cx, id, &ID);
-  switch (JSVAL_TO_INT(ID)) {
+  switch (magic) {
     case AUNIT_EXITS: {
-      JS_BeginRequest(cx);
       if (pArea->ExitArray == NULL) {
-        pArea->ExitArray = JS_NewArrayObject(cx, 0, NULL);
-        JS_AddRoot(cx, &pArea->ExitArray);
+        pArea->ExitArray = JS_NewArray(ctx);
 
         ActMap* map = ActMap::GetMap(pLevel);
 
@@ -49,90 +45,74 @@ JSAPI_PROP(area_getProperty) {
           exit->tileid = exits[i].TileId;
           exit->level = pArea->AreaId;
 
-          JSObject* pExit = BuildObject(cx, &exit_class, NULL, exit_props, exit);
-          if (!pExit) {
+          JSValue pExit = BuildObject(ctx, exit_class_id, NULL, 0, exit_props, _countof(exit_props), exit);
+          if (JS_IsException(pExit)) {
             delete exit;
-            JS_EndRequest(cx);
-            THROW_ERROR(cx, "Failed to create exit object!");
+            THROW_ERROR(ctx, "Failed to create exit object!");
           }
-          jsval a = OBJECT_TO_JSVAL(pExit);
-          JS_SetElement(cx, pArea->ExitArray, i, &a);
+          JS_SetPropertyUint32(ctx, pArea->ExitArray, i, pExit);
         }
       }
-      vp.set(OBJECT_TO_JSVAL(pArea->ExitArray));
-      if (pArea->ExitArray)
-        JS_RemoveRoot(cx, &pArea->ExitArray);
-    }
-      JS_EndRequest(cx);
-      break;
+      return pArea->ExitArray;
+    } break;
     case AUNIT_NAME: {
       LevelTxt* pTxt = D2COMMON_GetLevelText(pArea->AreaId);
-      if (pTxt)
-        vp.setString(JS_InternString(cx, pTxt->szName));
+      if (pTxt) {
+        return JS_NewString(ctx, pTxt->szName);
+      }
     } break;
     case AUNIT_X:
-      vp.setInt32(pLevel->dwPosX);
-      break;
+      return JS_NewInt32(ctx, pLevel->dwPosX);
     case AUNIT_Y:
-      vp.setInt32(pLevel->dwPosY);
-      break;
+      return JS_NewInt32(ctx, pLevel->dwPosY);
     case AUNIT_XSIZE:
-      vp.setInt32(pLevel->dwSizeX);
-      break;
+      return JS_NewInt32(ctx, pLevel->dwSizeX);
     case AUNIT_YSIZE:
-      vp.setInt32(pLevel->dwSizeY);
-      break;
+      return JS_NewInt32(ctx, pLevel->dwSizeY);
     case AUNIT_ID:
-      vp.setInt32(pLevel->dwLevelNo);
-      break;
+      return JS_NewInt32(ctx, pLevel->dwLevelNo);
   }
 
   return JS_TRUE;
 }
 
 JSAPI_FUNC(my_getArea) {
-  JS_SET_RVAL(cx, vp, JSVAL_VOID);
+  // JS_SET_RVAL(cx, vp, JSVAL_VOID);
 
   if (!WaitForGameReady())
-    THROW_ERROR(cx, "Get Area: Game not ready");
+    THROW_ERROR(ctx, "Get Area: Game not ready");
 
   int32 nArea = GetPlayerArea();
 
   if (argc == 1) {
-    if (JSVAL_IS_INT(JS_ARGV(cx, vp)[0])) {
-      JS_BeginRequest(cx);
-      JS_ValueToECMAInt32(cx, JS_ARGV(cx, vp)[0], &nArea);
-      JS_EndRequest(cx);
-    } else
-      THROW_ERROR(cx, "Invalid parameter passed to getArea!");
+    if (JS_ToInt32(ctx, &nArea, argv[0])) {
+      return JS_EXCEPTION;
+    }
   }
 
-  if (nArea < 0)
-    THROW_ERROR(cx, "Invalid parameter passed to getArea!");
+  if (nArea < 0) {
+    THROW_ERROR(ctx, "Invalid parameter passed to getArea!");
+  }
 
   Level* pLevel = GetLevel(nArea);
 
   if (!pLevel) {
-    JS_SET_RVAL(cx, vp, JSVAL_FALSE);
-    return JS_TRUE;
+    return JS_FALSE;
   }
 
   myArea* pArea = new myArea;
   if (!pArea) {
-    JS_SET_RVAL(cx, vp, JSVAL_FALSE);
-    return JS_TRUE;
+    return JS_FALSE;
   }
 
   pArea->AreaId = nArea;
   pArea->ExitArray = NULL;
 
-  JSObject* unit = BuildObject(cx, &area_class, NULL, area_props, pArea);
-  if (!unit) {
+  JSValue unit = BuildObject(ctx, area_class_id, NULL, 0, area_props, _countof(area_props), pArea);
+  if (JS_IsException(unit)) {
     delete pArea;
     pArea = NULL;
-    THROW_ERROR(cx, "Failed to build area unit!");
+    THROW_ERROR(ctx, "Failed to build area unit!");
   }
-  JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(unit));
-
-  return JS_TRUE;
+  return unit;
 }

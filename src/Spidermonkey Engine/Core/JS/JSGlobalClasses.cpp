@@ -16,187 +16,163 @@
 #include "JSScript.h"
 #include "JSProfile.h"
 
-JSClass global_obj = {
-    "global", JSCLASS_GLOBAL_FLAGS,       JS_PropertyStub, JS_PropertyStub, JS_PropertyStub, JS_StrictPropertyStub, JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub,
-    NULL,     JSCLASS_NO_OPTIONAL_MEMBERS};
-// JSAPI_EMPTY_CTOR(global)
+JSClassID sqlite_db_class_id;
+JSClassID sqlite_stmt_class_id;
+JSClassID script_class_id;
+JSClassID frame_class_id;
+JSClassID box_class_id;
+JSClassID line_class_id;
+JSClassID text_class_id;
+JSClassID image_class_id;
+JSClassID sandbox_class_id;
+JSClassID room_class_id;
+JSClassID presetunit_class_id;
+JSClassID party_class_id;
+JSClassID filetools_class_id;
+JSClassID file_class_id;
+JSClassID socket_class_id;
+JSClassID exit_class_id;
+JSClassID folder_class_id;
+JSClassID control_class_id;
+JSClassID area_class_id;
+JSClassID unit_class_id;
+JSClassID profile_class_id;
+JSClassID profileType_class_id;
+JSClassID dialogLine_class_id;
 
-// JSClass global_obj = { "global", JSCLASS_GLOBAL_FLAGS, JSCLASS_DEFAULT_WITH_CTOR(global) };
-
-// JSClass pipe_class = { "Pipe", JSCLASS_HAS_PRIVATE,
-//	JSCLASS_SPEC(JS_PropertyStub, JS_PropertyStub, JS_PropertyStub, JS_StrictPropertyStub,
-//				 JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub, pipe_finalize, Pipe)};
-
-// JSClassSpec pipe_spec = JS_CS(&pipe_class, &stream_class, Pipe, 0, pipe_methods, pipe_props, pipe_static_methods, nullptr);
-
-JSClass sqlite_db = {"SQLite", JSCLASS_HAS_PRIVATE,
-                     JSCLASS_SPEC(JS_PropertyStub, JS_PropertyStub, (JSPropertyOp)JS_PropertyStub, (JSStrictPropertyOp)JS_StrictPropertyStub, JS_EnumerateStub,
-                                  JS_ResolveStub, JS_ConvertStub, sqlite_finalize, sqlite_ctor)};
-
-JSClass sqlite_stmt = {"DBStatement", JSCLASS_HAS_PRIVATE,
-                       JSCLASS_SPEC(JS_PropertyStub, JS_PropertyStub, JS_PropertyStub, JS_StrictPropertyStub, JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub,
-                                    sqlite_stmt_finalize, sqlite_stmt_ctor)};
-
-JSClass script_class = {
-    "D2BSScript", JSCLASS_HAS_PRIVATE,
-    JSCLASS_SPEC(JS_PropertyStub, JS_PropertyStub, JS_PropertyStub, JS_StrictPropertyStub, JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub, NULL, script_ctor)};
-
-JSClass frame_class = {
-    "Frame", JSCLASS_HAS_PRIVATE,
-    JSCLASS_SPEC(JS_PropertyStub, JS_PropertyStub, JS_PropertyStub, JS_StrictPropertyStub, JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub, hook_finalize, frame_ctor)};
-
-JSClass box_class = {
-    "Box", JSCLASS_HAS_PRIVATE,
-    JSCLASS_SPEC(JS_PropertyStub, JS_PropertyStub, JS_PropertyStub, JS_StrictPropertyStub, JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub, hook_finalize, box_ctor)};
-
-JSClass line_class = {
-    "Line", JSCLASS_HAS_PRIVATE,
-    JSCLASS_SPEC(JS_PropertyStub, JS_PropertyStub, JS_PropertyStub, JS_StrictPropertyStub, JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub, hook_finalize, line_ctor)};
-
-JSClass text_class = {
-    "Text", JSCLASS_HAS_PRIVATE,
-    JSCLASS_SPEC(JS_PropertyStub, JS_PropertyStub, JS_PropertyStub, JS_StrictPropertyStub, JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub, hook_finalize, text_ctor)};
-
-JSClass image_class = {
-    "Image", JSCLASS_HAS_PRIVATE,
-    JSCLASS_SPEC(JS_PropertyStub, JS_PropertyStub, JS_PropertyStub, JS_StrictPropertyStub, JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub, hook_finalize, image_ctor)};
-
-JSClass sandbox_class = {"Sandbox", JSCLASS_HAS_PRIVATE,
-                         JSCLASS_SPEC(sandbox_addProperty, sandbox_delProperty, sandbox_getProperty, sandbox_setProperty, JS_EnumerateStub, JS_ResolveStub,
-                                      JS_ConvertStub, sandbox_finalize, sandbox_ctor)};
-
-JSClass room_class = {
-    "Room", JSCLASS_HAS_PRIVATE,
-    JSCLASS_SPEC(JS_PropertyStub, JS_PropertyStub, JS_PropertyStub, JS_StrictPropertyStub, JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub, NULL, room_ctor)};
-
-JSClass presetunit_class = {"PresetUnit", JSCLASS_HAS_PRIVATE,
-                            JSCLASS_SPEC(JS_PropertyStub, JS_PropertyStub, JS_PropertyStub, JS_StrictPropertyStub, JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub,
-                                         presetunit_finalize, presetunit_ctor)};
-
-JSClass party_class = {
-    "Party", JSCLASS_HAS_PRIVATE,
-    JSCLASS_SPEC(JS_PropertyStub, JS_PropertyStub, JS_PropertyStub, JS_StrictPropertyStub, JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub, NULL, party_ctor)};
-
-JSClass filetools_class = {
-    "FileTools", NULL,
-    JSCLASS_SPEC(JS_PropertyStub, JS_PropertyStub, JS_PropertyStub, JS_StrictPropertyStub, JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub, NULL, filetools_ctor)};
-
-JSClass file_class = {
-    "File", JSCLASS_HAS_PRIVATE,
-    JSCLASS_SPEC(JS_PropertyStub, JS_PropertyStub, JS_PropertyStub, JS_StrictPropertyStub, JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub, file_finalize, file_ctor)};
-
-JSClass socket_class = {"Socket", JSCLASS_HAS_PRIVATE,
-                        JSCLASS_SPEC(JS_PropertyStub, JS_PropertyStub, JS_PropertyStub, JS_StrictPropertyStub, JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub,
-                                     socket_finalize, socket_ctor)};
-
-JSClass exit_class = {
-    "Exit", JSCLASS_HAS_PRIVATE,
-    JSCLASS_SPEC(JS_PropertyStub, JS_PropertyStub, JS_PropertyStub, JS_StrictPropertyStub, JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub, exit_finalize, exit_ctor)};
-
-JSClass folder_class = {
-    "Folder", JSCLASS_HAS_PRIVATE,
-    JSCLASS_SPEC(JS_PropertyStub, JS_PropertyStub, JS_PropertyStub, JS_StrictPropertyStub, JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub, dir_finalize, dir_ctor)};
-
-JSClass control_class = {"Control", JSCLASS_HAS_PRIVATE,
-                         JSCLASS_SPEC(JS_PropertyStub, JS_PropertyStub, JS_PropertyStub, JS_StrictPropertyStub, JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub,
-                                      control_finalize, control_ctor)};
-
-JSClass area_class = {
-    "Area", JSCLASS_HAS_PRIVATE,
-    JSCLASS_SPEC(JS_PropertyStub, JS_PropertyStub, JS_PropertyStub, JS_StrictPropertyStub, JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub, area_finalize, area_ctor)};
-
-JSClass unit_class = {
-    "Unit", JSCLASS_HAS_PRIVATE,
-    JSCLASS_SPEC(JS_PropertyStub, JS_PropertyStub, JS_PropertyStub, JS_StrictPropertyStub, JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub, unit_finalize, unit_ctor)};
-
-JSClass profile_class = {"Profile", JSCLASS_HAS_PRIVATE,
-                         JSCLASS_SPEC(JS_PropertyStub, JS_PropertyStub, JS_PropertyStub, JS_StrictPropertyStub, JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub,
-                                      profile_finalize, profile_ctor)};
-
-JSClass profileType_class = {
-    "ProfileType", JSCLASS_HAS_PRIVATE,
-    JSCLASS_SPEC(JS_PropertyStub, JS_PropertyStub, JS_PropertyStub, JS_StrictPropertyStub, JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub, NULL, profileType_ctor)};
-
-JSClass dialogLine_class = {
-    "DailogLine", JSCLASS_HAS_PRIVATE | JSCLASS_HAS_RESERVED_SLOTS(1),
-    JSCLASS_SPEC(JS_PropertyStub, JS_PropertyStub, JS_PropertyStub, JS_StrictPropertyStub, JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub, NULL, NULL)};
-
-// JSExtendedClass unit_class_ex = {
-//	unit_class,
-//	unit_equal,
-//	NULL, NULL, NULL, NULL
-//};
-//
-// JSExtendedClass file_class_ex = {
-//	file_class,
-//	file_equality,
-//	NULL, NULL, NULL, NULL
-//};
-//
-// JSExtendedClass sqlite_db_ex = {
-//	sqlite_db,
-//	sqlite_equal,
-//	NULL, NULL, NULL, NULL
-//};
-// JSClassSpec pipe_spec = JS_CS(&pipe_class, &stream_class, Pipe, 0, pipe_methods, pipe_props, pipe_static_methods, nullptr);
-// JSClassSpec file_spec = JS_CS(&file_class, &stream_class, File, 0, file_methods, file_props, file_static_methods, nullptr);
-JSClassSpec global_classes[] = {
-    // JS_CS(&event_class, nullptr, ::Event, 0, nullptr, nullptr, event_methods, nullptr),
-    {&unit_class, 0, unit_ctor, 0, unit_methods, unit_props, NULL, NULL},
-    {&presetunit_class, 0, presetunit_ctor, 0, NULL, presetunit_props, NULL, NULL},
-    {&area_class, 0, area_ctor, 0, NULL, area_props, NULL, NULL},
-    {&control_class, 0, control_ctor, 0, control_funcs, control_props, NULL, NULL},
-    {&folder_class, 0, dir_ctor, 0, dir_methods, dir_props, NULL, NULL},
-    {&exit_class, 0, exit_ctor, 0, NULL, exit_props, NULL, NULL},
-    {&party_class, 0, party_ctor, 0, party_methods, party_props, NULL, NULL},
-    {&room_class, 0, room_ctor, 0, room_methods, room_props, NULL, NULL},
-
-    {&file_class, 0, file_ctor, 0, file_methods, file_props, file_s_methods, NULL},
-    {&socket_class, 0, socket_ctor, 0, socket_methods, socket_props, socket_s_methods, NULL},
-    {&filetools_class, 0, filetools_ctor, 0, NULL, NULL, filetools_s_methods, NULL},
-    {&sqlite_db, 0, sqlite_ctor, 0, sqlite_methods, sqlite_props, NULL, NULL},
-    {&sqlite_stmt, 0, sqlite_stmt_ctor, 0, sqlite_stmt_methods, sqlite_stmt_props, NULL, NULL},
-    {&sandbox_class, 0, sandbox_ctor, 0, sandbox_methods, NULL, NULL, NULL},
-    {&script_class, 0, script_ctor, 0, script_methods, script_props, NULL, NULL},
-
-    {&frame_class, 0, frame_ctor, 0, frame_methods, frame_props, NULL, NULL},
-    {&box_class, 0, box_ctor, 0, box_methods, box_props, NULL, NULL},
-    {&line_class, 0, line_ctor, 0, line_methods, line_props, NULL, NULL},
-    {&text_class, 0, text_ctor, 0, text_methods, text_props, NULL, NULL},
-    {&image_class, 0, image_ctor, 0, image_methods, image_props, NULL, NULL},
-    {&profile_class, 0, profile_ctor, 0, profile_methods, profile_props, NULL, NULL},
-    {0}
-
+JSClassDef sqlite_db = {
+    .class_name = "SQLite",
+    .finalizer = sqlite_finalizer,
 };
 
-// JSClassSpec global_classes[] = {
-/*JSClass*				properties			functions				static props	static funcs */
-// game objects
-//{&unit_class_ex.base,	unit_props,			unit_methods,			NULL,			NULL},
-//{&presetunit_class,		presetunit_props,	NULL,					NULL,			NULL},
-//{&area_class,			area_props,			NULL,					NULL,			NULL},
-//{&control_class,		control_props,		control_funcs,			NULL,			NULL},
-//{&folder_class,			dir_props,			dir_methods,			NULL,			NULL},
-//{&exit_class,			exit_props,			NULL,					NULL,			NULL},
-//{&party_class,			party_props,		party_methods,			NULL,			NULL},
-//{&room_class,			room_props,			room_methods,			NULL,			NULL},
-//{&profile_class,		profile_props,		profile_methods,		NULL,			NULL},
-//{&profileType_class,	NULL,				NULL,					profileType_props,
-//																					NULL},
+JSClassDef sqlite_stmt = {
+    .class_name = "DBStatement",
+    .finalizer = sqlite_stmt_finalizer,
+};
 
-// utility objects
-//{&file_class,	file_props,			file_methods,			NULL,			file_s_methods},
-//{&sqlite_db,	sqlite_props,		sqlite_methods,			NULL,			NULL},
-//{&sqlite_stmt,			sqlite_stmt_props,	sqlite_stmt_methods,	NULL,			NULL},
-//{&filetools_class,		NULL,				NULL,					NULL,			filetools_s_methods},
-//{&sandbox_class,		NULL,				sandbox_methods,		NULL,			NULL},
-//{&script_class,			script_props,		script_methods,			NULL,			NULL},
+JSClassDef script_class = {
+    .class_name = "D2BSScript",
+};
 
-// screenhook objects
-//{&frame_class,			frame_props,		frame_methods,			NULL,			NULL},
-//	{&box_class,			box_props,			box_methods,			NULL,			NULL},
-//	{&line_class,			line_props,			line_methods,			NULL,			NULL},
-//	{&text_class,			text_props,			text_methods,			NULL,			NULL},
-//	{&image_class,			image_props,		image_methods,			NULL,			NULL},
-//	{0}
-//};
+JSClassDef frame_class = {
+    .class_name = "Frame",
+    .finalizer = hook_finalizer,
+};
+
+JSClassDef box_class = {
+    .class_name = "Box",
+    .finalizer = hook_finalizer,
+};
+
+JSClassDef line_class = {
+    .class_name = "Line",
+    .finalizer = hook_finalizer,
+};
+
+JSClassDef text_class = {
+    .class_name = "Text",
+    .finalizer = hook_finalizer,
+};
+
+JSClassDef image_class = {
+    .class_name = "Image",
+    .finalizer = hook_finalizer,
+};
+
+JSClassDef sandbox_class = {
+    .class_name = "Sandbox",
+    .finalizer = hook_finalizer,
+};
+
+JSClassDef room_class = {
+    .class_name = "Room",
+};
+
+JSClassDef presetunit_class = {
+    .class_name = "PresetUnit",
+    .finalizer = presetunit_finalizer,
+};
+
+JSClassDef party_class = {
+    .class_name = "Party",
+};
+
+JSClassDef filetools_class = {
+    .class_name = "FileTools",
+};
+
+JSClassDef file_class = {
+    .class_name = "File",
+    .finalizer = file_finalizer,
+};
+
+JSClassDef socket_class = {
+    .class_name = "Socket",
+    .finalizer = socket_finalizer,
+};
+
+JSClassDef exit_class = {.class_name = "Exit", .finalizer = exit_finalizer};
+
+JSClassDef folder_class = {
+    .class_name = "Folder",
+    .finalizer = dir_finalizer,
+};
+
+JSClassDef control_class = {
+    .class_name = "Control",
+    .finalizer = control_finalizer,
+};
+
+JSClassDef area_class = {
+    .class_name = "Area",
+    .finalizer = area_finalizer,
+};
+
+JSClassDef unit_class = {
+    .class_name = "Unit",
+    .finalizer = unit_finalizer,
+};
+
+JSClassDef profile_class = {
+    .class_name = "Profile",
+    .finalizer = profile_finalizer,
+};
+
+JSClassDef profileType_class = {
+    .class_name = "ProfileType",
+};
+
+JSClassDef dialogLine_class = {
+    .class_name = "DailogLine",
+};
+
+JSClassSpec global_classes[] = {
+    {&unit_class_id, &unit_class, 0, unit_ctor, 0, unit_methods, _countof(unit_methods), unit_props, _countof(unit_props), NULL, 0, NULL, 0},
+    {&presetunit_class_id, &presetunit_class, 0, presetunit_ctor, 0, NULL, 0, presetunit_props, _countof(presetunit_props), NULL, 0, NULL, 0},
+    {&area_class_id, &area_class, 0, area_ctor, 0, NULL, 0, area_props, _countof(area_props), NULL, 0, NULL, 0},
+    {&control_class_id, &control_class, 0, control_ctor, 0, control_funcs, _countof(control_funcs), control_props, _countof(control_props), NULL, 0, NULL, 0},
+    {&folder_class_id, &folder_class, 0, dir_ctor, 0, dir_methods, _countof(dir_methods), dir_props, _countof(dir_props), NULL, 0, NULL, 0},
+    {&exit_class_id, &exit_class, 0, exit_ctor, 0, NULL, 0, exit_props, _countof(exit_props), NULL, 0, NULL, 0},
+    {&party_class_id, &party_class, 0, party_ctor, 0, party_methods, _countof(party_methods), party_props, _countof(party_props), NULL, 0, NULL, 0},
+    {&room_class_id, &room_class, 0, room_ctor, 0, room_methods, _countof(room_methods), room_props, _countof(room_props), NULL, 0, NULL, 0},
+
+    {&file_class_id, &file_class, 0, file_ctor, 0, file_methods, _countof(file_methods), file_props, _countof(file_props), file_s_methods, _countof(file_s_methods), NULL,
+     0},
+    {&socket_class_id, &socket_class, 0, socket_ctor, 0, socket_methods, _countof(socket_methods), socket_props, _countof(socket_props), socket_s_methods,
+     _countof(socket_s_methods), NULL, 0},
+    {&filetools_class_id, &filetools_class, 0, filetools_ctor, 0, NULL, 0, NULL, 0, filetools_s_methods, _countof(filetools_s_methods), NULL, 0},
+    {&sqlite_db_class_id, &sqlite_db, 0, sqlite_ctor, 0, sqlite_methods, _countof(sqlite_methods), sqlite_props, _countof(sqlite_props), NULL, 0, NULL, 0},
+    {&sqlite_stmt_class_id, &sqlite_stmt, 0, sqlite_stmt_ctor, 0, sqlite_stmt_methods, _countof(sqlite_stmt_methods), sqlite_stmt_props, _countof(sqlite_stmt_props),
+     NULL, 0, NULL, 0},
+    {&sandbox_class_id, &sandbox_class, 0, sandbox_ctor, 0, sandbox_methods, _countof(sandbox_methods), NULL, 0, NULL, 0, NULL, 0},
+    {&script_class_id, &script_class, 0, script_ctor, 0, script_methods, _countof(script_methods), script_props, _countof(script_props), NULL, 0, NULL, 0},
+
+    {&frame_class_id, &frame_class, 0, frame_ctor, 0, frame_methods, _countof(frame_methods), frame_props, _countof(frame_props), NULL, 0, NULL, 0},
+    {&box_class_id, &box_class, 0, box_ctor, 0, box_methods, _countof(box_methods), box_props, _countof(box_props), NULL, 0, NULL, 0},
+    {&line_class_id, &line_class, 0, line_ctor, 0, line_methods, _countof(line_methods), line_props, _countof(line_props), NULL, 0, NULL, 0},
+    {&text_class_id, &text_class, 0, text_ctor, 0, text_methods, _countof(text_methods), text_props, _countof(text_props), NULL, 0, NULL, 0},
+    {&image_class_id, &image_class, 0, image_ctor, 0, image_methods, _countof(image_methods), image_props, _countof(image_props), NULL, 0, NULL, 0},
+    {&profile_class_id, &profile_class, 0, profile_ctor, 0, profile_methods, _countof(profile_methods), profile_props, _countof(profile_props), NULL, 0, NULL, 0},
+    {0},
+
+};

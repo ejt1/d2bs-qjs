@@ -6,7 +6,6 @@
 
 #include "js32.h"
 
-// CLASS_CTOR(script);
 CLASS_CTOR(script);
 JSAPI_PROP(script_getProperty);
 
@@ -18,6 +17,7 @@ JSAPI_FUNC(script_resume);
 JSAPI_FUNC(script_join);
 JSAPI_FUNC(my_getScript);
 JSAPI_FUNC(my_getScripts);
+
 enum script_tinyid {
   SCRIPT_FILENAME,
   SCRIPT_GAMETYPE,
@@ -26,17 +26,19 @@ enum script_tinyid {
   SCRIPT_MEMORY,
 };
 
-static JSPropertySpec script_props[] = {{"name", SCRIPT_FILENAME, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(script_getProperty), JSOP_NULLWRAPPER},
-                                        {"type", SCRIPT_GAMETYPE, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(script_getProperty), JSOP_NULLWRAPPER},
-                                        {"running", SCRIPT_RUNNING, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(script_getProperty), JSOP_NULLWRAPPER},
-                                        {"threadid", SCRIPT_THREADID, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(script_getProperty), JSOP_NULLWRAPPER},
-                                        {"memory", SCRIPT_MEMORY, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(script_getProperty), JSOP_NULLWRAPPER},
-                                        {0, 0, 0, JSOP_NULLWRAPPER, JSOP_NULLWRAPPER}};
+static JSCFunctionListEntry script_props[] = {
+    JS_CGETSET_MAGIC_DEF("name", script_getProperty, nullptr, SCRIPT_FILENAME),      //
+    JS_CGETSET_MAGIC_DEF("type", script_getProperty, nullptr, SCRIPT_GAMETYPE),      //
+    JS_CGETSET_MAGIC_DEF("running", script_getProperty, nullptr, SCRIPT_RUNNING),    //
+    JS_CGETSET_MAGIC_DEF("threadid", script_getProperty, nullptr, SCRIPT_THREADID),  //
+    JS_CGETSET_MAGIC_DEF("memory", script_getProperty, nullptr, SCRIPT_MEMORY),
+};
 
-static JSFunctionSpec script_methods[] = {JS_FS("getNext", script_getNext, 0, FUNCTION_FLAGS),
-                                          JS_FS("pause", script_pause, 0, FUNCTION_FLAGS),
-                                          JS_FS("resume", script_resume, 0, FUNCTION_FLAGS),
-                                          JS_FS("stop", script_stop, 0, FUNCTION_FLAGS),
-                                          JS_FS("join", script_join, 0, FUNCTION_FLAGS),
-                                          JS_FS("send", script_send, 1, FUNCTION_FLAGS),
-                                          JS_FS_END};
+static JSCFunctionListEntry script_methods[] = {
+    JS_FS("getNext", script_getNext, 0, FUNCTION_FLAGS),  //
+    JS_FS("pause", script_pause, 0, FUNCTION_FLAGS),      //
+    JS_FS("resume", script_resume, 0, FUNCTION_FLAGS),    //
+    JS_FS("stop", script_stop, 0, FUNCTION_FLAGS),        //
+    JS_FS("join", script_join, 0, FUNCTION_FLAGS),        //
+    JS_FS("send", script_send, 1, FUNCTION_FLAGS),
+};
