@@ -3,30 +3,17 @@
 #include <windows.h>
 #include "D2Structs.h"
 
-void FlushPrint();
 DWORD __fastcall GameInput(wchar_t* wMsg);
-LRESULT CALLBACK MouseMove(int code, WPARAM wParam, LPARAM lParam);
-LRESULT CALLBACK KeyPress(int code, WPARAM wParam, LPARAM lParam);
-DWORD __fastcall GamePacketReceived(BYTE* pPacket, DWORD dwSize);
-DWORD __fastcall GamePacketSent(BYTE* pPacket, DWORD dwSize);
-void SetMaxDiff(void);
-void __stdcall AddUnit(UnitAny* lpUnit);
-void __stdcall RemoveUnit(UnitAny* lpUnit);
-void __fastcall WhisperHandler(char* szAcc, char* szText);
 DWORD __fastcall ChannelInput(wchar_t* wMsg);
+
+void SetMaxDiff(void);
+void __fastcall WhisperHandler(char* szAcc, char* szText);
 DWORD __fastcall GameAttack(UnitInteraction* pAttack);
 void __fastcall GamePlayerAssignment(UnitAny* pPlayer);
 void GameLeave(void);
-VOID __fastcall ClassicSTUB();
-VOID __fastcall LodSTUB();
-void FailToJoin();
-HMODULE __stdcall Multi(LPSTR Class, LPSTR Window);
-HANDLE __stdcall Windowname(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int x, int y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu,
-                            HINSTANCE hInstance, LPVOID lpParam);
-HANDLE __stdcall CacheFix(LPCSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition,
-                          DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);
+
+DWORD __fastcall GamePacketReceived(BYTE* pPacket, DWORD dwSize);
+DWORD __fastcall GamePacketSent(BYTE* pPacket, DWORD dwSize);
 BOOL __fastcall RealmPacketRecv(BYTE* pPacket, DWORD dwSize);
 BOOL __fastcall ChatPacketRecv(BYTE* pPacket, int len);
-LONG WINAPI MyUnhandledExceptionFilter(_In_ struct _EXCEPTION_POINTERS* ExceptionInfo);
-void FogException();
-char __fastcall ErrorReportLaunch(const char* crash_file, int a2);
+

@@ -55,6 +55,54 @@ void LogNoFormat(const wchar_t* szString) {
 #endif
 }
 
+// Do not edit without the express consent of bsdunx or lord2800
+ClientGameState ClientState(void) {
+  ClientGameState state = ClientStateNull;
+  UnitAny* player = D2CLIENT_GetPlayerUnit();
+  Control* firstControl = *p_D2WIN_FirstControl;
+
+  if (player && !firstControl) {
+    if (player && player->pUpdateUnit) {
+      state = ClientStateBusy;
+      return state;
+    }
+    if (player->pInventory && player->pPath &&
+        // player->pPath->xPos &&
+        player->pPath->pRoom1 && player->pPath->pRoom1->pRoom2 && player->pPath->pRoom1->pRoom2->pLevel && player->pPath->pRoom1->pRoom2->pLevel->dwLevelNo)
+      state = ClientStateInGame;
+    else
+      state = ClientStateBusy;
+  } else if (!player && firstControl)
+    state = ClientStateMenu;
+  else if (!player && !firstControl)
+    state = ClientStateNull;
+
+  return state;
+}
+
+bool GameReady(void) {
+  return (ClientState() == ClientStateInGame ? true : false);
+}
+
+bool WaitForGameReady(void) {
+  DWORD start = GetTickCount();
+  do {
+    switch (ClientState()) {
+      case ClientStateNull:
+      case ClientStateMenu:
+        return false;
+      case ClientStateInGame:
+        return true;
+    }
+    Sleep(10);
+  } while ((Vars.dwGameTimeout == 0) || (Vars.dwGameTimeout > 0 && (GetTickCount() - start) < Vars.dwGameTimeout));
+  return false;
+}
+
+DWORD GetPlayerArea(void) {
+  return (ClientState() == ClientStateInGame ? D2CLIENT_GetPlayerUnit()->pPath->pRoom1->pRoom2->pLevel->dwLevelNo : NULL);
+}
+
 // NOTE TO CALLERS: szTmp must be a PRE-INITIALIZED string.
 const char* GetUnitName(UnitAny* pUnit, char* szTmp, size_t bufSize) {
   if (!pUnit) {
@@ -120,54 +168,6 @@ return NULL;
 {
 *(DWORD*)&p_D2CLIENT_SelectedInvItem = (DWORD)FindItemByPosition(x, y, dwLocation);
 }*/
-
-// Do not edit without the express consent of bsdunx or lord2800
-ClientGameState ClientState(void) {
-  ClientGameState state = ClientStateNull;
-  UnitAny* player = D2CLIENT_GetPlayerUnit();
-  Control* firstControl = *p_D2WIN_FirstControl;
-
-  if (player && !firstControl) {
-    if (player && player->pUpdateUnit) {
-      state = ClientStateBusy;
-      return state;
-    }
-    if (player->pInventory && player->pPath &&
-        // player->pPath->xPos &&
-        player->pPath->pRoom1 && player->pPath->pRoom1->pRoom2 && player->pPath->pRoom1->pRoom2->pLevel && player->pPath->pRoom1->pRoom2->pLevel->dwLevelNo)
-      state = ClientStateInGame;
-    else
-      state = ClientStateBusy;
-  } else if (!player && firstControl)
-    state = ClientStateMenu;
-  else if (!player && !firstControl)
-    state = ClientStateNull;
-
-  return state;
-}
-
-bool GameReady(void) {
-  return (ClientState() == ClientStateInGame ? true : false);
-}
-
-bool WaitForGameReady(void) {
-  DWORD start = GetTickCount();
-  do {
-    switch (ClientState()) {
-      case ClientStateNull:
-      case ClientStateMenu:
-        return false;
-      case ClientStateInGame:
-        return true;
-    }
-    Sleep(10);
-  } while ((Vars.dwGameTimeout == 0) || (Vars.dwGameTimeout > 0 && (GetTickCount() - start) < Vars.dwGameTimeout));
-  return false;
-}
-
-DWORD GetPlayerArea(void) {
-  return (ClientState() == ClientStateInGame ? D2CLIENT_GetPlayerUnit()->pPath->pRoom1->pRoom2->pLevel->dwLevelNo : NULL);
-}
 
 Level* GetLevel(DWORD dwLevelNo) {
   AutoCriticalRoom* cRoom = new AutoCriticalRoom;

@@ -43,108 +43,12 @@ DWORD __fastcall ChannelInput(wchar_t* wMsg) {
   return send;  // false means ignore, true means send
 }
 
-DWORD __fastcall GamePacketReceived(BYTE* pPacket, DWORD dwSize) {
-  switch (pPacket[0]) {
-    case 0xAE:
-      Log(L"Warden activity detected! Terminating Diablo to ensure your safety :)");
-      TerminateProcess(GetCurrentProcess(), 0);
-      break;
-    case 0x15:
-      return !GamePacketEvent(pPacket, dwSize) && ReassignPlayerHandler(pPacket, dwSize);
-    case 0x26:
-      return !GamePacketEvent(pPacket, dwSize) && ChatEventHandler(pPacket, dwSize);
-    case 0x2A:
-      return !GamePacketEvent(pPacket, dwSize) && NPCTransactionHandler(pPacket, dwSize);
-    case 0x5A:
-      return !GamePacketEvent(pPacket, dwSize) && EventMessagesHandler(pPacket, dwSize);
-    case 0x18:
-    case 0x95:
-      return !GamePacketEvent(pPacket, dwSize) && HPMPUpdateHandler(pPacket, dwSize);
-    case 0x9C:
-    case 0x9D:
-      return !GamePacketEvent(pPacket, dwSize) && ItemActionHandler(pPacket, dwSize);
-    case 0xA7:
-      return !GamePacketEvent(pPacket, dwSize) && DelayedStateHandler(pPacket, dwSize);
-  }
-
-  return !GamePacketEvent(pPacket, dwSize);
-}
-
-DWORD __fastcall GamePacketSent(BYTE* pPacket, DWORD dwSize) {
-  return !GamePacketSentEvent(pPacket, dwSize);
-}
-
-void FlushPrint() {
-  if (!TryEnterCriticalSection(&Vars.cPrintSection))
-    return;
-
-  if (Vars.qPrintBuffer.empty()) {
-    LeaveCriticalSection(&Vars.cPrintSection);
-    return;
-  }
-
-  std::queue<std::wstring> clean;
-  std::swap(Vars.qPrintBuffer, clean);
-  LeaveCriticalSection(&Vars.cPrintSection);
-
-  while (!clean.empty()) {
-    std::wstring str = clean.front();
-
-    // Break into lines through \n.
-    std::list<std::wstring> lines;
-    std::wstring temp;
-    std::wstringstream ss(str);
-
-    if (Vars.bUseGamePrint && ClientState() == ClientStateInGame) {
-      while (getline(ss, temp)) {
-        SplitLines(temp.c_str(), Console::MaxWidth() - 100, L' ', lines);
-        Console::AddLine(temp);
-      }
-
-      // Convert and send every line.
-      for (std::list<std::wstring>::iterator it = lines.begin(); it != lines.end(); ++it) {
-        D2CLIENT_PrintGameString((wchar_t*)it->c_str(), 0);
-      }
-      /*} else if (Vars.bUseGamePrint && ClientState() == ClientStateMenu && findControl(4, (const wchar_t*)NULL, -1, 28, 410, 354, 298)) {
-          while (getline(ss, temp))
-              SplitLines(temp, Console::MaxWidth() - 100, ' ', lines);
-              // TODO: Double check this function, make sure it is working as intended.
-              for (list<string>::iterator it = lines.begin(); it != lines.end(); ++it)
-                  D2MULTI_PrintChannelText((char*)it->c_str(), 0);*/
-    } else {
-      while (getline(ss, temp)) Console::AddLine(temp);
-    }
-
-    clean.pop();
-  }
-}
-
 void SetMaxDiff(void) {
   if (D2CLIENT_GetDifficulty() == 1 && *p_D2CLIENT_ExpCharFlag) {
     BnetData* pData = *p_D2LAUNCH_BnData;
     if (pData)
       pData->nMaxDiff = 10;
   }
-}
-
-void __stdcall AddUnit(UnitAny* /*lpUnit*/) {
-  //	EnterCriticalSection(&Vars.cUnitListSection);
-  //	Vars.vUnitList.push_back(make_pair<DWORD, DWORD>(lpUnit->dwUnitId, lpUnit->dwType));
-  //	LeaveCriticalSection(&Vars.cUnitListSection);
-}
-
-void __stdcall RemoveUnit(UnitAny* /*lpUnit*/) {
-  //	EnterCriticalSection(&Vars.cUnitListSection);
-  // no need to check the return--it has to be there or the real game would have bigger issues with it
-  //	for(vector<pair<DWORD, DWORD> >::iterator it = Vars.vUnitList.begin(); it != Vars.vUnitList.end(); it++)
-  //	{
-  //		if(it->first == lpUnit->dwUnitId && it->second == lpUnit->dwType)
-  //		{
-  //			Vars.vUnitList.erase(it);
-  //			break;
-  //		}
-  //	}
-  //	LeaveCriticalSection(&Vars.cUnitListSection);
 }
 
 void __fastcall WhisperHandler(char* szAcc, char* szText) {
@@ -180,6 +84,37 @@ void GameLeave(void) {
   Vars.bQuitting = false;
   sScriptEngine->ForEachScript(StopIngameScript, NULL, 0);
   ActMap::ClearCache();
+}
+
+DWORD __fastcall GamePacketReceived(BYTE* pPacket, DWORD dwSize) {
+  switch (pPacket[0]) {
+    case 0xAE:
+      Log(L"Warden activity detected! Terminating Diablo to ensure your safety :)");
+      TerminateProcess(GetCurrentProcess(), 0);
+      break;
+    case 0x15:
+      return !GamePacketEvent(pPacket, dwSize) && ReassignPlayerHandler(pPacket, dwSize);
+    case 0x26:
+      return !GamePacketEvent(pPacket, dwSize) && ChatEventHandler(pPacket, dwSize);
+    case 0x2A:
+      return !GamePacketEvent(pPacket, dwSize) && NPCTransactionHandler(pPacket, dwSize);
+    case 0x5A:
+      return !GamePacketEvent(pPacket, dwSize) && EventMessagesHandler(pPacket, dwSize);
+    case 0x18:
+    case 0x95:
+      return !GamePacketEvent(pPacket, dwSize) && HPMPUpdateHandler(pPacket, dwSize);
+    case 0x9C:
+    case 0x9D:
+      return !GamePacketEvent(pPacket, dwSize) && ItemActionHandler(pPacket, dwSize);
+    case 0xA7:
+      return !GamePacketEvent(pPacket, dwSize) && DelayedStateHandler(pPacket, dwSize);
+  }
+
+  return !GamePacketEvent(pPacket, dwSize);
+}
+
+DWORD __fastcall GamePacketSent(BYTE* pPacket, DWORD dwSize) {
+  return !GamePacketSentEvent(pPacket, dwSize);
 }
 
 BOOL __fastcall RealmPacketRecv(BYTE* pPacket, DWORD dwSize) {

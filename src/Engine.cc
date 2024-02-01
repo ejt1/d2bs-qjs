@@ -307,6 +307,51 @@ void Engine::OnMenuEntered(bool beginStarter) {
   }
 }
 
+void Engine::FlushPrint() {
+  if (!TryEnterCriticalSection(&Vars.cPrintSection))
+    return;
+
+  if (Vars.qPrintBuffer.empty()) {
+    LeaveCriticalSection(&Vars.cPrintSection);
+    return;
+  }
+
+  std::queue<std::wstring> clean;
+  std::swap(Vars.qPrintBuffer, clean);
+  LeaveCriticalSection(&Vars.cPrintSection);
+
+  while (!clean.empty()) {
+    std::wstring str = clean.front();
+
+    // Break into lines through \n.
+    std::list<std::wstring> lines;
+    std::wstring temp;
+    std::wstringstream ss(str);
+
+    if (Vars.bUseGamePrint && ClientState() == ClientStateInGame) {
+      while (getline(ss, temp)) {
+        SplitLines(temp.c_str(), Console::MaxWidth() - 100, L' ', lines);
+        Console::AddLine(temp);
+      }
+
+      // Convert and send every line.
+      for (std::list<std::wstring>::iterator it = lines.begin(); it != lines.end(); ++it) {
+        D2CLIENT_PrintGameString((wchar_t*)it->c_str(), 0);
+      }
+      /*} else if (Vars.bUseGamePrint && ClientState() == ClientStateMenu && findControl(4, (const wchar_t*)NULL, -1, 28, 410, 354, 298)) {
+          while (getline(ss, temp))
+              SplitLines(temp, Console::MaxWidth() - 100, ' ', lines);
+              // TODO: Double check this function, make sure it is working as intended.
+              for (list<string>::iterator it = lines.begin(); it != lines.end(); ++it)
+                  D2MULTI_PrintChannelText((char*)it->c_str(), 0);*/
+    } else {
+      while (getline(ss, temp)) Console::AddLine(temp);
+    }
+
+    clean.pop();
+  }
+}
+
 LRESULT __stdcall Engine::HandleWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
   switch (uMsg) {
     // BUG(ejt): weird behavior when typing into console, adds numbers after some characters
@@ -511,7 +556,7 @@ void Engine::HandleGameDraw() {
   m_instance->OnUpdate();
 
   if (ClientState() == ClientStateInGame) {
-    FlushPrint();
+    m_instance->FlushPrint();
     Genhook::DrawAll(IG);
     DrawLogo();
     Console::Draw();
@@ -537,7 +582,7 @@ void Engine::HandleGameDrawMenu() {
   m_instance->OnUpdate();
 
   if (ClientState() == ClientStateMenu) {
-    FlushPrint();
+    m_instance->FlushPrint();
     Genhook::DrawAll(OOG);
     DrawLogo();
     Console::Draw();

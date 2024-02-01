@@ -135,6 +135,8 @@ class Engine final {
   void OnGameEntered();
   void OnMenuEntered(bool beginStarter);
 
+  void FlushPrint();
+
   // hooks
   inline static WNDPROC m_fnWndProc;
   static LRESULT WINAPI HandleWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);

@@ -37,7 +37,7 @@ Script::Script(const wchar_t* file, ScriptMode mode, uint argc, JSAutoStructured
     m_fileName = std::wstring(L"Command Line");
   } else {
     if (_waccess(file, 0) != 0) {
-      DEBUG_LOG(file);
+      Log(L"%s (%s, %d)", file, __FILE__, __LINE__);
 
       throw std::exception("File not found");
     }
