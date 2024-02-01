@@ -26,7 +26,7 @@ struct sLine {
 };
 
 void ParseCommandLine(LPWSTR Command);
-sLine* GetCommand(LPWSTR Param);
+sLine* GetCommand(LPCWSTR Param);
 
 extern CArrayEx<sLine*, sLine*> aCommand;
 

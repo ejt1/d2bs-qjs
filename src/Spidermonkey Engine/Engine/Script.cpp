@@ -703,7 +703,7 @@ bool Script::Initialize() {
     if (wcslen(Vars.szConsole) > 0) {
       m_script = JS_CompileFile(m_context, m_globalObject, m_fileName);
     } else {
-      char* cmd = "function main() {print('ÿc2D2BSÿc0 :: Started Console'); while (true){delay(10000)};}  ";
+      const char* cmd = "function main() {print('ÿc2D2BSÿc0 :: Started Console'); while (true){delay(10000)};}  ";
       m_script = JS_CompileScript(m_context, m_globalObject, cmd, strlen(cmd), "Command Line", 1);
     }
     JS_AddNamedScriptRoot(m_context, &m_script, "console script");

@@ -61,7 +61,7 @@ class Profile {
 
   friend JSAPI_PROP(profile_getProperty);
 
-  DWORD login(char** error);
+  DWORD login(const char** error);
 
   static bool ProfileExists(const wchar_t* profile);
 };

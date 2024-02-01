@@ -18,7 +18,7 @@ void DefineOffsets() {
   } while (ptrdiff_t(++p) < ((ptrdiff_t)d2ptrs_list) + sizeof(d2ptrs_list));
 }
 
-DWORD GetDllOffset(char* /*DllName*/, int Offset) {
+DWORD GetDllOffset(const char* /*DllName*/, int Offset) {
   HMODULE hMod = GetModuleHandle(NULL);
 
   if (Offset < 0)
@@ -28,8 +28,8 @@ DWORD GetDllOffset(char* /*DllName*/, int Offset) {
 }
 
 DWORD GetDllOffset(int num) {
-  static char* dlls[] = {"D2Client.DLL", "D2Common.DLL", "D2Gfx.DLL",    "D2Lang.DLL", "D2Win.DLL", "D2Net.DLL",  "D2Game.DLL",
-                         "D2Launch.DLL", "Fog.DLL",      "BNClient.DLL", "Storm.DLL",  "D2Cmp.DLL", "D2Multi.DLL"};
+  static const char* dlls[] = {"D2Client.DLL", "D2Common.DLL", "D2Gfx.DLL",    "D2Lang.DLL", "D2Win.DLL", "D2Net.DLL",  "D2Game.DLL",
+                               "D2Launch.DLL", "Fog.DLL",      "BNClient.DLL", "Storm.DLL",  "D2Cmp.DLL", "D2Multi.DLL"};
   if ((num & 0xff) > 12)
     return 0;
   return GetDllOffset(dlls[num & 0xff], num >> 8);

@@ -36,8 +36,8 @@ class ScriptEngine {
   void RunCommand(const wchar_t* command);
   void DisposeScript(Script* script);
 
-  void LockScriptList(char* loc);
-  void UnLockScriptList(char* loc);
+  void LockScriptList(const char* loc);
+  void UnLockScriptList(const char* loc);
 
   ScriptMap& scripts() {
     return m_scripts;

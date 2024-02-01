@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # remove any /W compile flags
@@ -108,6 +108,7 @@ target_include_directories(D2BS PRIVATE
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/SpiderMonkey Engine/Engine")
 
 target_compile_definitions(D2BS PRIVATE
+  WIN32
   WIN32_LEAN_AND_MEAN
   XP_WIN
   STATIC_JS_API)

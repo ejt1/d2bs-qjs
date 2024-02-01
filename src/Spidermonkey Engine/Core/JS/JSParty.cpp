@@ -95,7 +95,7 @@ JSAPI_FUNC(my_getParty) {
 
   if (argc == 1) {
     UnitAny* inUnit = NULL;
-    char* nPlayerName = "";
+    char* nPlayerName = nullptr;
     uint32 nPlayerId = NULL;
 
     if (JSVAL_IS_STRING(JS_ARGV(cx, vp)[0])) {
@@ -138,7 +138,9 @@ JSAPI_FUNC(my_getParty) {
       }
     }
 
-    JS_free(cx, nPlayerName);
+    if (nPlayerName) {
+      JS_free(cx, nPlayerName);
+    }
 
     if (!bFound)
       return JS_TRUE;

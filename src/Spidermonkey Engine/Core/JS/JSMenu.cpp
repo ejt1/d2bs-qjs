@@ -15,7 +15,7 @@ JSAPI_FUNC(my_login) {
     return JS_TRUE;
 
   const wchar_t* profile = NULL;
-  char* error;
+  const char* error;
 
   if (!JSVAL_IS_STRING(JS_ARGV(cx, vp)[0])) {
     if (Vars.szProfile != NULL) {

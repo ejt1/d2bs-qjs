@@ -94,11 +94,11 @@ static BOOL isTcpIp(ProfileType pt) {
   }
 }
 
-DWORD Profile::login(char** error) {
+DWORD Profile::login(const char** error) {
   // Sleep(10000);
   bool loginComplete = FALSE, skippedToBnet = TRUE;
   int location = 0;
-  char* errorMsg = "";
+  const char* errorMsg = "";
   Control* pControl = NULL;
   unsigned int timeout = 0;
 

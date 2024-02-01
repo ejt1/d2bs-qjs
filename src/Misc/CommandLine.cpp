@@ -87,7 +87,7 @@ VOID ParseCommandLine(LPWSTR Command) {
   }
 }
 
-sLine* GetCommand(LPWSTR Param) {
+sLine* GetCommand(LPCWSTR Param) {
   for (int x = 0; x < aCommand.GetSize(); x++)
     if (!_wcsicmp(aCommand[x]->Param, Param))
       return aCommand[x];

@@ -582,7 +582,7 @@ JSAPI_FUNC(unit_getUnit) {
   uint32 nClassId = (uint32)-1;
   uint32 nMode = (uint32)-1;
   uint32 nUnitId = (uint32)-1;
-  char* szName = "";
+  char* szName = (char*)"";
 
   JS_BeginRequest(cx);
   if (argc > 0 && JSVAL_IS_INT(JS_ARGV(cx, vp)[0]))

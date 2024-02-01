@@ -84,23 +84,23 @@ JSAPI_FUNC(my_setTimeout) {
   JS_ReportError(cx, "setTimeout temporarily disabled during development");
   return JS_FALSE;
 
-  //JS_SET_RVAL(cx, vp, JSVAL_NULL);
+  // JS_SET_RVAL(cx, vp, JSVAL_NULL);
 
-  //if (argc < 2 || !JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1]))
-  //  JS_ReportError(cx, "invalid params passed to setTimeout");
+  // if (argc < 2 || !JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1]))
+  //   JS_ReportError(cx, "invalid params passed to setTimeout");
 
-  //if (JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[0]) && JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1])) {
-  //  Script* self = (Script*)JS_GetContextPrivate(cx);
-  //  int freq = JSVAL_TO_INT(JS_ARGV(cx, vp)[1]);
-  //  self->RegisterEvent("setTimeout", JS_ARGV(cx, vp)[0]);
-  //  Event* evt = new Event;
-  //  evt->owner = self;
-  //  evt->name = "setTimeout";
-  //  evt->arg3 = new jsval(JS_ARGV(cx, vp)[0]);
-  //  JS_SET_RVAL(cx, vp, INT_TO_JSVAL(sScriptEngine->AddDelayedEvent(evt, freq)));
-  //}
+  // if (JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[0]) && JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1])) {
+  //   Script* self = (Script*)JS_GetContextPrivate(cx);
+  //   int freq = JSVAL_TO_INT(JS_ARGV(cx, vp)[1]);
+  //   self->RegisterEvent("setTimeout", JS_ARGV(cx, vp)[0]);
+  //   Event* evt = new Event;
+  //   evt->owner = self;
+  //   evt->name = "setTimeout";
+  //   evt->arg3 = new jsval(JS_ARGV(cx, vp)[0]);
+  //   JS_SET_RVAL(cx, vp, INT_TO_JSVAL(sScriptEngine->AddDelayedEvent(evt, freq)));
+  // }
 
-  //return JS_TRUE;
+  // return JS_TRUE;
 }
 
 JSAPI_FUNC(my_setInterval) {
@@ -110,23 +110,23 @@ JSAPI_FUNC(my_setInterval) {
   JS_ReportError(cx, "setInterval temporarily disabled during development");
   return JS_FALSE;
 
-  //JS_SET_RVAL(cx, vp, JSVAL_NULL);
+  // JS_SET_RVAL(cx, vp, JSVAL_NULL);
 
-  //if (argc < 2 || !JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1]))
-  //  JS_ReportError(cx, "invalid params passed to setInterval");
+  // if (argc < 2 || !JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1]))
+  //   JS_ReportError(cx, "invalid params passed to setInterval");
 
-  //if (JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[0]) && JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1])) {
-  //  Script* self = (Script*)JS_GetContextPrivate(cx);
-  //  int freq = JSVAL_TO_INT(JS_ARGV(cx, vp)[1]);
-  //  self->RegisterEvent("setInterval", JS_ARGV(cx, vp)[0]);
-  //  Event* evt = new Event;
-  //  evt->owner = self;
-  //  evt->name = "setInterval";
-  //  evt->arg3 = new jsval(JS_ARGV(cx, vp)[0]);
-  //  JS_SET_RVAL(cx, vp, INT_TO_JSVAL(sScriptEngine->AddDelayedEvent(evt, freq)));
-  //}
+  // if (JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[0]) && JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1])) {
+  //   Script* self = (Script*)JS_GetContextPrivate(cx);
+  //   int freq = JSVAL_TO_INT(JS_ARGV(cx, vp)[1]);
+  //   self->RegisterEvent("setInterval", JS_ARGV(cx, vp)[0]);
+  //   Event* evt = new Event;
+  //   evt->owner = self;
+  //   evt->name = "setInterval";
+  //   evt->arg3 = new jsval(JS_ARGV(cx, vp)[0]);
+  //   JS_SET_RVAL(cx, vp, INT_TO_JSVAL(sScriptEngine->AddDelayedEvent(evt, freq)));
+  // }
 
-  //return JS_TRUE;
+  // return JS_TRUE;
 }
 JSAPI_FUNC(my_clearInterval) {
   (argc);
@@ -135,12 +135,12 @@ JSAPI_FUNC(my_clearInterval) {
   JS_ReportError(cx, "clearInterval temporarily disabled during development");
   return JS_FALSE;
 
-  //JS_SET_RVAL(cx, vp, JSVAL_NULL);
-  //if (argc != 1 || !JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[0]))
-  //  JS_ReportError(cx, "invalid params passed to clearInterval");
+  // JS_SET_RVAL(cx, vp, JSVAL_NULL);
+  // if (argc != 1 || !JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[0]))
+  //   JS_ReportError(cx, "invalid params passed to clearInterval");
 
-  //sScriptEngine->RemoveDelayedEvent(JSVAL_TO_INT(JS_ARGV(cx, vp)[0]));
-  //return JS_TRUE;
+  // sScriptEngine->RemoveDelayedEvent(JSVAL_TO_INT(JS_ARGV(cx, vp)[0]));
+  // return JS_TRUE;
 }
 
 JSAPI_FUNC(my_delay) {
@@ -153,7 +153,7 @@ JSAPI_FUNC(my_delay) {
   JS_EndRequest(cx);
   Script* script = (Script*)JS_GetContextPrivate(cx);
 
-  if (nDelay) {        // loop so we can exec events while in delay
+  if (nDelay) {  // loop so we can exec events while in delay
     script->BlockThread(nDelay);
   } else
     JS_ReportWarning(cx, "delay(0) called, argument must be >= 1");
@@ -416,10 +416,12 @@ JSAPI_FUNC(my_sendCopyData) {
   }
 
   // if data is NULL, strlen crashes
-  if (data == NULL)
-    data = "";
-
-  COPYDATASTRUCT aCopy = {static_cast<ULONG_PTR>(nModeId), strlen(data) + 1, data};
+  COPYDATASTRUCT aCopy{};
+  if (data == NULL) {
+    aCopy = {static_cast<ULONG_PTR>(nModeId), 0, nullptr};
+  } else {
+    aCopy = {static_cast<ULONG_PTR>(nModeId), strlen(data) + 1, data};
+  }
 
   // bob20	 jsrefcount depth = JS_SuspendRequest(cx);
   JS_SET_RVAL(cx, vp, INT_TO_JSVAL(SendMessage(hWnd, WM_COPYDATA, (WPARAM)D2GFX_GetHwnd(), (LPARAM)&aCopy)));
@@ -434,7 +436,7 @@ JSAPI_FUNC(my_sendDDE) {
 
   JS_SET_RVAL(cx, vp, JSVAL_FALSE);
   int32_t mode = 0;
-  char *pszDDEServer = "\"\"", *pszTopic = "\"\"", *pszItem = "\"\"", *pszData = "\"\"";
+  const char *pszDDEServer = "\"\"", *pszTopic = "\"\"", *pszItem = "\"\"", *pszData = "\"\"";
   JS_BeginRequest(cx);
 
   if (JSVAL_IS_INT(JS_ARGV(cx, vp)[0]))
@@ -456,10 +458,18 @@ JSAPI_FUNC(my_sendDDE) {
   char buffer[255] = "";
   BOOL result = SendDDE(mode, pszDDEServer, pszTopic, pszItem, pszData, (char**)&buffer, sizeof(buffer));
 
-  JS_free(cx, pszDDEServer);
-  JS_free(cx, pszTopic);
-  JS_free(cx, pszItem);
-  JS_free(cx, pszData);
+  if (JSVAL_IS_STRING(JS_ARGV(cx, vp)[1])) {
+    JS_free(cx, (char*)pszDDEServer);
+  }
+  if (JSVAL_IS_STRING(JS_ARGV(cx, vp)[2])) {
+    JS_free(cx, (char*)pszTopic);
+  }
+  if (JSVAL_IS_STRING(JS_ARGV(cx, vp)[3])) {
+    JS_free(cx, (char*)pszItem);
+  }
+  if (JSVAL_IS_STRING(JS_ARGV(cx, vp)[4])) {
+    JS_free(cx, (char*)pszData);
+  }
 
   if (!result)
     THROW_ERROR(cx, "DDE Failed! Check the log for the error message.");

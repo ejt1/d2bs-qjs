@@ -54,7 +54,7 @@ BOOL ShutdownDdeServer() {
   return DdeUninitialize(DdeSrvInst);
 }
 
-BOOL SendDDE(int mode, char* pszDDEServer, char* pszTopic, char* pszItem, char* pszData, char** result, uint size) {
+BOOL SendDDE(int mode, const char* pszDDEServer, const char* pszTopic, const char* pszItem, const char* pszData, char** result, uint size) {
   DWORD pidInst = 0;
   HCONV hConv;
   DWORD dwTimeout = 5000;

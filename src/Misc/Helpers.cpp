@@ -150,7 +150,7 @@ void InitSettings(void) {
   Vars.bLogConsole = StringToBool(logConsole);
   Vars.bEnableUnsupported = StringToBool(enableUnsupported);
   Vars.bForwardMessageBox = StringToBool(forwardMessageBox);
-  Vars.eventSignal = CreateEventA(false, true, false, nullptr);
+  Vars.eventSignal = CreateEventA(0, true, false, nullptr);
   Vars.dwMemUsage = abs(_wtoi(memUsage));
   Vars.dwConsoleFont = abs(_wtoi(consoleFont));
   if (Vars.dwMemUsage < 1)
@@ -406,8 +406,8 @@ void ResumeProcess() {
 void InitCommandLine() {
   wchar_t* line = GetCommandLineW();
   memcpy(Vars.szCommandLine, line, min(sizeof(Vars.szCommandLine), sizeof(wchar_t) * wcslen(line)));
-  LPWSTR cline = L"C:\\Program Files (x86)\\Diablo II\\Game.exe -w";
-  memcpy(line, cline, sizeof(LPWSTR) * wcslen(cline));
+  LPCWSTR cline = L"C:\\Program Files (x86)\\Diablo II\\Game.exe -w";
+  memcpy(line, cline, sizeof(LPCWSTR) * wcslen(cline));
 }
 
 bool GetStackWalk() {

@@ -14,7 +14,7 @@
 #include "stringhash.h"
 #include "CriticalSections.h"
 
-void Log(wchar_t* szFormat, ...) {
+void Log(const wchar_t* szFormat, ...) {
   va_list vaArgs;
 
   va_start(vaArgs, szFormat);

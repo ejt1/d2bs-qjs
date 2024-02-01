@@ -139,12 +139,12 @@ void ScriptEngine::DisposeScript(Script* script) {
   }
 }
 
-void ScriptEngine::LockScriptList(char* /*loc*/) {
+void ScriptEngine::LockScriptList(const char* /*loc*/) {
   EnterCriticalSection(&m_scriptListLock);
   // Log(loc);
 }
 
-void ScriptEngine::UnLockScriptList(char* /*loc*/) {
+void ScriptEngine::UnLockScriptList(const char* /*loc*/) {
   // Log(loc);
   LeaveCriticalSection(&m_scriptListLock);
 }

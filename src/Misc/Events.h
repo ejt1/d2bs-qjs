@@ -19,7 +19,7 @@ struct Event {
   void* arg5;
 };
 
-bool ChatEvent(char* lpszNick, wchar_t* lpszMsg);
+bool ChatEvent(char* lpszNick, const wchar_t* lpszMsg);
 bool ChatInputEvent(wchar_t* lpszMsg);
 void LifeEvent(DWORD dwLife);
 void ManaEvent(DWORD dwMana);
@@ -40,8 +40,8 @@ void ReleaseGameLock(void);
 void TakeGameLock(void);
 
 struct ChatEventHelper {
-  char *name, *nick;
-  wchar_t* msg;
+  const char *name, *nick;
+  const wchar_t* msg;
 };
 
 struct CopyDataHelper {
@@ -89,7 +89,7 @@ struct BCastEventHelper {
   uint argc;
 };
 struct PacketEventHelper {
-  char* name;
+  const char* name;
   BYTE* pPacket;
   DWORD dwSize;
 };

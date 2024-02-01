@@ -41,7 +41,7 @@ void ManaEvent(DWORD dwMana) {
 
 bool __fastcall KeyEventCallback(Script* script, void* argv, uint argc) {
   KeyEventHelper* helper = (KeyEventHelper*)argv;
-  char* name = (helper->up ? "keyup" : "keydown");
+  const char* name = (helper->up ? "keyup" : "keydown");
   if (script->IsRunning() && script->IsListenerRegistered(name)) {
     Event* evt = new Event;
     //evt->owner = script;
@@ -208,7 +208,7 @@ bool __fastcall ChatEventCallback(Script* script, void* argv, uint argc) {
   return block;
 }
 
-bool ChatEvent(char* lpszNick, wchar_t* lpszMsg) {
+bool ChatEvent(char* lpszNick, const wchar_t* lpszMsg) {
   ChatEventHelper helper = {"chatmsg", lpszNick, lpszMsg};
   return sScriptEngine->ForEachScript(ChatEventCallback, &helper, 2);
 }

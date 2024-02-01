@@ -407,7 +407,7 @@ enum {
     // D2Cmp Ordinals
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    FUNCPTR(D2CMP, InitCellFile, VOID __stdcall, (LPVOID File, CellFile** Out, LPSTR SourceFile, DWORD Line, DWORD FileVersion, LPSTR Filename),
+    FUNCPTR(D2CMP, InitCellFile, VOID __stdcall, (LPVOID File, CellFile** Out, LPCSTR SourceFile, DWORD Line, DWORD FileVersion, LPCSTR Filename),
             0x201340)                                                            // Updated 1.14d //00601340-BASE
     FUNCPTR(D2CMP, DeleteCellFile, void __stdcall, (CellFile * File), 0x201A50)  // Updated 1.14d //00601A50-BASE
 

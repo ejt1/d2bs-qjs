@@ -84,8 +84,8 @@ DWORD EventMessagesHandler(BYTE* pPacket, DWORD /*dwSize*/) {
   strcpy_s(name2, 16, (char*)pPacket + 24);
   wchar_t* wname2 = NULL;
 
-  char* tables[3] = {"", "monstats", "objects"};
-  char* columns[3] = {"", "NameStr", "Name"};
+  const char* tables[3] = {"", "monstats", "objects"};
+  const char* columns[3] = {"", "NameStr", "Name"};
 
   switch (mode) {
     case 0x06:  // name1 slain by name2

@@ -5,7 +5,7 @@
 #include "D2Ptrs.h"
 #include "js32.h"
 
-void Log(wchar_t* szFormat, ...);
+void Log(const wchar_t* szFormat, ...);
 void LogNoFormat(const wchar_t* szString);
 
 enum ClientGameState { ClientStateNull, ClientStateMenu, ClientStateInGame, ClientStateBusy };
