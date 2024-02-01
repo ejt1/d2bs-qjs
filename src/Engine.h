@@ -27,6 +27,9 @@ class Engine final {
   void FlushPrint();
 
   // hooks
+  static LPTOP_LEVEL_EXCEPTION_FILTER WINAPI
+  HandleSetUnhandledExceptionFilter(LPTOP_LEVEL_EXCEPTION_FILTER lpTopLevelExceptionFilter);
+
   inline static WNDPROC m_fnWndProc;
   static LRESULT WINAPI HandleWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 

@@ -319,40 +319,32 @@ char* DllLoadAddrStrs() {
 }
 
 LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* ptrs) {
-  GetStackWalk();
+  static bool already_crashed = false;
+  if (already_crashed) {
+    return EXCEPTION_EXECUTE_HANDLER;
+  }
+  // just in case we crash in here :)
+  already_crashed = true;
 
-  EXCEPTION_RECORD* rec = ptrs->ExceptionRecord;
-  CONTEXT* ctx = ptrs->ContextRecord;
+  // spdlog::info("Generating exception dump");
+  wchar_t crashpath[_MAX_PATH]{};
+  swprintf_s(crashpath, L"%s\\D2BS_crash_%d-%d.dmp", Vars.szPath, GetCurrentProcessId(), GetCurrentThreadId());
 
-  int len;
-  char* szString;
-  char* dllAddrs;
 
-  len = _scprintf(
-      "EXCEPTION!\n*** 0x%08x at 0x%08x\n"
-      "Registers:\n"
-      "\tEIP: 0x%08x, ESP: 0x%08x\n"
-      "\tCS: 0x%04x, DS: 0x%04x, ES: 0x%04x, SS: 0x%04x, FS: 0x%04x, GS: 0x%04x\n"
-      "\tEAX: 0x%08x, EBX: 0x%08x, ECX: 0x%08x, EDX: 0x%08x, ESI: 0x%08x, EDI: 0x%08x, EBP: 0x%08x, FLG: 0x%08x\n",
-      rec->ExceptionCode, (uint32_t)rec->ExceptionAddress, ctx->Eip, ctx->Esp, ctx->SegCs, ctx->SegDs, ctx->SegEs, ctx->SegSs, ctx->SegFs, ctx->SegGs, ctx->Eax,
-      ctx->Ebx, ctx->Ecx, ctx->Edx, ctx->Esi, ctx->Edi, ctx->Ebp, ctx->EFlags);
+  auto hFile = CreateFileW(crashpath, GENERIC_WRITE, FILE_SHARE_READ, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+  if (hFile == INVALID_HANDLE_VALUE)
+    return EXCEPTION_EXECUTE_HANDLER;
 
-  szString = new char[len + 1];
-  sprintf_s(szString, len + 1,
-            "EXCEPTION!\n*** 0x%08x at 0x%08x\n"
-            "Registers:\n"
-            "\tEIP: 0x%08x, ESP: 0x%08x\n"
-            "\tCS: 0x%04x, DS: 0x%04x, ES: 0x%04x, SS: 0x%04x, FS: 0x%04x, GS: 0x%04x\n"
-            "\tEAX: 0x%08x, EBX: 0x%08x, ECX: 0x%08x, EDX: 0x%08x, ESI: 0x%08x, EDI: 0x%08x, EBP: 0x%08x, FLG: 0x%08x\n",
-            rec->ExceptionCode, (uint32_t)rec->ExceptionAddress, ctx->Eip, ctx->Esp, ctx->SegCs, ctx->SegDs, ctx->SegEs, ctx->SegSs, ctx->SegFs, ctx->SegGs,
-            ctx->Eax, ctx->Ebx, ctx->Ecx, ctx->Edx, ctx->Esi, ctx->Edi, ctx->Ebp, ctx->EFlags);
+  MINIDUMP_EXCEPTION_INFORMATION exceptionInfo{};
+  exceptionInfo.ThreadId = GetCurrentThreadId();
+  exceptionInfo.ExceptionPointers = ptrs;
+  exceptionInfo.ClientPointers = FALSE;
 
-  dllAddrs = DllLoadAddrStrs();
-  Log(L"%hs\n%hs", szString, dllAddrs);
+  MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), hFile, MINIDUMP_TYPE(MiniDumpWithIndirectlyReferencedMemory), ptrs ? &exceptionInfo : nullptr, nullptr,
+                    nullptr);
 
-  free(dllAddrs);
-  delete[] szString;
-  return EXCEPTION_EXECUTE_HANDLER;
+  CloseHandle(hFile);
+  std::terminate();
 }
 
 int __cdecl _purecall(void) {
