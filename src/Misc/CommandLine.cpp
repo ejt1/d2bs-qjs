@@ -1,96 +1,76 @@
-/*
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program. If not, see <http://www.gnu.org/licenses/>.
-
-*/
-
-#include <windows.h>
-#include <shlwapi.h>
-#include <stdio.h>
-#include <time.h>
-#include "Offset.h"
-#include "File.h"
 #include "CommandLine.h"
-#include "ArrayEx.h"
-#define ArraySize(x) (sizeof((x)) / sizeof((x)[0]))
 
-CArrayEx<sLine*, sLine*> aCommand;
+CommandLineParser::CommandLineParser(std::wstring cmdline) {
+  // example input C:\Program Files (x86)\Diablo II\Game.exe -profile "test" -handle "4325261" -cachefix -multi
+  // -title "some title" -w -ns -sleepy -ftj
+  TrimBinary(cmdline);
+  auto args = ParseArguments(cmdline);
 
-// Commands.
-sLine CLine[] = {{L"-d2c", 0}, {L"-d2x", 0}, {L"-title", 0}, {L"-mpq", 0}, {L"-profile", 0}, {L"-handle", 0}, {L"-multi", 0}, {L"-sleepy", 0}, {L"-cachefix", 0}};
-
-DWORD ParseStringForText(LPWSTR Source, LPWSTR text) {
-  WCHAR BUF[4059];
-  memset(BUF, 0x00, 4059);
-
-  for (unsigned int x = 0; x < wcslen(Source); x++) {
-    if (wcslen(text) + x > wcslen(Source))
-      break;
-
-    for (unsigned int y = 0; y < wcslen(text); y++) {
-      INT cC = Source[x + y];
-      memcpy(BUF + wcslen(BUF), (LPWSTR)&cC, sizeof(cC));
+  auto it = args.begin();
+  while (it != args.end()) {
+    std::wstring arg = (*it);
+    std::wstring val;
+    if (++it != args.end() && (*it)[0] != L'-') {
+      val = (*it);
+      ++it;
     }
-    if (!_wcsicmp(BUF, text))
-      return x;
-
-    memset(BUF, 0x00, 4059);
-  }
-  return 0xFFFFFFFF;
-}
-
-VOID ParseCommandLine(LPWSTR Command) {
-  for (int x = 0; x < ArraySize(CLine); x++) {
-    DWORD id = ParseStringForText(Command, CLine[x].Param);
-    if (id == -1)
-      continue;
-
-    WCHAR szText[200];
-    BOOL bStart = false;
-
-    memset(szText, 0x00, 100);
-
-    if (!CLine[x].isBool) {
-      for (unsigned int y = (id + (wcslen(CLine[x].Param))); y < wcslen(Command); y++) {
-        if (Command[y] == L'"')
-          if (bStart) {
-            bStart = false;
-            break;
-          } else {
-            bStart = true;
-            y++;
-          }
-
-        int byt = Command[y];
-
-        if (bStart)
-          memcpy(szText + wcslen(szText), (LPWSTR)&byt, sizeof(byt));
-      }
-    }
-    sLine* sl = new sLine;
-    sl->isBool = CLine[x].isBool;
-    wcscpy_s(sl->Param, _countof(sl->Param), CLine[x].Param);
-    if (!sl->isBool)
-      wcscpy_s(sl->szText, _countof(sl->szText), szText);
-
-    aCommand.Add(sl);
+    m_args[arg] = TrimQuote(val);
   }
 }
 
-sLine* GetCommand(LPCWSTR Param) {
-  for (int x = 0; x < aCommand.GetSize(); x++)
-    if (!_wcsicmp(aCommand[x]->Param, Param))
-      return aCommand[x];
+bool CommandLineParser::Contains(const std::wstring& arg) {
+  return m_args.contains(arg);
+}
 
-  return 0;
+std::wstring CommandLineParser::Value(const std::wstring& arg) {
+  return Contains(arg) ? m_args[arg] : L"";
+}
+
+std::map<std::wstring, std::wstring> CommandLineParser::Args() {
+  return m_args;
+}
+
+void CommandLineParser::TrimBinary(std::wstring& cmdline) {
+  size_t pos = 0;
+
+  // remove the binary path from command line
+  if ((pos = cmdline.find(L".exe")) != std::wstring::npos) {
+    cmdline.erase(0, pos + 4);
+
+    // remove trailing space, if present
+    if (!cmdline.empty() && cmdline[0] == ' ') {
+      cmdline.erase(0, 1);
+    }
+  }
+}
+
+std::wstring& CommandLineParser::TrimQuote(std::wstring& val) {
+  if (val.starts_with(L'\"')) {
+    val.erase(0, 1);
+  }
+  if (val.ends_with(L'\"')) {
+    val.erase(val.size() - 1, val.size());
+  }
+  return val;
+}
+
+std::vector<std::wstring> CommandLineParser::ParseArguments(std::wstring& cmdline) {
+  size_t pos = 0;
+  std::vector<std::wstring> args;
+
+  // tokenize the remainder of command line into arguments
+  while ((pos = cmdline.find(' ')) != std::wstring::npos || !cmdline.empty()) {
+    args.push_back(cmdline.substr(0, pos));
+
+    // contains trailing space
+    if (pos != std::wstring::npos) {
+      cmdline.erase(0, pos + 1);
+    } else {
+      // last argument, clear the string to stop loop
+      // ugly but best I can think of right now :)
+      cmdline.clear();
+    }
+  }
+
+  return args;
 }

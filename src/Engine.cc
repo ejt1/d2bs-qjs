@@ -47,54 +47,34 @@ bool Engine::Initialize(HMODULE hModule) {
   swprintf_s(Vars.szLogPath, _countof(Vars.szLogPath), L"%slogs\\", Vars.szPath);
   CreateDirectoryW(Vars.szLogPath, NULL);
   InitCommandLine();
-  ParseCommandLine(Vars.szCommandLine);
   InitSettings();
-  sLine* command = NULL;
   Vars.bUseRawCDKey = FALSE;
 
-  command = GetCommand(L"-title");
-  if (command) {
-    int len = wcslen((wchar_t*)command->szText);
-    wcsncat_s(Vars.szTitle, (wchar_t*)command->szText, len);
+  CommandLineParser cmdline(Vars.szCommandLine);
+  for (const auto& [arg, value] : cmdline.Args()) {
+    if (arg == L"-title") {
+      wcsncat_s(Vars.szTitle, value.c_str(), value.length());
+    } else if (arg == L"-sleepy") {
+      Vars.bSleepy = TRUE;
+    } else if (arg == L"-cachefix") {
+      Vars.bCacheFix = TRUE;
+    } else if (arg == L"-multi") {
+      Vars.bMulti = TRUE;
+    } else if (arg == L"-ftj") {
+      Vars.bReduceFTJ = TRUE;
+    } else if (arg == L"-d2c") {
+      Vars.bUseRawCDKey = TRUE;
+      const char* keys = UnicodeToAnsi(value.c_str());
+      strncat_s(Vars.szClassic, keys, strlen(keys));
+      delete[] keys;
+    } else if (arg == L"-d2x") {
+      const char* keys = UnicodeToAnsi(value.c_str());
+      strncat_s(Vars.szLod, keys, strlen(keys));
+      delete[] keys;
+    } else if (arg == L"-handle") {
+      Vars.hHandle = (HWND)_wtoi(value.c_str());
+    }
   }
-
-  if (GetCommand(L"-sleepy"))
-    Vars.bSleepy = TRUE;
-
-  if (GetCommand(L"-cachefix"))
-    Vars.bCacheFix = TRUE;
-
-  if (GetCommand(L"-multi"))
-    Vars.bMulti = TRUE;
-
-  if (GetCommand(L"-ftj"))
-    Vars.bReduceFTJ = TRUE;
-
-  command = GetCommand(L"-d2c");
-  if (command) {
-    Vars.bUseRawCDKey = TRUE;
-    const char* keys = UnicodeToAnsi(command->szText);
-    strncat_s(Vars.szClassic, keys, strlen(keys));
-    delete[] keys;
-  }
-
-  command = GetCommand(L"-d2x");
-  if (command) {
-    const char* keys = UnicodeToAnsi(command->szText);
-    strncat_s(Vars.szLod, keys, strlen(keys));
-    delete[] keys;
-  }
-
-#if 0
-		char errlog[516] = "";
-		sprintf_s(errlog, 516, "%sd2bs.log", Vars.szPath);
-		AllocConsole();
-		int handle = _open_osfhandle((long)GetStdHandle(STD_ERROR_HANDLE), _O_TEXT);
-		FILE* f = _fdopen(handle, "wt");
-		*stderr = *f;
-		setvbuf(stderr, NULL, _IONBF, 0);
-		freopen_s(&f, errlog, "a+t", f);
-#endif
 
   SetUnhandledExceptionFilter(ExceptionHandler);
 
@@ -179,28 +159,20 @@ void Engine::OnUpdate() {
 
     *p_D2CLIENT_Lang = D2CLIENT_GetGameLanguageCode();
 
-    sLine* command;
-    ParseCommandLine(Vars.szCommandLine);
-
-    command = GetCommand(L"-handle");
-    if (command) {
-      Vars.hHandle = (HWND)_wtoi(command->szText);
-    }
-
-    command = GetCommand(L"-mpq");
-    if (command) {
-      char* mpq = UnicodeToAnsi(command->szText);
-      LoadMPQ(mpq);
-      delete[] mpq;
-    }
-
-    command = GetCommand(L"-profile");
-    if (command) {
-      const wchar_t* profile = command->szText;
-      if (SwitchToProfile(profile))
-        Print(L"\u00FFc2D2BS\u00FFc0 :: Switched to profile %s", profile);
-      else
-        Print(L"\u00FFc2D2BS\u00FFc0 :: Profile %s not found", profile);
+    // TODO(ejt): use these in Initialize?
+    CommandLineParser cmdline(Vars.szCommandLine);
+    for (const auto& [arg, value] : cmdline.Args()) {
+      if (arg == L"-mpq") {
+        char* mpq = UnicodeToAnsi(value.c_str());
+        LoadMPQ(mpq);
+        delete[] mpq;
+      } else if (arg == L"-profile") {
+        const wchar_t* profile = value.c_str();
+        if (SwitchToProfile(profile))
+          Print(L"\u00FFc2D2BS\u00FFc0 :: Switched to profile %s", profile);
+        else
+          Print(L"\u00FFc2D2BS\u00FFc0 :: Profile %s not found", profile);
+      }
     }
 
     Log(L"D2BS Engine startup complete. %s", D2BS_VERSION);

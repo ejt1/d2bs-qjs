@@ -1,33 +1,21 @@
-/*
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or (at your option) any later version.
+#pragma once
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU Affero General Public License for more details.
+#include <map>
+#include <string>
+#include <vector>
 
-You should have received a copy of the GNU Affero General Public License
-along with this program. If not, see <http://www.gnu.org/licenses/>.
+class CommandLineParser {
+ public:
+  CommandLineParser(std::wstring cmdline);
 
-*/
+  bool Contains(const std::wstring& arg);
+  std::wstring Value(const std::wstring& arg);
+  std::map<std::wstring, std::wstring> Args();
 
-#ifndef _COMMANDLINE_H
-#define _COMMANDLINE_H
+ private:
+  void TrimBinary(std::wstring& cmdline);
+  std::wstring& TrimQuote(std::wstring& val);
+  std::vector<std::wstring> ParseArguments(std::wstring& cmdline);
 
-#include <ArrayEx.h>
-
-struct sLine {
-  WCHAR Param[400];
-  BOOL isBool;
-  WCHAR szText[600];
+  std::map<std::wstring, std::wstring> m_args;
 };
-
-void ParseCommandLine(LPWSTR Command);
-sLine* GetCommand(LPCWSTR Param);
-
-extern CArrayEx<sLine*, sLine*> aCommand;
-
-#endif
