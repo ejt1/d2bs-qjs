@@ -1,19 +1,12 @@
-#ifndef __D2BS_H__
-#define __D2BS_H__
-
 #pragma once
 
-#ifndef XP_WIN
-#define XP_WIN
-#endif
+#include "ScreenHook.h"
 
-#define D2BS_VERSION L"1.6.4U"
-
-#include <windows.h>
+#include <Windows.h>
 #include <vector>
 #include <queue>
 
-#include "ScreenHook.h"
+#define D2BS_VERSION L"1.6.4U"
 
 // struct Variables;
 
@@ -125,7 +118,18 @@ struct Variables {
 
 extern Variables Vars;
 
-BOOL Startup(void);
-void Shutdown(void);
+class Engine final {
+ public:
+  Engine();
+  virtual ~Engine();
 
-#endif
+  Engine(const Engine&) = delete;
+  Engine& operator=(const Engine&) = delete;
+
+  bool Initialize(HMODULE hModule, LPVOID lpReserved);
+  void Shutdown();
+
+ private:
+  HMODULE m_hModule;
+  HANDLE m_hThread;
+};

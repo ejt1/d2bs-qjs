@@ -5,7 +5,7 @@
 #define __D2PTRS_LIST_
 #include "D2Ptrs.h"
 #include "Patch.h"
-#include "D2BS.h"
+#include "Engine.h"
 
 #ifndef ArraySize
 #define ArraySize(x) (sizeof((x)) / sizeof((x)[0]))

@@ -58,6 +58,7 @@ class Script {
   void Join(void);
   void Pause(void);
   void Resume(void);
+  bool IsUninitialized();
   bool IsRunning(void);
   bool IsAborted(void);
   void RunCommand(const wchar_t* command);
@@ -74,18 +75,21 @@ class Script {
   inline const wchar_t* GetFilename(void) {
     return m_fileName.c_str();
   }
+
   const wchar_t* GetShortFilename(void);
+
   inline JSContext* GetContext(void) {
     return m_context;
   }
+
   inline JSRuntime* GetRuntime(void) {
     return m_runtime;
   }
+
   inline ScriptMode GetMode(void) {
     return m_scriptMode;
   }
 
-  int GetExecutionCount(void);
   DWORD GetThreadId(void);
 
   // UGLY HACK to fix up the player gid on game join for cached scripts/oog scripts
@@ -124,30 +128,30 @@ class Script {
   static JSBool InterruptHandler(JSContext* ctx);
 
   std::wstring m_fileName;
-  int m_execCount;
   ScriptMode m_scriptMode;
   std::atomic<ScriptState> m_scriptState;
+
   JSRuntime* m_runtime;
   JSContext* m_context;
+  JSObject* m_globalObject;
   JSScript* m_script;
   myUnit* m_me;
   uint m_argc;
   JSAutoStructuredCloneBuffer** m_argv;
-
-  DWORD m_threadId;
-  FunctionMap m_functions;
   DWORD m_LastGC;
   // wtf is this trying to do anyway, why not just check m_context or m_runtime?
   bool m_hasActiveCX;  // hack to get away from JS_IsRunning
+
+  DWORD m_threadId;
+  HANDLE m_threadHandle;
+
+  FunctionMap m_functions;
   HANDLE m_eventSignal;
   std::list<Event*> m_EventList;
 
-  JSObject* m_globalObject;
-  bool m_isLocked, m_isPaused, m_isReallyPaused;
+  bool m_isPaused, m_isReallyPaused;
 
   IncludeList m_includes, m_inProgress;
-
-  HANDLE m_threadHandle;
 
   CRITICAL_SECTION m_lock;
 };

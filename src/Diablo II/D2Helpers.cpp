@@ -10,7 +10,7 @@
 #include "Helpers.h"
 #include "D2Skills.h"
 #include "D2Intercepts.h"
-#include "D2BS.h"
+#include "Engine.h"
 #include "stringhash.h"
 #include "CriticalSections.h"
 

@@ -1,4 +1,4 @@
-// Diablo II Botting System Core
+#include "Engine.h"
 
 #include <shlwapi.h>
 #include <io.h>
@@ -10,7 +10,6 @@
 #include "Helpers.h"
 #include "D2Handlers.h"
 #include "Console.h"
-#include "D2BS.h"
 #include "D2Ptrs.h"
 #include "CommandLine.h"
 
@@ -18,67 +17,72 @@
 #include "D2Loader.h"
 #endif
 
-static HANDLE hD2Thread = INVALID_HANDLE_VALUE;
-BOOL WINAPI DllMain(HINSTANCE hDll, DWORD dwReason, LPVOID lpReserved) {
-  switch (dwReason) {
-    case DLL_PROCESS_ATTACH: {
-      DisableThreadLibraryCalls(hDll);
-      if (lpReserved != NULL) {
-        Vars.pModule = (Module*)lpReserved;
+Engine::Engine() : m_hModule(nullptr), m_hThread(INVALID_HANDLE_VALUE) {
+}
 
-        if (!Vars.pModule)
-          return FALSE;
+Engine::~Engine() {
+}
 
-        wcscpy_s(Vars.szPath, MAX_PATH, Vars.pModule->szPath);
-        Vars.bLoadedWithCGuard = TRUE;
-      } else {
-        Vars.hModule = hDll;
-        GetModuleFileNameW(hDll, Vars.szPath, MAX_PATH);
-        PathRemoveFileSpecW(Vars.szPath);
-        wcscat_s(Vars.szPath, MAX_PATH, L"\\");
-        Vars.bLoadedWithCGuard = FALSE;
-      }
+bool Engine::Initialize(HMODULE hModule, LPVOID lpReserved) {
+  m_hModule = hModule;
 
-      swprintf_s(Vars.szLogPath, _countof(Vars.szLogPath), L"%slogs\\", Vars.szPath);
-      CreateDirectoryW(Vars.szLogPath, NULL);
-      InitCommandLine();
-      ParseCommandLine(Vars.szCommandLine);
-      InitSettings();
-      sLine* command = NULL;
-      Vars.bUseRawCDKey = FALSE;
+  // start of old DllMain DLL_PROCESS_ATTACH
+  if (lpReserved != NULL) {
+    Vars.pModule = (Module*)lpReserved;
 
-      command = GetCommand(L"-title");
-      if (command) {
-        int len = wcslen((wchar_t*)command->szText);
-        wcsncat_s(Vars.szTitle, (wchar_t*)command->szText, len);
-      }
+    if (!Vars.pModule)
+      return FALSE;
 
-      if (GetCommand(L"-sleepy"))
-        Vars.bSleepy = TRUE;
+    wcscpy_s(Vars.szPath, MAX_PATH, Vars.pModule->szPath);
+    Vars.bLoadedWithCGuard = TRUE;
+  } else {
+    Vars.hModule = hModule;
+    GetModuleFileNameW(hModule, Vars.szPath, MAX_PATH);
+    PathRemoveFileSpecW(Vars.szPath);
+    wcscat_s(Vars.szPath, MAX_PATH, L"\\");
+    Vars.bLoadedWithCGuard = FALSE;
+  }
 
-      if (GetCommand(L"-cachefix"))
-        Vars.bCacheFix = TRUE;
+  swprintf_s(Vars.szLogPath, _countof(Vars.szLogPath), L"%slogs\\", Vars.szPath);
+  CreateDirectoryW(Vars.szLogPath, NULL);
+  InitCommandLine();
+  ParseCommandLine(Vars.szCommandLine);
+  InitSettings();
+  sLine* command = NULL;
+  Vars.bUseRawCDKey = FALSE;
 
-      if (GetCommand(L"-multi"))
-        Vars.bMulti = TRUE;
+  command = GetCommand(L"-title");
+  if (command) {
+    int len = wcslen((wchar_t*)command->szText);
+    wcsncat_s(Vars.szTitle, (wchar_t*)command->szText, len);
+  }
 
-      if (GetCommand(L"-ftj"))
-        Vars.bReduceFTJ = TRUE;
+  if (GetCommand(L"-sleepy"))
+    Vars.bSleepy = TRUE;
 
-      command = GetCommand(L"-d2c");
-      if (command) {
-        Vars.bUseRawCDKey = TRUE;
-        const char* keys = UnicodeToAnsi(command->szText);
-        strncat_s(Vars.szClassic, keys, strlen(keys));
-        delete[] keys;
-      }
+  if (GetCommand(L"-cachefix"))
+    Vars.bCacheFix = TRUE;
 
-      command = GetCommand(L"-d2x");
-      if (command) {
-        const char* keys = UnicodeToAnsi(command->szText);
-        strncat_s(Vars.szLod, keys, strlen(keys));
-        delete[] keys;
-      }
+  if (GetCommand(L"-multi"))
+    Vars.bMulti = TRUE;
+
+  if (GetCommand(L"-ftj"))
+    Vars.bReduceFTJ = TRUE;
+
+  command = GetCommand(L"-d2c");
+  if (command) {
+    Vars.bUseRawCDKey = TRUE;
+    const char* keys = UnicodeToAnsi(command->szText);
+    strncat_s(Vars.szClassic, keys, strlen(keys));
+    delete[] keys;
+  }
+
+  command = GetCommand(L"-d2x");
+  if (command) {
+    const char* keys = UnicodeToAnsi(command->szText);
+    strncat_s(Vars.szLod, keys, strlen(keys));
+    delete[] keys;
+  }
 
 #if 0
 		char errlog[516] = "";
@@ -91,23 +95,10 @@ BOOL WINAPI DllMain(HINSTANCE hDll, DWORD dwReason, LPVOID lpReserved) {
 		freopen_s(&f, errlog, "a+t", f);
 #endif
 
-      Vars.bShutdownFromDllMain = FALSE;
-      SetUnhandledExceptionFilter(ExceptionHandler);
-      if (!Startup())
-        return FALSE;
-    } break;
-    case DLL_PROCESS_DETACH:
-      if (Vars.bNeedShutdown) {
-        Vars.bShutdownFromDllMain = TRUE;
-        Shutdown();
-      }
-      break;
-  }
+  Vars.bShutdownFromDllMain = FALSE;
+  SetUnhandledExceptionFilter(ExceptionHandler);
 
-  return TRUE;
-}
-
-BOOL Startup(void) {
+  // start of old Startup function
   InitializeCriticalSection(&Vars.cEventSection);
   InitializeCriticalSection(&Vars.cRoomSection);
   InitializeCriticalSection(&Vars.cMiscSection);
@@ -136,19 +127,19 @@ BOOL Startup(void) {
   InstallConditional();
   CreateDdeServer();
 
-  if ((hD2Thread = CreateThread(NULL, NULL, D2Thread, NULL, NULL, NULL)) == NULL)
+  if ((m_hThread = CreateThread(NULL, NULL, D2Thread, NULL, NULL, NULL)) == NULL)
     return FALSE;
 
   return TRUE;
 }
 
-void Shutdown(void) {
+void Engine::Shutdown() {
   if (!Vars.bNeedShutdown)
     return;
 
   Vars.bActive = FALSE;
   if (!Vars.bShutdownFromDllMain)
-    WaitForSingleObject(hD2Thread, INFINITE);
+    WaitForSingleObject(m_hThread, INFINITE);
 
   SetWindowLong(D2GFX_GetHwnd(), GWL_WNDPROC, (LONG)Vars.oldWNDPROC);
 

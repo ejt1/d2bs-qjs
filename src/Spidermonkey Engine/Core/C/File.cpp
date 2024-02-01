@@ -23,7 +23,7 @@
 #include <Windows.h>
 
 #include "File.h"
-#include "D2BS.h"
+#include "Engine.h"
 #include "Helpers.h"
 
 char* readLine(FILE* fptr, bool locking) {

@@ -1,6 +1,6 @@
 #include "ScreenHook.h"
 #include "JSScreenHook.h"
-#include "D2BS.h"
+#include "Engine.h"
 #include "Console.h"
 #include "D2Ptrs.h"
 

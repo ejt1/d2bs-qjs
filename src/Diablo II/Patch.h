@@ -3,7 +3,7 @@
 #include "Offset.h"
 #include "D2Intercepts.h"
 #include "D2Handlers.h"
-#include "D2BS.h"
+#include "Engine.h"
 
 PatchHook Patches[] = {
     {PatchCall, GetDllOffset("D2Client.dll", 0x7C89D), (DWORD)GameInput_Intercept, 5},           // Updated 1.14d //0047C89D-BASE

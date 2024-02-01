@@ -1020,7 +1020,8 @@ JSAPI_FUNC(my_quitGame) {
     D2CLIENT_ExitGame();
 
   // give the core a chance to shut down
-  Shutdown();
+  // TODO(ejt): commented out Shutdown while refactoring to Engine
+  //Shutdown();
   TerminateProcess(GetCurrentProcess(), 0);
 
   return JS_TRUE;

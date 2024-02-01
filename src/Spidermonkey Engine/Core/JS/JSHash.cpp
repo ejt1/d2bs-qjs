@@ -1,7 +1,7 @@
 #include "JSHash.h"
 #include "Hash.h"
 #include "File.h"
-#include "D2BS.h"
+#include "Engine.h"
 #include "Helpers.h"
 
 JSAPI_FUNC(my_md5) {

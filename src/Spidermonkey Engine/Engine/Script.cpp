@@ -8,7 +8,7 @@
 #include "JSUnit.h"
 #include "Helpers.h"
 #include "ScriptEngine.h"
-#include "D2BS.h"
+#include "Engine.h"
 #include "JSGlobalFuncs.h"
 #include "Console.h"
 
@@ -19,7 +19,6 @@ Script::Script(const wchar_t* file, ScriptMode mode, uint argc, JSAutoStructured
       m_context(NULL),
       m_globalObject(NULL),
       m_script(NULL),
-      m_execCount(0),
       m_isPaused(false),
       m_isReallyPaused(false),
       m_scriptMode(mode),
@@ -93,9 +92,10 @@ bool Script::Start() {
 }
 
 void Script::Stop(bool force, bool reallyForce) {
-  // if we've already stopped, just return
-  if (m_scriptState == kScriptStateStopped)
+  // make sure the script is actually running
+  if (m_scriptState != kScriptStateRunning)
     return;
+
   EnterCriticalSection(&m_lock);
   // tell everyone else that the script is aborted FIRST
   m_scriptState = kScriptStateRequestStop;
@@ -154,6 +154,10 @@ void Script::Resume(void) {
   SetEvent(m_eventSignal);
 }
 
+bool Script::IsUninitialized() {
+  return m_scriptState == kScriptStateUninitialized;
+}
+
 bool Script::IsRunning(void) {
   return m_context && !(m_scriptState != kScriptStateRunning || m_isPaused || !m_hasActiveCX);
 }
@@ -175,10 +179,6 @@ const wchar_t* Script::GetShortFilename() {
     return m_fileName.c_str();
   else
     return (m_fileName.c_str() + wcslen(Vars.szScriptPath) + 1);
-}
-
-int Script::GetExecutionCount(void) {
-  return m_execCount;
 }
 
 DWORD Script::GetThreadId(void) {
@@ -740,8 +740,6 @@ void Script::RunMain() {
       JS_GetProperty(m_context, m_globalObject, "main", main.address()) != JS_FALSE && JSVAL_IS_FUNCTION(m_context, main)) {
     JS_CallFunctionValue(m_context, m_globalObject, main, args.length(), args.begin(), dummy.address());
   }
-
-  m_execCount++;
 }
 
 // return false to stop the script

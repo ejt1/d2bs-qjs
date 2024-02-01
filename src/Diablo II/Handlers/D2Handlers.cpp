@@ -13,7 +13,7 @@
 #include "Events.h"
 #include "ScriptEngine.h"
 #include "Console.h"
-#include "D2BS.h"
+#include "Engine.h"
 #include "MapHeader.h"
 #include "Offset.h"
 #include "CommandLine.h"

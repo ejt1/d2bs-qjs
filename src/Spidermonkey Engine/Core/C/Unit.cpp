@@ -3,7 +3,7 @@
 #include "Unit.h"
 #include "Constants.h"
 #include "D2Helpers.h"
-#include "D2BS.h"
+#include "Engine.h"
 
 #define HAS_BIT(value, bit) ((((value) >> (bit)) & 0x1) == 0x1)
 

@@ -7,7 +7,7 @@
 #include "JSGlobalClasses.h"
 #include "JSUnit.h"
 #include "Constants.h"
-#include "D2BS.h"
+#include "Engine.h"
 #include "D2Ptrs.h"
 #include "Events.h"
 #include "Helpers.h"
@@ -104,7 +104,7 @@ unsigned int ScriptEngine::GetCount(bool active, bool unexecuted) {
   for (ScriptMap::iterator it = m_scripts.begin(); it != m_scripts.end(); it++) {
     if (!active && it->second->IsRunning() && !it->second->IsAborted())
       count--;
-    if (!unexecuted && it->second->GetExecutionCount() == 0 && !it->second->IsRunning())
+    if (!unexecuted && it->second->IsUninitialized() && !it->second->IsRunning())
       count--;
   }
   assert(count >= 0);

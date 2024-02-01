@@ -1,5 +1,5 @@
 #include "ScriptEngine.h"
-#include "D2BS.h"
+#include "Engine.h"
 
 bool __fastcall LifeEventCallback(Script* script, void* argv, uint argc) {
   SingleArgHelper* helper = (SingleArgHelper*)argv;

@@ -1,5 +1,5 @@
 #include "JSScreenHook.h"
-#include "D2BS.h"
+#include "Engine.h"
 #include "ScreenHook.h"
 #include "Script.h"
 #include "File.h"

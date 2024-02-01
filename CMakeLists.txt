@@ -27,8 +27,6 @@ set(D2BS_SRCS
 
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Diablo II/D2Helpers.cpp"
 
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/Main/D2BS.cpp"
-
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Map/Diablo_II/ActMap.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Map/Diablo_II/LevelMap.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Map/Diablo_II/Points.cpp"
@@ -80,6 +78,8 @@ set(D2BS_SRCS
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Engine/Script.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Engine/ScriptEngine.cpp"
 
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/Engine.cc"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cc"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/StackWalker.cpp"
 
   "version.rc")
