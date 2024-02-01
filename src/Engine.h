@@ -130,6 +130,8 @@ class Engine final {
   void Shutdown();
 
  private:
+  static DWORD WINAPI EngineThread(LPVOID lpThreadParameter);
+
   HMODULE m_hModule;
   HANDLE m_hThread;
 };

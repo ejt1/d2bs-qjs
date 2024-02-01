@@ -12,6 +12,9 @@
 #include "Console.h"
 #include "D2Ptrs.h"
 #include "CommandLine.h"
+#include "Core.h"
+#include "Unit.h"
+#include "D2Handlers.h"
 
 #ifdef _MSVC_DEBUG
 #include "D2Loader.h"
@@ -127,7 +130,7 @@ bool Engine::Initialize(HMODULE hModule, LPVOID lpReserved) {
   InstallConditional();
   CreateDdeServer();
 
-  if ((m_hThread = CreateThread(NULL, NULL, D2Thread, NULL, NULL, NULL)) == NULL)
+  if ((m_hThread = CreateThread(NULL, NULL, EngineThread, NULL, NULL, NULL)) == NULL)
     return FALSE;
 
   return TRUE;
@@ -169,4 +172,103 @@ void Engine::Shutdown() {
 
   Log(L"D2BS Shutdown complete.");
   Vars.bNeedShutdown = false;
+}
+
+DWORD __stdcall Engine::EngineThread(LPVOID lpThreadParameter) {
+  UNREFERENCED_PARAMETER(lpThreadParameter);
+
+  sLine* command;
+  bool beginStarter = true;
+  bool bInGame = false;
+
+  if (!InitHooks()) {
+    wcscpy_s(Vars.szPath, MAX_PATH, L"common");
+    Log(L"D2BS Engine startup failed. %s", Vars.szCommandLine);
+    Print(L"\u00FFc2D2BS\u00FFc0 :: Engine startup failed!");
+    return FALSE;
+  }
+
+  ParseCommandLine(Vars.szCommandLine);
+
+  command = GetCommand(L"-handle");
+
+  if (command) {
+    Vars.hHandle = (HWND)_wtoi(command->szText);
+  }
+
+  command = GetCommand(L"-mpq");
+
+  if (command) {
+    char* mpq = UnicodeToAnsi(command->szText);
+    LoadMPQ(mpq);
+    delete[] mpq;
+  }
+
+  command = GetCommand(L"-profile");
+
+  if (command) {
+    const wchar_t* profile = command->szText;
+    if (SwitchToProfile(profile))
+      Print(L"\u00FFc2D2BS\u00FFc0 :: Switched to profile %s", profile);
+    else
+      Print(L"\u00FFc2D2BS\u00FFc0 :: Profile %s not found", profile);
+  }
+
+  Log(L"D2BS Engine startup complete. %s", D2BS_VERSION);
+  Print(L"\u00FFc2D2BS\u00FFc0 :: Engine startup complete!");
+
+  while (Vars.bActive) {
+    switch (ClientState()) {
+      case ClientStateInGame: {
+        if (bInGame) {
+          if ((Vars.dwMaxGameTime && Vars.dwGameTime && (GetTickCount() - Vars.dwGameTime) > Vars.dwMaxGameTime) ||
+              (!D2COMMON_IsTownByLevelNo(GetPlayerArea()) && (Vars.nChickenHP && Vars.nChickenHP >= GetUnitHP(D2CLIENT_GetPlayerUnit())) ||
+               (Vars.nChickenMP && Vars.nChickenMP >= GetUnitMP(D2CLIENT_GetPlayerUnit()))))
+            D2CLIENT_ExitGame();
+        } else {
+          Vars.dwGameTime = GetTickCount();
+
+          Sleep(500);
+
+          D2CLIENT_InitInventory();
+          sScriptEngine->ForEachScript(
+              [](Script* script, void*, uint) {
+                script->UpdatePlayerGid();
+                return true;
+              },
+              NULL, 0);
+          sScriptEngine->UpdateConsole();
+          Vars.bQuitting = false;
+          GameJoined();
+
+          bInGame = true;
+        }
+        break;
+      }
+      case ClientStateMenu: {
+        while (Vars.bUseProfileScript) {
+          Sleep(100);
+        }
+        MenuEntered(beginStarter);
+        beginStarter = false;
+        if (bInGame) {
+          Vars.dwGameTime = NULL;
+          bInGame = false;
+        }
+        break;
+      }
+      case ClientStateBusy:
+      case ClientStateNull:
+        break;
+    }
+    Sleep(50);
+    /*	EnterCriticalSection(&sScriptEngine->lock);
+            for(ScriptMap::iterator it = sScriptEngine->scripts.begin(); it != sScriptEngine->scripts.end(); it++)
+                    JS_TriggerOperationCallback(it->second->GetContext());
+            LeaveCriticalSection(&sScriptEngine->lock);  */
+  }
+
+  sScriptEngine->Shutdown();
+
+  return NULL;
 }
