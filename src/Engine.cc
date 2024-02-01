@@ -36,25 +36,15 @@ Engine::Engine() : m_hModule(nullptr), m_pScriptEngine(std::make_unique<ScriptEn
 Engine::~Engine() {
 }
 
-bool Engine::Initialize(HMODULE hModule, LPVOID lpReserved) {
+bool Engine::Initialize(HMODULE hModule) {
   m_hModule = hModule;
 
   // start of old DllMain DLL_PROCESS_ATTACH
-  if (lpReserved != NULL) {
-    Vars.pModule = (Module*)lpReserved;
-
-    if (!Vars.pModule)
-      return FALSE;
-
-    wcscpy_s(Vars.szPath, MAX_PATH, Vars.pModule->szPath);
-    Vars.bLoadedWithCGuard = TRUE;
-  } else {
-    Vars.hModule = hModule;
-    GetModuleFileNameW(hModule, Vars.szPath, MAX_PATH);
-    PathRemoveFileSpecW(Vars.szPath);
-    wcscat_s(Vars.szPath, MAX_PATH, L"\\");
-    Vars.bLoadedWithCGuard = FALSE;
-  }
+  Vars.hModule = hModule;
+  GetModuleFileNameW(hModule, Vars.szPath, MAX_PATH);
+  PathRemoveFileSpecW(Vars.szPath);
+  wcscat_s(Vars.szPath, MAX_PATH, L"\\");
+  Vars.bLoadedWithCGuard = FALSE;
 
   swprintf_s(Vars.szLogPath, _countof(Vars.szLogPath), L"%slogs\\", Vars.szPath);
   CreateDirectoryW(Vars.szLogPath, NULL);

@@ -11,8 +11,6 @@
 #include "Engine.h"
 #include "MPQStats.h"
 
-Variables Vars = {};
-
 DWORD ReassignPlayerHandler(BYTE* pPacket, DWORD /*dwSize*/) {
   if (*(LPDWORD)&pPacket[2] == D2CLIENT_GetPlayerUnit()->dwUnitId)
     pPacket[10] = NULL;

@@ -12,7 +12,7 @@ BOOL WINAPI DllMain(HINSTANCE hModule, DWORD dwReason, LPVOID lpReserved) {
       DisableThreadLibraryCalls(hModule);
 
       kEngineInstance = std::make_unique<Engine>();
-      if (!kEngineInstance->Initialize(hModule, lpReserved)) {
+      if (!kEngineInstance->Initialize(hModule)) {
         return FALSE;
       }
       break;
