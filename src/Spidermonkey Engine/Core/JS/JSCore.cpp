@@ -75,53 +75,74 @@ JSAPI_FUNC(my_print) {
   return JS_TRUE;
 }
 
+// TODO(ejt): setTimeout, setInterval and clearInterval is not currently used by kolbot (it overrides it).
+// The plan is to use libuv timers once we get to adding libuv, for now just throw an error.
 JSAPI_FUNC(my_setTimeout) {
-  JS_SET_RVAL(cx, vp, JSVAL_NULL);
+  (argc);
+  (vp);
 
-  if (argc < 2 || !JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1]))
-    JS_ReportError(cx, "invalid params passed to setTimeout");
+  JS_ReportError(cx, "setTimeout temporarily disabled during development");
+  return JS_FALSE;
 
-  if (JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[0]) && JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1])) {
-    Script* self = (Script*)JS_GetContextPrivate(cx);
-    int freq = JSVAL_TO_INT(JS_ARGV(cx, vp)[1]);
-    self->RegisterEvent("setTimeout", JS_ARGV(cx, vp)[0]);
-    Event* evt = new Event;
-    evt->owner = self;
-    evt->name = "setTimeout";
-    evt->arg3 = new jsval(JS_ARGV(cx, vp)[0]);
-    JS_SET_RVAL(cx, vp, INT_TO_JSVAL(sScriptEngine->AddDelayedEvent(evt, freq)));
-  }
+  //JS_SET_RVAL(cx, vp, JSVAL_NULL);
 
-  return JS_TRUE;
+  //if (argc < 2 || !JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1]))
+  //  JS_ReportError(cx, "invalid params passed to setTimeout");
+
+  //if (JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[0]) && JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1])) {
+  //  Script* self = (Script*)JS_GetContextPrivate(cx);
+  //  int freq = JSVAL_TO_INT(JS_ARGV(cx, vp)[1]);
+  //  self->RegisterEvent("setTimeout", JS_ARGV(cx, vp)[0]);
+  //  Event* evt = new Event;
+  //  evt->owner = self;
+  //  evt->name = "setTimeout";
+  //  evt->arg3 = new jsval(JS_ARGV(cx, vp)[0]);
+  //  JS_SET_RVAL(cx, vp, INT_TO_JSVAL(sScriptEngine->AddDelayedEvent(evt, freq)));
+  //}
+
+  //return JS_TRUE;
 }
 
 JSAPI_FUNC(my_setInterval) {
-  JS_SET_RVAL(cx, vp, JSVAL_NULL);
+  (argc);
+  (vp);
 
-  if (argc < 2 || !JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1]))
-    JS_ReportError(cx, "invalid params passed to setInterval");
+  JS_ReportError(cx, "setInterval temporarily disabled during development");
+  return JS_FALSE;
 
-  if (JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[0]) && JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1])) {
-    Script* self = (Script*)JS_GetContextPrivate(cx);
-    int freq = JSVAL_TO_INT(JS_ARGV(cx, vp)[1]);
-    self->RegisterEvent("setInterval", JS_ARGV(cx, vp)[0]);
-    Event* evt = new Event;
-    evt->owner = self;
-    evt->name = "setInterval";
-    evt->arg3 = new jsval(JS_ARGV(cx, vp)[0]);
-    JS_SET_RVAL(cx, vp, INT_TO_JSVAL(sScriptEngine->AddDelayedEvent(evt, freq)));
-  }
+  //JS_SET_RVAL(cx, vp, JSVAL_NULL);
 
-  return JS_TRUE;
+  //if (argc < 2 || !JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1]))
+  //  JS_ReportError(cx, "invalid params passed to setInterval");
+
+  //if (JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[0]) && JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1])) {
+  //  Script* self = (Script*)JS_GetContextPrivate(cx);
+  //  int freq = JSVAL_TO_INT(JS_ARGV(cx, vp)[1]);
+  //  self->RegisterEvent("setInterval", JS_ARGV(cx, vp)[0]);
+  //  Event* evt = new Event;
+  //  evt->owner = self;
+  //  evt->name = "setInterval";
+  //  evt->arg3 = new jsval(JS_ARGV(cx, vp)[0]);
+  //  JS_SET_RVAL(cx, vp, INT_TO_JSVAL(sScriptEngine->AddDelayedEvent(evt, freq)));
+  //}
+
+  //return JS_TRUE;
 }
 JSAPI_FUNC(my_clearInterval) {
-  JS_SET_RVAL(cx, vp, JSVAL_NULL);
-  if (argc != 1 || !JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[0]))
-    JS_ReportError(cx, "invalid params passed to clearInterval");
+  (argc);
+  (vp);
 
-  sScriptEngine->RemoveDelayedEvent(JSVAL_TO_INT(JS_ARGV(cx, vp)[0]));
-  return JS_TRUE;
+  JS_ReportError(cx, "clearInterval temporarily disabled during development");
+  return JS_FALSE;
+
+  //JS_SET_RVAL(cx, vp, JSVAL_NULL);
+  //if (argc != 1 || !JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[0]))
+  //  JS_ReportError(cx, "invalid params passed to clearInterval");
+
+  //sScriptEngine->RemoveDelayedEvent(JSVAL_TO_INT(JS_ARGV(cx, vp)[0]));
+  //return JS_TRUE;
 }
+
 JSAPI_FUNC(my_delay) {
   uint32 nDelay = 0;
   JS_BeginRequest(cx);

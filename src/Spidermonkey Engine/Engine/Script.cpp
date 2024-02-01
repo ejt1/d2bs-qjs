@@ -617,9 +617,9 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
       ExecuteEvent(evtName, 0, &dummy);
     }
 
-    if (strcmp(evtName, "setTimeout") == 0) {
-      sScriptEngine->RemoveDelayedEvent(*(DWORD*)evt->arg1);
-    }
+    //if (strcmp(evtName, "setTimeout") == 0) {
+    //  sScriptEngine->RemoveDelayedEvent(*(DWORD*)evt->arg1);
+    //}
 
     return true;
   }

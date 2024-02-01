@@ -16,7 +16,7 @@
 bool __fastcall DisposeScript(Script* script, void*, uint);
 bool __fastcall StopScript(Script* script, void* argv, uint argc);
 
-ScriptEngine::ScriptEngine() : m_console(NULL), m_scripts(), m_state(Stopped), m_lock({0}), m_scriptListLock({0}), m_DelayedExecList(), m_delayedExecKey() {
+ScriptEngine::ScriptEngine() : m_console(NULL), m_scripts(), m_state(Stopped), m_lock({0}), m_scriptListLock({0})/*, m_DelayedExecList(), m_delayedExecKey()*/ {
 }
 
 ScriptEngine::~ScriptEngine() {
@@ -249,44 +249,45 @@ bool __fastcall StopIngameScript(Script* script, void*, uint) {
   return true;
 }
 
-int ScriptEngine::AddDelayedEvent(Event* evt, int freq) {
-  m_delayedExecKey++;
-  evt->arg1 = new DWORD(m_delayedExecKey);
-  evt->arg2 = CreateWaitableTimer(NULL, true, NULL);
+//int ScriptEngine::AddDelayedEvent(Event* evt, int freq) {
+//  m_delayedExecKey++;
+//  evt->arg1 = new DWORD(m_delayedExecKey);
+//  evt->arg2 = CreateWaitableTimer(NULL, true, NULL);
+//
+//  __int64 start;
+//  start = freq * -10000;
+//  LARGE_INTEGER lStart;
+//  // Copy the relative time into a LARGE_INTEGER.
+//  lStart.LowPart = (DWORD)(start & 0xFFFFFFFF);
+//  lStart.HighPart = (LONG)(start >> 32);
+//  freq = (evt->name.compare("setInterval") == 0) ? freq : 0;
+//  EnterCriticalSection(&Vars.cEventSection);
+//  m_DelayedExecList.push_back(evt);
+//  SetWaitableTimer((HANDLE*)evt->arg2, &lStart, freq, &EventTimerProc, evt, false);
+//  LeaveCriticalSection(&Vars.cEventSection);
+//
+//  return m_delayedExecKey;
+//}
+//
+//void ScriptEngine::RemoveDelayedEvent(int key) {
+//  std::list<Event*>::iterator it;
+//  it = m_DelayedExecList.begin();
+//  while (it != m_DelayedExecList.end()) {
+//    if (*(int*)(*it)->arg1 == key) {
+//      CancelWaitableTimer((HANDLE*)(*it)->arg2);
+//      CloseHandle((HANDLE*)(*it)->arg2);
+//      Event* evt = *it;
+//      evt->owner->UnregisterEvent(evt->name.c_str(), *(jsval*)evt->arg3);
+//      delete evt->arg1;
+//      delete evt->arg3;
+//      delete evt;
+//      it = m_DelayedExecList.erase(it);
+//    } else
+//      it++;
+//  }
+//  LeaveCriticalSection(&Vars.cEventSection);
+//}
 
-  __int64 start;
-  start = freq * -10000;
-  LARGE_INTEGER lStart;
-  // Copy the relative time into a LARGE_INTEGER.
-  lStart.LowPart = (DWORD)(start & 0xFFFFFFFF);
-  lStart.HighPart = (LONG)(start >> 32);
-  freq = (evt->name.compare("setInterval") == 0) ? freq : 0;
-  EnterCriticalSection(&Vars.cEventSection);
-  m_DelayedExecList.push_back(evt);
-  SetWaitableTimer((HANDLE*)evt->arg2, &lStart, freq, &EventTimerProc, evt, false);
-  LeaveCriticalSection(&Vars.cEventSection);
-
-  return m_delayedExecKey;
-}
-
-void ScriptEngine::RemoveDelayedEvent(int key) {
-  std::list<Event*>::iterator it;
-  it = m_DelayedExecList.begin();
-  while (it != m_DelayedExecList.end()) {
-    if (*(int*)(*it)->arg1 == key) {
-      CancelWaitableTimer((HANDLE*)(*it)->arg2);
-      CloseHandle((HANDLE*)(*it)->arg2);
-      Event* evt = *it;
-      evt->owner->UnregisterEvent(evt->name.c_str(), *(jsval*)evt->arg3);
-      delete evt->arg1;
-      delete evt->arg3;
-      delete evt;
-      it = m_DelayedExecList.erase(it);
-    } else
-      it++;
-  }
-  LeaveCriticalSection(&Vars.cEventSection);
-}
 void CALLBACK EventTimerProc(LPVOID lpArg, DWORD /*dwTimerLowValue*/, DWORD /*dwTimerHighValue*/) {
   Event* evt = (Event*)lpArg;
   evt->owner->FireEvent(evt);

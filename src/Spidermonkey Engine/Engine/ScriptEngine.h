@@ -53,14 +53,15 @@ class ScriptEngine {
                  JSPropertySpec* s_props);
   void DefineConstant(JSContext* context, JSObject* globalObject, const char* name, int value);
   void UpdateConsole();
-  int AddDelayedEvent(Event* evt, int freq);
-  void RemoveDelayedEvent(int key);
+
+  //int AddDelayedEvent(Event* evt, int freq);
+  //void RemoveDelayedEvent(int key);
 
  private:
   Script* m_console;
   EngineState m_state;
-  std::list<Event*> m_DelayedExecList;
-  int m_delayedExecKey;
+  //std::list<Event*> m_DelayedExecList;
+  //int m_delayedExecKey;
   CRITICAL_SECTION m_scriptListLock;
   ScriptMap m_scripts;
   CRITICAL_SECTION m_lock;
@@ -71,4 +72,4 @@ class ScriptEngine {
 // these ForEachScript helpers are exposed in case they can be of use somewhere
 bool __fastcall StopIngameScript(Script* script, void*, uint);
 
-void CALLBACK EventTimerProc(LPVOID lpArg, DWORD dwTimerLowValue, DWORD dwTimerHighValue);
+//void CALLBACK EventTimerProc(LPVOID lpArg, DWORD dwTimerLowValue, DWORD dwTimerHighValue);
