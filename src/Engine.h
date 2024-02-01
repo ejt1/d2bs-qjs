@@ -52,6 +52,7 @@ struct Variables {
   BOOL bActive;
   BOOL bIgnoreKeys;
   BOOL bBlockKeys;
+  BOOL bIgnoreMouse;
   BOOL bBlockMouse;
   BOOL bDisableCache;
   BOOL bUseProfileScript;
@@ -85,9 +86,6 @@ struct Variables {
   wchar_t szTitle[256];
   wchar_t szCommandLine[256];
 
-  HHOOK hMouseHook;
-
-  UINT_PTR uTimer;
   long SectionCount;
 
   std::queue<std::wstring> qPrintBuffer;
@@ -155,5 +153,4 @@ class Engine final {
   static void HandleGameDrawMenu();
 
   HMODULE m_hModule;
-  HANDLE m_hThread;
 };

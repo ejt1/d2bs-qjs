@@ -17,7 +17,6 @@ DWORD __fastcall ChannelInput(wchar_t* wMsg);
 DWORD __fastcall GameAttack(UnitInteraction* pAttack);
 void __fastcall GamePlayerAssignment(UnitAny* pPlayer);
 void GameLeave(void);
-void CALLBACK TimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
 VOID __fastcall ClassicSTUB();
 VOID __fastcall LodSTUB();
 void FailToJoin();

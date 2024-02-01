@@ -22,8 +22,9 @@
 #endif
 #include <MinHook.h>
 #include <mutex>
+#include <Control.h>
 
-Engine::Engine() : m_hModule(nullptr), m_hThread(INVALID_HANDLE_VALUE) {
+Engine::Engine() : m_hModule(nullptr) {
   m_instance = this;
   m_fnWndProc = nullptr;
   m_fnCreateWindow = nullptr;
@@ -141,15 +142,13 @@ bool Engine::Initialize(HMODULE hModule, LPVOID lpReserved) {
   Vars.bGameLoopEntered = FALSE;
   Vars.SectionCount = 0;
   Vars.bIgnoreKeys = FALSE;
+  Vars.bIgnoreMouse = FALSE;
 
   Genhook::Initialize();
   DefineOffsets();
   InstallPatches();
   InstallConditional();
   CreateDdeServer();
-
-  if ((m_hThread = CreateThread(NULL, NULL, EngineThread, this, NULL, NULL)) == NULL)
-    return FALSE;
 
   return TRUE;
 }
@@ -162,8 +161,6 @@ void Engine::Shutdown() {
     return;
 
   Vars.bActive = FALSE;
-  if (!Vars.bShutdownFromDllMain)
-    WaitForSingleObject(m_hThread, INFINITE);
 
   MH_DisableHook(MH_ALL_HOOKS);
   MH_RemoveHook(HandleGameDrawMenu);
@@ -174,8 +171,6 @@ void Engine::Shutdown() {
   RemovePatches();
   Genhook::Destroy();
   ShutdownDdeServer();
-
-  KillTimer(D2GFX_GetHwnd(), Vars.uTimer);
 
   DeleteCriticalSection(&Vars.cRoomSection);
   DeleteCriticalSection(&Vars.cMiscSection);
@@ -196,24 +191,24 @@ void Engine::Shutdown() {
   Vars.bNeedShutdown = false;
 }
 
-DWORD __stdcall Engine::EngineThread(LPVOID lpThreadParameter) {
-  UNREFERENCED_PARAMETER(lpThreadParameter);
-
-  if (!InitHooks()) {
-    wcscpy_s(Vars.szPath, MAX_PATH, L"common");
-    Log(L"D2BS Engine startup failed. %s", Vars.szCommandLine);
-    Print(L"\u00FFc2D2BS\u00FFc0 :: Engine startup failed!");
-    return FALSE;
-  }
-
-  // sScriptEngine->Shutdown();
-
-  return NULL;
-}
-
 void Engine::OnUpdate() {
   static std::once_flag of;
   std::call_once(of, []() {
+    if (!sScriptEngine->Startup()) {
+      wcscpy_s(Vars.szPath, MAX_PATH, L"common");
+      Log(L"D2BS Engine startup failed. %s", Vars.szCommandLine);
+      Print(L"\u00FFc2D2BS\u00FFc0 :: Engine startup failed!");
+      exit(-1);
+    }
+
+    Vars.bActive = TRUE;
+
+    if (ClientState() == ClientStateMenu && Vars.bStartAtMenu)
+      clickControl(*p_D2WIN_FirstControl);
+
+    *p_D2CLIENT_Lang = D2CLIENT_GetGameLanguageCode();
+    Vars.dwLocale = *p_D2CLIENT_Lang;
+
     sLine* command;
     ParseCommandLine(Vars.szCommandLine);
 
@@ -328,6 +323,7 @@ LRESULT __stdcall Engine::HandleWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
     case WM_KEYUP:
     case WM_SYSKEYUP:
     case WM_CHAR: {
+      // TODO(ejt): scuffed solution to ignore keyboard events from scripts
       if (Vars.bIgnoreKeys) {
         break;
       }
@@ -416,64 +412,68 @@ LRESULT __stdcall Engine::HandleWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
     } break;
 
     // TODO(ejt): revisit mouse events for cleanup
-    //case WM_LBUTTONDOWN:
-    //case WM_LBUTTONUP:
-    //case WM_RBUTTONDOWN:
-    //case WM_RBUTTONUP:
-    //case WM_MBUTTONDOWN:
-    //case WM_MBUTTONUP:
-    //case WM_MOUSEMOVE: {
-    //  POINT pt = {static_cast<LONG>(LOWORD(lParam)), static_cast<LONG>(HIWORD(lParam))};
-    //  // filter out clicks on the window border
-    //  if ((pt.x < 0 || pt.y < 0))
-    //    break;
+    case WM_LBUTTONDOWN:
+    case WM_LBUTTONUP:
+    case WM_RBUTTONDOWN:
+    case WM_RBUTTONUP:
+    case WM_MBUTTONDOWN:
+    case WM_MBUTTONUP:
+    case WM_MOUSEMOVE: {
+      // TODO(ejt): scuffed solution to ignore mouse events from scripts
+      if (Vars.bIgnoreMouse) {
+        break;
+      }
+      POINT pt = {static_cast<LONG>(LOWORD(lParam)), static_cast<LONG>(HIWORD(lParam))};
+      // filter out clicks on the window border
+      if ((pt.x < 0 || pt.y < 0))
+        break;
 
-    //  Vars.pMouseCoords = pt;
-    //  if (Vars.bBlockMouse)
-    //    return 0;
+      Vars.pMouseCoords = pt;
+      if (Vars.bBlockMouse)
+        return 0;
 
-    //  bool clicked = false;
+      bool clicked = false;
 
-    //  HookClickHelper helper = {-1, {pt.x, pt.y}};
-    //  switch (uMsg) {
-    //    case WM_LBUTTONDOWN:
-    //      MouseClickEvent(0, pt, false);
-    //      helper.button = 0;
-    //      if (Genhook::ForEachVisibleHook(ClickHook, &helper, 1))
-    //        clicked = true;
-    //      break;
-    //    case WM_LBUTTONUP:
-    //      MouseClickEvent(0, pt, true);
-    //      break;
-    //    case WM_RBUTTONDOWN:
-    //      MouseClickEvent(1, pt, false);
-    //      helper.button = 1;
-    //      if (Genhook::ForEachVisibleHook(ClickHook, &helper, 1))
-    //        clicked = true;
-    //      break;
-    //    case WM_RBUTTONUP:
-    //      MouseClickEvent(1, pt, true);
-    //      break;
-    //    case WM_MBUTTONDOWN:
-    //      MouseClickEvent(2, pt, false);
-    //      helper.button = 2;
-    //      if (Genhook::ForEachVisibleHook(ClickHook, &helper, 1))
-    //        clicked = true;
-    //      break;
-    //    case WM_MBUTTONUP:
-    //      MouseClickEvent(2, pt, true);
-    //      break;
-    //    case WM_MOUSEMOVE:
-    //      // would be nice to enable these events but they bog down too much
-    //      MouseMoveEvent(pt);
-    //      // Genhook::ForEachVisibleHook(HoverHook, &helper, 1);
-    //      break;
-    //  }
+      HookClickHelper helper = {-1, {pt.x, pt.y}};
+      switch (uMsg) {
+        case WM_LBUTTONDOWN:
+          MouseClickEvent(0, pt, false);
+          helper.button = 0;
+          if (Genhook::ForEachVisibleHook(ClickHook, &helper, 1))
+            clicked = true;
+          break;
+        case WM_LBUTTONUP:
+          MouseClickEvent(0, pt, true);
+          break;
+        case WM_RBUTTONDOWN:
+          MouseClickEvent(1, pt, false);
+          helper.button = 1;
+          if (Genhook::ForEachVisibleHook(ClickHook, &helper, 1))
+            clicked = true;
+          break;
+        case WM_RBUTTONUP:
+          MouseClickEvent(1, pt, true);
+          break;
+        case WM_MBUTTONDOWN:
+          MouseClickEvent(2, pt, false);
+          helper.button = 2;
+          if (Genhook::ForEachVisibleHook(ClickHook, &helper, 1))
+            clicked = true;
+          break;
+        case WM_MBUTTONUP:
+          MouseClickEvent(2, pt, true);
+          break;
+        case WM_MOUSEMOVE:
+          // would be nice to enable these events but they bog down too much
+          MouseMoveEvent(pt);
+          // Genhook::ForEachVisibleHook(HoverHook, &helper, 1);
+          break;
+      }
 
-    //  if (clicked) {
-    //    return 0;
-    //  }
-    //} break;
+      if (clicked) {
+        return 0;
+      }
+    } break;
 
     case WM_COPYDATA: {
       COPYDATASTRUCT* pCopy = (COPYDATASTRUCT*)lParam;
@@ -508,6 +508,17 @@ int __stdcall Engine::HandleCreateWindow(HINSTANCE hInstance, WNDPROC lpWndProc,
 }
 
 void Engine::HandleGameDraw() {
+  if (Vars.bGameLoopEntered)
+    LeaveCriticalSection(&Vars.cGameLoopSection);
+  else {
+    Vars.bGameLoopEntered = true;
+    Vars.dwGameThreadId = GetCurrentThreadId();
+  }
+  if (Vars.SectionCount)
+    Sleep(5);
+
+  EnterCriticalSection(&Vars.cGameLoopSection);
+
   m_instance->OnUpdate();
 
   if (Vars.bActive && ClientState() == ClientStateInGame) {
@@ -546,5 +557,13 @@ void Engine::HandleGameDrawMenu() {
     Vars.bTakeScreenshot = false;
     D2WIN_TakeScreenshot();
   }
-  Sleep(10);
+  if (Vars.SectionCount) {
+    if (Vars.bGameLoopEntered)
+      LeaveCriticalSection(&Vars.cGameLoopSection);
+    else
+      Vars.bGameLoopEntered = true;
+    Sleep(0);
+    EnterCriticalSection(&Vars.cGameLoopSection);
+  } else
+    Sleep(10);
 }

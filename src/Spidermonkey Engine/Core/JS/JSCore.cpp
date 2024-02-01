@@ -722,11 +722,13 @@ JSAPI_FUNC(my_sendClick) {
     return JS_FALSE;
   }
   JS_EndRequest(cx);
+  Vars.bIgnoreMouse = TRUE;
   Sleep(100);
   SendMouseClick(x, y, 0);
   Sleep(100);
   SendMouseClick(x, y, 1);
   Sleep(100);
+  Vars.bIgnoreMouse = FALSE;
   return JS_TRUE;
 }
 
