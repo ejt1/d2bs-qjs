@@ -294,43 +294,6 @@ void FlushPrint() {
   }
 }
 
-void GameDraw(void) {
-  if (Vars.bActive && ClientState() == ClientStateInGame) {
-    FlushPrint();
-    Genhook::DrawAll(IG);
-    DrawLogo();
-    Console::Draw();
-  }
-  if (Vars.bTakeScreenshot) {
-    Vars.bTakeScreenshot = false;
-    D2WIN_TakeScreenshot();
-  }
-  if (Vars.SectionCount) {
-    if (Vars.bGameLoopEntered)
-      LeaveCriticalSection(&Vars.cGameLoopSection);
-    else
-      Vars.bGameLoopEntered = true;
-    Sleep(0);
-    EnterCriticalSection(&Vars.cGameLoopSection);
-  } else
-    Sleep(10);
-}
-
-void GameDrawOOG(void) {
-  D2WIN_DrawSprites();
-  if (Vars.bActive && ClientState() == ClientStateMenu) {
-    FlushPrint();
-    Genhook::DrawAll(OOG);
-    DrawLogo();
-    Console::Draw();
-  }
-  if (Vars.bTakeScreenshot) {
-    Vars.bTakeScreenshot = false;
-    D2WIN_TakeScreenshot();
-  }
-  Sleep(10);
-}
-
 void SetMaxDiff(void) {
   if (D2CLIENT_GetDifficulty() == 1 && *p_D2CLIENT_ExpCharFlag) {
     BnetData* pData = *p_D2LAUNCH_BnData;
@@ -402,23 +365,9 @@ void CALLBACK TimerProc(HWND /*hwnd*/, UINT /*uMsg*/, UINT_PTR /*idEvent*/, DWOR
 }
 
 void GameLeave(void) {
-  //	if(Vars.bGameLoopEntered)
-  //	LeaveCriticalSection(&Vars.cGameLoopSection);
-  //	else
-  //		Vars.bGameLoopEntered = true;
-
-  /*EnterCriticalSection(&sScriptEngine->lock);
-  std::vector<Script*> list;
-  for(ScriptMap::iterator it = sScriptEngine->scripts.begin(); it != sScriptEngine->scripts.end(); it++)
-          if(it->second->GetState() == InGame)
-                  it->second->Stop(true);
-
-  LeaveCriticalSection(&sScriptEngine->lock); */
   Vars.bQuitting = false;
   sScriptEngine->ForEachScript(StopIngameScript, NULL, 0);
   ActMap::ClearCache();
-
-  //	EnterCriticalSection(&Vars.cGameLoopSection);
 }
 
 BOOL __fastcall RealmPacketRecv(BYTE* pPacket, DWORD dwSize) {

@@ -68,10 +68,6 @@ void __declspec(naked) GamePacketSent_Interception() {
   }
 }
 
-void GameDraw_Intercept(void) {
-  GameDraw();
-}
-
 void __declspec(naked) GameInput_Intercept() {
   __asm {
 		pushad
@@ -181,10 +177,6 @@ Skip:
 		MOV DWORD PTR DS:[EAX+0xC],0
 		RETN
   }
-}
-
-void GameDrawOOG_Intercept(void) {
-  GameDrawOOG();
 }
 
 void __declspec(naked) CongratsScreen_Intercept(void) {

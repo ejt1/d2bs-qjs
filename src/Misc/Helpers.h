@@ -23,8 +23,8 @@ bool ProcessCommand(const wchar_t* command, bool unprocessedIsCommand);
 void ResumeProcess();
 void InitCommandLine();
 
-void GameJoined(void);
-void MenuEntered(bool beginStarter);
+const wchar_t* GetStarterScriptName(void);
+ScriptMode GetStarterScriptState(void);
 
 char* DllLoadAddrStrs();
 LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* ptrs);

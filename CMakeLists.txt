@@ -112,9 +112,12 @@ target_compile_definitions(D2BS PRIVATE
   STATIC_JS_API)
 
 target_link_libraries(D2BS PRIVATE
+  # windows dependencies
   dbghelp
   shlwapi
 
+  # vendor dependencies
+  minhook
   js)
 
 install(TARGETS D2BS RUNTIME DESTINATION bin/d2bs)

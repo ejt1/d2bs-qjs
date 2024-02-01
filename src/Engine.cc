@@ -19,8 +19,13 @@
 #ifdef _MSVC_DEBUG
 #include "D2Loader.h"
 #endif
+#include <MinHook.h>
 
 Engine::Engine() : m_hModule(nullptr), m_hThread(INVALID_HANDLE_VALUE) {
+  m_fnWndProc = nullptr;
+  m_fnCreateWindow = nullptr;
+  m_fnGameDraw = nullptr;
+  m_fnGameDrawMenu = nullptr;
 }
 
 Engine::~Engine() {
@@ -101,6 +106,17 @@ bool Engine::Initialize(HMODULE hModule, LPVOID lpReserved) {
   Vars.bShutdownFromDllMain = FALSE;
   SetUnhandledExceptionFilter(ExceptionHandler);
 
+  MessageBox(nullptr, "asdf", "continue", MB_OK);
+  MH_Initialize();
+  // win32 hooks
+
+  // game hooks
+  size_t base = reinterpret_cast<size_t>(GetModuleHandle(nullptr));
+  MH_CreateHook(reinterpret_cast<void*>(base + 0xF52E0), HandleCreateWindow, (void**)&m_fnCreateWindow);
+  MH_CreateHook(reinterpret_cast<void*>(base + 0x53B30), HandleGameDraw, (void**)&m_fnGameDraw);
+  MH_CreateHook(reinterpret_cast<void*>(base + 0xF9870), HandleGameDrawMenu, (void**)&m_fnGameDrawMenu);
+  MH_EnableHook(MH_ALL_HOOKS);
+
   // start of old Startup function
   InitializeCriticalSection(&Vars.cEventSection);
   InitializeCriticalSection(&Vars.cRoomSection);
@@ -123,14 +139,13 @@ bool Engine::Initialize(HMODULE hModule, LPVOID lpReserved) {
   Vars.bGameLoopEntered = FALSE;
   Vars.SectionCount = 0;
 
-  // MessageBox(NULL, "qwe", "qwe", MB_OK);
   Genhook::Initialize();
   DefineOffsets();
   InstallPatches();
   InstallConditional();
   CreateDdeServer();
 
-  if ((m_hThread = CreateThread(NULL, NULL, EngineThread, NULL, NULL, NULL)) == NULL)
+  if ((m_hThread = CreateThread(NULL, NULL, EngineThread, this, NULL, NULL)) == NULL)
     return FALSE;
 
   return TRUE;
@@ -145,6 +160,12 @@ void Engine::Shutdown() {
     WaitForSingleObject(m_hThread, INFINITE);
 
   SetWindowLong(D2GFX_GetHwnd(), GWL_WNDPROC, (LONG)Vars.oldWNDPROC);
+
+  MH_DisableHook(MH_ALL_HOOKS);
+  MH_RemoveHook(HandleGameDrawMenu);
+  MH_RemoveHook(HandleGameDraw);
+  MH_RemoveHook(HandleCreateWindow);
+  MH_Uninitialize();
 
   RemovePatches();
   Genhook::Destroy();
@@ -175,7 +196,7 @@ void Engine::Shutdown() {
 }
 
 DWORD __stdcall Engine::EngineThread(LPVOID lpThreadParameter) {
-  UNREFERENCED_PARAMETER(lpThreadParameter);
+  Engine* engine = static_cast<Engine*>(lpThreadParameter);
 
   sLine* command;
   bool beginStarter = true;
@@ -239,7 +260,7 @@ DWORD __stdcall Engine::EngineThread(LPVOID lpThreadParameter) {
               NULL, 0);
           sScriptEngine->UpdateConsole();
           Vars.bQuitting = false;
-          GameJoined();
+          engine->OnGameEntered();
 
           bInGame = true;
         }
@@ -249,7 +270,7 @@ DWORD __stdcall Engine::EngineThread(LPVOID lpThreadParameter) {
         while (Vars.bUseProfileScript) {
           Sleep(100);
         }
-        MenuEntered(beginStarter);
+        engine->OnMenuEntered(beginStarter);
         beginStarter = false;
         if (bInGame) {
           Vars.dwGameTime = NULL;
@@ -262,13 +283,83 @@ DWORD __stdcall Engine::EngineThread(LPVOID lpThreadParameter) {
         break;
     }
     Sleep(50);
-    /*	EnterCriticalSection(&sScriptEngine->lock);
-            for(ScriptMap::iterator it = sScriptEngine->scripts.begin(); it != sScriptEngine->scripts.end(); it++)
-                    JS_TriggerOperationCallback(it->second->GetContext());
-            LeaveCriticalSection(&sScriptEngine->lock);  */
   }
 
   sScriptEngine->Shutdown();
 
   return NULL;
+}
+
+void Engine::OnGameEntered() {
+  if (!Vars.bUseProfileScript) {
+    const wchar_t* starter = GetStarterScriptName();
+    if (starter != NULL) {
+      Print(L"\u00FFc2D2BS\u00FFc0 :: Starting %s", starter);
+      if (StartScript(starter, GetStarterScriptState()))
+        Print(L"\u00FFc2D2BS\u00FFc0 :: %s running.", starter);
+      else
+        Print(L"\u00FFc2D2BS\u00FFc0 :: Failed to start %s!", starter);
+    }
+  }
+}
+
+void Engine::OnMenuEntered(bool beginStarter) {
+  if (beginStarter && !Vars.bUseProfileScript) {
+    const wchar_t* starter = GetStarterScriptName();
+    if (starter != NULL) {
+      Print(L"\u00FFc2D2BS\u00FFc0 :: Starting %s", starter);
+      if (StartScript(starter, GetStarterScriptState()))
+        Print(L"\u00FFc2D2BS\u00FFc0 :: %s running.", starter);
+      else
+        Print(L"\u00FFc2D2BS\u00FFc0 :: Failed to start %s!", starter);
+    }
+  }
+}
+
+LRESULT __stdcall Engine::HandleWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+  return m_fnWndProc(hWnd, uMsg, wParam, lParam);
+}
+
+int __stdcall Engine::HandleCreateWindow(HINSTANCE hInstance, WNDPROC lpWndProc, int a3, int a4) {
+  m_fnWndProc = lpWndProc;
+  return m_fnCreateWindow(hInstance, HandleWndProc, a3, a4);
+}
+
+void Engine::HandleGameDraw() {
+  if (Vars.bActive && ClientState() == ClientStateInGame) {
+    FlushPrint();
+    Genhook::DrawAll(IG);
+    DrawLogo();
+    Console::Draw();
+  }
+  if (Vars.bTakeScreenshot) {
+    Vars.bTakeScreenshot = false;
+    D2WIN_TakeScreenshot();
+  }
+  if (Vars.SectionCount) {
+    if (Vars.bGameLoopEntered)
+      LeaveCriticalSection(&Vars.cGameLoopSection);
+    else
+      Vars.bGameLoopEntered = true;
+    Sleep(0);
+    EnterCriticalSection(&Vars.cGameLoopSection);
+  } else
+    Sleep(10);
+  m_fnGameDraw();
+}
+
+void Engine::HandleGameDrawMenu() {
+  //D2WIN_DrawSprites();
+  m_fnGameDrawMenu();
+  if (Vars.bActive && ClientState() == ClientStateMenu) {
+    FlushPrint();
+    Genhook::DrawAll(OOG);
+    DrawLogo();
+    Console::Draw();
+  }
+  if (Vars.bTakeScreenshot) {
+    Vars.bTakeScreenshot = false;
+    D2WIN_TakeScreenshot();
+  }
+  Sleep(10);
 }

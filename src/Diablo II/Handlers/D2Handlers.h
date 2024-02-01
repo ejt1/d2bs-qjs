@@ -3,16 +3,13 @@
 #include <windows.h>
 #include "D2Structs.h"
 
-DWORD WINAPI D2Thread(LPVOID lpParam);
+void FlushPrint();
 DWORD __fastcall GameInput(wchar_t* wMsg);
 LONG WINAPI GameEventHandler(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK MouseMove(int code, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK KeyPress(int code, WPARAM wParam, LPARAM lParam);
-void GameDraw(void);
 DWORD __fastcall GamePacketReceived(BYTE* pPacket, DWORD dwSize);
 DWORD __fastcall GamePacketSent(BYTE* pPacket, DWORD dwSize);
-void __fastcall GameResetFrames(UnitAny* pOwner);
-void GameDrawOOG(void);
 void SetMaxDiff(void);
 void __stdcall AddUnit(UnitAny* lpUnit);
 void __stdcall RemoveUnit(UnitAny* lpUnit);

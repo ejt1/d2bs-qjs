@@ -310,32 +310,6 @@ bool ProcessCommand(const wchar_t* command, bool unprocessedIsCommand) {
   return result;
 }
 
-void GameJoined(void) {
-  if (!Vars.bUseProfileScript) {
-    const wchar_t* starter = GetStarterScriptName();
-    if (starter != NULL) {
-      Print(L"\u00FFc2D2BS\u00FFc0 :: Starting %s", starter);
-      if (StartScript(starter, GetStarterScriptState()))
-        Print(L"\u00FFc2D2BS\u00FFc0 :: %s running.", starter);
-      else
-        Print(L"\u00FFc2D2BS\u00FFc0 :: Failed to start %s!", starter);
-    }
-  }
-}
-
-void MenuEntered(bool beginStarter) {
-  if (beginStarter && !Vars.bUseProfileScript) {
-    const wchar_t* starter = GetStarterScriptName();
-    if (starter != NULL) {
-      Print(L"\u00FFc2D2BS\u00FFc0 :: Starting %s", starter);
-      if (StartScript(starter, GetStarterScriptState()))
-        Print(L"\u00FFc2D2BS\u00FFc0 :: %s running.", starter);
-      else
-        Print(L"\u00FFc2D2BS\u00FFc0 :: Failed to start %s!", starter);
-    }
-  }
-}
-
 SYMBOL_INFO* GetSymFromAddr(HANDLE hProcess, DWORD64 addr) {
   char* symbols = new char[sizeof(SYMBOL_INFO) + 512];
   memset(symbols, 0, sizeof(SYMBOL_INFO) + 512);

@@ -132,6 +132,25 @@ class Engine final {
  private:
   static DWORD WINAPI EngineThread(LPVOID lpThreadParameter);
 
+  void OnGameEntered();
+  void OnMenuEntered(bool beginStarter);
+
+  // hooks
+  inline static WNDPROC m_fnWndProc;
+  static LRESULT WINAPI HandleWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+
+  typedef int(WINAPI* CreateWindow_t)(HINSTANCE, WNDPROC, int a3, int a4);
+  inline static CreateWindow_t m_fnCreateWindow;
+  static int WINAPI HandleCreateWindow(HINSTANCE hInstance, WNDPROC lpWndProc, int a3, int a4);
+
+  typedef void (*GameDraw_t)();
+  inline static GameDraw_t m_fnGameDraw;
+  static void HandleGameDraw();
+
+  typedef void (*GameDrawMenu_t)();
+  inline static GameDrawMenu_t m_fnGameDrawMenu;
+  static void HandleGameDrawMenu();
+
   HMODULE m_hModule;
   HANDLE m_hThread;
 };
