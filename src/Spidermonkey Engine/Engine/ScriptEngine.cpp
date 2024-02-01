@@ -82,7 +82,7 @@ void ScriptEngine::DisposeScript(Script* script) {
   else {
     // bad things happen if we delete from another thread
     Event* evt = new Event;
-    evt->owner = script;
+    //evt->owner = script;
     evt->name = "DisposeMe";
     script->FireEvent(evt);
   }
@@ -288,7 +288,7 @@ bool __fastcall StopIngameScript(Script* script, void*, uint) {
 //  LeaveCriticalSection(&Vars.cEventSection);
 //}
 
-void CALLBACK EventTimerProc(LPVOID lpArg, DWORD /*dwTimerLowValue*/, DWORD /*dwTimerHighValue*/) {
-  Event* evt = (Event*)lpArg;
-  evt->owner->FireEvent(evt);
-}
+//void CALLBACK EventTimerProc(LPVOID lpArg, DWORD /*dwTimerLowValue*/, DWORD /*dwTimerHighValue*/) {
+//  Event* evt = (Event*)lpArg;
+//  evt->owner->FireEvent(evt);
+//}

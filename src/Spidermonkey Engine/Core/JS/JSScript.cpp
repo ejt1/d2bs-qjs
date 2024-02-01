@@ -117,7 +117,7 @@ JSAPI_FUNC(script_send) {
   if (!script || !script->IsRunning())
     return JS_TRUE;
   sScriptEngine->LockScriptList("script.send");
-  evt->owner = script;
+  //evt->owner = script;
   evt->argc = argc;
   evt->name = "scriptmsg";
   evt->arg1 = new DWORD(argc);
@@ -127,7 +127,7 @@ JSAPI_FUNC(script_send) {
     evt->argv[i]->write(cx, JS_ARGV(cx, vp)[i]);
   }
 
-  evt->owner->FireEvent(evt);
+  script->FireEvent(evt);
   sScriptEngine->UnLockScriptList("script.send");
 
   return JS_TRUE;

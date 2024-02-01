@@ -5,7 +5,7 @@ bool __fastcall LifeEventCallback(Script* script, void* argv, uint argc) {
   SingleArgHelper* helper = (SingleArgHelper*)argv;
   if (script->IsRunning() && script->IsListenerRegistered("melife")) {
     Event* evt = new Event;
-    evt->owner = script;
+    //evt->owner = script;
     evt->argc = argc;
     evt->name = "melife";
     evt->arg1 = new DWORD(helper->arg1);
@@ -24,7 +24,7 @@ bool __fastcall ManaEventCallback(Script* script, void* argv, uint argc) {
   SingleArgHelper* helper = (SingleArgHelper*)argv;
   if (script->IsRunning() && script->IsListenerRegistered("memana")) {
     Event* evt = new Event;
-    evt->owner = script;
+    //evt->owner = script;
     evt->argc = argc;
     evt->name = "memana";
     evt->arg1 = new DWORD(helper->arg1);
@@ -44,7 +44,7 @@ bool __fastcall KeyEventCallback(Script* script, void* argv, uint argc) {
   char* name = (helper->up ? "keyup" : "keydown");
   if (script->IsRunning() && script->IsListenerRegistered(name)) {
     Event* evt = new Event;
-    evt->owner = script;
+    //evt->owner = script;
     evt->argc = argc;
     evt->name = name;
     evt->arg1 = new DWORD((DWORD)helper->key);
@@ -55,7 +55,7 @@ bool __fastcall KeyEventCallback(Script* script, void* argv, uint argc) {
   name = (helper->up ? "keyupblocker" : "keydownblocker");
   if (script->IsRunning() && script->IsListenerRegistered(name)) {
     Event* evt = new Event;
-    evt->owner = script;
+    //evt->owner = script;
     evt->argc = argc;
     evt->name = name;
     evt->arg1 = new DWORD((DWORD)helper->key);
@@ -85,7 +85,7 @@ bool __fastcall PlayerAssignCallback(Script* script, void* argv, uint argc) {
   SingleArgHelper* helper = (SingleArgHelper*)argv;
   if (script->IsRunning() && script->IsListenerRegistered("playerassign")) {
     Event* evt = new Event;
-    evt->owner = script;
+    //evt->owner = script;
     evt->argc = argc;
     evt->name = "playerassign";
     evt->arg1 = new DWORD((DWORD)helper->arg1);
@@ -104,7 +104,7 @@ bool __fastcall MouseClickCallback(Script* script, void* argv, uint argc) {
   QuadArgHelper* helper = (QuadArgHelper*)argv;
   if (script->IsRunning() && script->IsListenerRegistered("mouseclick")) {
     Event* evt = new Event;
-    evt->owner = script;
+    //evt->owner = script;
     evt->argc = argc;
     evt->name = "mouseclick";
     evt->arg1 = new DWORD(helper->arg1);
@@ -126,7 +126,7 @@ bool __fastcall MouseMoveCallback(Script* script, void* argv, uint argc) {
   DoubleArgHelper* helper = (DoubleArgHelper*)argv;
   if (script->IsRunning() && script->IsListenerRegistered("mousemove")) {
     Event* evt = new Event;
-    evt->owner = script;
+    //evt->owner = script;
     evt->argc = argc;
     evt->name = "mousemove";
     evt->arg1 = new DWORD(helper->arg1);
@@ -149,7 +149,7 @@ bool __fastcall BCastEventCallback(Script* script, void* argv, uint argc) {
 
   if (script->IsRunning() && script->IsListenerRegistered("scriptmsg")) {
     Event* evt = new Event;
-    evt->owner = script;
+    //evt->owner = script;
     evt->argc = argc;
     evt->name = "scriptmsg";
     evt->arg1 = new DWORD(argc);
@@ -173,7 +173,7 @@ bool __fastcall ChatEventCallback(Script* script, void* argv, uint argc) {
   ChatEventHelper* helper = (ChatEventHelper*)argv;
   if (script->IsRunning() && script->IsListenerRegistered(helper->name)) {
     Event* evt = new Event;
-    evt->owner = script;
+    //evt->owner = script;
     evt->argc = argc;
     evt->name = helper->name;
     evt->arg1 = _strdup(helper->nick);
@@ -187,7 +187,7 @@ bool __fastcall ChatEventCallback(Script* script, void* argv, uint argc) {
 
   if (script->IsRunning() && script->IsListenerRegistered(evtname.c_str())) {
     Event* evt = new Event;
-    evt->owner = script;
+    //evt->owner = script;
     evt->argc = argc;
     evt->name = evtname;
     evt->arg1 = _strdup(helper->nick);
@@ -227,7 +227,7 @@ bool __fastcall CopyDataCallback(Script* script, void* argv, uint argc) {
   CopyDataHelper* helper = (CopyDataHelper*)argv;
   if (script->IsRunning() && script->IsListenerRegistered("copydata")) {
     Event* evt = new Event;
-    evt->owner = script;
+    //evt->owner = script;
     evt->argc = argc;
     evt->name = "copydata";
     evt->arg1 = new DWORD(helper->mode);
@@ -247,7 +247,7 @@ bool __fastcall ItemEventCallback(Script* script, void* argv, uint argc) {
   ItemEventHelper* helper = (ItemEventHelper*)argv;
   if (script->IsRunning() && script->IsListenerRegistered("itemaction")) {
     Event* evt = new Event;
-    evt->owner = script;
+    //evt->owner = script;
     evt->argc = argc;
     evt->name = "itemaction";
     evt->arg1 = new DWORD(helper->id);
@@ -269,7 +269,7 @@ bool __fastcall GameActionEventCallback(Script* script, void* argv, uint argc) {
   GameActionEventHelper* helper = (GameActionEventHelper*)argv;
   if (script->IsRunning() && script->IsListenerRegistered("gameevent")) {
     Event* evt = new Event;
-    evt->owner = script;
+    //evt->owner = script;
     evt->argc = argc;
     evt->name = "gameevent";
     evt->arg1 = new BYTE(helper->mode);
@@ -293,7 +293,7 @@ bool __fastcall PacketEventCallback(Script* script, void* argv, uint argc) {
 
   if (script->IsRunning() && script->IsListenerRegistered(helper->name)) {
     Event* evt = new Event;
-    evt->owner = script;
+    //evt->owner = script;
     evt->argc = argc;
     evt->name = helper->name;
     evt->arg1 = new BYTE[helper->dwSize];
@@ -301,7 +301,7 @@ bool __fastcall PacketEventCallback(Script* script, void* argv, uint argc) {
     evt->arg4 = new DWORD(false);
     memcpy(evt->arg1, helper->pPacket, helper->dwSize);
 
-    if (GetCurrentThreadId() == evt->owner->GetThreadId())
+    if (GetCurrentThreadId() == script->GetThreadId())
       script->HandleEvent(evt, false);
     else {
       ResetEvent(Vars.eventSignal);

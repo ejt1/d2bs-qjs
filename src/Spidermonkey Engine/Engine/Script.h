@@ -19,9 +19,7 @@ typedef std::map<std::string, FunctionList> FunctionMap;
 typedef std::list<Script*> ScriptList;
 
 struct Event {
-  Event() : owner(nullptr), argv(nullptr), argc(0), arg1(nullptr), arg2(nullptr), arg3(nullptr), arg4(nullptr), arg5(nullptr){};
-  Script* owner;
-  JSObject* object;
+  Event() : argv(nullptr), argc(0), arg1(nullptr), arg2(nullptr), arg3(nullptr), arg4(nullptr), arg5(nullptr){};
   FunctionList functions;
   JSAutoStructuredCloneBuffer** argv;
   uint argc;
@@ -31,7 +29,6 @@ struct Event {
   void* arg3;
   void* arg4;
   void* arg5;
-  // volatile long count;
 };
 
 enum ScriptMode { kScriptModeGame, kScriptModeMenu, kScriptModeCommand };
