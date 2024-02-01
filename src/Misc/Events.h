@@ -1,6 +1,23 @@
 #pragma once
 
+#include "js32.h"
+
 #include <windows.h>
+
+typedef std::list<AutoRoot*> FunctionList;
+
+struct Event {
+  Event() : argv(nullptr), argc(0), arg1(nullptr), arg2(nullptr), arg3(nullptr), arg4(nullptr), arg5(nullptr){};
+  FunctionList functions;
+  JSAutoStructuredCloneBuffer** argv;
+  uint argc;
+  std::string name;
+  void* arg1;
+  void* arg2;
+  void* arg3;
+  void* arg4;
+  void* arg5;
+};
 
 bool ChatEvent(char* lpszNick, wchar_t* lpszMsg);
 bool ChatInputEvent(wchar_t* lpszMsg);

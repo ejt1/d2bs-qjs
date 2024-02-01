@@ -11,25 +11,8 @@
 #include "JSUnit.h"
 #include "Events.h"
 
-class Script;
-
 typedef std::map<std::wstring, bool> IncludeList;
-typedef std::list<AutoRoot*> FunctionList;
 typedef std::map<std::string, FunctionList> FunctionMap;
-typedef std::list<Script*> ScriptList;
-
-struct Event {
-  Event() : argv(nullptr), argc(0), arg1(nullptr), arg2(nullptr), arg3(nullptr), arg4(nullptr), arg5(nullptr){};
-  FunctionList functions;
-  JSAutoStructuredCloneBuffer** argv;
-  uint argc;
-  std::string name;
-  void* arg1;
-  void* arg2;
-  void* arg3;
-  void* arg4;
-  void* arg5;
-};
 
 enum ScriptMode { kScriptModeGame, kScriptModeMenu, kScriptModeCommand };
 
