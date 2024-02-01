@@ -149,7 +149,7 @@ JSAPI_PROP(unit_getProperty) {
       vp.setInt32(*p_D2CLIENT_FPS);
       break;
     case ME_LOCALE:
-      vp.setInt32(Vars.dwLocale);
+      vp.setInt32(*p_D2CLIENT_Lang);
       break;
     case OOG_INGAME:
       vp.setBoolean((ClientState() == ClientStateMenu ? false : true));
@@ -582,7 +582,7 @@ JSAPI_FUNC(unit_getUnit) {
   uint32 nClassId = (uint32)-1;
   uint32 nMode = (uint32)-1;
   uint32 nUnitId = (uint32)-1;
-  char* szName = "";
+  char* szName = (char*)"";
 
   JS_BeginRequest(cx);
   if (argc > 0 && JSVAL_IS_INT(JS_ARGV(cx, vp)[0]))

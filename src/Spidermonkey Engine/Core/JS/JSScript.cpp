@@ -1,7 +1,7 @@
 #include "JSScript.h"
 #include "Script.h"
 #include "ScriptEngine.h"
-#include "D2BS.h"
+#include "Engine.h"
 #include "Helpers.h"
 
 EMPTY_CTOR(script)
@@ -30,7 +30,7 @@ JSAPI_PROP(script_getProperty) {
       vp.setString(JS_InternUCString(cx, script->GetShortFilename()));
       break;
     case SCRIPT_GAMETYPE:
-      vp.setBoolean(script->GetState() == InGame ? false : true);
+      vp.setBoolean(script->GetMode() == kScriptModeGame ? false : true);
       break;
     case SCRIPT_RUNNING:
       vp.setBoolean(script->IsRunning());
@@ -105,8 +105,7 @@ JSAPI_FUNC(script_resume) {
   JS_SET_RVAL(cx, vp, JSVAL_NULL);
   Script* script = (Script*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &script_class, NULL);
 
-  if (script->IsPaused())
-    script->Resume();
+  script->Resume();
 
   return JS_TRUE;
 }
@@ -118,9 +117,9 @@ JSAPI_FUNC(script_send) {
   if (!script || !script->IsRunning())
     return JS_TRUE;
   sScriptEngine->LockScriptList("script.send");
-  evt->owner = script;
+  //evt->owner = script;
   evt->argc = argc;
-  evt->name = _strdup("scriptmsg");
+  evt->name = "scriptmsg";
   evt->arg1 = new DWORD(argc);
   evt->argv = new JSAutoStructuredCloneBuffer*[argc];
   for (uint i = 0; i < argc; i++) {
@@ -128,10 +127,7 @@ JSAPI_FUNC(script_send) {
     evt->argv[i]->write(cx, JS_ARGV(cx, vp)[i]);
   }
 
-  EnterCriticalSection(&Vars.cEventSection);
-  evt->owner->EventList.push_front(evt);
-  LeaveCriticalSection(&Vars.cEventSection);
-  evt->owner->TriggerOperationCallback();
+  script->FireEvent(evt);
   sScriptEngine->UnLockScriptList("script.send");
 
   return JS_TRUE;

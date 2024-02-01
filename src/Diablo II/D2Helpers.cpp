@@ -10,11 +10,11 @@
 #include "Helpers.h"
 #include "D2Skills.h"
 #include "D2Intercepts.h"
-#include "D2BS.h"
+#include "Engine.h"
 #include "stringhash.h"
 #include "CriticalSections.h"
 
-void Log(wchar_t* szFormat, ...) {
+void Log(const wchar_t* szFormat, ...) {
   va_list vaArgs;
 
   va_start(vaArgs, szFormat);
@@ -53,6 +53,54 @@ void LogNoFormat(const wchar_t* szString) {
   fflush(log);
   fclose(log);
 #endif
+}
+
+// Do not edit without the express consent of bsdunx or lord2800
+ClientGameState ClientState(void) {
+  ClientGameState state = ClientStateNull;
+  UnitAny* player = D2CLIENT_GetPlayerUnit();
+  Control* firstControl = *p_D2WIN_FirstControl;
+
+  if (player && !firstControl) {
+    if (player && player->pUpdateUnit) {
+      state = ClientStateBusy;
+      return state;
+    }
+    if (player->pInventory && player->pPath &&
+        // player->pPath->xPos &&
+        player->pPath->pRoom1 && player->pPath->pRoom1->pRoom2 && player->pPath->pRoom1->pRoom2->pLevel && player->pPath->pRoom1->pRoom2->pLevel->dwLevelNo)
+      state = ClientStateInGame;
+    else
+      state = ClientStateBusy;
+  } else if (!player && firstControl)
+    state = ClientStateMenu;
+  else if (!player && !firstControl)
+    state = ClientStateNull;
+
+  return state;
+}
+
+bool GameReady(void) {
+  return (ClientState() == ClientStateInGame ? true : false);
+}
+
+bool WaitForGameReady(void) {
+  DWORD start = GetTickCount();
+  do {
+    switch (ClientState()) {
+      case ClientStateNull:
+      case ClientStateMenu:
+        return false;
+      case ClientStateInGame:
+        return true;
+    }
+    Sleep(10);
+  } while ((Vars.dwGameTimeout == 0) || (Vars.dwGameTimeout > 0 && (GetTickCount() - start) < Vars.dwGameTimeout));
+  return false;
+}
+
+DWORD GetPlayerArea(void) {
+  return (ClientState() == ClientStateInGame ? D2CLIENT_GetPlayerUnit()->pPath->pRoom1->pRoom2->pLevel->dwLevelNo : NULL);
 }
 
 // NOTE TO CALLERS: szTmp must be a PRE-INITIALIZED string.
@@ -120,54 +168,6 @@ return NULL;
 {
 *(DWORD*)&p_D2CLIENT_SelectedInvItem = (DWORD)FindItemByPosition(x, y, dwLocation);
 }*/
-
-// Do not edit without the express consent of bsdunx or lord2800
-ClientGameState ClientState(void) {
-  ClientGameState state = ClientStateNull;
-  UnitAny* player = D2CLIENT_GetPlayerUnit();
-  Control* firstControl = *p_D2WIN_FirstControl;
-
-  if (player && !firstControl) {
-    if (player && player->pUpdateUnit) {
-      state = ClientStateBusy;
-      return state;
-    }
-    if (player->pInventory && player->pPath &&
-        // player->pPath->xPos &&
-        player->pPath->pRoom1 && player->pPath->pRoom1->pRoom2 && player->pPath->pRoom1->pRoom2->pLevel && player->pPath->pRoom1->pRoom2->pLevel->dwLevelNo)
-      state = ClientStateInGame;
-    else
-      state = ClientStateBusy;
-  } else if (!player && firstControl)
-    state = ClientStateMenu;
-  else if (!player && !firstControl)
-    state = ClientStateNull;
-
-  return state;
-}
-
-bool GameReady(void) {
-  return (ClientState() == ClientStateInGame ? true : false);
-}
-
-bool WaitForGameReady(void) {
-  DWORD start = GetTickCount();
-  do {
-    switch (ClientState()) {
-      case ClientStateNull:
-      case ClientStateMenu:
-        return false;
-      case ClientStateInGame:
-        return true;
-    }
-    Sleep(10);
-  } while ((Vars.dwGameTimeout == 0) || (Vars.dwGameTimeout > 0 && (GetTickCount() - start) < Vars.dwGameTimeout));
-  return false;
-}
-
-DWORD GetPlayerArea(void) {
-  return (ClientState() == ClientStateInGame ? D2CLIENT_GetPlayerUnit()->pPath->pRoom1->pRoom2->pLevel->dwLevelNo : NULL);
-}
 
 Level* GetLevel(DWORD dwLevelNo) {
   AutoCriticalRoom* cRoom = new AutoCriticalRoom;
@@ -266,22 +266,7 @@ BOOL SetSkill(JSContext* cx, WORD wSkillId, BOOL bLeft, DWORD dwItemId) {
       return TRUE;
 
     Script* script = (Script*)JS_GetContextPrivate(cx);  // run events to avoid packet block deadlock
-    DWORD start = GetTickCount();
-    int amt = 100 - (GetTickCount() - start);
-
-    while (amt > 0) {  // had a script deadlock here, make sure were positve with amt
-      WaitForSingleObjectEx(script->eventSignal(), amt, true);
-      ResetEvent(script->eventSignal());
-      while (script->EventList.size() > 0 && !!!(JSBool)(script->IsAborted() || ((script->GetState() == InGame) && ClientState() == ClientStateMenu))) {
-        EnterCriticalSection(&Vars.cEventSection);
-        Event* evt = script->EventList.back();
-        script->EventList.pop_back();
-        LeaveCriticalSection(&Vars.cEventSection);
-        ExecScriptEvent(evt, false);
-      }
-      amt = 100 - (GetTickCount() - start);
-      // SleepEx(10,true);	// ex for delayed setTimer
-    }
+    script->BlockThread(100);
   }
 
   return FALSE;

@@ -1,8 +1,25 @@
 #include "D2Handlers.h"
 #include "D2Ptrs.h"
-#include "D2BS.h"
+#include "Engine.h"
 #include "Helpers.h"
 #include <shlwapi.h>
+
+void __declspec(naked) GameInput_Intercept() {
+  __asm {
+		pushad
+		mov ecx, ebx
+		call GameInput
+		cmp eax, -1
+		popad
+		je BlockIt
+		call D2CLIENT_InputCall_I
+		ret
+
+BlockIt:
+		xor eax,eax
+		ret
+  }
+}
 
 void __declspec(naked) RealmPacketRecv_Interception() {
   __asm {
@@ -68,23 +85,21 @@ void __declspec(naked) GamePacketSent_Interception() {
   }
 }
 
-void GameDraw_Intercept(void) {
-  GameDraw();
-}
-
-void __declspec(naked) GameInput_Intercept() {
+VOID __declspec(naked) ChatPacketRecv_Interception() {
   __asm {
-		pushad
+		mov edx, [ebp + 8]
 		mov ecx, ebx
-		call GameInput
-		cmp eax, -1
-		popad
-		je BlockIt
-		call D2CLIENT_InputCall_I
-		ret
+		pushad
+		sub ecx, 4
+		add edx, 4
 
-BlockIt:
-		xor eax,eax
+		call ChatPacketRecv
+		test eax, eax
+		popad
+ 
+		je Block
+		call edi
+Block:
 		ret
   }
 }
@@ -116,25 +131,6 @@ void __declspec(naked) Whisper_Intercept() {
 		popad
         // jmp D2MULTI_WhisperIntercept_Jump
 		jmp edi
-  }
-}
-
-VOID __declspec(naked) ChatPacketRecv_Interception() {
-  __asm {
-		mov edx, [ebp + 8]
-		mov ecx, ebx
-		pushad
-		sub ecx, 4
-		add edx, 4
-
-		call ChatPacketRecv
-		test eax, eax
-		popad
- 
-		je Block
-		call edi
-Block:
-		ret
   }
 }
 
@@ -181,10 +177,6 @@ Skip:
 		MOV DWORD PTR DS:[EAX+0xC],0
 		RETN
   }
-}
-
-void GameDrawOOG_Intercept(void) {
-  GameDrawOOG();
 }
 
 void __declspec(naked) CongratsScreen_Intercept(void) {
@@ -243,34 +235,6 @@ void __declspec(naked) ChannelInput_Intercept(void) {
 
 SkipInput:
 		ret
-  }
-}
-
-void __declspec(naked) AddUnit_Intercept(UnitAny* lpUnit) {
-  (lpUnit);  // unreferenced formal parameter
-
-  __asm
-  {
-		call [D2CLIENT_GameAddUnit_I]
-		pushad
-		push esi
-		call AddUnit
-		popad
-		retn
-  }
-}
-
-void __declspec(naked) RemoveUnit_Intercept(UnitAny* lpUnit) {
-  (lpUnit);  // unreferenced formal parameter
-
-  __asm {
-		pushad
-		push dword ptr ds:[esi+edx*4]
-		call RemoveUnit
-		popad
-		mov eax,dword ptr ds:[ecx+0xE4]
-		mov DWORD PTR ds:[esi+edx*4], eax
-		retn
   }
 }
 
@@ -382,9 +346,6 @@ HANDLE __stdcall CacheFix(LPCSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShar
   return CreateFileA(path, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
 }
 
-WINUSERAPI
-int WINAPI MessageBoxA(__in_opt HWND hWnd, __in_opt LPCSTR lpText, __in_opt LPCSTR lpCaption, __in UINT uType);
-
 int WINAPI LogMessageBoxA_Intercept(HWND hWnd, LPCSTR lpText, LPCSTR lpCaption, UINT uType) {
   GetStackWalk();
   char* dllAddrs;
@@ -393,42 +354,7 @@ int WINAPI LogMessageBoxA_Intercept(HWND hWnd, LPCSTR lpText, LPCSTR lpCaption, 
   return MessageBoxA(hWnd, lpText, lpCaption, uType);
 }
 
-#include <DbgHelp.h>
-LONG WINAPI MyUnhandledExceptionFilter(_In_ struct _EXCEPTION_POINTERS* ExceptionInfo) {
-  // NOT WORKING ONE, WORKING ONE IS IN Helpers.cpp
-  MessageBox(NULL, "QWE", "QWE", MB_OK);
-  HANDLE hFile = INVALID_HANDLE_VALUE;
-  for (int i = 0; hFile == INVALID_HANDLE_VALUE; ++i) {
-    char fname[100];
-    sprintf_s(fname, "Crash%03d.dump", i);
-    hFile = CreateFile(fname, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
-  }
-  DWORD ProcessId = GetCurrentProcessId();
-  HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS /*READ_CONTROL | PROCESS_VM_READ*/, TRUE, ProcessId);
-  MINIDUMP_EXCEPTION_INFORMATION ExceptionParam;
-  ExceptionParam.ThreadId = GetCurrentThreadId();
-  ExceptionParam.ExceptionPointers = ExceptionInfo;
-  ExceptionParam.ClientPointers = TRUE;
-  MiniDumpWriteDump(hProcess, ProcessId, hFile, MiniDumpNormal, &ExceptionParam, NULL, NULL);
-  CloseHandle(hFile);
-  exit(0);
-  // return EXCEPTION_EXECUTE_HANDLER;
-}
-
-//  FogException(6, (int)&Default, a3, "Unrecoverable internal error %08x", a2);
-void FogException() {
-  __try {
-    RaiseException(1,  // exception code
-                   0,  // continuable exception
-                   0, NULL);
-  } __except (UnhandledExceptionFilter(GetExceptionInformation())) {
-    exit(0);
-  }
-}
-
-char __fastcall ErrorReportLaunch(const char* crash_file, int a2) {
-  (a2);  // unreferenced formal parameter
-
+char __fastcall ErrorReportLaunch(const char* crash_file, int /*a2*/) {
   GetStackWalk();
   Log(L"Crash File: %hs\n", crash_file);
   exit(0);

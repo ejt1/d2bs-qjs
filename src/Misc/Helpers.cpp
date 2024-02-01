@@ -1,4 +1,4 @@
-#include "D2BS.h"
+#include "Engine.h"
 #include "Core.h"
 #include "Script.h"
 #include "ScriptEngine.h"
@@ -150,68 +150,21 @@ void InitSettings(void) {
   Vars.bLogConsole = StringToBool(logConsole);
   Vars.bEnableUnsupported = StringToBool(enableUnsupported);
   Vars.bForwardMessageBox = StringToBool(forwardMessageBox);
-  Vars.eventSignal = CreateEventA(false, true, false, nullptr);
+  Vars.eventSignal = CreateEventA(0, true, false, nullptr);
   Vars.dwMemUsage = abs(_wtoi(memUsage));
   Vars.dwConsoleFont = abs(_wtoi(consoleFont));
   if (Vars.dwMemUsage < 1)
     Vars.dwMemUsage = 50;
   Vars.dwMemUsage *= 1024 * 1024;
-  Vars.oldWNDPROC = NULL;
-}
-
-bool InitHooks(void) {
-  int i = 0;
-  while (!Vars.bActive) {
-    Sleep(50);
-
-    if (i >= 300) {
-      MessageBox(0, "Failed to set hooks, exiting!", "D2BS", 0);
-      return false;
-    }
-
-    if (D2GFX_GetHwnd() && (ClientState() == ClientStateMenu || ClientState() == ClientStateInGame)) {
-      if (!Vars.oldWNDPROC)
-        Vars.oldWNDPROC = (WNDPROC)SetWindowLong(D2GFX_GetHwnd(), GWL_WNDPROC, (LONG)GameEventHandler);
-      if (!Vars.oldWNDPROC)
-        continue;
-
-      Vars.uTimer = SetTimer(D2GFX_GetHwnd(), 1, 0, TimerProc);
-
-      DWORD mainThread = GetWindowThreadProcessId(D2GFX_GetHwnd(), 0);
-      if (mainThread) {
-        if (!Vars.hKeybHook)
-          Vars.hKeybHook = SetWindowsHookEx(WH_KEYBOARD, KeyPress, NULL, mainThread);
-        if (!Vars.hMouseHook)
-          Vars.hMouseHook = SetWindowsHookEx(WH_MOUSE, MouseMove, NULL, mainThread);
-      }
-    } else
-      continue;
-
-    if (Vars.hKeybHook && Vars.hMouseHook) {
-      if (!sScriptEngine->Startup())
-        return false;
-
-      Vars.bActive = TRUE;
-
-      if (ClientState() == ClientStateMenu && Vars.bStartAtMenu)
-        clickControl(*p_D2WIN_FirstControl);
-    }
-
-    i++;
-  }
-
-  *p_D2CLIENT_Lang = D2CLIENT_GetGameLanguageCode();
-  Vars.dwLocale = *p_D2CLIENT_Lang;
-  return true;
 }
 
 const wchar_t* GetStarterScriptName(void) {
   return (ClientState() == ClientStateInGame ? Vars.szDefault : ClientState() == ClientStateMenu ? Vars.szStarter : NULL);
 }
 
-ScriptState GetStarterScriptState(void) {
+ScriptMode GetStarterScriptState(void) {
   // the default return is InGame because that's the least harmful of the options
-  return (ClientState() == ClientStateInGame ? InGame : ClientState() == ClientStateMenu ? OutOfGame : InGame);
+  return (ClientState() == ClientStateInGame ? kScriptModeGame : ClientState() == ClientStateMenu ? kScriptModeMenu : kScriptModeGame);
 }
 
 bool ExecCommand(const wchar_t* command) {
@@ -219,11 +172,11 @@ bool ExecCommand(const wchar_t* command) {
   return true;
 }
 
-bool StartScript(const wchar_t* scriptname, ScriptState state) {
+bool StartScript(const wchar_t* scriptname, ScriptMode mode) {
   wchar_t file[_MAX_FNAME + _MAX_PATH];
   swprintf_s(file, _countof(file), L"%s\\%s", Vars.szScriptPath, scriptname);
-  Script* script = sScriptEngine->CompileFile(file, state);
-  return (script && script->BeginThread(ScriptThread));
+  Script* script = sScriptEngine->NewScript(file, mode);
+  return (script && script->Start());
 }
 
 void Reload(void) {
@@ -310,32 +263,6 @@ bool ProcessCommand(const wchar_t* command, bool unprocessedIsCommand) {
   return result;
 }
 
-void GameJoined(void) {
-  if (!Vars.bUseProfileScript) {
-    const wchar_t* starter = GetStarterScriptName();
-    if (starter != NULL) {
-      Print(L"\u00FFc2D2BS\u00FFc0 :: Starting %s", starter);
-      if (StartScript(starter, GetStarterScriptState()))
-        Print(L"\u00FFc2D2BS\u00FFc0 :: %s running.", starter);
-      else
-        Print(L"\u00FFc2D2BS\u00FFc0 :: Failed to start %s!", starter);
-    }
-  }
-}
-
-void MenuEntered(bool beginStarter) {
-  if (beginStarter && !Vars.bUseProfileScript) {
-    const wchar_t* starter = GetStarterScriptName();
-    if (starter != NULL) {
-      Print(L"\u00FFc2D2BS\u00FFc0 :: Starting %s", starter);
-      if (StartScript(starter, GetStarterScriptState()))
-        Print(L"\u00FFc2D2BS\u00FFc0 :: %s running.", starter);
-      else
-        Print(L"\u00FFc2D2BS\u00FFc0 :: Failed to start %s!", starter);
-    }
-  }
-}
-
 SYMBOL_INFO* GetSymFromAddr(HANDLE hProcess, DWORD64 addr) {
   char* symbols = new char[sizeof(SYMBOL_INFO) + 512];
   memset(symbols, 0, sizeof(SYMBOL_INFO) + 512);
@@ -396,7 +323,6 @@ LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* ptrs) {
 
   EXCEPTION_RECORD* rec = ptrs->ExceptionRecord;
   CONTEXT* ctx = ptrs->ContextRecord;
-  DWORD base = Vars.pModule ? Vars.pModule->dwBaseAddress : (DWORD)Vars.hModule;
 
   int len;
   char* szString;
@@ -404,24 +330,22 @@ LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* ptrs) {
 
   len = _scprintf(
       "EXCEPTION!\n*** 0x%08x at 0x%08x\n"
-      "D2BS loaded at: 0x%08x\n"
       "Registers:\n"
       "\tEIP: 0x%08x, ESP: 0x%08x\n"
       "\tCS: 0x%04x, DS: 0x%04x, ES: 0x%04x, SS: 0x%04x, FS: 0x%04x, GS: 0x%04x\n"
       "\tEAX: 0x%08x, EBX: 0x%08x, ECX: 0x%08x, EDX: 0x%08x, ESI: 0x%08x, EDI: 0x%08x, EBP: 0x%08x, FLG: 0x%08x\n",
-      rec->ExceptionCode, (uint32_t)rec->ExceptionAddress, base, ctx->Eip, ctx->Esp, ctx->SegCs, ctx->SegDs, ctx->SegEs, ctx->SegSs, ctx->SegFs, ctx->SegGs, ctx->Eax, ctx->Ebx,
-      ctx->Ecx, ctx->Edx, ctx->Esi, ctx->Edi, ctx->Ebp, ctx->EFlags);
+      rec->ExceptionCode, (uint32_t)rec->ExceptionAddress, ctx->Eip, ctx->Esp, ctx->SegCs, ctx->SegDs, ctx->SegEs, ctx->SegSs, ctx->SegFs, ctx->SegGs, ctx->Eax,
+      ctx->Ebx, ctx->Ecx, ctx->Edx, ctx->Esi, ctx->Edi, ctx->Ebp, ctx->EFlags);
 
   szString = new char[len + 1];
   sprintf_s(szString, len + 1,
             "EXCEPTION!\n*** 0x%08x at 0x%08x\n"
-            "D2BS loaded at: 0x%08x\n"
             "Registers:\n"
             "\tEIP: 0x%08x, ESP: 0x%08x\n"
             "\tCS: 0x%04x, DS: 0x%04x, ES: 0x%04x, SS: 0x%04x, FS: 0x%04x, GS: 0x%04x\n"
             "\tEAX: 0x%08x, EBX: 0x%08x, ECX: 0x%08x, EDX: 0x%08x, ESI: 0x%08x, EDI: 0x%08x, EBP: 0x%08x, FLG: 0x%08x\n",
-            rec->ExceptionCode, (uint32_t)rec->ExceptionAddress, base, ctx->Eip, ctx->Esp, ctx->SegCs, ctx->SegDs, ctx->SegEs, ctx->SegSs, ctx->SegFs, ctx->SegGs, ctx->Eax,
-            ctx->Ebx, ctx->Ecx, ctx->Edx, ctx->Esi, ctx->Edi, ctx->Ebp, ctx->EFlags);
+            rec->ExceptionCode, (uint32_t)rec->ExceptionAddress, ctx->Eip, ctx->Esp, ctx->SegCs, ctx->SegDs, ctx->SegEs, ctx->SegSs, ctx->SegFs, ctx->SegGs,
+            ctx->Eax, ctx->Ebx, ctx->Ecx, ctx->Edx, ctx->Esi, ctx->Edi, ctx->Ebp, ctx->EFlags);
 
   dllAddrs = DllLoadAddrStrs();
   Log(L"%hs\n%hs", szString, dllAddrs);
@@ -482,8 +406,8 @@ void ResumeProcess() {
 void InitCommandLine() {
   wchar_t* line = GetCommandLineW();
   memcpy(Vars.szCommandLine, line, min(sizeof(Vars.szCommandLine), sizeof(wchar_t) * wcslen(line)));
-  LPWSTR cline = L"C:\\Program Files (x86)\\Diablo II\\Game.exe -w";
-  memcpy(line, cline, sizeof(LPWSTR) * wcslen(cline));
+  LPCWSTR cline = L"C:\\Program Files (x86)\\Diablo II\\Game.exe -w";
+  memcpy(line, cline, sizeof(LPCWSTR) * wcslen(cline));
 }
 
 bool GetStackWalk() {

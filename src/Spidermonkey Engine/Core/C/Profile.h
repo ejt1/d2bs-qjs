@@ -1,7 +1,7 @@
 #ifndef PROFILE_H
 #define PROFILE_H
 
-#include "D2BS.h"
+#include "Engine.h"
 
 enum ProfileType { PROFILETYPE_INVALID, PROFILETYPE_SINGLEPLAYER, PROFILETYPE_BATTLENET, PROFILETYPE_OPEN_BATTLENET, PROFILETYPE_TCPIP_HOST, PROFILETYPE_TCPIP_JOIN };
 
@@ -61,7 +61,7 @@ class Profile {
 
   friend JSAPI_PROP(profile_getProperty);
 
-  DWORD login(char** error);
+  DWORD login(const char** error);
 
   static bool ProfileExists(const wchar_t* profile);
 };

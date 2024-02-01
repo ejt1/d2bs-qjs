@@ -4,6 +4,13 @@
 #include "js32.h"
 #include "Offset.h"
 
+#define PRIVATE_UNIT 1
+#define PRIVATE_ITEM 3
+
+struct Private {
+  DWORD dwPrivateType;
+};
+
 CLASS_CTOR(unit);
 
 JSAPI_FUNC(unit_getUnit);

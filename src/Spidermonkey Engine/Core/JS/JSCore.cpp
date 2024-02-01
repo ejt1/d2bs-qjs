@@ -11,7 +11,7 @@
 #include "Helpers.h"
 #include "dde.h"
 // #include "ScriptEngine.h"
-// #include "D2BS.h"
+// #include "Engine.h"
 #include "Events.h"
 #include "Console.h"
 #include "D2Ptrs.h"
@@ -75,53 +75,74 @@ JSAPI_FUNC(my_print) {
   return JS_TRUE;
 }
 
+// TODO(ejt): setTimeout, setInterval and clearInterval is not currently used by kolbot (it overrides it).
+// The plan is to use libuv timers once we get to adding libuv, for now just throw an error.
 JSAPI_FUNC(my_setTimeout) {
-  JS_SET_RVAL(cx, vp, JSVAL_NULL);
+  (argc);
+  (vp);
 
-  if (argc < 2 || !JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1]))
-    JS_ReportError(cx, "invalid params passed to setTimeout");
+  JS_ReportError(cx, "setTimeout temporarily disabled during development");
+  return JS_FALSE;
 
-  if (JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[0]) && JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1])) {
-    Script* self = (Script*)JS_GetContextPrivate(cx);
-    int freq = JSVAL_TO_INT(JS_ARGV(cx, vp)[1]);
-    self->RegisterEvent("setTimeout", JS_ARGV(cx, vp)[0]);
-    Event* evt = new Event;
-    evt->owner = self;
-    evt->name = _strdup("setTimeout");
-    evt->arg3 = new jsval(JS_ARGV(cx, vp)[0]);
-    JS_SET_RVAL(cx, vp, INT_TO_JSVAL(sScriptEngine->AddDelayedEvent(evt, freq)));
-  }
+  // JS_SET_RVAL(cx, vp, JSVAL_NULL);
 
-  return JS_TRUE;
+  // if (argc < 2 || !JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1]))
+  //   JS_ReportError(cx, "invalid params passed to setTimeout");
+
+  // if (JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[0]) && JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1])) {
+  //   Script* self = (Script*)JS_GetContextPrivate(cx);
+  //   int freq = JSVAL_TO_INT(JS_ARGV(cx, vp)[1]);
+  //   self->RegisterEvent("setTimeout", JS_ARGV(cx, vp)[0]);
+  //   Event* evt = new Event;
+  //   evt->owner = self;
+  //   evt->name = "setTimeout";
+  //   evt->arg3 = new jsval(JS_ARGV(cx, vp)[0]);
+  //   JS_SET_RVAL(cx, vp, INT_TO_JSVAL(sScriptEngine->AddDelayedEvent(evt, freq)));
+  // }
+
+  // return JS_TRUE;
 }
 
 JSAPI_FUNC(my_setInterval) {
-  JS_SET_RVAL(cx, vp, JSVAL_NULL);
+  (argc);
+  (vp);
 
-  if (argc < 2 || !JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1]))
-    JS_ReportError(cx, "invalid params passed to setInterval");
+  JS_ReportError(cx, "setInterval temporarily disabled during development");
+  return JS_FALSE;
 
-  if (JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[0]) && JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1])) {
-    Script* self = (Script*)JS_GetContextPrivate(cx);
-    int freq = JSVAL_TO_INT(JS_ARGV(cx, vp)[1]);
-    self->RegisterEvent("setInterval", JS_ARGV(cx, vp)[0]);
-    Event* evt = new Event;
-    evt->owner = self;
-    evt->name = _strdup("setInterval");
-    evt->arg3 = new jsval(JS_ARGV(cx, vp)[0]);
-    JS_SET_RVAL(cx, vp, INT_TO_JSVAL(sScriptEngine->AddDelayedEvent(evt, freq)));
-  }
+  // JS_SET_RVAL(cx, vp, JSVAL_NULL);
 
-  return JS_TRUE;
+  // if (argc < 2 || !JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1]))
+  //   JS_ReportError(cx, "invalid params passed to setInterval");
+
+  // if (JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[0]) && JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1])) {
+  //   Script* self = (Script*)JS_GetContextPrivate(cx);
+  //   int freq = JSVAL_TO_INT(JS_ARGV(cx, vp)[1]);
+  //   self->RegisterEvent("setInterval", JS_ARGV(cx, vp)[0]);
+  //   Event* evt = new Event;
+  //   evt->owner = self;
+  //   evt->name = "setInterval";
+  //   evt->arg3 = new jsval(JS_ARGV(cx, vp)[0]);
+  //   JS_SET_RVAL(cx, vp, INT_TO_JSVAL(sScriptEngine->AddDelayedEvent(evt, freq)));
+  // }
+
+  // return JS_TRUE;
 }
 JSAPI_FUNC(my_clearInterval) {
-  JS_SET_RVAL(cx, vp, JSVAL_NULL);
-  if (argc != 1 || !JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[0]))
-    JS_ReportError(cx, "invalid params passed to clearInterval");
+  (argc);
+  (vp);
 
-  sScriptEngine->RemoveDelayedEvent(JSVAL_TO_INT(JS_ARGV(cx, vp)[0]));
-  return JS_TRUE;
+  JS_ReportError(cx, "clearInterval temporarily disabled during development");
+  return JS_FALSE;
+
+  // JS_SET_RVAL(cx, vp, JSVAL_NULL);
+  // if (argc != 1 || !JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[0]))
+  //   JS_ReportError(cx, "invalid params passed to clearInterval");
+
+  // sScriptEngine->RemoveDelayedEvent(JSVAL_TO_INT(JS_ARGV(cx, vp)[0]));
+  // return JS_TRUE;
 }
+
 JSAPI_FUNC(my_delay) {
   uint32 nDelay = 0;
   JS_BeginRequest(cx);
@@ -131,35 +152,9 @@ JSAPI_FUNC(my_delay) {
   }
   JS_EndRequest(cx);
   Script* script = (Script*)JS_GetContextPrivate(cx);
-  DWORD start = GetTickCount();
 
-  int amt = nDelay - (GetTickCount() - start);
-
-  if (nDelay) {        // loop so we can exec events while in delay
-    while (amt > 0) {  // had a script deadlock here, make sure were positve with amt
-      WaitForSingleObjectEx(script->eventSignal(), amt, true);
-      ResetEvent(script->eventSignal());
-      if (script->IsAborted())
-        break;
-
-      while (script->EventList.size() > 0 && !!!(JSBool)(script->IsAborted() || ((script->GetState() == InGame) && ClientState() == ClientStateMenu))) {
-        EnterCriticalSection(&Vars.cEventSection);
-        Event* evt = script->EventList.back();
-        script->EventList.pop_back();
-        LeaveCriticalSection(&Vars.cEventSection);
-        ExecScriptEvent(evt, false);
-      }
-      if (JS_GetGCParameter(script->GetRuntime(), JSGC_BYTES) - script->LastGC() > 524288)  // gc every .5 mb
-      {
-        JS_GC(JS_GetRuntime(cx));
-        script->LastGC() = JS_GetGCParameter(script->GetRuntime(), JSGC_BYTES);
-      }
-      /*else
-              JS_MaybeGC(cx);*/
-      amt = nDelay - (GetTickCount() - start);
-      // SleepEx(10,true);	// ex for delayed setTimer
-    }
-
+  if (nDelay) {  // loop so we can exec events while in delay
+    script->BlockThread(nDelay);
   } else
     JS_ReportWarning(cx, "delay(0) called, argument must be >= 1");
   return JS_TRUE;
@@ -181,9 +176,9 @@ JSAPI_FUNC(my_load) {
     return JS_FALSE;
   }
 
-  ScriptState scriptState = script->GetState();
-  if (scriptState == Command)
-    scriptState = (ClientState() == ClientStateInGame ? InGame : OutOfGame);
+  ScriptMode scriptState = script->GetMode();
+  if (scriptState == kScriptModeCommand)
+    scriptState = (ClientState() == ClientStateInGame ? kScriptModeGame : kScriptModeMenu);
 
   wchar_t buf[_MAX_PATH + _MAX_FNAME];
   swprintf_s(buf, _countof(buf), L"%s\\%s", Vars.szScriptPath, file);
@@ -195,10 +190,10 @@ JSAPI_FUNC(my_load) {
     autoBuffer[i - 1]->write(cx, JS_ARGV(cx, vp)[i]);
   }
 
-  Script* newScript = sScriptEngine->CompileFile(buf, scriptState, argc - 1, autoBuffer);
+  Script* newScript = sScriptEngine->NewScript(buf, scriptState, argc - 1, autoBuffer);
 
   if (newScript) {
-    newScript->BeginThread(ScriptThread);
+    newScript->Start();
     // JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(BuildObject(cx, &script_class, script_methods, script_props, newScript->GetContext())));
     JS_SET_RVAL(cx, vp, JSVAL_NULL);
   } else {
@@ -421,10 +416,12 @@ JSAPI_FUNC(my_sendCopyData) {
   }
 
   // if data is NULL, strlen crashes
-  if (data == NULL)
-    data = "";
-
-  COPYDATASTRUCT aCopy = {static_cast<ULONG_PTR>(nModeId), strlen(data) + 1, data};
+  COPYDATASTRUCT aCopy{};
+  if (data == NULL) {
+    aCopy = {static_cast<ULONG_PTR>(nModeId), 0, nullptr};
+  } else {
+    aCopy = {static_cast<ULONG_PTR>(nModeId), strlen(data) + 1, data};
+  }
 
   // bob20	 jsrefcount depth = JS_SuspendRequest(cx);
   JS_SET_RVAL(cx, vp, INT_TO_JSVAL(SendMessage(hWnd, WM_COPYDATA, (WPARAM)D2GFX_GetHwnd(), (LPARAM)&aCopy)));
@@ -439,7 +436,7 @@ JSAPI_FUNC(my_sendDDE) {
 
   JS_SET_RVAL(cx, vp, JSVAL_FALSE);
   int32_t mode = 0;
-  char *pszDDEServer = "\"\"", *pszTopic = "\"\"", *pszItem = "\"\"", *pszData = "\"\"";
+  const char *pszDDEServer = "\"\"", *pszTopic = "\"\"", *pszItem = "\"\"", *pszData = "\"\"";
   JS_BeginRequest(cx);
 
   if (JSVAL_IS_INT(JS_ARGV(cx, vp)[0]))
@@ -461,10 +458,18 @@ JSAPI_FUNC(my_sendDDE) {
   char buffer[255] = "";
   BOOL result = SendDDE(mode, pszDDEServer, pszTopic, pszItem, pszData, (char**)&buffer, sizeof(buffer));
 
-  JS_free(cx, pszDDEServer);
-  JS_free(cx, pszTopic);
-  JS_free(cx, pszItem);
-  JS_free(cx, pszData);
+  if (JSVAL_IS_STRING(JS_ARGV(cx, vp)[1])) {
+    JS_free(cx, (char*)pszDDEServer);
+  }
+  if (JSVAL_IS_STRING(JS_ARGV(cx, vp)[2])) {
+    JS_free(cx, (char*)pszTopic);
+  }
+  if (JSVAL_IS_STRING(JS_ARGV(cx, vp)[3])) {
+    JS_free(cx, (char*)pszItem);
+  }
+  if (JSVAL_IS_STRING(JS_ARGV(cx, vp)[4])) {
+    JS_free(cx, (char*)pszData);
+  }
 
   if (!result)
     THROW_ERROR(cx, "DDE Failed! Check the log for the error message.");
@@ -727,11 +732,13 @@ JSAPI_FUNC(my_sendClick) {
     return JS_FALSE;
   }
   JS_EndRequest(cx);
+  Vars.bIgnoreMouse = TRUE;
   Sleep(100);
   SendMouseClick(x, y, 0);
   Sleep(100);
   SendMouseClick(x, y, 1);
   Sleep(100);
+  Vars.bIgnoreMouse = FALSE;
   return JS_TRUE;
 }
 
@@ -748,11 +755,13 @@ JSAPI_FUNC(my_sendKey) {
   if (prompt) {
     Console::HidePrompt();
   }
+  Vars.bIgnoreKeys = TRUE;
   Sleep(100);
   SendKeyPress(WM_KEYDOWN, key, 0);
   Sleep(100);
   SendKeyPress(WM_KEYUP, key, 0);
   Sleep(100);
+  Vars.bIgnoreKeys = FALSE;
   if (prompt) {
     Console::ShowPrompt();
   }

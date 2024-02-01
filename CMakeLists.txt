@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # remove any /W compile flags
@@ -26,8 +26,6 @@ set(D2BS_SRCS
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Diablo II/Patches/D2Intercepts.cpp"
 
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Diablo II/D2Helpers.cpp"
-
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/Main/D2BS.cpp"
 
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Map/Diablo_II/ActMap.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Map/Diablo_II/LevelMap.cpp"
@@ -80,6 +78,9 @@ set(D2BS_SRCS
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Engine/Script.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Engine/ScriptEngine.cpp"
 
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/Engine.cc"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/Globals.cc"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cc"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/StackWalker.cpp"
 
   "version.rc")
@@ -107,14 +108,18 @@ target_include_directories(D2BS PRIVATE
 	"${CMAKE_CURRENT_SOURCE_DIR}/src/SpiderMonkey Engine/Engine")
 
 target_compile_definitions(D2BS PRIVATE
+  WIN32
   WIN32_LEAN_AND_MEAN
   XP_WIN
   STATIC_JS_API)
 
 target_link_libraries(D2BS PRIVATE
+  # windows dependencies
   dbghelp
   shlwapi
 
+  # vendor dependencies
+  minhook
   js)
 
 install(TARGETS D2BS RUNTIME DESTINATION bin/d2bs)

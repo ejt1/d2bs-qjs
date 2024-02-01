@@ -3,6 +3,7 @@
 #include "D2Helpers.h"
 #include "Helpers.h"
 #include "Constants.h"
+#include <Engine.h>
 
 Control* findControl(int Type, int LocaleID, int Disabled, int PosX, int PosY, int SizeX, int SizeY) {
   if (ClientState() != ClientStateMenu)
@@ -120,11 +121,13 @@ bool clickControl(Control* pControl, int x, int y) {
     if (y == -1)
       y = pControl->dwPosY - (pControl->dwSizeY / 2);
 
+    Vars.bIgnoreMouse = TRUE;
     Sleep(100);
     SendMouseClick(x, y, 0);
     Sleep(100);
     SendMouseClick(x, y, 1);
     Sleep(100);
+    Vars.bIgnoreMouse = FALSE;
 
     return true;
   }

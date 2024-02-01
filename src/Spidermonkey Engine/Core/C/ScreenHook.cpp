@@ -1,6 +1,6 @@
 #include "ScreenHook.h"
 #include "JSScreenHook.h"
-#include "D2BS.h"
+#include "Engine.h"
 #include "Console.h"
 #include "D2Ptrs.h"
 
@@ -210,16 +210,16 @@ bool Genhook::Click(int button, POINT* loc) {
   bool block = false;
   if (owner && JSVAL_IS_FUNCTION(owner->GetContext(), clicked)) {
     Event* evt = new Event;
-    evt->owner = owner;
+    //evt->owner = owner;
     evt->argc = 3;
-    evt->name = _strdup("ScreenHookClick");
+    evt->name = "ScreenHookClick";
     evt->arg1 = new DWORD((DWORD)button);
     evt->arg2 = new DWORD((DWORD)loc->x);
     evt->arg3 = new DWORD((DWORD)loc->y);
     evt->arg4 = new DWORD(false);
 
     ResetEvent(Vars.eventSignal);
-    AutoRoot* root = new AutoRoot(evt->owner->GetContext(), clicked);
+    AutoRoot* root = new AutoRoot(owner->GetContext(), clicked);
     evt->functions.push_back(root);
     owner->FireEvent(evt);
 
@@ -243,10 +243,10 @@ void Genhook::Hover(POINT* loc) {
 
   if (owner && JSVAL_IS_FUNCTION(owner->GetContext(), hovered)) {
     Event* evt = new Event;
-    evt->owner = owner;
+    //evt->owner = owner;
     evt->argc = 2;
     evt->functions.push_back(new AutoRoot(owner->GetContext(), hovered));
-    evt->name = _strdup("ScreenHookHover");
+    evt->name = "ScreenHookHover";
     evt->arg1 = new DWORD((DWORD)loc->x);
     evt->arg2 = new DWORD((DWORD)loc->y);
 

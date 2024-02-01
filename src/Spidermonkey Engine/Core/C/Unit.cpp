@@ -3,7 +3,7 @@
 #include "Unit.h"
 #include "Constants.h"
 #include "D2Helpers.h"
-#include "D2BS.h"
+#include "Engine.h"
 
 #define HAS_BIT(value, bit) ((((value) >> (bit)) & 0x1) == 0x1)
 
@@ -50,44 +50,6 @@ UnitAny* GetUnit(char* szName, DWORD dwClassId, DWORD dwType, DWORD dwMode, DWOR
     return GetUnitFromTables(p_D2CLIENT_ServerSideUnitHashTables, dwType, dwType, szName, dwClassId, dwType, dwMode, dwUnitId);
   else
     return GetUnitFromTables(p_D2CLIENT_ServerSideUnitHashTables, 0, 5, szName, dwClassId, dwType, dwMode, dwUnitId);
-
-  /*	EnterCriticalSection(&Vars.cUnitListSection);
-
-          UnitAny* result = NULL;
-          for(vector<pair<DWORD, DWORD> >::iterator it = Vars.vUnitList.begin(); it != Vars.vUnitList.end(); it++)
-          {
-                  UnitAny* unit = D2CLIENT_FindUnit(it->first, it->second);
-                  if(unit != NULL && CheckUnit(unit, szName, dwClassId, dwType, dwMode, dwUnitId))
-                  {
-                          result = unit;
-                          break;
-                  }
-          }
-
-          LeaveCriticalSection(&Vars.cUnitListSection);
-
-          return result;*/
-
-  // First off, check for near units
-  /*	UnitAny* player = D2CLIENT_GetPlayerUnit();
-          if(player && player->pPath && player->pPath->pRoom1 && player->pPath->pRoom1->pRoom2 &&
-                  player->pPath->pRoom1->pRoom2->pLevel)
-          {
-                  Room2* ptRoomOther = player->pPath->pRoom1->pRoom2->pLevel->pRoom2First;
-
-                  for(;ptRoomOther; ptRoomOther = ptRoomOther->pRoom2Next)
-                  {
-                          if(!ptRoomOther->pRoom1)
-                                  continue;
-                          for(UnitAny* lpUnit = ptRoomOther->pRoom1->pUnitFirst; lpUnit; lpUnit = lpUnit->pListNext)
-                          {
-                                  if(CheckUnit(lpUnit, szName, dwClassId, dwType, dwMode, dwUnitId))
-                                          return lpUnit;
-                          }
-                  }
-          }
-
-          return NULL;*/
 }
 
 static DWORD dwMax(DWORD a, DWORD b) {
@@ -147,66 +109,6 @@ UnitAny* GetNextUnit(UnitAny* pUnit, char* szName, DWORD dwClassId, DWORD dwType
     return GetNextUnitFromTables(pUnit, p_D2CLIENT_ServerSideUnitHashTables, dwType, dwType, szName, dwClassId, dwType, dwMode);
   else
     return GetNextUnitFromTables(pUnit, p_D2CLIENT_ServerSideUnitHashTables, 0, 5, szName, dwClassId, dwType, dwMode);
-
-  /*	EnterCriticalSection(&Vars.cUnitListSection);
-
-          UnitAny* result = NULL;
-          // find where we left off
-          vector<pair<DWORD, DWORD> >::iterator it = Vars.vUnitList.begin();
-          for(; it != Vars.vUnitList.end(); it++)
-          {
-                  if(it->first == pUnit->dwUnitId && it->second == pUnit->dwType)
-                          // this is where we left off
-                          break;
-          }
-
-          if(it != Vars.vUnitList.end())
-          {
-                  it++;
-
-                  for(; it != Vars.vUnitList.end(); it++)
-                  {
-                          UnitAny* unit = D2CLIENT_FindUnit(it->first, it->second);
-                          if(unit != NULL && CheckUnit(unit, szName, dwClassId, dwType, dwMode, (DWORD)-1))
-                          {
-                                  result = unit;
-                                  break;
-                          }
-                  }
-          }
-
-          LeaveCriticalSection(&Vars.cUnitListSection);
-
-          return result;*/
-
-  /*	UnitAny* lpUnit = pUnit->pListNext;
-          Room1* ptRoom = D2COMMON_GetRoomFromUnit(pUnit);
-          Room2* ptRoomOther = NULL;
-
-          if(ptRoom)
-          {
-                  ptRoomOther = ptRoom->pRoom2;
-
-                  if(!lpUnit && ptRoomOther)
-                          ptRoomOther = ptRoomOther->pRoom2Next;
-
-                  for(; ptRoomOther; ptRoomOther = ptRoomOther->pRoom2Next)
-                  {
-                          if(ptRoomOther->pRoom1)
-                          {
-                                  if(!lpUnit)
-                                          lpUnit = ptRoomOther->pRoom1->pUnitFirst;
-
-                                  for(; lpUnit; lpUnit = lpUnit->pListNext)
-                                  {
-                                          if(CheckUnit(lpUnit, szName, dwClassId, dwType, dwMode, (DWORD)-1))
-                                                  return lpUnit;
-                                  }
-                          }
-                  }
-          }
-
-          return NULL;*/
 }
 
 UnitAny* GetInvUnit(UnitAny* pOwner, char* szName, DWORD dwClassId, DWORD dwMode, DWORD dwUnitId) {

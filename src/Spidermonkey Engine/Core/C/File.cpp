@@ -23,7 +23,7 @@
 #include <Windows.h>
 
 #include "File.h"
-#include "D2BS.h"
+#include "Engine.h"
 #include "Helpers.h"
 
 char* readLine(FILE* fptr, bool locking) {
@@ -45,7 +45,6 @@ char* readLine(FILE* fptr, bool locking) {
 }
 
 bool writeValue(FILE* fptr, JSContext* cx, jsval value, bool isBinary, bool locking) {
-  char* str;
   int len = 0, result;
   int32 ival = 0;
   jsdouble dval = 0;
@@ -61,8 +60,8 @@ bool writeValue(FILE* fptr, JSContext* cx, jsval value, bool isBinary, bool lock
       if (result == 1)
         return true;
       break;
-    case JSTYPE_STRING:
-      str = JS_EncodeStringToUTF8(cx, JSVAL_TO_STRING(value));
+    case JSTYPE_STRING: {
+      char* str = JS_EncodeStringToUTF8(cx, JSVAL_TO_STRING(value));
       if (locking)
         result = fwrite(str, sizeof(char), strlen(str), fptr);
       else
@@ -70,6 +69,7 @@ bool writeValue(FILE* fptr, JSContext* cx, jsval value, bool isBinary, bool lock
 
       JS_free(cx, str);
       return (int)strlen(str) == result;
+    }
       break;
     case JSTYPE_NUMBER:
       if (isBinary) {
@@ -97,7 +97,7 @@ bool writeValue(FILE* fptr, JSContext* cx, jsval value, bool isBinary, bool lock
           if (JS_ValueToNumber(cx, value, &dval) == JS_FALSE)
             return false;
           // jsdouble will never be a 64-char string, but I'd rather be safe than sorry
-          str = new char[64];
+          char* str = new char[64];
           sprintf_s(str, 64, "%.16f", dval);
           len = strlen(str);
           if (locking)
@@ -110,7 +110,7 @@ bool writeValue(FILE* fptr, JSContext* cx, jsval value, bool isBinary, bool lock
         } else if (JSVAL_IS_INT(value)) {
           if (JS_ValueToInt32(cx, value, &ival) == JS_FALSE)
             return false;
-          str = new char[16];
+          char* str = new char[16];
           _itoa_s(ival, str, 16, 10);
           len = strlen(str);
           if (locking)
@@ -126,7 +126,7 @@ bool writeValue(FILE* fptr, JSContext* cx, jsval value, bool isBinary, bool lock
     case JSTYPE_BOOLEAN:
       if (!isBinary) {
         bval = !!JSVAL_TO_BOOLEAN(value);
-        str = bval ? "true" : "false";
+        const char* str = bval ? "true" : "false";
         if (locking)
           result = fwrite(str, sizeof(char), strlen(str), fptr);
         else

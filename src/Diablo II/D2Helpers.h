@@ -5,18 +5,14 @@
 #include "D2Ptrs.h"
 #include "js32.h"
 
-#define DEBUG_LOG(MESSAGE) Log(L"%s (%s, %d)", MESSAGE, __FILE__, __LINE__)
-
-enum DistanceType { Euclidean, Chebyshev, Manhattan };
-
-enum ClientGameState { ClientStateNull, ClientStateMenu, ClientStateInGame, ClientStateBusy };
-
-void Log(wchar_t* szFormat, ...);
+void Log(const wchar_t* szFormat, ...);
 void LogNoFormat(const wchar_t* szString);
 
+enum ClientGameState { ClientStateNull, ClientStateMenu, ClientStateInGame, ClientStateBusy };
 ClientGameState ClientState(void);
 bool GameReady(void);
 bool WaitForGameReady(void);
+
 DWORD GetPlayerArea(void);
 void SendMouseClick(int x, int y, int clicktype);
 void SendKeyPress(uint type, uint key, uint ext);
@@ -112,6 +108,7 @@ void __stdcall D2CLIENT_TakeWaypoint(DWORD dwWaypointId, DWORD dwArea);
 DWORD __fastcall D2CLIENT_SendGamePacket_ASM(DWORD dwLen, BYTE* bPacket);
 void __stdcall D2CLIENT_LeftClickItem(DWORD Location, UnitAny* pPlayer, Inventory* pInventory, int x, int y, DWORD dwClickType, InventoryLayout* pLayout);
 
+enum DistanceType { Euclidean, Chebyshev, Manhattan };
 double GetDistance(long x1, long y1, long x2, long y2, DistanceType type = Euclidean);
 bool IsScrollingText();
 void ReadProcessBYTES(HANDLE hProcess, DWORD lpAddress, void* buf, int len);

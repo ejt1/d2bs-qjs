@@ -2,7 +2,7 @@
 #include "Profile.h"
 #include "Helpers.h"
 
-#include "D2BS.h"
+#include "Engine.h"
 
 // Profile() - get the active profile
 // Profile(name) - get the named profile
@@ -93,7 +93,7 @@ JSAPI_FUNC(profile_login) {
   (argc);
 
   JS_SET_RVAL(cx, vp, JSVAL_VOID);
-  char* error;
+  const char* error;
   Profile* prof;
 
   prof = (Profile*)JS_GetPrivate(cx, JS_THIS_OBJECT(cx, vp));
