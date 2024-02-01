@@ -5,6 +5,7 @@
 #include <fcntl.h>
 
 #include "dde.h"
+#include "Constants.h"
 #include "Offset.h"
 #include "ScriptEngine.h"
 #include "Helpers.h"
@@ -20,8 +21,10 @@
 #include "D2Loader.h"
 #endif
 #include <MinHook.h>
+#include <mutex>
 
 Engine::Engine() : m_hModule(nullptr), m_hThread(INVALID_HANDLE_VALUE) {
+  m_instance = this;
   m_fnWndProc = nullptr;
   m_fnCreateWindow = nullptr;
   m_fnGameDraw = nullptr;
@@ -106,7 +109,6 @@ bool Engine::Initialize(HMODULE hModule, LPVOID lpReserved) {
   Vars.bShutdownFromDllMain = FALSE;
   SetUnhandledExceptionFilter(ExceptionHandler);
 
-  MessageBox(nullptr, "asdf", "continue", MB_OK);
   MH_Initialize();
   // win32 hooks
 
@@ -138,6 +140,7 @@ bool Engine::Initialize(HMODULE hModule, LPVOID lpReserved) {
   Vars.bChangedAct = FALSE;
   Vars.bGameLoopEntered = FALSE;
   Vars.SectionCount = 0;
+  Vars.bIgnoreKeys = FALSE;
 
   Genhook::Initialize();
   DefineOffsets();
@@ -152,14 +155,15 @@ bool Engine::Initialize(HMODULE hModule, LPVOID lpReserved) {
 }
 
 void Engine::Shutdown() {
+  // TODO(ejt): while proper shutdown is not strictly required for D2BS to function it's good practice to cleanup as best we can.
+  // During restructuring it is not a priority so revisit this in the future.
+
   if (!Vars.bNeedShutdown)
     return;
 
   Vars.bActive = FALSE;
   if (!Vars.bShutdownFromDllMain)
     WaitForSingleObject(m_hThread, INFINITE);
-
-  SetWindowLong(D2GFX_GetHwnd(), GWL_WNDPROC, (LONG)Vars.oldWNDPROC);
 
   MH_DisableHook(MH_ALL_HOOKS);
   MH_RemoveHook(HandleGameDrawMenu);
@@ -172,9 +176,6 @@ void Engine::Shutdown() {
   ShutdownDdeServer();
 
   KillTimer(D2GFX_GetHwnd(), Vars.uTimer);
-
-  UnhookWindowsHookEx(Vars.hMouseHook);
-  UnhookWindowsHookEx(Vars.hKeybHook);
 
   DeleteCriticalSection(&Vars.cRoomSection);
   DeleteCriticalSection(&Vars.cMiscSection);
@@ -196,11 +197,7 @@ void Engine::Shutdown() {
 }
 
 DWORD __stdcall Engine::EngineThread(LPVOID lpThreadParameter) {
-  Engine* engine = static_cast<Engine*>(lpThreadParameter);
-
-  sLine* command;
-  bool beginStarter = true;
-  bool bInGame = false;
+  UNREFERENCED_PARAMETER(lpThreadParameter);
 
   if (!InitHooks()) {
     wcscpy_s(Vars.szPath, MAX_PATH, L"common");
@@ -209,85 +206,92 @@ DWORD __stdcall Engine::EngineThread(LPVOID lpThreadParameter) {
     return FALSE;
   }
 
-  ParseCommandLine(Vars.szCommandLine);
-
-  command = GetCommand(L"-handle");
-
-  if (command) {
-    Vars.hHandle = (HWND)_wtoi(command->szText);
-  }
-
-  command = GetCommand(L"-mpq");
-
-  if (command) {
-    char* mpq = UnicodeToAnsi(command->szText);
-    LoadMPQ(mpq);
-    delete[] mpq;
-  }
-
-  command = GetCommand(L"-profile");
-
-  if (command) {
-    const wchar_t* profile = command->szText;
-    if (SwitchToProfile(profile))
-      Print(L"\u00FFc2D2BS\u00FFc0 :: Switched to profile %s", profile);
-    else
-      Print(L"\u00FFc2D2BS\u00FFc0 :: Profile %s not found", profile);
-  }
-
-  Log(L"D2BS Engine startup complete. %s", D2BS_VERSION);
-  Print(L"\u00FFc2D2BS\u00FFc0 :: Engine startup complete!");
-
-  while (Vars.bActive) {
-    switch (ClientState()) {
-      case ClientStateInGame: {
-        if (bInGame) {
-          if ((Vars.dwMaxGameTime && Vars.dwGameTime && (GetTickCount() - Vars.dwGameTime) > Vars.dwMaxGameTime) ||
-              (!D2COMMON_IsTownByLevelNo(GetPlayerArea()) && (Vars.nChickenHP && Vars.nChickenHP >= GetUnitHP(D2CLIENT_GetPlayerUnit())) ||
-               (Vars.nChickenMP && Vars.nChickenMP >= GetUnitMP(D2CLIENT_GetPlayerUnit()))))
-            D2CLIENT_ExitGame();
-        } else {
-          Vars.dwGameTime = GetTickCount();
-
-          Sleep(500);
-
-          D2CLIENT_InitInventory();
-          sScriptEngine->ForEachScript(
-              [](Script* script, void*, uint) {
-                script->UpdatePlayerGid();
-                return true;
-              },
-              NULL, 0);
-          sScriptEngine->UpdateConsole();
-          Vars.bQuitting = false;
-          engine->OnGameEntered();
-
-          bInGame = true;
-        }
-        break;
-      }
-      case ClientStateMenu: {
-        while (Vars.bUseProfileScript) {
-          Sleep(100);
-        }
-        engine->OnMenuEntered(beginStarter);
-        beginStarter = false;
-        if (bInGame) {
-          Vars.dwGameTime = NULL;
-          bInGame = false;
-        }
-        break;
-      }
-      case ClientStateBusy:
-      case ClientStateNull:
-        break;
-    }
-    Sleep(50);
-  }
-
-  sScriptEngine->Shutdown();
+  // sScriptEngine->Shutdown();
 
   return NULL;
+}
+
+void Engine::OnUpdate() {
+  static std::once_flag of;
+  std::call_once(of, []() {
+    sLine* command;
+    ParseCommandLine(Vars.szCommandLine);
+
+    command = GetCommand(L"-handle");
+    if (command) {
+      Vars.hHandle = (HWND)_wtoi(command->szText);
+    }
+
+    command = GetCommand(L"-mpq");
+    if (command) {
+      char* mpq = UnicodeToAnsi(command->szText);
+      LoadMPQ(mpq);
+      delete[] mpq;
+    }
+
+    command = GetCommand(L"-profile");
+    if (command) {
+      const wchar_t* profile = command->szText;
+      if (SwitchToProfile(profile))
+        Print(L"\u00FFc2D2BS\u00FFc0 :: Switched to profile %s", profile);
+      else
+        Print(L"\u00FFc2D2BS\u00FFc0 :: Profile %s not found", profile);
+    }
+
+    Log(L"D2BS Engine startup complete. %s", D2BS_VERSION);
+    Print(L"\u00FFc2D2BS\u00FFc0 :: Engine startup complete!");
+  });
+
+  static bool beginStarter = true;
+  static bool bInGame = false;
+
+  if (!Vars.bActive) {
+    return;
+  }
+
+  switch (ClientState()) {
+    case ClientStateInGame: {
+      if (bInGame) {
+        if ((Vars.dwMaxGameTime && Vars.dwGameTime && (GetTickCount() - Vars.dwGameTime) > Vars.dwMaxGameTime) ||
+            (!D2COMMON_IsTownByLevelNo(GetPlayerArea()) && (Vars.nChickenHP && Vars.nChickenHP >= GetUnitHP(D2CLIENT_GetPlayerUnit())) ||
+             (Vars.nChickenMP && Vars.nChickenMP >= GetUnitMP(D2CLIENT_GetPlayerUnit()))))
+          D2CLIENT_ExitGame();
+      } else {
+        Vars.dwGameTime = GetTickCount();
+
+        // Sleep(500);
+
+        D2CLIENT_InitInventory();
+        sScriptEngine->ForEachScript(
+            [](Script* script, void*, uint) {
+              script->UpdatePlayerGid();
+              return true;
+            },
+            NULL, 0);
+        sScriptEngine->UpdateConsole();
+        Vars.bQuitting = false;
+        OnGameEntered();
+
+        bInGame = true;
+      }
+      break;
+    }
+    case ClientStateMenu: {
+      while (Vars.bUseProfileScript) {
+        Sleep(100);
+      }
+      OnMenuEntered(beginStarter);
+      beginStarter = false;
+      if (bInGame) {
+        Vars.dwGameTime = NULL;
+        bInGame = false;
+      }
+      break;
+    }
+    case ClientStateBusy:
+    case ClientStateNull:
+      break;
+  }
 }
 
 void Engine::OnGameEntered() {
@@ -317,6 +321,184 @@ void Engine::OnMenuEntered(bool beginStarter) {
 }
 
 LRESULT __stdcall Engine::HandleWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+  switch (uMsg) {
+    // BUG(ejt): weird behavior when typing into console, adds numbers after some characters
+    case WM_KEYDOWN:
+    case WM_SYSKEYDOWN:
+    case WM_KEYUP:
+    case WM_SYSKEYUP:
+    case WM_CHAR: {
+      if (Vars.bIgnoreKeys) {
+        break;
+      }
+      WORD repeatCount = LOWORD(lParam);
+      bool altState = !!(HIWORD(lParam) & KF_ALTDOWN);
+      bool previousState = !!(HIWORD(lParam) & KF_REPEAT);
+      bool transitionState = !!(HIWORD(lParam) & KF_UP);
+      bool isRepeat = !transitionState && repeatCount != 1;
+      bool isDown = !(previousState && transitionState);
+      bool isUp = previousState && transitionState;
+
+      bool gameState = ClientState() == ClientStateInGame;
+      bool chatBoxOpen = gameState ? !!D2CLIENT_GetUIState(UI_CHAT_CONSOLE) : false;
+      bool escMenuOpen = gameState ? !!D2CLIENT_GetUIState(UI_ESCMENU_MAIN) : false;
+
+      if (altState && wParam == VK_F4)
+        break;
+
+      if (Vars.bBlockKeys)
+        return 0;
+
+      if (wParam == VK_HOME && !(chatBoxOpen || escMenuOpen)) {
+        if (isDown && !isRepeat) {
+          if (!altState)
+            Console::ToggleBuffer();
+          else
+            Console::TogglePrompt();
+
+          break;
+        }
+      } else if (wParam == VK_ESCAPE && Console::IsVisible()) {
+        if (isDown && !isRepeat) {
+          Console::Hide();
+          return 0;
+        }
+        break;
+      } else if (Console::IsEnabled()) {
+        BYTE layout[256] = {0};
+        WORD out[2] = {0};
+        switch (wParam) {
+          case VK_TAB:
+            if (isUp)
+              for (int i = 0; i < 5; i++) Console::AddKey(' ');
+            break;
+          case VK_RETURN:
+            if (isUp && !isRepeat && !escMenuOpen)
+              Console::ExecuteCommand();
+            break;
+          case VK_BACK:
+            if (isDown)
+              Console::RemoveLastKey();
+            break;
+          case VK_UP:
+            if (isUp && !isRepeat)
+              Console::PrevCommand();
+            break;
+          case VK_DOWN:
+            if (isUp && !isRepeat)
+              Console::NextCommand();
+            break;
+          case VK_NEXT:
+            if (isDown)
+              Console::ScrollDown();
+            break;
+          case VK_PRIOR:
+            if (isDown)
+              Console::ScrollUp();
+            break;
+          case VK_MENU:  // alt
+            // Send the alt to the scripts to fix sticky alt. There may be a better way.
+            KeyDownUpEvent(wParam, isUp);
+            return m_fnWndProc(hWnd, uMsg, wParam, lParam);
+            break;
+          default:
+            if (isDown) {
+              if (GetKeyboardState(layout) && ToAscii(wParam, (lParam & 0xFF0000), layout, out, 0) != 0) {
+                for (int i = 0; i < repeatCount; i++) Console::AddKey(out[0]);
+              }
+            }
+            break;
+        }
+        return 0;
+      } else if (!isRepeat && !(chatBoxOpen || escMenuOpen))
+        if (KeyDownUpEvent(wParam, isUp))
+          return 0;
+    } break;
+
+    // TODO(ejt): revisit mouse events for cleanup
+    //case WM_LBUTTONDOWN:
+    //case WM_LBUTTONUP:
+    //case WM_RBUTTONDOWN:
+    //case WM_RBUTTONUP:
+    //case WM_MBUTTONDOWN:
+    //case WM_MBUTTONUP:
+    //case WM_MOUSEMOVE: {
+    //  POINT pt = {static_cast<LONG>(LOWORD(lParam)), static_cast<LONG>(HIWORD(lParam))};
+    //  // filter out clicks on the window border
+    //  if ((pt.x < 0 || pt.y < 0))
+    //    break;
+
+    //  Vars.pMouseCoords = pt;
+    //  if (Vars.bBlockMouse)
+    //    return 0;
+
+    //  bool clicked = false;
+
+    //  HookClickHelper helper = {-1, {pt.x, pt.y}};
+    //  switch (uMsg) {
+    //    case WM_LBUTTONDOWN:
+    //      MouseClickEvent(0, pt, false);
+    //      helper.button = 0;
+    //      if (Genhook::ForEachVisibleHook(ClickHook, &helper, 1))
+    //        clicked = true;
+    //      break;
+    //    case WM_LBUTTONUP:
+    //      MouseClickEvent(0, pt, true);
+    //      break;
+    //    case WM_RBUTTONDOWN:
+    //      MouseClickEvent(1, pt, false);
+    //      helper.button = 1;
+    //      if (Genhook::ForEachVisibleHook(ClickHook, &helper, 1))
+    //        clicked = true;
+    //      break;
+    //    case WM_RBUTTONUP:
+    //      MouseClickEvent(1, pt, true);
+    //      break;
+    //    case WM_MBUTTONDOWN:
+    //      MouseClickEvent(2, pt, false);
+    //      helper.button = 2;
+    //      if (Genhook::ForEachVisibleHook(ClickHook, &helper, 1))
+    //        clicked = true;
+    //      break;
+    //    case WM_MBUTTONUP:
+    //      MouseClickEvent(2, pt, true);
+    //      break;
+    //    case WM_MOUSEMOVE:
+    //      // would be nice to enable these events but they bog down too much
+    //      MouseMoveEvent(pt);
+    //      // Genhook::ForEachVisibleHook(HoverHook, &helper, 1);
+    //      break;
+    //  }
+
+    //  if (clicked) {
+    //    return 0;
+    //  }
+    //} break;
+
+    case WM_COPYDATA: {
+      COPYDATASTRUCT* pCopy = (COPYDATASTRUCT*)lParam;
+
+      if (pCopy) {
+        wchar_t* lpwData = AnsiToUnicode((const char*)pCopy->lpData);
+        if (pCopy->dwData == 0x1337)  // 0x1337 = Execute Script
+        {
+          // TODO(ejt): This could deadlock
+          while (!Vars.bActive || (sScriptEngine->GetState() != Running)) {
+            Sleep(100);
+          }
+          sScriptEngine->RunCommand(lpwData);
+        } else if (pCopy->dwData == 0x31337)  // 0x31337 = Set Profile
+          if (SwitchToProfile(lpwData))
+            Print(L"\u00FFc2D2BS\u00FFc0 :: Switched to profile %s", lpwData);
+          else
+            Print(L"\u00FFc2D2BS\u00FFc0 :: Profile %s not found", lpwData);
+        else
+          CopyDataEvent(pCopy->dwData, lpwData);
+        delete[] lpwData;
+      }
+      return TRUE;
+    }
+  }
   return m_fnWndProc(hWnd, uMsg, wParam, lParam);
 }
 
@@ -326,6 +508,8 @@ int __stdcall Engine::HandleCreateWindow(HINSTANCE hInstance, WNDPROC lpWndProc,
 }
 
 void Engine::HandleGameDraw() {
+  m_instance->OnUpdate();
+
   if (Vars.bActive && ClientState() == ClientStateInGame) {
     FlushPrint();
     Genhook::DrawAll(IG);
@@ -349,8 +533,9 @@ void Engine::HandleGameDraw() {
 }
 
 void Engine::HandleGameDrawMenu() {
-  //D2WIN_DrawSprites();
   m_fnGameDrawMenu();
+  m_instance->OnUpdate();
+
   if (Vars.bActive && ClientState() == ClientStateMenu) {
     FlushPrint();
     Genhook::DrawAll(OOG);

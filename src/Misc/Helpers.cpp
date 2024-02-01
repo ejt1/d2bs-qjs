@@ -156,7 +156,6 @@ void InitSettings(void) {
   if (Vars.dwMemUsage < 1)
     Vars.dwMemUsage = 50;
   Vars.dwMemUsage *= 1024 * 1024;
-  Vars.oldWNDPROC = NULL;
 }
 
 bool InitHooks(void) {
@@ -170,24 +169,17 @@ bool InitHooks(void) {
     }
 
     if (D2GFX_GetHwnd() && (ClientState() == ClientStateMenu || ClientState() == ClientStateInGame)) {
-      if (!Vars.oldWNDPROC)
-        Vars.oldWNDPROC = (WNDPROC)SetWindowLong(D2GFX_GetHwnd(), GWL_WNDPROC, (LONG)GameEventHandler);
-      if (!Vars.oldWNDPROC)
-        continue;
-
       Vars.uTimer = SetTimer(D2GFX_GetHwnd(), 1, 0, TimerProc);
 
       DWORD mainThread = GetWindowThreadProcessId(D2GFX_GetHwnd(), 0);
       if (mainThread) {
-        if (!Vars.hKeybHook)
-          Vars.hKeybHook = SetWindowsHookEx(WH_KEYBOARD, KeyPress, NULL, mainThread);
         if (!Vars.hMouseHook)
           Vars.hMouseHook = SetWindowsHookEx(WH_MOUSE, MouseMove, NULL, mainThread);
       }
     } else
       continue;
 
-    if (Vars.hKeybHook && Vars.hMouseHook) {
+    if (Vars.hMouseHook) {
       if (!sScriptEngine->Startup())
         return false;
 

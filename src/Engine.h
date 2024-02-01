@@ -50,6 +50,7 @@ struct Variables {
   BOOL bQuitOnHostile;
   BOOL bStartAtMenu;
   BOOL bActive;
+  BOOL bIgnoreKeys;
   BOOL bBlockKeys;
   BOOL bBlockMouse;
   BOOL bDisableCache;
@@ -84,9 +85,7 @@ struct Variables {
   wchar_t szTitle[256];
   wchar_t szCommandLine[256];
 
-  WNDPROC oldWNDPROC;
   HHOOK hMouseHook;
-  HHOOK hKeybHook;
 
   UINT_PTR uTimer;
   long SectionCount;
@@ -130,8 +129,12 @@ class Engine final {
   void Shutdown();
 
  private:
+  // only for use by hooks!
+  inline static Engine* m_instance;
+
   static DWORD WINAPI EngineThread(LPVOID lpThreadParameter);
 
+  void OnUpdate();
   void OnGameEntered();
   void OnMenuEntered(bool beginStarter);
 

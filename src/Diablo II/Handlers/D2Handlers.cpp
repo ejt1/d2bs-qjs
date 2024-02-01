@@ -74,36 +74,6 @@ DWORD __fastcall GamePacketSent(BYTE* pPacket, DWORD dwSize) {
   return !GamePacketSentEvent(pPacket, dwSize);
 }
 
-LONG WINAPI GameEventHandler(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-  COPYDATASTRUCT* pCopy;
-  switch (uMsg) {
-    case WM_COPYDATA:
-      pCopy = (COPYDATASTRUCT*)lParam;
-
-      if (pCopy) {
-        wchar_t* lpwData = AnsiToUnicode((const char*)pCopy->lpData);
-        if (pCopy->dwData == 0x1337)  // 0x1337 = Execute Script
-        {
-          while (!Vars.bActive || (sScriptEngine->GetState() != Running)) {
-            Sleep(100);
-          }
-          sScriptEngine->RunCommand(lpwData);
-        } else if (pCopy->dwData == 0x31337)  // 0x31337 = Set Profile
-          if (SwitchToProfile(lpwData))
-            Print(L"\u00FFc2D2BS\u00FFc0 :: Switched to profile %s", lpwData);
-          else
-            Print(L"\u00FFc2D2BS\u00FFc0 :: Profile %s not found", lpwData);
-        else
-          CopyDataEvent(pCopy->dwData, lpwData);
-        delete[] lpwData;
-      }
-
-      return TRUE;
-  }
-
-  return (LONG)CallWindowProcA(Vars.oldWNDPROC, hWnd, uMsg, wParam, lParam);
-}
-
 LRESULT CALLBACK KeyPress(int code, WPARAM wParam, LPARAM lParam) {
   if (code >= HC_ACTION) {
     WORD repeatCount = LOWORD(lParam);

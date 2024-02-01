@@ -5,7 +5,6 @@
 
 void FlushPrint();
 DWORD __fastcall GameInput(wchar_t* wMsg);
-LONG WINAPI GameEventHandler(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK MouseMove(int code, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK KeyPress(int code, WPARAM wParam, LPARAM lParam);
 DWORD __fastcall GamePacketReceived(BYTE* pPacket, DWORD dwSize);

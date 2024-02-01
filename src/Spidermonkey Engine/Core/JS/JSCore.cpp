@@ -743,11 +743,13 @@ JSAPI_FUNC(my_sendKey) {
   if (prompt) {
     Console::HidePrompt();
   }
+  Vars.bIgnoreKeys = TRUE;
   Sleep(100);
   SendKeyPress(WM_KEYDOWN, key, 0);
   Sleep(100);
   SendKeyPress(WM_KEYUP, key, 0);
   Sleep(100);
+  Vars.bIgnoreKeys = FALSE;
   if (prompt) {
     Console::ShowPrompt();
   }
