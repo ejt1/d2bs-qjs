@@ -49,7 +49,6 @@ struct Variables {
   BOOL bQuitOnError;
   BOOL bQuitOnHostile;
   BOOL bStartAtMenu;
-  BOOL bActive;
   BOOL bIgnoreKeys;
   BOOL bBlockKeys;
   BOOL bIgnoreMouse;

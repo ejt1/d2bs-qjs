@@ -16,13 +16,14 @@
 #include "Core.h"
 #include "Unit.h"
 #include "D2Handlers.h"
+#include "Control.h"
 
 #ifdef _MSVC_DEBUG
 #include "D2Loader.h"
 #endif
+
 #include <MinHook.h>
 #include <mutex>
-#include <Control.h>
 
 Engine::Engine() : m_hModule(nullptr) {
   m_instance = this;
@@ -160,8 +161,6 @@ void Engine::Shutdown() {
   if (!Vars.bNeedShutdown)
     return;
 
-  Vars.bActive = FALSE;
-
   MH_DisableHook(MH_ALL_HOOKS);
   MH_RemoveHook(HandleGameDrawMenu);
   MH_RemoveHook(HandleGameDraw);
@@ -201,8 +200,6 @@ void Engine::OnUpdate() {
       exit(-1);
     }
 
-    Vars.bActive = TRUE;
-
     if (ClientState() == ClientStateMenu && Vars.bStartAtMenu)
       clickControl(*p_D2WIN_FirstControl);
 
@@ -240,10 +237,6 @@ void Engine::OnUpdate() {
   static bool beginStarter = true;
   static bool bInGame = false;
 
-  if (!Vars.bActive) {
-    return;
-  }
-
   switch (ClientState()) {
     case ClientStateInGame: {
       if (bInGame) {
@@ -253,8 +246,6 @@ void Engine::OnUpdate() {
           D2CLIENT_ExitGame();
       } else {
         Vars.dwGameTime = GetTickCount();
-
-        // Sleep(500);
 
         D2CLIENT_InitInventory();
         sScriptEngine->ForEachScript(
@@ -272,6 +263,7 @@ void Engine::OnUpdate() {
       break;
     }
     case ClientStateMenu: {
+      // this will 100% cause a deadlock if bUseProfileScript is true
       while (Vars.bUseProfileScript) {
         Sleep(100);
       }
@@ -483,7 +475,7 @@ LRESULT __stdcall Engine::HandleWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
         if (pCopy->dwData == 0x1337)  // 0x1337 = Execute Script
         {
           // TODO(ejt): This could deadlock
-          while (!Vars.bActive || (sScriptEngine->GetState() != Running)) {
+          while (sScriptEngine->GetState() != Running) {
             Sleep(100);
           }
           sScriptEngine->RunCommand(lpwData);
@@ -521,7 +513,7 @@ void Engine::HandleGameDraw() {
 
   m_instance->OnUpdate();
 
-  if (Vars.bActive && ClientState() == ClientStateInGame) {
+  if (ClientState() == ClientStateInGame) {
     FlushPrint();
     Genhook::DrawAll(IG);
     DrawLogo();
@@ -547,7 +539,7 @@ void Engine::HandleGameDrawMenu() {
   m_fnGameDrawMenu();
   m_instance->OnUpdate();
 
-  if (Vars.bActive && ClientState() == ClientStateMenu) {
+  if (ClientState() == ClientStateMenu) {
     FlushPrint();
     Genhook::DrawAll(OOG);
     DrawLogo();
