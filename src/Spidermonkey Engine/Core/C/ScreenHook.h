@@ -42,7 +42,7 @@ class Genhook {
   Script* owner;
   ScreenhookState gameState;
   Align alignment;
-  jsval clicked, hovered;
+  JSValue clicked, hovered;
   JSValue self;
   bool isAutomap, isVisible;
   ushort opacity, zorder;
@@ -140,8 +140,8 @@ class Genhook {
     zorder = norder;
     Unlock();
   }
-  void SetClickHandler(jsval handler);
-  void SetHoverHandler(jsval handler);
+  void SetClickHandler(JSValue handler);
+  void SetHoverHandler(JSValue handler);
 
   POINT GetLocation(void) const {
     return location;
@@ -170,10 +170,10 @@ class Genhook {
   ushort GetZOrder(void) const {
     return zorder;
   }
-  jsval GetClickHandler(void) {
+  JSValue GetClickHandler(void) {
     return clicked;
   }
-  jsval GetHoverHandler(void) {
+  JSValue GetHoverHandler(void) {
     return hovered;
   }
 

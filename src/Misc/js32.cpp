@@ -161,6 +161,6 @@ void JS_ReportPendingException(JSContext* ctx) {
     Console::ShowBuffer();
 }
 
-// JSBool JSVAL_IS_OBJECT(jsval v) {
+// JSBool JSVAL_IS_OBJECT(JSValue v) {
 //   return !JSVAL_IS_PRIMITIVE(v);
 // }

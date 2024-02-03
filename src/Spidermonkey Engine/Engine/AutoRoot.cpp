@@ -1,7 +1,7 @@
 #include "AutoRoot.h"
 #include "ScriptEngine.h"
 
-AutoRoot::AutoRoot(JSContext* ncx, jsval nvar) : cx(ncx), var(nvar), count(0) {
+AutoRoot::AutoRoot(JSContext* ncx, JSValue nvar) : cx(ncx), var(nvar), count(0) {
   Take();
 }
 AutoRoot::~AutoRoot() {

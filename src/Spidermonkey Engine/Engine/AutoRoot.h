@@ -7,7 +7,7 @@
 
 class AutoRoot {
  private:
-  jsval var;
+  JSValue var;
   int count;
   JSContext* cx;
   AutoRoot(const AutoRoot&);
@@ -15,14 +15,14 @@ class AutoRoot {
  public:
   AutoRoot() : var(JS_NULL), count(0) {
   }
-  AutoRoot(JSContext* cx, jsval var);
+  AutoRoot(JSContext* cx, JSValue var);
   ~AutoRoot();
   void Take();
   void Release();
-  jsval* value() {
+  JSValue* value() {
     return &var;
   }
-  jsval operator*() {
+  JSValue operator*() {
     return *value();
   }
   bool operator==(AutoRoot& other) {

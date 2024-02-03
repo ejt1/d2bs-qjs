@@ -16,12 +16,13 @@ class JSPathReducer : public PathReducer {
  private:
   JSContext* cx;
   JSValue obj;
-  jsval reject, reduce, mutate;
+  JSValue reject, reduce, mutate;
 
  public:
   JSPathReducer(const JSPathReducer&);
   JSPathReducer& operator=(const JSPathReducer&);
-  JSPathReducer(ActMap* /*m*/, JSContext* cx, JSValue obj, jsval _reject, jsval _reduce, jsval _mutate) : obj(JS_DupValue(cx, obj)), reject(_reject), reduce(_reduce), mutate(_mutate) {
+  JSPathReducer(ActMap* /*m*/, JSContext* cx, JSValue obj, JSValue _reject, JSValue _reduce, JSValue _mutate)
+      : obj(JS_DupValue(cx, obj)), reject(_reject), reduce(_reduce), mutate(_mutate) {
     JS_DupValue(cx, reject);
     JS_DupValue(cx, reduce);
     JS_DupValue(cx, mutate);
@@ -39,7 +40,7 @@ class JSPathReducer : public PathReducer {
 
     //	JS_EnterLocalRootScope(cx);
 
-    jsval* vec = new jsval[count];
+    JSValue* vec = new JSValue[count];
     for (int i = 0; i < count; i++) {
       JSValue pt = JS_NewObject(cx);
       JS_SetPropertyStr(cx, pt, "x", JS_NewInt32(cx, in[i].first));
@@ -48,13 +49,13 @@ class JSPathReducer : public PathReducer {
     }
     JSValue arr = JS_NewArray(cx);
 
-    jsval argv[] = {
+    JSValue argv[] = {
         JS_NULL,
         JS_NewInt32(cx, 0),
         arr,
     };
     for (int i = 0; i < count; i++) {
-      jsval rval = JS_FALSE;
+      JSValue rval = JS_FALSE;
       argv[0] = vec[i];
       argv[1] = JS_NewInt32(cx, i);
       rval = JS_Call(cx, obj, reduce, 3, argv);
@@ -66,8 +67,8 @@ class JSPathReducer : public PathReducer {
     delete[] vec;
   }
   bool Reject(const Point& pt, bool /*abs*/) {
-    jsval rval = JS_FALSE;
-    jsval argv[] = {
+    JSValue rval = JS_FALSE;
+    JSValue argv[] = {
         JS_NewInt32(cx, pt.first),
         JS_NewInt32(cx, pt.second),
     };
@@ -87,8 +88,8 @@ class JSPathReducer : public PathReducer {
     return 0;
   }
   void MutatePoint(Point& pt, bool /*abs*/) {
-    jsval rval = JS_FALSE;
-    jsval argv[] = {
+    JSValue rval = JS_FALSE;
+    JSValue argv[] = {
         JS_NewInt32(cx, pt.first),
         JS_NewInt32(cx, pt.second),
     };

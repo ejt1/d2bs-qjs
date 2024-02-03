@@ -39,7 +39,7 @@ JSAPI_FUNC(frame_ctor) {
   uint x = 0, y = 0, x2 = 0, y2 = 0;
   Align align = Left;
   bool automap = false;
-  jsval click = JS_UNDEFINED, hover = JS_UNDEFINED;
+  JSValue click = JS_UNDEFINED, hover = JS_UNDEFINED;
 
   if (argc > 0 && JS_IsNumber(argv[0]))
     JS_ToUint32(ctx, &x, argv[0]);
@@ -166,7 +166,7 @@ JSAPI_FUNC(box_ctor) {
   ScreenhookState state = (script->GetMode() == kScriptModeMenu) ? OOG : IG;
   uint x = 0, y = 0, x2 = 0, y2 = 0, color = 0, opacity = 0, align = Left;
   bool automap = false;
-  jsval click = JS_UNDEFINED, hover = JS_UNDEFINED;
+  JSValue click = JS_UNDEFINED, hover = JS_UNDEFINED;
 
   if (argc > 0 && JS_IsNumber(argv[0]))
     JS_ToUint32(ctx, &x, argv[0]);
@@ -309,7 +309,7 @@ JSAPI_FUNC(line_ctor) {
   ScreenhookState state = (script->GetMode() == kScriptModeMenu) ? OOG : IG;
   uint32_t x = 0, y = 0, x2 = 0, y2 = 0, color = 0;
   bool automap = false;
-  jsval click = JS_UNDEFINED, hover = JS_UNDEFINED;
+  JSValue click = JS_UNDEFINED, hover = JS_UNDEFINED;
 
   if (argc > 0 && JS_IsNumber(argv[0]))
     JS_ToUint32(ctx, &x, argv[0]);
@@ -438,7 +438,7 @@ JSAPI_FUNC(text_ctor) {
   ScreenhookState state = (script->GetMode() == kScriptModeMenu) ? OOG : IG;
   uint x = 0, y = 0, color = 0, font = 0, align = Left;
   bool automap = false;
-  jsval click = JS_UNDEFINED, hover = JS_UNDEFINED;
+  JSValue click = JS_UNDEFINED, hover = JS_UNDEFINED;
   std::wstring szText;
 
   if (argc > 0 && JS_IsString(argv[0])) {
@@ -589,7 +589,7 @@ JSAPI_FUNC(image_ctor) {
   ScreenhookState state = (script->GetMode() == kScriptModeMenu) ? OOG : IG;
   uint x = 0, y = 0, color = 0, align = Left;
   bool automap = false;
-  jsval click = JS_UNDEFINED, hover = JS_UNDEFINED;
+  JSValue click = JS_UNDEFINED, hover = JS_UNDEFINED;
   const char* szText = nullptr;
   wchar_t path[_MAX_FNAME + _MAX_PATH];
 

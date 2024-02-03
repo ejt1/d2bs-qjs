@@ -44,7 +44,7 @@ char* readLine(FILE* fptr, bool locking) {
   return _strdup(buffer.c_str());
 }
 
-bool writeValue(FILE* fptr, JSContext* cx, jsval value, bool isBinary, bool locking) {
+bool writeValue(FILE* fptr, JSContext* cx, JSValue value, bool isBinary, bool locking) {
   int len = 0, result;
   int32 ival = 0;
   jsdouble dval = 0;

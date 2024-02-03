@@ -166,7 +166,7 @@ JSAPI_FUNC(room_getCollisionTypeArray) {
   for (int j = y; j < nLimitY; j++) {
     int nCurrentArrayX = 0;
     for (int i = x; i < nLimitX; i++) {
-      jsval nNode = JS_NewInt32(ctx, *p);
+      JSValue nNode = JS_NewInt32(ctx, *p);
       JS_SetPropertyUint32(ctx, jsobjy, nCurrentArrayY * nCx + nCurrentArrayX, nNode);
       nCurrentArrayX++;
       p++;
@@ -228,7 +228,7 @@ JSAPI_FUNC(room_getCollision) {
 
     int nCurrentArrayX = 0;
     for (int i = x; i < nLimitX; i++) {
-      jsval nNode = JS_NewInt32(ctx, *p);
+      JSValue nNode = JS_NewInt32(ctx, *p);
       JS_SetPropertyUint32(ctx, jsobjx, nCurrentArrayX, nNode);
       nCurrentArrayX++;
       p++;

@@ -247,7 +247,7 @@ bool Script::IsListenerRegistered(const char* evtName) {
   return strlen(evtName) > 0 && m_functions.count(evtName) > 0;
 }
 
-void Script::RegisterEvent(const char* evtName, jsval evtFunc) {
+void Script::RegisterEvent(const char* evtName, JSValue evtFunc) {
   EnterCriticalSection(&m_lock);
   if (JS_IsFunction(m_context, evtFunc) && strlen(evtName) > 0) {
     m_functions[evtName].push_back(JS_DupValue(m_context, evtFunc));
@@ -255,7 +255,7 @@ void Script::RegisterEvent(const char* evtName, jsval evtFunc) {
   LeaveCriticalSection(&m_lock);
 }
 
-bool Script::IsRegisteredEvent(const char* evtName, jsval evtFunc) {
+bool Script::IsRegisteredEvent(const char* evtName, JSValue evtFunc) {
   // nothing can be registered under an empty name
   if (strlen(evtName) < 1)
     return false;
@@ -272,7 +272,7 @@ bool Script::IsRegisteredEvent(const char* evtName, jsval evtFunc) {
   return false;
 }
 
-void Script::UnregisterEvent(const char* evtName, jsval evtFunc) {
+void Script::UnregisterEvent(const char* evtName, JSValue evtFunc) {
   if (strlen(evtName) < 1)
     return;
 
@@ -357,9 +357,9 @@ void Script::BlockThread(DWORD delay) {
   }
 }
 
-void Script::ExecuteEvent(char* evtName, int argc, const jsval* argv, bool* block) {
+void Script::ExecuteEvent(char* evtName, int argc, const JSValue* argv, bool* block) {
   for (const auto& root : m_functions[evtName]) {
-    jsval rval;
+    JSValue rval;
     rval = JS_Call(m_context, root, JS_UNDEFINED, argc, const_cast<JSValue*>(argv));
     if (block) {
       *block |= static_cast<bool>(JS_IsBool(rval) && JS_ToBool(m_context, rval));
@@ -550,7 +550,7 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
           JS_NewUint32(m_context, *(DWORD*)evt->arg3),
       };
 
-      jsval rval;
+      JSValue rval;
       // diffrent function source for hooks
       for (FunctionList::iterator it = evt->functions.begin(); it != evt->functions.end(); it++) {
         rval = JS_Call(m_context, m_globalObject, *it, _countof(args), args);
@@ -574,7 +574,7 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
     test.append(cmd);
     test.append(" } catch (error){print(error)}");
 
-    jsval rval = JS_Eval(m_context, test.data(), test.length(), "Command Line", JS_EVAL_TYPE_GLOBAL);
+    JSValue rval = JS_Eval(m_context, test.data(), test.length(), "Command Line", JS_EVAL_TYPE_GLOBAL);
     if (!JS_IsException(rval)) {
       if (!JS_IsNull(rval) && !JS_IsUndefined(rval)) {
         const char* text = JS_ToCString(m_context, rval);
@@ -632,7 +632,7 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
   if (strcmp(evtName, "setTimeout") == 0 || strcmp(evtName, "setInterval") == 0) {
     if (!clearList) {
       // JSAutoRequest request(m_context);
-      // jsval dummy;
+      // JSValue dummy;
       // ExecuteEvent(evtName, 0, &dummy);
     }
 
@@ -761,7 +761,7 @@ void Script::RunMain() {
   // JS::AutoValueVector args(m_context);
   // args.resize(m_argc);
   // for (uint i = 0; i < m_argc; i++) {
-  //  jsval v;
+  //  JSValue v;
   //  m_argv[i]->read(m_context, &v);
   //  args.append(v);
   //}

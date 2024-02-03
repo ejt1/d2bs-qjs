@@ -248,7 +248,7 @@ void Genhook::Hover(POINT* loc) {
     owner->FireEvent(evt);
   }
 }
-void Genhook::SetClickHandler(jsval handler) {
+void Genhook::SetClickHandler(JSValue handler) {
   if (!owner)
     return;
   if (JS_IsUndefined(handler))
@@ -277,7 +277,7 @@ void Genhook::SetClickHandler(jsval handler) {
   Unlock();
 }
 
-void Genhook::SetHoverHandler(jsval handler) {
+void Genhook::SetHoverHandler(JSValue handler) {
   if (!owner)
     return;
   if (JS_IsUndefined(handler))

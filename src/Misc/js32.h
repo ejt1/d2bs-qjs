@@ -23,7 +23,6 @@ typedef double jsdouble;
 typedef int32_t jsint;
 typedef uint32_t jsuint;
 typedef uint16_t uint16;
-typedef JSValue jsval;
 
 // #define NUM(x) #x
 // #define NAME(line, v) (__FILE__ ":" NUM(line) " -> " #v)
@@ -43,7 +42,7 @@ JSValue JS_NewString(JSContext* ctx, const wchar_t* str);
 
 std::optional<std::wstring> JS_ToWString(JSContext* ctx, JSValue val);
 
-// JSBool JSVAL_IS_OBJECT(jsval v);
+// JSBool JSVAL_IS_OBJECT(JSValue v);
 
 struct JSClass2 {
   JSClassID* classpid;

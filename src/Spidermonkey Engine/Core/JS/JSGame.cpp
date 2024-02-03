@@ -272,7 +272,7 @@ JSAPI_FUNC(my_getPath) {
 
   JSValue arr = JS_NewArray(ctx);
   for (int i = 0; i < count; i++) {
-    jsval jx = JS_NewInt32(ctx, list[i].first), jy = JS_NewInt32(ctx, list[i].second);
+    JSValue jx = JS_NewInt32(ctx, list[i].first), jy = JS_NewInt32(ctx, list[i].second);
 
     JSValue point = JS_NewObject(ctx);
     JS_SetPropertyStr(ctx, point, "x", jx);
@@ -309,7 +309,7 @@ JSAPI_FUNC(my_getCollision) {
   // if(!map->IsValidPoint(point))  //return avoid instead and make it not lvl depenant
   //	{ map->CleanUp(); THROW_ERROR(cx, "Invalid point!");}
 
-  jsval rval;
+  JSValue rval;
   rval = JS_NewInt32(ctx, map->GetMapData(point, true));
   map->CleanUp();
   return rval;
@@ -847,8 +847,8 @@ JSAPI_FUNC(my_getTextSize) {
   JS_ToInt32(ctx, &font, argv[1]);
   POINT r = CalculateTextLen(szString, font);
   JS_FreeCString(ctx, szString);
-  jsval x = JS_NewInt64(ctx, r.x);
-  jsval y = JS_NewInt64(ctx, r.y);
+  JSValue x = JS_NewInt64(ctx, r.x);
+  JSValue y = JS_NewInt64(ctx, r.y);
 
   JSValue pObj = NULL;
   if (argc > 2 && JS_IsBool(argv[2]) && JS_ToBool(ctx, argv[2]) == TRUE) {
@@ -1096,7 +1096,7 @@ JSAPI_FUNC(my_getBaseStat) {
       JS_FreeCString(ctx, szTableName);
       THROW_ERROR(ctx, "Invalid column value");
     }
-    jsval rval;
+    JSValue rval;
     FillBaseStat(ctx, &rval, nBaseStat, nClassId, nStat, szTableName, szStatName);
     JS_FreeCString(ctx, szTableName);
     JS_FreeCString(ctx, szStatName);
@@ -1186,8 +1186,8 @@ JSAPI_FUNC(my_getMouseCoords) {
     D2COMMON_AbsScreenToMap(&Coords.x, &Coords.y);
   }
 
-  jsval jsX = JS_NewInt64(ctx, Coords.x);
-  jsval jsY = JS_NewInt64(ctx, Coords.y);
+  JSValue jsX = JS_NewInt64(ctx, Coords.x);
+  JSValue jsY = JS_NewInt64(ctx, Coords.y);
 
   if (nReturn) {
     pObj = JS_NewObject(ctx);

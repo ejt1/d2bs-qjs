@@ -75,7 +75,7 @@ JSAPI_FUNC(my_setTimeout) {
   //   Event* evt = new Event;
   //   evt->owner = self;
   //   evt->name = "setTimeout";
-  //   evt->arg3 = new jsval(JS_ARGV(cx, vp)[0]);
+  //   evt->arg3 = new JSValue(JS_ARGV(cx, vp)[0]);
   //   JS_SET_RVAL(cx, vp, INT_TO_JSVAL(sScriptEngine->AddDelayedEvent(evt, freq)));
   // }
 
@@ -98,7 +98,7 @@ JSAPI_FUNC(my_setInterval) {
   //   Event* evt = new Event;
   //   evt->owner = self;
   //   evt->name = "setInterval";
-  //   evt->arg3 = new jsval(JS_ARGV(cx, vp)[0]);
+  //   evt->arg3 = new JSValue(JS_ARGV(cx, vp)[0]);
   //   JS_SET_RVAL(cx, vp, INT_TO_JSVAL(sScriptEngine->AddDelayedEvent(evt, freq)));
   // }
 

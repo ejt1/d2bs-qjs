@@ -82,9 +82,9 @@ class Script {
   bool Include(const char* file);
 
   bool IsListenerRegistered(const char* evtName);
-  void RegisterEvent(const char* evtName, jsval evtFunc);
-  bool IsRegisteredEvent(const char* evtName, jsval evtFunc);
-  void UnregisterEvent(const char* evtName, jsval evtFunc);
+  void RegisterEvent(const char* evtName, JSValue evtFunc);
+  bool IsRegisteredEvent(const char* evtName, JSValue evtFunc);
+  void UnregisterEvent(const char* evtName, JSValue evtFunc);
   void ClearEvent(const char* evtName);
   void ClearAllEvents(void);
   void FireEvent(Event*);
@@ -92,7 +92,7 @@ class Script {
   void ClearEventList();
   // blocks the executing thread for X milliseconds, keeping the event loop running during this time
   void BlockThread(DWORD delay);
-  void ExecuteEvent(char* evtName, int argc, const jsval* argv, bool* block = nullptr);
+  void ExecuteEvent(char* evtName, int argc, const JSValue* argv, bool* block = nullptr);
   //void ExecuteEvent(char* evtName, const JS::AutoValueVector& args, bool* block = nullptr);
 
   void OnDestroyContext();

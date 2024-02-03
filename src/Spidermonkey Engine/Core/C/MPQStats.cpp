@@ -172,7 +172,7 @@ bool FillBaseStat(int table, int row, int column, void* result, size_t size) {
   return true;
 }
 
-DWORD FillBaseStat(JSContext* cx, jsval* argv, int table, int row, int column, const char* szTable, const char* szStat) {
+DWORD FillBaseStat(JSContext* cx, JSValue* argv, int table, int row, int column, const char* szTable, const char* szStat) {
   if (szTable) {
     table = -1;
     for (int i = 0; BaseStatTable[i].pTable != NULL; i++)

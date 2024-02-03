@@ -841,9 +841,9 @@ JSAPI_FUNC(unit_getStat) {
         if (!pArrayInsert)
           continue;
 
-        jsval nIndex = JS_NewInt32(ctx, aStatList[i].wStatIndex);
-        jsval _nSubIndex = JS_NewInt32(ctx, aStatList[i].wSubIndex);
-        jsval nValue = JS_NewInt32(ctx, aStatList[i].dwStatValue);
+        JSValue nIndex = JS_NewInt32(ctx, aStatList[i].wStatIndex);
+        JSValue _nSubIndex = JS_NewInt32(ctx, aStatList[i].wSubIndex);
+        JSValue nValue = JS_NewInt32(ctx, aStatList[i].dwStatValue);
 
         JS_SetPropertyUint32(ctx, pArrayInsert, 0, nIndex);
         JS_SetPropertyUint32(ctx, pArrayInsert, 1, _nSubIndex);
@@ -907,7 +907,7 @@ void InsertStatsNow(Stat* pStat, int nStat, JSContext* cx, JSValue pArray) {
       maxcharges = pStat[nStat].dwStatValue >> 8;
     }
     JSValue val = JS_NewObject(cx);
-    jsval jsskill = JS_NewInt32(cx, skill), jslevel = JS_NewInt32(cx, level), jscharges = JS_NewInt32(cx, charges), jsmaxcharges = JS_NewInt32(cx, maxcharges);
+    JSValue jsskill = JS_NewInt32(cx, skill), jslevel = JS_NewInt32(cx, level), jscharges = JS_NewInt32(cx, charges), jsmaxcharges = JS_NewInt32(cx, maxcharges);
     // val is an anonymous object that holds properties
     JS_SetPropertyStr(cx, val, "skill", jsskill);
     JS_SetPropertyStr(cx, val, "level", jslevel);
@@ -916,7 +916,7 @@ void InsertStatsNow(Stat* pStat, int nStat, JSContext* cx, JSValue pArray) {
       JS_SetPropertyStr(cx, val, "maxcharges", jsmaxcharges);
     }
     // find where we should put it
-    jsval index = JS_UNDEFINED, obj = val;
+    JSValue index = JS_UNDEFINED, obj = val;
     index = JS_GetPropertyUint32(cx, pArray, pStat[nStat].wStatIndex);
     if (index != JS_UNDEFINED) {
       // modify the existing object by stuffing it into an array
@@ -1452,7 +1452,7 @@ JSAPI_FUNC(unit_getMerc) {
 JSAPI_FUNC(unit_getMercHP) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
-  jsval* rest = 0;
+  JSValue* rest = 0;
   myUnit* lpUnit = (myUnit*)JS_GetInstancePrivate(ctx, this_val, unit_class_id, rest);
   // myUnit* lpUnit = (myUnit*)JS_GetPrivate(cx, test);
 

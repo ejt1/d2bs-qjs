@@ -163,7 +163,7 @@ bool __fastcall BCastEventCallback(Script* script, void* argv, uint argc) {
   return true;
 }
 
-void ScriptBroadcastEvent(JSContext* cx, uint argc, jsval* args) {
+void ScriptBroadcastEvent(JSContext* cx, uint argc, JSValue* args) {
   BCastEventHelper helper = {cx, args, argc};
   sScriptEngine->ForEachScript(BCastEventCallback, &helper, argc);
 }

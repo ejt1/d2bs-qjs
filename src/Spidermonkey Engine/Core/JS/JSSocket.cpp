@@ -37,7 +37,7 @@ JSAPI_PROP(socket_getProperty) {
   //SocketData* sdata = (SocketData*)JS_GetInstancePrivate(cx, obj, &socket_class, NULL);
 
   //if (sdata) {
-  //  jsval ID;
+  //  JSValue ID;
   //  JS_IdToValue(cx, id, &ID);
   //  JS_BeginRequest(cx);
   //  switch (JSVAL_TO_INT(ID)) {
