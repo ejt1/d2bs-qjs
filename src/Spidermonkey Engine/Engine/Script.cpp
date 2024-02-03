@@ -13,6 +13,7 @@
 #include "Console.h"
 
 #include <chrono>
+#include <cassert>
 
 Script::Script(const char* file, ScriptMode mode /*, uint32_t argc, JSAutoStructuredCloneBuffer** argv*/)
     : m_runtime(NULL),
@@ -55,6 +56,9 @@ Script::Script(const char* file, ScriptMode mode /*, uint32_t argc, JSAutoStruct
 }
 
 Script::~Script(void) {
+  assert(!m_runtime);
+  assert(!m_context);
+
   m_hasActiveCX = false;
   // if (JS_IsInRequest(m_runtime))
   //   JS_EndRequest(m_context);
@@ -620,6 +624,7 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
       }
 
       ExecuteEvent(evtName, 1, &arr, &block);
+      JS_FreeValue(m_context, arr);
       *(DWORD*)evt->arg4 = block;
       SetEvent(Vars.eventSignal);
     }
@@ -833,8 +838,10 @@ bool Script::ProcessAllEvents() {
 
 void Script::Cleanup() {
   Log(L"Cleanup %S", m_fileName.c_str());
+
   ClearEventList();
   Genhook::Clean(this);
+
   if (m_context) {
     Log(L"Destroying context for %S", m_fileName.c_str());
     JS_FreeValue(m_context, m_script);

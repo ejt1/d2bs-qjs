@@ -103,6 +103,7 @@ JSAPI_FUNC(my_getPresetUnits) {
         if (JS_IsException(unit)) {
           delete mypUnit;
           delete cRoom;
+          JS_FreeValue(ctx, pReturnArray);
           THROW_ERROR(ctx, "Failed to build object?");
         }
 

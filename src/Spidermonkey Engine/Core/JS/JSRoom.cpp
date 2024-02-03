@@ -106,6 +106,7 @@ JSAPI_FUNC(room_getPresetUnits) {
       JSValue jsUnit = BuildObject(ctx, presetunit_class_id, NULL, 0, presetunit_props, _countof(presetunit_props), mypUnit);
       if (JS_IsException(jsUnit)) {
         delete cRoom;
+        JS_FreeValue(ctx, pReturnArray);
         return JS_FALSE;
       }
 
@@ -149,6 +150,7 @@ JSAPI_FUNC(room_getCollisionTypeArray) {
     if (bAdded)
       D2COMMON_RemoveRoomData(D2CLIENT_GetPlayerUnit()->pAct, pRoom2->pLevel->dwLevelNo, pRoom2->dwPosX, pRoom2->dwPosY, D2CLIENT_GetPlayerUnit()->pPath->pRoom1);
     delete cRoom;
+    JS_FreeValue(ctx, jsobjy);
     return JS_UNDEFINED;
   }
 
@@ -209,6 +211,7 @@ JSAPI_FUNC(room_getCollision) {
     if (bAdded)
       D2COMMON_RemoveRoomData(D2CLIENT_GetPlayerUnit()->pAct, pRoom2->pLevel->dwLevelNo, pRoom2->dwPosX, pRoom2->dwPosY, D2CLIENT_GetPlayerUnit()->pPath->pRoom1);
     delete cRoom;
+    JS_FreeValue(ctx, jsobjy);
     return JS_UNDEFINED;
   }
 
@@ -257,6 +260,7 @@ JSAPI_FUNC(room_getNearby) {
   for (DWORD i = 0; i < pRoom2->dwRoomsNear; ++i) {
     JSValue jsroom = BuildObject(ctx, room_class_id, room_methods, _countof(room_methods), room_props, _countof(room_methods), pRoom2->pRoom2Near[i]);
     if (JS_IsException(jsroom)) {
+      JS_FreeValue(ctx, jsobj);
       return JS_UNDEFINED;
     }
     JS_SetPropertyUint32(ctx, jsobj, i, jsroom);
