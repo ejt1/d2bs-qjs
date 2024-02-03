@@ -69,7 +69,7 @@ JSAPI_FUNC(my_setTimeout) {
   //   JS_ReportError(cx, "invalid params passed to setTimeout");
 
   // if (JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[0]) && JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1])) {
-  //   Script* self = (Script*)JS_GetContextPrivate(cx);
+  //   Script* self = (Script*)JS_GetContextOpaque(cx);
   //   int freq = JSVAL_TO_INT(JS_ARGV(cx, vp)[1]);
   //   self->RegisterEvent("setTimeout", JS_ARGV(cx, vp)[0]);
   //   Event* evt = new Event;
@@ -92,7 +92,7 @@ JSAPI_FUNC(my_setInterval) {
   //   JS_ReportError(cx, "invalid params passed to setInterval");
 
   // if (JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[0]) && JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1])) {
-  //   Script* self = (Script*)JS_GetContextPrivate(cx);
+  //   Script* self = (Script*)JS_GetContextOpaque(cx);
   //   int freq = JSVAL_TO_INT(JS_ARGV(cx, vp)[1]);
   //   self->RegisterEvent("setInterval", JS_ARGV(cx, vp)[0]);
   //   Event* evt = new Event;
@@ -122,7 +122,7 @@ JSAPI_FUNC(my_delay) {
     return JS_EXCEPTION;
   }
 
-  Script* script = (Script*)JS_GetContextPrivate(ctx);
+  Script* script = (Script*)JS_GetContextOpaque(ctx);
 
   if (nDelay) {  // loop so we can exec events while in delay
     script->BlockThread(nDelay);
@@ -133,7 +133,7 @@ JSAPI_FUNC(my_delay) {
 }
 
 JSAPI_FUNC(my_load) {
-  Script* script = (Script*)JS_GetContextPrivate(ctx);
+  Script* script = (Script*)JS_GetContextOpaque(ctx);
   if (!script) {
     JS_ReportError(ctx, "Failed to get script object");
     return JS_EXCEPTION;
@@ -177,7 +177,7 @@ JSAPI_FUNC(my_load) {
 }
 
 JSAPI_FUNC(my_include) {
-  Script* script = (Script*)JS_GetContextPrivate(ctx);
+  Script* script = (Script*)JS_GetContextOpaque(ctx);
   if (!script) {
     JS_ReportError(ctx, "Failed to get script object");
     return JS_EXCEPTION;
@@ -207,7 +207,7 @@ JSAPI_FUNC(my_include) {
 JSAPI_FUNC(my_stop) {
   int ival;
   if (argc > 0 && (JS_IsNumber(argv[0]) && (!JS_ToInt32(ctx, &ival, argv[0]) && ival == 1)) || (JS_IsBool(argv[0]) && JS_ToBool(ctx, argv[0]) == TRUE)) {
-    Script* script = (Script*)JS_GetContextPrivate(ctx);
+    Script* script = (Script*)JS_GetContextOpaque(ctx);
     if (script)
       script->Stop();
   } else
@@ -254,7 +254,7 @@ JSAPI_FUNC(my_isIncluded) {
   char path[_MAX_FNAME + _MAX_PATH];
   sprintf_s(path, _countof(path), "%s\\libs\\%s", Vars.szScriptPath, file);
   JS_FreeCString(ctx, file);
-  Script* script = (Script*)JS_GetContextPrivate(ctx);
+  Script* script = (Script*)JS_GetContextOpaque(ctx);
   return JS_NewBool(ctx, script->IsIncluded(path));
 }
 
@@ -384,7 +384,7 @@ JSAPI_FUNC(my_addEventListener) {
   if (JS_IsString(argv[0]) && JS_IsFunction(ctx, argv[1])) {
     const char* evtName = JS_ToCString(ctx, argv[0]);
     if (evtName && strlen(evtName)) {
-      Script* self = (Script*)JS_GetContextPrivate(ctx);
+      Script* self = (Script*)JS_GetContextOpaque(ctx);
       self->RegisterEvent(evtName, argv[1]);
     } else {
       THROW_ERROR(ctx, "Event name is invalid!");
@@ -398,7 +398,7 @@ JSAPI_FUNC(my_removeEventListener) {
   if (JS_IsString(argv[0]) && JS_IsFunction(ctx, argv[1])) {
     const char* evtName = JS_ToCString(ctx, argv[0]);
     if (evtName && strlen(evtName)) {
-      Script* self = (Script*)JS_GetContextPrivate(ctx);
+      Script* self = (Script*)JS_GetContextOpaque(ctx);
       self->UnregisterEvent(evtName, argv[1]);
     } else {
       THROW_ERROR(ctx, "Event name is invalid!");
@@ -410,7 +410,7 @@ JSAPI_FUNC(my_removeEventListener) {
 
 JSAPI_FUNC(my_clearEvent) {
   if (JS_IsString(argv[0])) {
-    Script* self = (Script*)JS_GetContextPrivate(ctx);
+    Script* self = (Script*)JS_GetContextOpaque(ctx);
     const char* evt = JS_ToCString(ctx, argv[0]);
     self->ClearEvent(evt);
     JS_FreeCString(ctx, evt);
@@ -419,7 +419,7 @@ JSAPI_FUNC(my_clearEvent) {
 }
 
 JSAPI_FUNC(my_clearAllEvents) {
-  Script* self = (Script*)JS_GetContextPrivate(ctx);
+  Script* self = (Script*)JS_GetContextOpaque(ctx);
   self->ClearAllEvents();
   return JS_TRUE;
 }

@@ -39,7 +39,7 @@ struct FileData {
 EMPTY_CTOR(file)
 
 CLASS_FINALIZER(file) {
-  FileData* fdata = (FileData*)JS_GetPrivate(val);
+  FileData* fdata = (FileData*)JS_GetOpaque3(val);
   if (fdata) {
     free(fdata->path);
     if (fdata->fptr) {
@@ -58,7 +58,7 @@ CLASS_FINALIZER(file) {
 }
 
 JSAPI_PROP(file_getProperty) {
-  FileData* fdata = (FileData*)JS_GetInstancePrivate(ctx, this_val, file_class_id, NULL);
+  FileData* fdata = (FileData*)JS_GetOpaque3(this_val);
   struct _stat filestat = {0};
   if (fdata) {
     switch (magic) {
@@ -133,7 +133,7 @@ JSAPI_PROP(file_getProperty) {
 }
 
 JSAPI_STRICT_PROP(file_setProperty) {
-  FileData* fdata = (FileData*)JS_GetInstancePrivate(ctx, this_val, file_class_id, NULL);
+  FileData* fdata = (FileData*)JS_GetOpaque3(this_val);
   if (fdata) {
     switch (magic) {
       case FILE_AUTOFLUSH:
@@ -243,7 +243,7 @@ JSAPI_FUNC(file_open) {
 }
 
 JSAPI_FUNC(file_close) {
-  FileData* fdata = (FileData*)JS_GetInstancePrivate(ctx, this_val, file_class_id, NULL);
+  FileData* fdata = (FileData*)JS_GetOpaque3(this_val);
   if (fdata) {
     if (fdata->fptr) {
       if (fdata->locked) {
@@ -268,7 +268,7 @@ JSAPI_FUNC(file_close) {
 JSAPI_FUNC(file_reopen) {
   (argc);
 
-  FileData* fdata = (FileData*)JS_GetInstancePrivate(ctx, this_val, file_class_id, NULL);
+  FileData* fdata = (FileData*)JS_GetOpaque3(this_val);
   if (fdata)
     if (!fdata->fptr) {
       static const char* modes[] = {"rt", "w+t", "a+t", "rb", "w+b", "a+b"};
@@ -291,7 +291,7 @@ JSAPI_FUNC(file_reopen) {
 }
 
 JSAPI_FUNC(file_read) {
-  FileData* fdata = (FileData*)JS_GetInstancePrivate(ctx, this_val, file_class_id, NULL);
+  FileData* fdata = (FileData*)JS_GetOpaque3(this_val);
   if (fdata && fdata->fptr) {
     clearerr(fdata->fptr);
     int32_t count = 1;
@@ -364,7 +364,7 @@ JSAPI_FUNC(file_read) {
 }
 
 JSAPI_FUNC(file_readLine) {
-  FileData* fdata = (FileData*)JS_GetInstancePrivate(ctx, this_val, file_class_id, NULL);
+  FileData* fdata = (FileData*)JS_GetOpaque3(this_val);
   if (fdata && fdata->fptr) {
     uint32_t size = 0;
     int offset = 0;
@@ -394,7 +394,7 @@ JSAPI_FUNC(file_readLine) {
 }
 
 JSAPI_FUNC(file_readAllLines) {
-  FileData* fdata = (FileData*)JS_GetInstancePrivate(ctx, this_val, file_class_id, NULL);
+  FileData* fdata = (FileData*)JS_GetOpaque3(this_val);
   if (fdata && fdata->fptr) {
     JSValue arr = JS_NewArray(ctx);
     int i = 0;
@@ -428,7 +428,7 @@ JSAPI_FUNC(file_readAllLines) {
 }
 
 JSAPI_FUNC(file_readAll) {
-  FileData* fdata = (FileData*)JS_GetInstancePrivate(ctx, this_val, file_class_id, NULL);
+  FileData* fdata = (FileData*)JS_GetOpaque3(this_val);
   if (fdata && fdata->fptr) {
     uint32_t size = 0;
     int offset = 0;
@@ -482,7 +482,7 @@ JSAPI_FUNC(file_readAll) {
 }
 
 JSAPI_FUNC(file_write) {
-  FileData* fdata = (FileData*)JS_GetInstancePrivate(ctx, this_val, file_class_id, NULL);
+  FileData* fdata = (FileData*)JS_GetOpaque3(this_val);
   if (fdata && fdata->fptr) {
     for (int i = 0; i < argc; i++) writeValue(fdata->fptr, ctx, argv[i], !!(fdata->mode > 2), fdata->locked);
 
@@ -497,7 +497,7 @@ JSAPI_FUNC(file_write) {
 }
 
 JSAPI_FUNC(file_seek) {
-  FileData* fdata = (FileData*)JS_GetInstancePrivate(ctx, this_val, file_class_id, NULL);
+  FileData* fdata = (FileData*)JS_GetOpaque3(this_val);
   if (fdata && fdata->fptr) {
     if (argc > 0) {
       int32_t bytes;
@@ -530,7 +530,7 @@ JSAPI_FUNC(file_seek) {
 }
 
 JSAPI_FUNC(file_flush) {
-  FileData* fdata = (FileData*)JS_GetInstancePrivate(ctx, this_val, file_class_id, NULL);
+  FileData* fdata = (FileData*)JS_GetOpaque3(this_val);
   if (fdata && fdata->fptr)
     if (fdata->locked)
       fflush(fdata->fptr);
@@ -543,7 +543,7 @@ JSAPI_FUNC(file_flush) {
 JSAPI_FUNC(file_reset) {
   (argc);
 
-  FileData* fdata = (FileData*)JS_GetInstancePrivate(ctx, this_val, file_class_id, NULL);
+  FileData* fdata = (FileData*)JS_GetOpaque3(this_val);
   if (fdata && fdata->fptr) {
     if (fdata->locked && fseek(fdata->fptr, 0L, SEEK_SET)) {
       THROW_ERROR(ctx, "Seek failed");
@@ -556,7 +556,7 @@ JSAPI_FUNC(file_reset) {
 JSAPI_FUNC(file_end) {
   (argc);
 
-  FileData* fdata = (FileData*)JS_GetInstancePrivate(ctx, this_val, file_class_id, NULL);
+  FileData* fdata = (FileData*)JS_GetOpaque3(this_val);
   if (fdata && fdata->fptr) {
     if (fdata->locked && fseek(fdata->fptr, 0L, SEEK_END)) {
       THROW_ERROR(ctx, "Seek failed");

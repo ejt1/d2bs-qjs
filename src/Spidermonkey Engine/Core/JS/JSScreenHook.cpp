@@ -6,10 +6,10 @@
 #include <Helpers.h>
 
 CLASS_FINALIZER(hook) {
-  Genhook* hook = (Genhook*)JS_GetPrivate(val);
+  Genhook* hook = (Genhook*)JS_GetOpaque3(val);
   Genhook::EnterGlobalSection();
   if (hook) {
-    JS_SetPrivate(val, NULL);
+    JS_SetOpaque(val, NULL);
     delete hook;
   }
   Genhook::LeaveGlobalSection();
@@ -19,12 +19,12 @@ JSAPI_FUNC(hook_remove) {
   (argc);
 
   Genhook::EnterGlobalSection();
-  Genhook* hook = (Genhook*)JS_GetPrivate(ctx, this_val);
+  Genhook* hook = (Genhook*)JS_GetOpaque3(this_val);
   if (hook) {
     delete hook;
   }
 
-  JS_SetPrivate(ctx, this_val, NULL);
+  JS_SetOpaque(this_val, NULL);
   // JS_ValueToObject(cx, JSVAL_VOID, &obj);
   Genhook::LeaveGlobalSection();
 
@@ -34,7 +34,7 @@ JSAPI_FUNC(hook_remove) {
 // Function to create a frame which gets called on a "new Frame ()"
 // Parameters: x, y, xsize, ysize, alignment, automap, onClick, onHover
 JSAPI_FUNC(frame_ctor) {
-  Script* script = (Script*)JS_GetContextPrivate(ctx);
+  Script* script = (Script*)JS_GetContextOpaque(ctx);
 
   uint32_t x = 0, y = 0, x2 = 0, y2 = 0;
   Align align = Left;
@@ -67,7 +67,7 @@ JSAPI_FUNC(frame_ctor) {
   if (!pFrameHook)
     THROW_ERROR(ctx, "Failed to create framehook");
 
-  JS_SetPrivate(ctx, hook, pFrameHook);
+  JS_SetOpaque(hook, pFrameHook);
   pFrameHook->SetClickHandler(click);
   pFrameHook->SetHoverHandler(hover);
 
@@ -75,7 +75,7 @@ JSAPI_FUNC(frame_ctor) {
 }
 
 JSAPI_PROP(frame_getProperty) {
-  FrameHook* pFramehook = (FrameHook*)JS_GetPrivate(ctx, this_val);
+  FrameHook* pFramehook = (FrameHook*)JS_GetOpaque3(this_val);
   if (!pFramehook)
     return JS_TRUE;
 
@@ -112,7 +112,7 @@ JSAPI_PROP(frame_getProperty) {
 }
 
 JSAPI_STRICT_PROP(frame_setProperty) {
-  FrameHook* pFramehook = (FrameHook*)JS_GetPrivate(ctx, this_val);
+  FrameHook* pFramehook = (FrameHook*)JS_GetOpaque3(this_val);
   if (!pFramehook)
     return JS_UNDEFINED;
 
@@ -161,7 +161,7 @@ JSAPI_STRICT_PROP(frame_setProperty) {
 
 // Parameters: x, y, xsize, ysize, color, opacity, alignment, automap, onClick, onHover
 JSAPI_FUNC(box_ctor) {
-  Script* script = (Script*)JS_GetContextPrivate(ctx);
+  Script* script = (Script*)JS_GetContextOpaque(ctx);
 
   ScreenhookState state = (script->GetMode() == kScriptModeMenu) ? OOG : IG;
   uint32_t x = 0, y = 0, x2 = 0, y2 = 0, color = 0, opacity = 0, align = Left;
@@ -199,14 +199,14 @@ JSAPI_FUNC(box_ctor) {
   if (!pBoxHook)
     THROW_ERROR(ctx, "Unable to initalize a box class.");
 
-  JS_SetPrivate(ctx, hook, pBoxHook);
+  JS_SetOpaque(hook, pBoxHook);
   pBoxHook->SetClickHandler(click);
   pBoxHook->SetHoverHandler(hover);
 
   return hook;
 }
 JSAPI_PROP(box_getProperty) {
-  BoxHook* pBoxHook = (BoxHook*)JS_GetPrivate(ctx, this_val);
+  BoxHook* pBoxHook = (BoxHook*)JS_GetOpaque3(this_val);
   if (!pBoxHook)
     return JS_TRUE;
 
@@ -249,7 +249,7 @@ JSAPI_PROP(box_getProperty) {
 }
 
 JSAPI_STRICT_PROP(box_setProperty) {
-  BoxHook* pBoxHook = (BoxHook*)JS_GetPrivate(ctx, this_val);
+  BoxHook* pBoxHook = (BoxHook*)JS_GetOpaque3(this_val);
   if (!pBoxHook)
     return JS_TRUE;
 
@@ -304,7 +304,7 @@ JSAPI_STRICT_PROP(box_setProperty) {
 
 // Parameters: x, y, x2, y2, color, automap, click, hover
 JSAPI_FUNC(line_ctor) {
-  Script* script = (Script*)JS_GetContextPrivate(ctx);
+  Script* script = (Script*)JS_GetContextOpaque(ctx);
 
   ScreenhookState state = (script->GetMode() == kScriptModeMenu) ? OOG : IG;
   uint32_t x = 0, y = 0, x2 = 0, y2 = 0, color = 0;
@@ -339,7 +339,7 @@ JSAPI_FUNC(line_ctor) {
     THROW_ERROR(ctx, "Unable to initalize a line class.");
   }
 
-  JS_SetPrivate(ctx, hook, pLineHook);
+  JS_SetOpaque(hook, pLineHook);
   pLineHook->SetClickHandler(click);
   pLineHook->SetHoverHandler(hover);
 
@@ -347,7 +347,7 @@ JSAPI_FUNC(line_ctor) {
 }
 
 JSAPI_PROP(line_getProperty) {
-  LineHook* pLineHook = (LineHook*)JS_GetPrivate(ctx, this_val);
+  LineHook* pLineHook = (LineHook*)JS_GetOpaque3(this_val);
   if (!pLineHook)
     return JS_TRUE;
 
@@ -384,7 +384,7 @@ JSAPI_PROP(line_getProperty) {
 }
 
 JSAPI_STRICT_PROP(line_setProperty) {
-  LineHook* pLineHook = (LineHook*)JS_GetPrivate(ctx, this_val);
+  LineHook* pLineHook = (LineHook*)JS_GetOpaque3(this_val);
   if (!pLineHook)
     return JS_TRUE;
 
@@ -433,7 +433,7 @@ JSAPI_STRICT_PROP(line_setProperty) {
 
 // Parameters: text, x, y, color, font, align, automap, onHover, onText
 JSAPI_FUNC(text_ctor) {
-  Script* script = (Script*)JS_GetContextPrivate(ctx);
+  Script* script = (Script*)JS_GetContextOpaque(ctx);
 
   ScreenhookState state = (script->GetMode() == kScriptModeMenu) ? OOG : IG;
   uint32_t x = 0, y = 0, color = 0, font = 0, align = Left;
@@ -477,14 +477,14 @@ JSAPI_FUNC(text_ctor) {
     THROW_ERROR(ctx, "Failed to create texthook");
   }
 
-  JS_SetPrivate(ctx, hook, pTextHook);
+  JS_SetOpaque(hook, pTextHook);
   pTextHook->SetClickHandler(click);
   pTextHook->SetHoverHandler(hover);
   return hook;
 }
 
 JSAPI_PROP(text_getProperty) {
-  TextHook* pTextHook = (TextHook*)JS_GetPrivate(ctx, this_val);
+  TextHook* pTextHook = (TextHook*)JS_GetOpaque3(this_val);
   if (!pTextHook)
     return JS_TRUE;
 
@@ -524,7 +524,7 @@ JSAPI_PROP(text_getProperty) {
 }
 
 JSAPI_STRICT_PROP(text_setProperty) {
-  TextHook* pTextHook = (TextHook*)JS_GetPrivate(ctx, this_val);
+  TextHook* pTextHook = (TextHook*)JS_GetOpaque3(this_val);
   if (!pTextHook)
     return JS_TRUE;
 
@@ -584,7 +584,7 @@ JSAPI_STRICT_PROP(text_setProperty) {
 
 // Parameters: image, x, y, color, align, automap, onHover, onimage
 JSAPI_FUNC(image_ctor) {
-  Script* script = (Script*)JS_GetContextPrivate(ctx);
+  Script* script = (Script*)JS_GetContextOpaque(ctx);
 
   ScreenhookState state = (script->GetMode() == kScriptModeMenu) ? OOG : IG;
   uint32_t x = 0, y = 0, color = 0, align = Left;
@@ -631,7 +631,7 @@ JSAPI_FUNC(image_ctor) {
   if (!pImageHook)
     THROW_ERROR(ctx, "Failed to create ImageHook");
 
-  JS_SetPrivate(ctx, hook, pImageHook);
+  JS_SetOpaque(hook, pImageHook);
   pImageHook->SetClickHandler(click);
   pImageHook->SetHoverHandler(hover);
 
@@ -639,7 +639,7 @@ JSAPI_FUNC(image_ctor) {
 }
 
 JSAPI_PROP(image_getProperty) {
-  ImageHook* pImageHook = (ImageHook*)JS_GetPrivate(ctx, this_val);
+  ImageHook* pImageHook = (ImageHook*)JS_GetOpaque3(this_val);
   if (!pImageHook)
     return JS_TRUE;
 
@@ -673,7 +673,7 @@ JSAPI_PROP(image_getProperty) {
 }
 
 JSAPI_STRICT_PROP(image_setProperty) {
-  ImageHook* pImageHook = (ImageHook*)JS_GetPrivate(ctx, this_val);
+  ImageHook* pImageHook = (ImageHook*)JS_GetOpaque3(this_val);
   if (!pImageHook)
     return JS_TRUE;
 

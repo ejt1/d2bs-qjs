@@ -103,19 +103,19 @@ CLASS_CTOR(profile) {
 CLASS_FINALIZER(profile) {
    Profile* prof;
 
-   prof = (Profile*)JS_GetPrivate(val);
+   prof = (Profile*)JS_GetOpaque3(val);
 
    if (prof != NULL)
      delete prof;
 
-   JS_SetPrivate(val, NULL);
+   JS_SetOpaque(val, NULL);
 }
 
 JSAPI_FUNC(profile_login) {
    const char* error;
    Profile* prof;
 
-   prof = (Profile*)JS_GetPrivate(ctx, this_val);
+   prof = (Profile*)JS_GetOpaque3(this_val);
 
    if (prof->login(&error) != 0)
      THROW_ERROR(ctx, error);
@@ -126,7 +126,7 @@ JSAPI_FUNC(profile_login) {
 JSAPI_PROP(profile_getProperty) {
    Profile* prof;
 
-   prof = (Profile*)JS_GetPrivate(ctx, this_val);
+   prof = (Profile*)JS_GetOpaque3(this_val);
 
    switch (magic) {
      case PROFILE_TYPE:

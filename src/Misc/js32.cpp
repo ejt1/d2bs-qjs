@@ -6,34 +6,6 @@
 #include "Globals.h"
 #include "Console.h"
 
-void* JS_GetPrivate(JSValue obj) {
-  return JS_GetOpaque3(obj);
-}
-
-void JS_SetPrivate(JSValue obj, void* data) {
-  return JS_SetOpaque(obj, data);
-}
-
-void* JS_GetPrivate(JSContext* /*ctx*/, JSValue obj) {
-  return JS_GetOpaque3(obj);
-}
-
-void JS_SetPrivate(JSContext* /*ctx*/, JSValue obj, void* data) {
-  return JS_SetOpaque(obj, data);
-}
-
-void* JS_GetContextPrivate(JSRuntime* rt) {
-  return JS_GetRuntimeOpaque(rt);
-}
-
-void* JS_GetContextPrivate(JSContext* ctx) {
-  return JS_GetContextOpaque(ctx);
-}
-
-void* JS_GetInstancePrivate(JSContext* /*ctx*/, JSValue val, JSClassID /*class_id*/, JSValue* /*argv*/) {
-  return JS_GetOpaque3(val);
-}
-
 JSValue JS_NewString(JSContext* ctx, const wchar_t* str) {
   std::string utf8 = WideToAnsi(str);
   return JS_NewString(ctx, utf8.c_str());
@@ -59,7 +31,7 @@ JSValue BuildObject(JSContext* ctx, JSClassID class_id, JSCFunctionListEntry* fu
   JS_SetPropertyFunctionList(ctx, obj, funcs, num_funcs);
   JS_SetPropertyFunctionList(ctx, obj, props, num_props);
   if (opaque) {
-    JS_SetPrivate(ctx, obj, opaque);
+    JS_SetOpaque(obj, opaque);
   }
 
   return obj;

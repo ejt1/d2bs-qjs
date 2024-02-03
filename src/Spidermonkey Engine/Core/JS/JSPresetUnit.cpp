@@ -7,16 +7,16 @@
 EMPTY_CTOR(presetunit)
 
 CLASS_FINALIZER(presetunit) {
-  myPresetUnit* pUnit = (myPresetUnit*)JS_GetPrivate(val);
+  myPresetUnit* pUnit = (myPresetUnit*)JS_GetOpaque3(val);
 
   if (pUnit) {
-    JS_SetPrivate(val, NULL);
+    JS_SetOpaque(val, NULL);
     delete pUnit;
   }
 }
 
 JSAPI_PROP(presetunit_getProperty) {
-  myPresetUnit* pUnit = (myPresetUnit*)JS_GetPrivate(ctx, this_val);
+  myPresetUnit* pUnit = (myPresetUnit*)JS_GetOpaque3(this_val);
 
   if (!pUnit)
     return JS_UNDEFINED;

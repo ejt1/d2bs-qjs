@@ -849,7 +849,7 @@ void Script::Cleanup() {
 
 // return != 0 if the JS code needs to be interrupted
 int Script::InterruptHandler(JSRuntime* rt, void* /*opaque*/) {
-  Script* script = (Script*)JS_GetContextPrivate(rt);
+  Script* script = (Script*)JS_GetRuntimeOpaque(rt);
   if (!script->RunEventLoop()) {
     return 1;
   }
@@ -894,7 +894,7 @@ DWORD WINAPI ScriptThread(LPVOID lpThreadParameter) {
 
 // JSBool contextCallback(JSContext* ctx, uint32_t contextOp) {
 //   if (contextOp == JSCONTEXT_DESTROY) {
-//     Script* script = (Script*)JS_GetContextPrivate(ctx);
+//     Script* script = (Script*)JS_GetContextOpaque(ctx);
 //     script->OnDestroyContext();
 //   }
 //   return JS_TRUE;

@@ -26,7 +26,7 @@ struct SocketData {
 EMPTY_CTOR(socket)
 
 CLASS_FINALIZER(socket) {
-  // SocketData* sData = (SocketData*)JS_GetPrivate(obj);
+  // SocketData* sData = (SocketData*)JS_GetOpaque3(obj);
   // if (sData) {
   //   closesocket(sData->socket);
   //   WSACleanup();
@@ -34,7 +34,7 @@ CLASS_FINALIZER(socket) {
 }
 
 JSAPI_PROP(socket_getProperty) {
-  //SocketData* sdata = (SocketData*)JS_GetInstancePrivate(cx, obj, &socket_class, NULL);
+  //SocketData* sdata = (SocketData*)JS_GetOpaque3(this_val);
 
   //if (sdata) {
   //  JSValue ID;
@@ -130,7 +130,7 @@ JSAPI_FUNC(socket_open) {
 JSAPI_FUNC(socket_close) {
   //(argc);
 
-  //SocketData* sData = (SocketData*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &socket_class, NULL);
+  //SocketData* sData = (SocketData*)JS_GetOpaque3(this_val);
 
   //closesocket(sData->socket);
   //WSACleanup();
@@ -141,7 +141,7 @@ JSAPI_FUNC(socket_close) {
 JSAPI_FUNC(socket_send) {
   //(argc);
 
-  //SocketData* sData = (SocketData*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &socket_class, NULL);
+  //SocketData* sData = (SocketData*)JS_GetOpaque3(this_val);
   //char* msg = NULL;
 
   //if (JSVAL_IS_STRING(JS_ARGV(cx, vp)[0]))
@@ -155,7 +155,7 @@ JSAPI_FUNC(socket_send) {
 JSAPI_FUNC(socket_read) {
   //(argc);
 
-  //SocketData* sData = (SocketData*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &socket_class, NULL);
+  //SocketData* sData = (SocketData*)JS_GetOpaque3(this_val);
 
   //char buffer[10000] = {0};
   //std::string returnVal;

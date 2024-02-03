@@ -7,7 +7,7 @@
 EMPTY_CTOR(room)
 
 JSAPI_PROP(room_getProperty) {
-  Room2* pRoom2 = (Room2*)JS_GetPrivate(ctx, this_val);
+  Room2* pRoom2 = (Room2*)JS_GetOpaque3(this_val);
 
   if (!pRoom2)
     return JS_UNDEFINED;
@@ -52,7 +52,7 @@ JSAPI_PROP(room_getProperty) {
 JSAPI_FUNC(room_getNext) {
   (argc);
 
-  Room2* pRoom2 = (Room2*)JS_GetPrivate(ctx, this_val);
+  Room2* pRoom2 = (Room2*)JS_GetOpaque3(this_val);
   if (!pRoom2) {
     return JS_FALSE;
   }
@@ -62,12 +62,12 @@ JSAPI_FUNC(room_getNext) {
     return JS_FALSE;
   }
 
-  JS_SetPrivate(ctx, this_val, pRoom2);
+  JS_SetOpaque(this_val, pRoom2);
   return JS_TRUE;
 }
 
 JSAPI_FUNC(room_getPresetUnits) {
-  Room2* pRoom2 = (Room2*)JS_GetPrivate(ctx, this_val);
+  Room2* pRoom2 = (Room2*)JS_GetOpaque3(this_val);
 
   uint32_t nType = NULL;
   uint32_t nClass = NULL;
@@ -122,7 +122,7 @@ JSAPI_FUNC(room_getPresetUnits) {
 }
 
 JSAPI_FUNC(room_getCollisionTypeArray) {
-  Room2* pRoom2 = (Room2*)JS_GetPrivate(ctx, this_val);
+  Room2* pRoom2 = (Room2*)JS_GetOpaque3(this_val);
 
   bool bAdded = FALSE;
   CollMap* pCol = NULL;
@@ -182,7 +182,7 @@ JSAPI_FUNC(room_getCollisionTypeArray) {
 }
 
 JSAPI_FUNC(room_getCollision) {
-  Room2* pRoom2 = (Room2*)JS_GetPrivate(ctx, this_val);
+  Room2* pRoom2 = (Room2*)JS_GetOpaque3(this_val);
 
   bool bAdded = FALSE;
   CollMap* pCol = NULL;
@@ -248,7 +248,7 @@ JSAPI_FUNC(room_getCollision) {
 JSAPI_FUNC(room_getNearby) {
   (argc);
 
-  Room2* pRoom2 = (Room2*)JS_GetPrivate(ctx, this_val);
+  Room2* pRoom2 = (Room2*)JS_GetOpaque3(this_val);
 
   JSValue jsobj = JS_NewArray(ctx);
   if (!jsobj)
@@ -268,7 +268,7 @@ JSAPI_FUNC(room_getNearby) {
 // Don't know whether it works or not
 JSAPI_FUNC(room_getStat) {
   JSValue rval = JS_NULL;
-  Room2* pRoom2 = (Room2*)JS_GetPrivate(ctx, this_val);
+  Room2* pRoom2 = (Room2*)JS_GetOpaque3(this_val);
 
   if (argc < 1 || !JS_IsNumber(argv[0]))
     return rval;
@@ -336,7 +336,7 @@ JSAPI_FUNC(room_getStat) {
 }
 
 JSAPI_FUNC(room_getFirst) {
-  Room2* pRoom2 = (Room2*)JS_GetPrivate(ctx, this_val);
+  Room2* pRoom2 = (Room2*)JS_GetOpaque3(this_val);
   if (!pRoom2 || !pRoom2->pLevel || !pRoom2->pLevel->pRoom2First)
     return JS_UNDEFINED;
 
@@ -344,11 +344,11 @@ JSAPI_FUNC(room_getFirst) {
 }
 
 JSAPI_FUNC(room_unitInRoom) {
-  Room2* pRoom2 = (Room2*)JS_GetPrivate(ctx, this_val);
+  Room2* pRoom2 = (Room2*)JS_GetOpaque3(this_val);
   if (!pRoom2 || argc < 1 || !JS_IsObject(argv[0]))
     return JS_UNDEFINED;
 
-  myUnit* pmyUnit = (myUnit*)JS_GetPrivate(ctx, argv[0]);
+  myUnit* pmyUnit = (myUnit*)JS_GetOpaque3(argv[0]);
   if (!pmyUnit || (pmyUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_UNDEFINED;
 
@@ -366,7 +366,7 @@ JSAPI_FUNC(room_unitInRoom) {
 }
 
 JSAPI_FUNC(room_reveal) {
-  Room2* pRoom2 = (Room2*)JS_GetPrivate(ctx, this_val);
+  Room2* pRoom2 = (Room2*)JS_GetOpaque3(this_val);
 
   BOOL bDrawPresets = false;
   if (argc == 1 && JS_IsBool(argv[0]))

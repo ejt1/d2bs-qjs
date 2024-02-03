@@ -7,16 +7,16 @@
 EMPTY_CTOR(area)
 
 CLASS_FINALIZER(area) {
-  myArea* pArea = (myArea*)JS_GetPrivate(val);
+  myArea* pArea = (myArea*)JS_GetOpaque3(val);
 
   if (pArea) {
-    JS_SetPrivate(val, NULL);
+    JS_SetOpaque(val, NULL);
     delete pArea;
   }
 }
 
 JSAPI_PROP(area_getProperty) {
-  myArea* pArea = (myArea*)JS_GetPrivate(ctx, this_val);
+  myArea* pArea = (myArea*)JS_GetOpaque3(this_val);
 
   if (!pArea)
     return JS_FALSE;

@@ -16,7 +16,7 @@ bool __fastcall FindScriptByTid(Script* script, void* argv, uint32_t argc);
 bool __fastcall FindScriptByName(Script* script, void* argv, uint32_t argc);
 
 JSAPI_PROP(script_getProperty) {
-  Script* script = (Script*)JS_GetInstancePrivate(ctx, this_val, script_class_id, NULL);
+  Script* script = (Script*)JS_GetOpaque3(this_val);
 
   // TODO: make this check stronger
   if (!script)
@@ -49,7 +49,7 @@ JSAPI_PROP(script_getProperty) {
 }
 
 JSAPI_FUNC(script_getNext) {
-  Script* iterp = (Script*)JS_GetInstancePrivate(ctx, this_val, script_class_id, NULL);
+  Script* iterp = (Script*)JS_GetOpaque3(this_val);
   sScriptEngine->LockScriptList("scrip.getNext");
 
   for (ScriptMap::iterator it = sScriptEngine->scripts().begin(); it != sScriptEngine->scripts().end(); it++) {
@@ -58,7 +58,7 @@ JSAPI_FUNC(script_getNext) {
       if (it == sScriptEngine->scripts().end())
         break;
       iterp = it->second;
-      JS_SetPrivate(ctx, this_val, iterp);
+      JS_SetOpaque(this_val, iterp);
       sScriptEngine->UnLockScriptList("scrip.getNext");
       return JS_TRUE;
     }
@@ -70,7 +70,7 @@ JSAPI_FUNC(script_getNext) {
 }
 
 JSAPI_FUNC(script_stop) {
-  Script* script = (Script*)JS_GetInstancePrivate(ctx, this_val, script_class_id, NULL);
+  Script* script = (Script*)JS_GetOpaque3(this_val);
   if (script->IsRunning())
     script->Stop();
 
@@ -78,7 +78,7 @@ JSAPI_FUNC(script_stop) {
 }
 
 JSAPI_FUNC(script_pause) {
-  Script* script = (Script*)JS_GetInstancePrivate(ctx, this_val, script_class_id, NULL);
+  Script* script = (Script*)JS_GetOpaque3(this_val);
 
   if (script->IsRunning())
     script->Pause();
@@ -87,7 +87,7 @@ JSAPI_FUNC(script_pause) {
 }
 
 JSAPI_FUNC(script_resume) {
-  Script* script = (Script*)JS_GetInstancePrivate(ctx, this_val, script_class_id, NULL);
+  Script* script = (Script*)JS_GetOpaque3(this_val);
 
   script->Resume();
 
@@ -95,7 +95,7 @@ JSAPI_FUNC(script_resume) {
 }
 
 JSAPI_FUNC(script_send) {
-  Script* script = (Script*)JS_GetInstancePrivate(ctx, this_val, script_class_id, NULL);
+  Script* script = (Script*)JS_GetOpaque3(this_val);
   Event* evt = new Event;
   if (!script || !script->IsRunning())
     return JS_NULL;
@@ -116,7 +116,7 @@ JSAPI_FUNC(script_send) {
 }
 
 JSAPI_FUNC(script_join) {
-  Script* script = (Script*)JS_GetInstancePrivate(ctx, this_val, script_class_id, NULL);
+  Script* script = (Script*)JS_GetOpaque3(this_val);
 
   script->Join();
 
@@ -126,7 +126,7 @@ JSAPI_FUNC(script_join) {
 JSAPI_FUNC(my_getScript) {
   Script* iterp = NULL;
   if (argc == 1 && JS_IsBool(argv[0]) && JS_ToBool(ctx, argv[0]) == TRUE)
-    iterp = (Script*)JS_GetContextPrivate(ctx);
+    iterp = (Script*)JS_GetContextOpaque(ctx);
   else if (argc == 1 && JS_IsNumber(argv[0])) {
     // loop over the Scripts in ScriptEngine and find the one with the right threadid
     uint32_t tid;

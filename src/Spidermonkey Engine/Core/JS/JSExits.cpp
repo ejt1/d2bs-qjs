@@ -3,12 +3,12 @@
 EMPTY_CTOR(exit)
 
 CLASS_FINALIZER(exit) {
-  myExit* pExit = (myExit*)JS_GetPrivate(val);
+  myExit* pExit = (myExit*)JS_GetOpaque3(val);
   delete pExit;
 }
 
 JSAPI_PROP(exit_getProperty) {
-  myExit* pExit = (myExit*)JS_GetPrivate(ctx, this_val);
+  myExit* pExit = (myExit*)JS_GetOpaque3(this_val);
 
   if (!pExit)
     return JS_UNDEFINED;

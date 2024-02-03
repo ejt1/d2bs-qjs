@@ -8,7 +8,7 @@
 EMPTY_CTOR(party)
 
 JSAPI_PROP(party_getProperty) {
-  RosterUnit* pUnit = (RosterUnit*)JS_GetPrivate(ctx, this_val);
+  RosterUnit* pUnit = (RosterUnit*)JS_GetOpaque3(this_val);
 
   if (!pUnit)
     return JS_UNDEFINED;
@@ -55,7 +55,7 @@ JSAPI_FUNC(party_getNext) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  RosterUnit* pUnit = (RosterUnit*)JS_GetPrivate(ctx, this_val);
+  RosterUnit* pUnit = (RosterUnit*)JS_GetOpaque3(this_val);
 
   if (!pUnit) {
     return JS_FALSE;
@@ -64,7 +64,7 @@ JSAPI_FUNC(party_getNext) {
   pUnit = pUnit->pNext;
 
   if (pUnit) {
-    JS_SetPrivate(ctx, this_val, pUnit);
+    JS_SetOpaque(this_val, pUnit);
     return JS_DupValue(ctx, this_val);
   }
 
@@ -93,7 +93,7 @@ JSAPI_FUNC(my_getParty) {
     } else if (JS_IsNumber(argv[0]) && JS_ToUint32(ctx, &nPlayerId, argv[0])) {
       THROW_ERROR(ctx, "Unable to get ID");
     } else if (JS_IsObject(argv[0])) {
-      myUnit* lpUnit = (myUnit*)JS_GetPrivate(ctx, argv[0]);
+      myUnit* lpUnit = (myUnit*)JS_GetOpaque3(argv[0]);
 
       if (!lpUnit)
         return JS_UNDEFINED;

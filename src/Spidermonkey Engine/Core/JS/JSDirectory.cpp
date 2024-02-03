@@ -35,7 +35,7 @@
 EMPTY_CTOR(dir)
 
 CLASS_FINALIZER(dir) {
-  DirData* d = (DirData*)JS_GetPrivate(val);
+  DirData* d = (DirData*)JS_GetOpaque3(val);
   delete d;
 }
 
@@ -75,7 +75,7 @@ JSAPI_FUNC(my_openDir) {
 ////////////////////////////////////////////////////////////////////////////////
 
 JSAPI_FUNC(dir_getFiles) {
-  DirData* d = (DirData*)JS_GetPrivate(ctx, this_val);
+  DirData* d = (DirData*)JS_GetOpaque3(this_val);
   char search[_MAX_PATH] = "*.*";
 
   if (argc > 1)
@@ -122,7 +122,7 @@ JSAPI_FUNC(dir_getFiles) {
 }
 
 JSAPI_FUNC(dir_getFolders) {
-  DirData* d = (DirData*)JS_GetPrivate(ctx, this_val);
+  DirData* d = (DirData*)JS_GetOpaque3(this_val);
   char search[_MAX_PATH] = "*.*";
 
   if (argc > 1)
@@ -170,7 +170,7 @@ JSAPI_FUNC(dir_getFolders) {
 }
 
 JSAPI_FUNC(dir_create) {
-  DirData* d = (DirData*)JS_GetPrivate(ctx, this_val);
+  DirData* d = (DirData*)JS_GetOpaque3(this_val);
   char path[_MAX_PATH];
   if (!JS_IsString(argv[0]))
     THROW_ERROR(ctx, "No path passed to dir.create()");
@@ -198,7 +198,7 @@ JSAPI_FUNC(dir_create) {
 }
 
 JSAPI_FUNC(dir_delete) {
-  DirData* d = (DirData*)JS_GetPrivate(ctx, this_val);
+  DirData* d = (DirData*)JS_GetOpaque3(this_val);
 
   char path[_MAX_PATH];
   sprintf_s(path, _MAX_PATH, "%s\\%s", Vars.szScriptPath, d->name);
@@ -214,7 +214,7 @@ JSAPI_FUNC(dir_delete) {
 }
 
 JSAPI_PROP(dir_getProperty) {
-  DirData* d = (DirData*)JS_GetPrivate(ctx, this_val);
+  DirData* d = (DirData*)JS_GetOpaque3(this_val);
 
   if (!d)
     return JS_EXCEPTION;

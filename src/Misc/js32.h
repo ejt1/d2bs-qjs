@@ -15,23 +15,7 @@
 #include <optional>
 #include <streambuf>
 
-// #define NUM(x) #x
-// #define NAME(line, v) (__FILE__ ":" NUM(line) " -> " #v)
-//
-void* JS_GetPrivate(JSContext* ctx, JSValue obj);
-void JS_SetPrivate(JSValue obj, void* data);
-
-void* JS_GetPrivate(JSValue obj);
-void JS_SetPrivate(JSContext* ctx, JSValue obj, void* data);
-
-void* JS_GetContextPrivate(JSRuntime* rt);
-void* JS_GetContextPrivate(JSContext* ctx);
-
-void* JS_GetInstancePrivate(JSContext* ctx, JSValue val, JSClassID class_id, JSValue* argv);
-
 JSValue JS_NewString(JSContext* ctx, const wchar_t* str);
-
-std::optional<std::wstring> JS_ToWString(JSContext* ctx, JSValue val);
 
 // JSBool JSVAL_IS_OBJECT(JSValue v);
 

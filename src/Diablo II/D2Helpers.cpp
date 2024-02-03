@@ -262,7 +262,7 @@ BOOL SetSkill(JSContext* cx, WORD wSkillId, BOOL bLeft, DWORD dwItemId) {
     } else
       return TRUE;
 
-    Script* script = (Script*)JS_GetContextPrivate(cx);  // run events to avoid packet block deadlock
+    Script* script = (Script*)JS_GetContextOpaque(cx);  // run events to avoid packet block deadlock
     script->BlockThread(100);
   }
 

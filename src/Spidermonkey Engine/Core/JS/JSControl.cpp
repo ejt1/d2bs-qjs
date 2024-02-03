@@ -6,10 +6,10 @@
 EMPTY_CTOR(control)
 
 CLASS_FINALIZER(control) {
-  ControlData* pData = ((ControlData*)JS_GetPrivate(val));
+  ControlData* pData = ((ControlData*)JS_GetOpaque3(val));
 
   if (pData) {
-    JS_SetPrivate(val, NULL);
+    JS_SetOpaque(val, NULL);
     delete pData;
   }
 }
@@ -18,7 +18,7 @@ JSAPI_PROP(control_getProperty) {
   if (ClientState() != ClientStateMenu)
     return JS_EXCEPTION;
 
-  ControlData* pData = ((ControlData*)JS_GetPrivate(ctx, this_val));
+  ControlData* pData = ((ControlData*)JS_GetOpaque3(this_val));
   if (!pData)
     return JS_EXCEPTION;
 
@@ -80,7 +80,7 @@ JSAPI_STRICT_PROP(control_setProperty) {
   if (ClientState() != ClientStateMenu)
     return JS_EXCEPTION;
 
-  ControlData* pData = ((ControlData*)JS_GetPrivate(ctx, this_val));
+  ControlData* pData = ((ControlData*)JS_GetOpaque3(this_val));
   if (!pData)
     return JS_EXCEPTION;
 
@@ -135,7 +135,7 @@ JSAPI_FUNC(control_getNext) {
   if (ClientState() != ClientStateMenu)
     return JS_UNDEFINED;
 
-  ControlData* pData = ((ControlData*)JS_GetPrivate(ctx, this_val));
+  ControlData* pData = ((ControlData*)JS_GetOpaque3(this_val));
   if (!pData)
     return JS_UNDEFINED;
 
@@ -152,7 +152,7 @@ JSAPI_FUNC(control_getNext) {
     pData->dwY = pData->pControl->dwPosY;
     pData->dwSizeX = pData->pControl->dwSizeX;
     pData->dwSizeY = pData->pControl->dwSizeY;
-    JS_SetPrivate(ctx, this_val, pData);
+    JS_SetOpaque(this_val, pData);
     return JS_DupValue(ctx, this_val);
   }
   return JS_UNDEFINED;
@@ -162,7 +162,7 @@ JSAPI_FUNC(control_click) {
   if (ClientState() != ClientStateMenu)
     return JS_TRUE;
 
-  ControlData* pData = ((ControlData*)JS_GetPrivate(ctx, this_val));
+  ControlData* pData = ((ControlData*)JS_GetOpaque3(this_val));
   if (!pData)
     return JS_TRUE;
 
@@ -187,7 +187,7 @@ JSAPI_FUNC(control_setText) {
   if (ClientState() != ClientStateMenu)
     return JS_TRUE;
 
-  ControlData* pData = ((ControlData*)JS_GetPrivate(ctx, this_val));
+  ControlData* pData = ((ControlData*)JS_GetOpaque3(this_val));
   if (!pData)
     return JS_TRUE;
 
@@ -212,7 +212,7 @@ JSAPI_FUNC(control_getText) {
   if (ClientState() != ClientStateMenu)
     return JS_UNDEFINED;
 
-  ControlData* pData = ((ControlData*)JS_GetPrivate(ctx, this_val));
+  ControlData* pData = ((ControlData*)JS_GetOpaque3(this_val));
   if (!pData)
     return JS_UNDEFINED;
 
