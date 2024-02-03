@@ -64,8 +64,7 @@ void JS_ReportPendingException(JSContext* ctx);
 
 #define THROW_WARNING(cx, msg) \
   {                            \
-    JS_ReportError(cx, msg);   \
-    return JS_EXCEPTION;       \
+    return JS_UNDEFINED;       \
   }
 
 #define JSAPI_FUNC(name) \
