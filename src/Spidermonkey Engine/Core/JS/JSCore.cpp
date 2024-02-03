@@ -6,7 +6,6 @@
 
 #include <io.h>
 #include <windows.h>
-#include <ddeml.h>
 #include <wininet.h>
 #include <iostream>
 
@@ -15,7 +14,6 @@
 #include "JSCore.h"
 #include "Core.h"
 #include "Helpers.h"
-#include "dde.h"
 // #include "ScriptEngine.h"
 // #include "Engine.h"
 #include "Events.h"
@@ -308,6 +306,7 @@ JSAPI_FUNC(my_copy) {
   JS_FreeCString(ctx, data);
   return JS_TRUE;
 }
+
 JSAPI_FUNC(my_paste) {
   OpenClipboard(NULL);
   HANDLE foo = GetClipboardData(CF_TEXT);
@@ -369,55 +368,6 @@ JSAPI_FUNC(my_sendCopyData) {
   JS_FreeCString(ctx, windowClassName);
   JS_FreeCString(ctx, data);
   return rval;
-}
-
-JSAPI_FUNC(my_sendDDE) {
-  // JS_SET_RVAL(cx, vp, JSVAL_FALSE);
-  // int32_t mode = 0;
-  // const char *pszDDEServer = "\"\"", *pszTopic = "\"\"", *pszItem = "\"\"", *pszData = "\"\"";
-  // JS_BeginRequest(cx);
-
-  // if (JSVAL_IS_INT(JS_ARGV(cx, vp)[0]))
-  //   JS_ValueToECMAInt32(cx, JS_ARGV(cx, vp)[1], &mode);
-
-  // if (JSVAL_IS_STRING(JS_ARGV(cx, vp)[1]))
-  //   pszDDEServer = JS_EncodeStringToUTF8(cx, JSVAL_TO_STRING(JS_ARGV(cx, vp)[1]));
-
-  // if (JSVAL_IS_STRING(JS_ARGV(cx, vp)[2]))
-  //   pszTopic = JS_EncodeStringToUTF8(cx, JSVAL_TO_STRING(JS_ARGV(cx, vp)[2]));
-
-  // if (JSVAL_IS_STRING(JS_ARGV(cx, vp)[3]))
-  //   pszItem = JS_EncodeStringToUTF8(cx, JSVAL_TO_STRING(JS_ARGV(cx, vp)[3]));
-
-  // if (JSVAL_IS_STRING(JS_ARGV(cx, vp)[4]))
-  //   pszData = JS_EncodeStringToUTF8(cx, JSVAL_TO_STRING(JS_ARGV(cx, vp)[4]));
-
-  // JS_EndRequest(cx);
-  // char buffer[255] = "";
-  // BOOL result = SendDDE(mode, pszDDEServer, pszTopic, pszItem, pszData, (char**)&buffer, sizeof(buffer));
-
-  // if (JSVAL_IS_STRING(JS_ARGV(cx, vp)[1])) {
-  //   JS_free(cx, (char*)pszDDEServer);
-  // }
-  // if (JSVAL_IS_STRING(JS_ARGV(cx, vp)[2])) {
-  //   JS_free(cx, (char*)pszTopic);
-  // }
-  // if (JSVAL_IS_STRING(JS_ARGV(cx, vp)[3])) {
-  //   JS_free(cx, (char*)pszItem);
-  // }
-  // if (JSVAL_IS_STRING(JS_ARGV(cx, vp)[4])) {
-  //   JS_free(cx, (char*)pszData);
-  // }
-
-  // if (!result)
-  //   THROW_ERROR(cx, "DDE Failed! Check the log for the error message.");
-
-  // if (mode == 0) {
-  //   wchar_t* buf = AnsiToUnicode(buffer);
-  //   JS_SET_RVAL(cx, vp, STRING_TO_JSVAL(JS_NewUCStringCopyZ(cx, buf)));
-  //   delete[] buf;
-  // }
-  return JS_TRUE;
 }
 
 JSAPI_FUNC(my_keystate) {

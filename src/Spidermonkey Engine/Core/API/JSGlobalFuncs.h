@@ -68,7 +68,6 @@ static JSCFunctionListEntry global_funcs[] = {
     JS_FN("copy", my_copy, 0, FUNCTION_FLAGS),
     JS_FN("paste", my_paste, 0, FUNCTION_FLAGS),
     JS_FN("sendCopyData", my_sendCopyData, 4, FUNCTION_FLAGS),
-    JS_FN("sendDDE", my_sendDDE, 0, FUNCTION_FLAGS),
     JS_FN("keystate", my_keystate, 0, FUNCTION_FLAGS),
     JS_FN("addEventListener", my_addEventListener, 2, FUNCTION_FLAGS),
     JS_FN("removeEventListener", my_removeEventListener, 2, FUNCTION_FLAGS),

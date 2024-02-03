@@ -4,7 +4,6 @@
 #include <io.h>
 #include <fcntl.h>
 
-#include "dde.h"
 #include "Constants.h"
 #include "Offset.h"
 #include "ScriptEngine.h"
@@ -109,7 +108,6 @@ bool Engine::Initialize(HMODULE hModule) {
   DefineOffsets();
   InstallPatches();
   InstallConditional();
-  CreateDdeServer();
 
   return TRUE;
 }
@@ -127,7 +125,6 @@ void Engine::Shutdown() {
 
   RemovePatches();
   Genhook::Destroy();
-  ShutdownDdeServer();
 
   DeleteCriticalSection(&Vars.cPrintSection);
   DeleteCriticalSection(&Vars.cBoxHookSection);
