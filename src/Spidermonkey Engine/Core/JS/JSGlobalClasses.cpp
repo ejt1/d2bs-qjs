@@ -2,7 +2,6 @@
 #include "JSFile.h"
 #include "JSSocket.h"
 #include "JSSQLite.h"
-#include "JSSandbox.h"
 #include "JSUnit.h"
 #include "JSScreenHook.h"
 #include "JSPresetUnit.h"
@@ -24,7 +23,6 @@ JSClassID box_class_id;
 JSClassID line_class_id;
 JSClassID text_class_id;
 JSClassID image_class_id;
-JSClassID sandbox_class_id;
 JSClassID room_class_id;
 JSClassID presetunit_class_id;
 JSClassID party_class_id;
@@ -76,11 +74,6 @@ JSClassDef text_class = {
 
 JSClassDef image_class = {
     .class_name = "Image",
-    .finalizer = hook_finalizer,
-};
-
-JSClassDef sandbox_class = {
-    .class_name = "Sandbox",
     .finalizer = hook_finalizer,
 };
 
@@ -164,7 +157,6 @@ JSClassSpec global_classes[] = {
     {&sqlite_db_class_id, &sqlite_db, 0, sqlite_ctor, 0, sqlite_methods, _countof(sqlite_methods), sqlite_props, _countof(sqlite_props), NULL, 0, NULL, 0},
     {&sqlite_stmt_class_id, &sqlite_stmt, 0, sqlite_stmt_ctor, 0, sqlite_stmt_methods, _countof(sqlite_stmt_methods), sqlite_stmt_props, _countof(sqlite_stmt_props),
      NULL, 0, NULL, 0},
-    {&sandbox_class_id, &sandbox_class, 0, sandbox_ctor, 0, sandbox_methods, _countof(sandbox_methods), NULL, 0, NULL, 0, NULL, 0},
     {&script_class_id, &script_class, 0, script_ctor, 0, script_methods, _countof(script_methods), script_props, _countof(script_props), NULL, 0, NULL, 0},
 
     {&frame_class_id, &frame_class, 0, frame_ctor, 0, frame_methods, _countof(frame_methods), frame_props, _countof(frame_props), NULL, 0, NULL, 0},

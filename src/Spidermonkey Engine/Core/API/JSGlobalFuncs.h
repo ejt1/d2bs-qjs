@@ -10,7 +10,6 @@
 #include "JSFileTools.h"
 #include "JSDirectory.h"
 #include "JSSQLite.h"
-#include "JSSandbox.h"
 #include "JSScreenHook.h"
 #include "JSParty.h"
 #include "JSArea.h"
