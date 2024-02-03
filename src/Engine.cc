@@ -51,7 +51,14 @@ bool Engine::Initialize(HMODULE hModule) {
 
   CommandLineParser cmdline(Vars.szCommandLine);
   for (const auto& [arg, value] : cmdline.Args()) {
-    if (arg == "-title") {
+    if (arg == "-console") {
+      AllocConsole();
+      SetConsoleOutputCP(CP_UTF8);
+      FILE* fDummy;
+      freopen_s(&fDummy, "CONIN$", "r", stdin);
+      freopen_s(&fDummy, "CONOUT$", "w", stderr);
+      freopen_s(&fDummy, "CONOUT$", "w", stdout);
+    } else if (arg == "-title") {
       strncat_s(Vars.szTitle, value.c_str(), value.length());
     } else if (arg == "-sleepy") {
       Vars.bSleepy = TRUE;

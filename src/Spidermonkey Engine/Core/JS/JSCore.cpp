@@ -172,6 +172,7 @@ JSAPI_FUNC(my_load) {
     // TODO: Should this actually be there? No notification is bad, but do we want this? maybe throw an exception?
     Print(L"File \"%S\" not found.", file);
   }
+  JS_FreeCString(ctx, file);
   return JS_NULL;
 }
 

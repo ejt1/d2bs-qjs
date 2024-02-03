@@ -97,7 +97,10 @@
 /* dump objects freed by the garbage collector */
 //#define DUMP_GC_FREE
 /* dump objects leaking when freeing the runtime */
-//#define DUMP_LEAKS  1
+#define DUMP_LEAKS  1
+#define DUMP_LEAKS_OBJECTS 1
+#define DUMP_LEAKS_ATOMS 0
+#define DUMP_LEAKS_STRINGS 0
 /* dump memory usage before running the garbage collector */
 //#define DUMP_MEM
 //#define DUMP_OBJECTS    /* dump objects in JS_FreeContext */
@@ -1942,7 +1945,7 @@ void JS_FreeRuntime(JSRuntime *rt)
 
     JS_RunGC(rt);
 
-#ifdef DUMP_LEAKS
+#if DUMP_LEAKS && DUMP_LEAKS_OBJECTS
     /* leaking objects */
     {
         BOOL header_done;
@@ -1996,7 +1999,7 @@ void JS_FreeRuntime(JSRuntime *rt)
     bf_context_end(&rt->bf_ctx);
 #endif
 
-#ifdef DUMP_LEAKS
+#if DUMP_LEAKS && DUMP_LEAKS_ATOMS
     /* only the atoms defined in JS_InitAtoms() should be left */
     {
         BOOL header_done = FALSE;
@@ -2067,7 +2070,7 @@ void JS_FreeRuntime(JSRuntime *rt)
     js_free_rt(rt, rt->atom_array);
     js_free_rt(rt, rt->atom_hash);
     js_free_rt(rt, rt->shape_hash);
-#ifdef DUMP_LEAKS
+#if DUMP_LEAKS && DUMP_LEAKS_STRINGS
     if (!list_empty(&rt->string_list)) {
         if (rt->rt_info) {
             printf("%s:1: string leakage:", rt->rt_info);

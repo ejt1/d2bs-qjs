@@ -15,10 +15,10 @@
 #include <chrono>
 
 Script::Script(const char* file, ScriptMode mode /*, uint argc, JSAutoStructuredCloneBuffer** argv*/)
-    : /*m_runtime(NULL),
+    : m_runtime(NULL),
       m_context(NULL),
-      m_globalObject(NULL),
-      m_script(NULL),*/
+      m_globalObject(JS_UNDEFINED),
+      m_script(JS_UNDEFINED),
       m_isPaused(false),
       m_isReallyPaused(false),
       m_scriptMode(mode),
@@ -220,28 +220,27 @@ bool Script::Include(const char* file) {
     free(fname);
     return true;
   }
-  bool rval = false;
 
-  JSContext* cx = GetContext();
-
-  JSValue script = JS_CompileFile(cx, m_globalObject, fname);
-  if (!JS_IsException(script)) {
+  JSValue rval = JS_CompileFile(m_context, m_globalObject, fname);
+  if (!JS_IsException(rval)) {
     m_inProgress[fname] = true;
-    JSValue script_rval = JS_EvalFunction(cx, script);
-    if (!JS_IsException(script_rval)) {
+    rval = JS_EvalFunction(m_context, rval);
+    if (!JS_IsException(rval)) {
       m_includes[fname] = true;
-      rval = true;
-    } else {
-      JS_ReportPendingException(cx);
     }
     m_inProgress.erase(fname);
-  } else {
-    JS_ReportPendingException(cx);
   }
 
   LeaveCriticalSection(&m_lock);
   free(fname);
-  return rval;
+
+  if (JS_IsException(rval)) {
+    JS_ReportPendingException(m_context);
+    return false;
+  }
+
+  JS_FreeValue(m_context, rval);
+  return true;
 }
 
 bool Script::IsListenerRegistered(const char* evtName) {
@@ -582,24 +581,26 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
         Print(L"%S", text);
         JS_FreeCString(m_context, text);
       }
+      JS_FreeValue(m_context, rval);
+    } else {
+      JS_ReportPendingException(m_context);
     }
     free(evt->arg1);
     delete evt;
   }
   if (strcmp(evtName, "scriptmsg") == 0) {
+    DWORD* argc = (DWORD*)evt->arg1;
     if (!clearList) {
-      DWORD* argc = (DWORD*)evt->arg1;
-
       std::vector<JSValue> args;
       for (uint i = 0; i < *argc; ++i) {
         args.push_back(evt->argv[i]);
       }
 
       ExecuteEvent(evtName, args.size(), args.data());
+    }
 
-      for (size_t i = 0; i < args.size(); ++i) {
-        JS_FreeValue(m_context, args[i]);
-      }
+    for (size_t i = 0; i < *argc; ++i) {
+      JS_FreeValue(m_context, evt->argv[i]);
     }
 
     delete evt->arg1;
@@ -642,6 +643,7 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
     return true;
   }
   if (strcmp(evtName, "DisposeMe") == 0) {
+    Log(L"DisposeMe");
     sScriptEngine->DisposeScript(this);
   }
 
@@ -754,7 +756,6 @@ bool Script::Initialize() {
 
 void Script::RunMain() {
   JSValue main;
-  JSValue dummy;
 
   // args passed from load
   // JS::AutoValueVector args(m_context);
@@ -764,8 +765,8 @@ void Script::RunMain() {
   //  m_argv[i]->read(m_context, &v);
   //  args.append(v);
   //}
-  dummy = JS_EvalFunction(m_context, m_script);
-  if (JS_IsException(dummy)) {
+  m_script = JS_EvalFunction(m_context, m_script);
+  if (JS_IsException(m_script)) {
     JS_ReportPendingException(m_context);
     return;
   }
@@ -780,10 +781,13 @@ void Script::RunMain() {
     return;
   }
   JSValue rval = JS_Call(m_context, main, JS_UNDEFINED, 0, nullptr);
+  JS_FreeValue(m_context, main);
   if (JS_IsException(rval)) {
     JS_ReportPendingException(m_context);
     return;
   }
+  Log(L"main returned for %S", m_fileName.c_str());
+  JS_FreeValue(m_context, rval);
 }
 
 // return false to stop the script
@@ -828,6 +832,18 @@ bool Script::ProcessAllEvents() {
 }
 
 void Script::Cleanup() {
+  Log(L"Cleanup %S", m_fileName.c_str());
+  if (m_context) {
+    Log(L"Destroying context for %S", m_fileName.c_str());
+    ClearAllEvents();
+    JS_FreeValue(m_context, m_script);
+    JS_FreeValue(m_context, m_globalObject);
+    JS_FreeContext(m_context);
+  }
+  if (m_runtime) {
+    Log(L"Destroying runtime for %S", m_fileName.c_str());
+    JS_FreeRuntime(m_runtime);
+  }
   m_scriptState = kScriptStateStopped;
 }
 
