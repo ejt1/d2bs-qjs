@@ -45,9 +45,10 @@ void LogNoFormat(const wchar_t* szString) {
   FILE* log = _fsopen(path, "a+", _SH_DENYNO);
 #endif
   static DWORD id = GetProcessId(GetCurrentProcess());
+  DWORD tid = GetCurrentThreadId();
   std::string sString = WideToAnsi(szString);
   strftime(szTime, sizeof(szTime), "%x %X", &timestamp);
-  fprintf(log, "[%s] D2BS %d: %s\n", szTime, id, sString.c_str());
+  fprintf(log, "[%s pid %d tid %d] D2BS: %s\n", szTime, id, tid, sString.c_str());
 #ifndef DEBUG
   fflush(log);
   fclose(log);
