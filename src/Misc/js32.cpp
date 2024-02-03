@@ -88,8 +88,18 @@ std::optional<std::wstring> JS_ToWString(JSContext* ctx, JSValue val) {
 void JS_ReportPendingException(JSContext* ctx) {
   std::optional<std::string> what;
   std::optional<std::string> stackframe;
-  JSValue ex = JS_GetException(ctx);
-  bool isError = JS_IsError(ctx, ex);
+  JSValue ex;
+  bool isError;
+
+
+  ex = JS_GetException(ctx);
+  // skip uncatchable errors to avoid logging "interrupted" exceptions
+  if (JS_IsUncatchableError(ctx, ex)) {
+    JS_FreeValue(ctx, ex);
+    return;
+  }
+
+  isError = JS_IsError(ctx, ex);
   if (isError) {
     what = JS_CStringToStd(ctx, ex);
     JSValue stack = JS_GetPropertyStr(ctx, ex, "stack");
