@@ -811,7 +811,7 @@ JSAPI_FUNC(unit_getStat) {
   if (nStat >= STAT_HP && nStat <= STAT_MAXSTAMINA)
     rval = JS_NewInt32(ctx, D2COMMON_GetUnitStat(pUnit, nStat, nSubIndex) >> 8);
   else if (nStat == STAT_EXP || nStat == STAT_LASTEXP || nStat == STAT_NEXTEXP) {
-    rval = JS_NewInt32(ctx, (unsigned int)D2COMMON_GetUnitStat(pUnit, nStat, nSubIndex));
+    rval = JS_NewFloat64(ctx, (unsigned int)D2COMMON_GetUnitStat(pUnit, nStat, nSubIndex));
   } else if (nStat == STAT_ITEMLEVELREQ)
     rval = JS_NewInt32(ctx, D2COMMON_GetItemLevelRequirement(pUnit, D2CLIENT_GetPlayerUnit()));
   else if (nStat == -1) {
@@ -857,8 +857,6 @@ JSAPI_FUNC(unit_getStat) {
 
     InsertStatsToGenericObject(pUnit, pUnit->pStats, ctx, rval);
     InsertStatsToGenericObject(pUnit, D2COMMON_GetStatList(pUnit, NULL, 0x40), ctx, rval);
-    // InsertStatsToGenericObject(pUnit, pUnit->pStats->pNext, cx, pArray);  // only check the current unit stats!
-    //	InsertStatsToGenericObject(pUnit, pUnit->pStats->pSetList, cx, pArray);
   } else {
     long result = D2COMMON_GetUnitStat(pUnit, nStat, nSubIndex);
     if (result == 0)  // if stat isnt found look up preset list
@@ -918,7 +916,7 @@ void InsertStatsNow(Stat* pStat, int nStat, JSContext* cx, JSValue pArray) {
     // find where we should put it
     JSValue index = JS_UNDEFINED, obj = val;
     index = JS_GetPropertyUint32(cx, pArray, pStat[nStat].wStatIndex);
-    if (index != JS_UNDEFINED) {
+    if (!JS_IsUndefined(index)) {
       // modify the existing object by stuffing it into an array
       if (!JS_IsArray(cx, index)) {
         // it's not an array, build one
@@ -930,10 +928,12 @@ void InsertStatsNow(Stat* pStat, int nStat, JSContext* cx, JSValue pArray) {
         // it is an array, append the new value
         uint32_t len = 0;
         if (!JS_GetArrayBuffer(cx, &len, index)) {
+          JS_FreeValue(cx, index);
           return;
         }
         len++;
         JS_SetPropertyUint32(cx, index, len, val);
+        JS_FreeValue(cx, index);
       }
     } else {
       JS_SetPropertyUint32(cx, pArray, pStat[nStat].wStatIndex, obj);
@@ -949,10 +949,13 @@ void InsertStatsNow(Stat* pStat, int nStat, JSContext* cx, JSValue pArray) {
       // the array index doesn't exist, make it
       index = JS_NewArray(cx);
       JS_SetPropertyUint32(cx, pArray, pStat[nStat].wStatIndex, index);
+      JS_SetPropertyUint32(cx, index, pStat[nStat].wSubIndex, JS_NewInt32(cx, value));
+    } else {
+      JS_SetPropertyUint32(cx, index, pStat[nStat].wSubIndex, JS_NewInt32(cx, value));
+      JS_FreeValue(cx, index);
     }
 
     // index now points to the correct array index
-    JS_SetPropertyUint32(cx, index, pStat[nStat].wSubIndex, JS_NewInt32(cx, value));
   }
 }
 
@@ -1125,6 +1128,7 @@ JSAPI_FUNC(unit_getItems) {
 
     JSValue jsunit = BuildObject(ctx, unit_class_id, unit_methods, _countof(unit_methods), unit_props, _countof(unit_props), pmyUnit);
     if (JS_IsException(jsunit)) {
+      JS_FreeValue(ctx, pReturnArray);
       THROW_ERROR(ctx, "Failed to build item array");
     }
     JS_SetPropertyUint32(ctx, pReturnArray, dwArrayCount, jsunit);
