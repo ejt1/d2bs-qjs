@@ -144,7 +144,8 @@ void Genhook::Clean(Script* owner) {
   while (it != visible.end()) {
     if ((*it)->owner->IsAborted()) {
       // Genhook* i = *it;
-      it = invisible.erase(it);
+      //delete *it;
+      it = visible.erase(it);
       //	delete(i);
     } else
       it++;
@@ -154,6 +155,7 @@ void Genhook::Clean(Script* owner) {
   while (it != invisible.end()) {
     if ((*it)->owner == owner) {
       // Genhook* i = *it;
+      //delete *it;
       it = invisible.erase(it);
       // delete(i);
 
