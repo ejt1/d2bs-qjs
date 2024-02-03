@@ -839,15 +839,14 @@ JSAPI_FUNC(my_getTextSize) {
   }
 
   const char* szString = JS_ToCString(ctx, argv[0]);
-  const wchar_t* pString = AnsiToUnicode(szString);
-  JS_FreeCString(ctx, szString);
-  if (!pString)
-    THROW_ERROR(ctx, "Could not convert string");
+  if (!szString) {
+    return JS_EXCEPTION;
+  }
 
   int font;
   JS_ToInt32(ctx, &font, argv[1]);
-  POINT r = CalculateTextLen(pString, font);
-  delete[] pString;
+  POINT r = CalculateTextLen(szString, font);
+  JS_FreeCString(ctx, szString);
   jsval x = JS_NewInt64(ctx, r.x);
   jsval y = JS_NewInt64(ctx, r.y);
 
@@ -961,10 +960,8 @@ JSAPI_FUNC(my_say) {
     if (!str) {
       return JS_EXCEPTION;
     }
-    wchar_t* unicode_str = AnsiToUnicode(str);
+    Say(L"%S", str);
     JS_FreeCString(ctx, str);
-    Say(L"%s", unicode_str);
-    delete[] unicode_str;
   }
   return JS_TRUE;
 }

@@ -25,6 +25,7 @@
 
 #include "JSScript.h"
 
+// TODO(ejt): is this function necessary, and does it even work?!
 JSAPI_FUNC(my_stringToEUC) {
   if (argc == 0 || JS_IsNull(argv[0])) {
     return JS_NULL;
@@ -34,19 +35,9 @@ JSAPI_FUNC(my_stringToEUC) {
   if (!szText) {
     return JS_EXCEPTION;
   }
-  wchar_t* szwText = AnsiToUnicode(szText);
+  std::string ansi = UTF8ToANSI(szText);
   JS_FreeCString(ctx, szText);
-
-  if (szwText == NULL) {
-    JS_ReportError(ctx, "Could not get string for value");
-    return JS_EXCEPTION;
-  }
-
-  char* euc = UnicodeToAnsi(szwText, CP_ACP);
-  JSValue rval = JS_NewString(ctx, euc);
-  delete[] euc;
-  delete[] szwText;
-  return rval;
+  return JS_NewString(ctx, ansi.c_str());
 }
 
 JSAPI_FUNC(my_print) {
@@ -64,9 +55,7 @@ JSAPI_FUNC(my_print) {
     JS_FreeCString(ctx, str);
   }
   std::string finalstr = ss.str();
-  wchar_t* wstr = AnsiToUnicode(finalstr.c_str());
-  Log(wstr);
-  delete[] wstr;
+  Log(L"%S", finalstr.c_str());
   return JS_UNDEFINED;
 }
 
@@ -157,7 +146,7 @@ JSAPI_FUNC(my_load) {
     return JS_EXCEPTION;
   }
 
-  if (strlen(file) > (_MAX_FNAME + _MAX_PATH - wcslen(Vars.szScriptPath))) {
+  if (strlen(file) > (_MAX_FNAME + _MAX_PATH - strlen(Vars.szScriptPath))) {
     JS_FreeCString(ctx, file);
     JS_ReportError(ctx, "File name too long!");
     return JS_EXCEPTION;
@@ -167,9 +156,9 @@ JSAPI_FUNC(my_load) {
   if (scriptState == kScriptModeCommand)
     scriptState = (ClientState() == ClientStateInGame ? kScriptModeGame : kScriptModeMenu);
 
-  wchar_t buf[_MAX_PATH + _MAX_FNAME];
-  swprintf_s(buf, _countof(buf), L"%s\\%S", Vars.szScriptPath, file);
-  StringReplace(buf, L'/', L'\\', _countof(buf));
+  char buf[_MAX_PATH + _MAX_FNAME];
+  sprintf_s(buf, _countof(buf), "%s\\%s", Vars.szScriptPath, file);
+  StringReplace(buf, '/', '\\', _countof(buf));
 
   // JSAutoStructuredCloneBuffer** autoBuffer = new JSAutoStructuredCloneBuffer*[argc - 1];
   // for (uint i = 1; i < argc; i++) {
@@ -183,7 +172,7 @@ JSAPI_FUNC(my_load) {
     newScript->Start();
   } else {
     // TODO: Should this actually be there? No notification is bad, but do we want this? maybe throw an exception?
-    Print(L"File \"%s\" not found.", file);
+    Print(L"File \"%S\" not found.", file);
   }
   return JS_NULL;
 }
@@ -191,32 +180,28 @@ JSAPI_FUNC(my_load) {
 JSAPI_FUNC(my_include) {
   Script* script = (Script*)JS_GetContextPrivate(ctx);
   if (!script) {
-    Log(L"!script");
     JS_ReportError(ctx, "Failed to get script object");
     return JS_EXCEPTION;
   }
 
   const char* file = JS_ToCString(ctx, argv[0]);
   if (!file) {
-    Log(L"!file");
     return JS_EXCEPTION;
   }
 
-  if (strlen(file) > (_MAX_FNAME + _MAX_PATH - wcslen(Vars.szScriptPath) - 6)) {
+  if (strlen(file) > (_MAX_FNAME + _MAX_PATH - strlen(Vars.szScriptPath) - 6)) {
     JS_FreeCString(ctx, file);
     JS_ReportError(ctx, "File name too long!");
-    Log(L"strlen(file) > ");
     return JS_EXCEPTION;
   }
 
-  wchar_t buf[_MAX_PATH + _MAX_FNAME];
-  swprintf_s(buf, _countof(buf), L"%s\\libs\\%S", Vars.szScriptPath, file);
+  char buf[_MAX_PATH + _MAX_FNAME];
+  sprintf_s(buf, _countof(buf), "%s\\libs\\%s", Vars.szScriptPath, file);
   JS_FreeCString(ctx, file);
 
-  if (_waccess(buf, 0) == 0)
+  if (_access(buf, 0) == 0)
     return JS_NewBool(ctx, script->Include(buf));
 
-  Log(L"waccess != 0");
   return JS_FALSE;
 }
 
@@ -261,14 +246,14 @@ JSAPI_FUNC(my_isIncluded) {
     return JS_EXCEPTION;
   }
 
-  if (strlen(file) > (_MAX_FNAME + _MAX_PATH - wcslen(Vars.szScriptPath) - 6)) {
+  if (strlen(file) > (_MAX_FNAME + _MAX_PATH - strlen(Vars.szScriptPath) - 6)) {
     JS_FreeCString(ctx, file);
     JS_ReportError(ctx, "File name too long");
     return JS_EXCEPTION;
   }
 
-  wchar_t path[_MAX_FNAME + _MAX_PATH];
-  swprintf_s(path, _countof(path), L"%s\\libs\\%S", Vars.szScriptPath, file);
+  char path[_MAX_FNAME + _MAX_PATH];
+  sprintf_s(path, _countof(path), "%s\\libs\\%s", Vars.szScriptPath, file);
   JS_FreeCString(ctx, file);
   Script* script = (Script*)JS_GetContextPrivate(ctx);
   return JS_NewBool(ctx, script->IsIncluded(path));
@@ -533,12 +518,13 @@ JSAPI_FUNC(my_handler) {
 
 JSAPI_FUNC(my_loadMpq) {
   const char* path = JS_ToCString(ctx, argv[0]);
-  const wchar_t* szwPath = AnsiToUnicode(path);
-  JS_FreeCString(ctx, path);
-  if (isValidPath(szwPath)) {
-    LoadMPQ(szwPath);
+  if (!path) {
+    return JS_EXCEPTION;
   }
-  delete[] szwPath;
+  if (isValidPath(path)) {
+    LoadMPQ(path);
+  }
+  JS_FreeCString(ctx, path);
   return JS_NULL;
 }
 

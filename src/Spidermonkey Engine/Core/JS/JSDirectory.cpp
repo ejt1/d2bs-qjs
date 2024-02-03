@@ -43,30 +43,27 @@ JSAPI_FUNC(my_openDir) {
   if (argc != 1)
     return JS_TRUE;
 
-  wchar_t path[_MAX_PATH];
+  char path[_MAX_PATH];
   const char* szName = JS_ToCString(ctx, argv[0]);
-  const wchar_t* name = AnsiToUnicode(szName);
+  if (!szName) {
+    return JS_EXCEPTION;
+  }
+
+  if (!isValidPath(szName)) {
+    Log(L"The following path was deemed invalid: %S. (%s, %s)", szName, L"JSDirectory.cpp", L"my_openDir");
+    JS_FreeCString(ctx, szName);
+    return JS_EXCEPTION;
+  }
+
+  sprintf_s(path, _MAX_PATH, "%s\\%s", Vars.szScriptPath, szName);
+
+  if ((_mkdir(path) == -1) && (errno == ENOENT)) {
+    JS_ReportError(ctx, "Couldn't get directory %s, path '%s' not found", szName, path);
+    JS_FreeCString(ctx, szName);
+    return JS_EXCEPTION;
+  }
+  DirData* d = new DirData(szName);
   JS_FreeCString(ctx, szName);
-
-  if (!isValidPath(name)) {
-    Log(L"The following path was deemed invalid: %s. (%s, %s)", name, L"JSDirectory.cpp", L"my_openDir");
-    delete[] name;
-    return JS_EXCEPTION;
-  }
-
-  swprintf_s(path, _MAX_PATH, L"%s\\%s", Vars.szScriptPath, name);
-
-  if ((_wmkdir(path) == -1) && (errno == ENOENT)) {
-    char* n = UnicodeToAnsi(name);
-    char* p = UnicodeToAnsi(path);
-    JS_ReportError(ctx, "Couldn't get directory %s, path '%s' not found", n, p);
-    delete[] name;
-    delete[] n;
-    delete[] p;
-    return JS_EXCEPTION;
-  }
-  DirData* d = new DirData(name);
-  delete[] name;
   return BuildObject(ctx, folder_class_id, dir_methods, _countof(dir_methods), dir_props, _countof(dir_props), d);
 }
 
@@ -79,108 +76,93 @@ JSAPI_FUNC(my_openDir) {
 
 JSAPI_FUNC(dir_getFiles) {
   DirData* d = (DirData*)JS_GetPrivate(ctx, this_val);
-  wchar_t* search;
+  char search[_MAX_PATH] = "*.*";
 
   if (argc > 1)
     return JS_EXCEPTION;
-  if (argc < 1) {
-    search = new wchar_t[4];
-    wcscpy(search, L"*.*");
-  } else {
+  if (argc == 1) {
     const char* szSearch = JS_ToCString(ctx, argv[0]);
-    search = AnsiToUnicode(szSearch);
+    if (!szSearch) {
+      return JS_EXCEPTION;
+    }
+    strcpy_s(search, szSearch);
     JS_FreeCString(ctx, szSearch);
   }
 
-  if (!search) {
-    THROW_ERROR(ctx, "Failed to get search string");
-  }
-
   long hFile;
-  wchar_t path[_MAX_PATH], oldpath[_MAX_PATH];
-  swprintf_s(path, _MAX_PATH, L"%s\\%s", Vars.szScriptPath, d->name);
+  char path[_MAX_PATH], oldpath[_MAX_PATH];
+  sprintf_s(path, _MAX_PATH, "%s\\%s", Vars.szScriptPath, d->name);
 
-  if (!_wgetcwd(oldpath, _MAX_PATH)) {
+  if (!_getcwd(oldpath, _MAX_PATH)) {
     Log(L"Error getting current working directory. (%s, %s)", L"JSDirectory.cpp", L"dir_getFiles");
-    delete[] search;
     return JS_EXCEPTION;
   }
-  if (_wchdir(path) == -1) {
-    Log(L"Changing directory to %s. (%s, %s)", path, L"JSDirectory.cpp", L"dir_getFiles");
-    delete[] search;
+  if (_chdir(path) == -1) {
+    Log(L"Changing directory to %S. (%s, %s)", path, L"JSDirectory.cpp", L"dir_getFiles");
     return JS_EXCEPTION;
   }
 
-  _wfinddata_t found;
+  _finddata_t found;
   JSValue jsarray = JS_NewArray(ctx);
-  if ((hFile = _wfindfirst(search, &found)) != -1L) {
+  if ((hFile = _findfirst(search, &found)) != -1L) {
     jsint element = 0;
     do {
       if ((found.attrib & _A_SUBDIR))
         continue;
       JS_SetPropertyUint32(ctx, jsarray, element++, JS_NewString(ctx, found.name));
-    } while (_wfindnext(hFile, &found) == 0);
+    } while (_findnext(hFile, &found) == 0);
   }
 
-  if (_wchdir(oldpath) == -1) {
-    Log(L"Error changing directory back to %s. (%s, %s)", oldpath, L"JSDirectory.cpp", L"dir_getFiles");
-    delete[] search;
+  if (_chdir(oldpath) == -1) {
+    Log(L"Error changing directory back to %S. (%s, %s)", oldpath, L"JSDirectory.cpp", L"dir_getFiles");
     return JS_EXCEPTION;
   }
 
-  delete[] search;
   return jsarray;
 }
 
 JSAPI_FUNC(dir_getFolders) {
   DirData* d = (DirData*)JS_GetPrivate(ctx, this_val);
-  wchar_t* search;
+  char search[_MAX_PATH] = "*.*";
 
   if (argc > 1)
     return JS_EXCEPTION;
-  if (argc < 1) {
-    search = new wchar_t[4];
-    wcscpy(search, L"*.*");
-  } else {
+  if (argc == 1) {
     const char* szSearch = JS_ToCString(ctx, argv[0]);
-    search = AnsiToUnicode(szSearch);
+    if (!szSearch) {
+      return JS_EXCEPTION;
+    }
+    strcpy_s(search, szSearch);
     JS_FreeCString(ctx, szSearch);
   }
 
-  if (!search) {
-    THROW_ERROR(ctx, "Failed to get search string");
-  }
-
   long hFile;
-  wchar_t path[_MAX_PATH], oldpath[_MAX_PATH];
-  swprintf_s(path, _MAX_PATH, L"%s\\%s", Vars.szScriptPath, d->name);
+  char path[_MAX_PATH], oldpath[_MAX_PATH];
+  sprintf_s(path, _MAX_PATH, "%s\\%s", Vars.szScriptPath, d->name);
 
-  if (!_wgetcwd(oldpath, _MAX_PATH)) {
+  if (!_getcwd(oldpath, _MAX_PATH)) {
     Log(L"Error getting current working directory. (%s, %s)", L"JSDirectory.cpp", L"dir_getFolders");
-    delete[] search;
     return JS_EXCEPTION;
   }
-  if (_wchdir(path) == -1) {
-    Log(L"Changing directory to %s. (%s, %s)", path, L"JSDirectory.cpp", L"dir_getFolders");
-    delete[] search;
+  if (_chdir(path) == -1) {
+    Log(L"Changing directory to %S. (%s, %s)", path, L"JSDirectory.cpp", L"dir_getFolders");
     return JS_EXCEPTION;
   }
 
-  _wfinddata_t found;
+  _finddata_t found;
   JSValue jsarray = JS_NewArray(ctx);
 
-  if ((hFile = _wfindfirst(search, &found)) != -1L) {
+  if ((hFile = _findfirst(search, &found)) != -1L) {
     jsint element = 0;
     do {
-      if (!wcscmp(found.name, L"..") || !wcscmp(found.name, L".") || !(found.attrib & _A_SUBDIR))
+      if (!strcmp(found.name, "..") || !strcmp(found.name, ".") || !(found.attrib & _A_SUBDIR))
         continue;
       JS_SetPropertyUint32(ctx, jsarray, element++, JS_NewString(ctx, found.name));
-    } while (_wfindnext(hFile, &found) == 0);
+    } while (_findnext(hFile, &found) == 0);
   }
 
-  if (_wchdir(oldpath) == -1) {
-    Log(L"Error changing directory back to %s. (%s, %s)", oldpath, L"JSDirectory.cpp", L"dir_getFolders");
-    delete[] search;
+  if (_chdir(oldpath) == -1) {
+    Log(L"Error changing directory back to %S. (%s, %s)", oldpath, L"JSDirectory.cpp", L"dir_getFolders");
     return JS_EXCEPTION;
   }
 
@@ -189,37 +171,39 @@ JSAPI_FUNC(dir_getFolders) {
 
 JSAPI_FUNC(dir_create) {
   DirData* d = (DirData*)JS_GetPrivate(ctx, this_val);
-  wchar_t path[_MAX_PATH];
+  char path[_MAX_PATH];
   if (!JS_IsString(argv[0]))
     THROW_ERROR(ctx, "No path passed to dir.create()");
-  const char* szName = JS_ToCString(ctx, argv[0]);
-  const wchar_t* name = AnsiToUnicode(szName);
-  JS_FreeCString(ctx, szName);
 
-  if (!isValidPath(name)) {
-    delete[] name;
+  const char* szName = JS_ToCString(ctx, argv[0]);
+  if (!szName) {
     return JS_EXCEPTION;
   }
 
-  swprintf_s(path, _MAX_PATH, L"%s\\%s\\%s", Vars.szScriptPath, d->name, name);
-  if (_wmkdir(path) == -1 && (errno == ENOENT)) {
-    JS_ReportError(ctx, "Couldn't create directory %s, path %s not found", name, path);
-    delete[] name;
+  if (!isValidPath(szName)) {
+    JS_FreeCString(ctx, szName);
+    return JS_EXCEPTION;
+  }
+
+  sprintf_s(path, _MAX_PATH, "%s\\%s\\%s", Vars.szScriptPath, d->name, szName);
+  if (_mkdir(path) == -1 && (errno == ENOENT)) {
+    JS_ReportError(ctx, "Couldn't create directory %s, path %s not found", szName, path);
+    JS_FreeCString(ctx, szName);
     return JS_FALSE;
   }
 
-  DirData* _d = new DirData(name);
-  delete[] name;
+  DirData* _d = new DirData(szName);
+  JS_FreeCString(ctx, szName);
   return BuildObject(ctx, folder_class_id, dir_methods, _countof(dir_methods), dir_props, _countof(dir_props), _d);
 }
 
 JSAPI_FUNC(dir_delete) {
   DirData* d = (DirData*)JS_GetPrivate(ctx, this_val);
 
-  wchar_t path[_MAX_PATH];
-  swprintf_s(path, _MAX_PATH, L"%s\\%s", Vars.szScriptPath, d->name);
+  char path[_MAX_PATH];
+  sprintf_s(path, _MAX_PATH, "%s\\%s", Vars.szScriptPath, d->name);
 
-  if (_wrmdir(path) == -1) {
+  if (_rmdir(path) == -1) {
     // TODO: Make an optional param that specifies recursive delete
     if (errno == ENOTEMPTY)
       THROW_ERROR(ctx, "Tried to delete directory, but it is not empty or is the current working directory");

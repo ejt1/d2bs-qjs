@@ -8,7 +8,7 @@
 #include "AutoRoot.h"
 #include "Script.h"
 
-typedef std::map<std::wstring, Script*> ScriptMap;
+typedef std::map<std::string, Script*> ScriptMap;
 
 typedef bool(__fastcall* ScriptCallback)(Script*, void*, uint);
 
@@ -29,11 +29,11 @@ class ScriptEngine {
   BOOL Initialize();
   void Shutdown();
 
-  Script* NewScript(const wchar_t* file, ScriptMode mode/*, uint argc = 0, JSAutoStructuredCloneBuffer** argv = NULL*/, bool recompile = false);
+  Script* NewScript(const char* file, ScriptMode mode/*, uint argc = 0, JSAutoStructuredCloneBuffer** argv = NULL*/, bool recompile = false);
 
   void FlushCache(void);
 
-  void RunCommand(const wchar_t* command);
+  void RunCommand(const char* command);
   void DisposeScript(Script* script);
 
   void LockScriptList(const char* loc);

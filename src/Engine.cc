@@ -40,39 +40,35 @@ bool Engine::Initialize(HMODULE hModule) {
   m_hModule = hModule;
 
   // start of old DllMain DLL_PROCESS_ATTACH
-  GetModuleFileNameW(hModule, Vars.szPath, MAX_PATH);
-  PathRemoveFileSpecW(Vars.szPath);
-  wcscat_s(Vars.szPath, MAX_PATH, L"\\");
+  GetModuleFileNameA(hModule, Vars.szPath, MAX_PATH);
+  PathRemoveFileSpecA(Vars.szPath);
+  strcat_s(Vars.szPath, MAX_PATH, "\\");
 
-  swprintf_s(Vars.szLogPath, _countof(Vars.szLogPath), L"%slogs\\", Vars.szPath);
-  CreateDirectoryW(Vars.szLogPath, NULL);
+  sprintf_s(Vars.szLogPath, _countof(Vars.szLogPath), "%slogs\\", Vars.szPath);
+  CreateDirectoryA(Vars.szLogPath, NULL);
   InitCommandLine();
   InitSettings();
   Vars.bUseRawCDKey = FALSE;
 
   CommandLineParser cmdline(Vars.szCommandLine);
   for (const auto& [arg, value] : cmdline.Args()) {
-    if (arg == L"-title") {
-      wcsncat_s(Vars.szTitle, value.c_str(), value.length());
-    } else if (arg == L"-sleepy") {
+    if (arg == "-title") {
+      strncat_s(Vars.szTitle, value.c_str(), value.length());
+    } else if (arg == "-sleepy") {
       Vars.bSleepy = TRUE;
-    } else if (arg == L"-cachefix") {
+    } else if (arg == "-cachefix") {
       Vars.bCacheFix = TRUE;
-    } else if (arg == L"-multi") {
+    } else if (arg == "-multi") {
       Vars.bMulti = TRUE;
-    } else if (arg == L"-ftj") {
+    } else if (arg == "-ftj") {
       Vars.bReduceFTJ = TRUE;
-    } else if (arg == L"-d2c") {
+    } else if (arg == "-d2c") {
       Vars.bUseRawCDKey = TRUE;
-      const char* keys = UnicodeToAnsi(value.c_str());
-      strncat_s(Vars.szClassic, keys, strlen(keys));
-      delete[] keys;
-    } else if (arg == L"-d2x") {
-      const char* keys = UnicodeToAnsi(value.c_str());
-      strncat_s(Vars.szLod, keys, strlen(keys));
-      delete[] keys;
-    } else if (arg == L"-handle") {
-      Vars.hHandle = (HWND)_wtoi(value.c_str());
+      strncat_s(Vars.szClassic, value.c_str(), value.length());
+    } else if (arg == "-d2x") {
+      strncat_s(Vars.szLod, value.c_str(), value.length());
+    } else if (arg == "-handle") {
+      Vars.hHandle = (HWND)atoi(value.c_str());
     }
   }
 
@@ -151,7 +147,7 @@ void Engine::OnUpdate() {
   static std::once_flag of;
   std::call_once(of, []() {
     if (!sScriptEngine->Initialize()) {
-      wcscpy_s(Vars.szPath, MAX_PATH, L"common");
+      strcpy_s(Vars.szPath, MAX_PATH, "common");
       Log(L"D2BS Engine startup failed. %s", Vars.szCommandLine);
       Print(L"\u00FFc2D2BS\u00FFc0 :: Engine startup failed!");
       exit(-1);
@@ -165,16 +161,13 @@ void Engine::OnUpdate() {
     // TODO(ejt): use these in Initialize?
     CommandLineParser cmdline(Vars.szCommandLine);
     for (const auto& [arg, value] : cmdline.Args()) {
-      if (arg == L"-mpq") {
-        char* mpq = UnicodeToAnsi(value.c_str());
-        LoadMPQ(mpq);
-        delete[] mpq;
-      } else if (arg == L"-profile") {
-        const wchar_t* profile = value.c_str();
-        if (SwitchToProfile(profile))
-          Print(L"\u00FFc2D2BS\u00FFc0 :: Switched to profile %s", profile);
+      if (arg == "-mpq") {
+        LoadMPQ(value.c_str());
+      } else if (arg == "-profile") {
+        if (SwitchToProfile(value.c_str()))
+          Print(L"\u00FFc2D2BS\u00FFc0 :: Switched to profile %S", value.c_str());
         else
-          Print(L"\u00FFc2D2BS\u00FFc0 :: Profile %s not found", profile);
+          Print(L"\u00FFc2D2BS\u00FFc0 :: Profile %S not found", value.c_str());
       }
     }
 
@@ -231,26 +224,26 @@ void Engine::OnUpdate() {
 
 void Engine::OnGameEntered() {
   if (!Vars.bUseProfileScript) {
-    const wchar_t* starter = GetStarterScriptName();
+    const char* starter = GetStarterScriptName();
     if (starter != NULL) {
-      Print(L"\u00FFc2D2BS\u00FFc0 :: Starting %s", starter);
+      Print(L"\u00FFc2D2BS\u00FFc0 :: Starting %S", starter);
       if (StartScript(starter, GetStarterScriptState()))
-        Print(L"\u00FFc2D2BS\u00FFc0 :: %s running.", starter);
+        Print(L"\u00FFc2D2BS\u00FFc0 :: %S running.", starter);
       else
-        Print(L"\u00FFc2D2BS\u00FFc0 :: Failed to start %s!", starter);
+        Print(L"\u00FFc2D2BS\u00FFc0 :: Failed to start %S!", starter);
     }
   }
 }
 
 void Engine::OnMenuEntered(bool beginStarter) {
   if (beginStarter && !Vars.bUseProfileScript) {
-    const wchar_t* starter = GetStarterScriptName();
+    const char* starter = GetStarterScriptName();
     if (starter != NULL) {
-      Print(L"\u00FFc2D2BS\u00FFc0 :: Starting %s", starter);
+      Print(L"\u00FFc2D2BS\u00FFc0 :: Starting %S", starter);
       if (StartScript(starter, GetStarterScriptState()))
-        Print(L"\u00FFc2D2BS\u00FFc0 :: %s running.", starter);
+        Print(L"\u00FFc2D2BS\u00FFc0 :: %S running.", starter);
       else
-        Print(L"\u00FFc2D2BS\u00FFc0 :: Failed to start %s!", starter);
+        Print(L"\u00FFc2D2BS\u00FFc0 :: Failed to start %S!", starter);
     }
   }
 }
@@ -468,19 +461,18 @@ LRESULT __stdcall Engine::HandleWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
       COPYDATASTRUCT* pCopy = (COPYDATASTRUCT*)lParam;
 
       if (pCopy) {
-        wchar_t* lpwData = AnsiToUnicode((const char*)pCopy->lpData);
+        const char* lpszData = static_cast<const char*>(pCopy->lpData);
         if (pCopy->dwData == 0x1337) {  // 0x1337 = Execute Script
-          sScriptEngine->RunCommand(lpwData);
+          sScriptEngine->RunCommand(lpszData);
         } else if (pCopy->dwData == 0x31337) {  // 0x31337 = Set Profile
-          if (SwitchToProfile(lpwData)) {
-            Print(L"\u00FFc2D2BS\u00FFc0 :: Switched to profile %s", lpwData);
+          if (SwitchToProfile(lpszData)) {
+            Print(L"\u00FFc2D2BS\u00FFc0 :: Switched to profile %S", lpszData);
           } else {
-            Print(L"\u00FFc2D2BS\u00FFc0 :: Profile %s not found", lpwData);
+            Print(L"\u00FFc2D2BS\u00FFc0 :: Profile %S not found", lpszData);
           }
         } else {
-          CopyDataEvent(pCopy->dwData, lpwData);
+          CopyDataEvent(pCopy->dwData, lpszData);
         }
-        delete[] lpwData;
       }
       return TRUE;
     }

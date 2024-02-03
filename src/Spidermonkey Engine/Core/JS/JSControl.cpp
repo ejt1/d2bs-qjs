@@ -22,7 +22,7 @@ JSAPI_PROP(control_getProperty) {
   if (!pData)
     return JS_EXCEPTION;
 
-  Control* ctrl = findControl(pData->dwType, (const wchar_t*)NULL, -1, pData->dwX, pData->dwY, pData->dwSizeX, pData->dwSizeY);
+  Control* ctrl = findControl(pData->dwType, (const char*)NULL, -1, pData->dwX, pData->dwY, pData->dwSizeX, pData->dwSizeY);
   if (!ctrl)
     return JS_EXCEPTION;
 
@@ -84,7 +84,7 @@ JSAPI_STRICT_PROP(control_setProperty) {
   if (!pData)
     return JS_EXCEPTION;
 
-  Control* ctrl = findControl(pData->dwType, (const wchar_t*)NULL, -1, pData->dwX, pData->dwY, pData->dwSizeX, pData->dwSizeY);
+  Control* ctrl = findControl(pData->dwType, (const char*)NULL, -1, pData->dwX, pData->dwY, pData->dwSizeX, pData->dwSizeY);
   if (!ctrl)
     return JS_EXCEPTION;
 
@@ -92,10 +92,11 @@ JSAPI_STRICT_PROP(control_setProperty) {
     case CONTROL_TEXT:
       if (ctrl->dwType == 1 && JS_IsString(val)) {
         const char* szText = JS_ToCString(ctx, val);
-        wchar_t* szwText = AnsiToUnicode(szText);
+        if (!szText) {
+          return JS_EXCEPTION;
+        }
+        setControlText(ctrl, szText);
         JS_FreeCString(ctx, szText);
-        D2WIN_SetControlText(ctrl, szwText);
-        delete[] szwText;
       }
       break;
     case CONTROL_STATE:
@@ -132,13 +133,13 @@ JSAPI_STRICT_PROP(control_setProperty) {
 
 JSAPI_FUNC(control_getNext) {
   if (ClientState() != ClientStateMenu)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
   ControlData* pData = ((ControlData*)JS_GetPrivate(ctx, this_val));
   if (!pData)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
-  Control* pControl = findControl(pData->dwType, (const wchar_t*)NULL, -1, pData->dwX, pData->dwY, pData->dwSizeX, pData->dwSizeY);
+  Control* pControl = findControl(pData->dwType, (const char*)NULL, -1, pData->dwX, pData->dwY, pData->dwSizeX, pData->dwSizeY);
   if (pControl && pControl->pNext)
     pControl = pControl->pNext;
   else
@@ -154,7 +155,7 @@ JSAPI_FUNC(control_getNext) {
     JS_SetPrivate(ctx, this_val, pData);
     return JS_DupValue(ctx, this_val);
   }
-  return JS_EXCEPTION;
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(control_click) {
@@ -165,7 +166,7 @@ JSAPI_FUNC(control_click) {
   if (!pData)
     return JS_TRUE;
 
-  Control* pControl = findControl(pData->dwType, (const wchar_t*)NULL, -1, pData->dwX, pData->dwY, pData->dwSizeX, pData->dwSizeY);
+  Control* pControl = findControl(pData->dwType, (const char*)NULL, -1, pData->dwX, pData->dwY, pData->dwSizeX, pData->dwSizeY);
   if (!pControl) {
     return JS_NewInt32(ctx, 0);
   }
@@ -190,7 +191,7 @@ JSAPI_FUNC(control_setText) {
   if (!pData)
     return JS_TRUE;
 
-  Control* pControl = findControl(pData->dwType, (const wchar_t*)NULL, -1, pData->dwX, pData->dwY, pData->dwSizeX, pData->dwSizeY);
+  Control* pControl = findControl(pData->dwType, (const char*)NULL, -1, pData->dwX, pData->dwY, pData->dwSizeX, pData->dwSizeY);
   if (!pControl) {
     return JS_NewInt32(ctx, 0);
   }
@@ -199,12 +200,11 @@ JSAPI_FUNC(control_setText) {
     return JS_TRUE;
 
   const char* szText = JS_ToCString(ctx, argv[0]);
-  if (!szText)
+  if (!szText) {
     return JS_EXCEPTION;
-  wchar_t* szwText = AnsiToUnicode(szText);
+  }
+  setControlText(pControl, szText);
   JS_FreeCString(ctx, szText);
-  D2WIN_SetControlText(pControl, szwText);
-  delete[] szwText;
   return JS_TRUE;
 }
 
@@ -216,7 +216,7 @@ JSAPI_FUNC(control_getText) {
   if (!pData)
     return JS_UNDEFINED;
 
-  Control* pControl = findControl(pData->dwType, (const wchar_t*)NULL, -1, pData->dwX, pData->dwY, pData->dwSizeX, pData->dwSizeY);
+  Control* pControl = findControl(pData->dwType, (const char*)NULL, -1, pData->dwX, pData->dwY, pData->dwSizeX, pData->dwSizeY);
   if (!pControl) {
     return JS_NewInt32(ctx, 0);
   }
@@ -262,7 +262,7 @@ JSAPI_FUNC(my_getControl) {
     }
   }
 
-  Control* pControl = findControl(nType, (const wchar_t*)NULL, -1, nX, nY, nXSize, nYSize);
+  Control* pControl = findControl(nType, (const char*)NULL, -1, nX, nY, nXSize, nYSize);
   if (!pControl)
     return JS_UNDEFINED;
 

@@ -1,6 +1,6 @@
 #include "CommandLine.h"
 
-CommandLineParser::CommandLineParser(std::wstring cmdline) {
+CommandLineParser::CommandLineParser(std::string cmdline) {
   // example input C:\Program Files (x86)\Diablo II\Game.exe -profile "test" -handle "4325261" -cachefix -multi
   // -title "some title" -w -ns -sleepy -ftj
   TrimBinary(cmdline);
@@ -8,8 +8,8 @@ CommandLineParser::CommandLineParser(std::wstring cmdline) {
 
   auto it = args.begin();
   while (it != args.end()) {
-    std::wstring arg = (*it);
-    std::wstring val;
+    std::string arg = (*it);
+    std::string val;
     if (++it != args.end() && (*it)[0] != L'-') {
       val = (*it);
       ++it;
@@ -18,23 +18,23 @@ CommandLineParser::CommandLineParser(std::wstring cmdline) {
   }
 }
 
-bool CommandLineParser::Contains(const std::wstring& arg) {
+bool CommandLineParser::Contains(const std::string& arg) {
   return m_args.contains(arg);
 }
 
-std::wstring CommandLineParser::Value(const std::wstring& arg) {
-  return Contains(arg) ? m_args[arg] : L"";
+std::string CommandLineParser::Value(const std::string& arg) {
+  return Contains(arg) ? m_args[arg] : "";
 }
 
-std::map<std::wstring, std::wstring> CommandLineParser::Args() {
+std::map<std::string, std::string> CommandLineParser::Args() {
   return m_args;
 }
 
-void CommandLineParser::TrimBinary(std::wstring& cmdline) {
+void CommandLineParser::TrimBinary(std::string& cmdline) {
   size_t pos = 0;
 
   // remove the binary path from command line
-  if ((pos = cmdline.find(L".exe")) != std::wstring::npos) {
+  if ((pos = cmdline.find(".exe")) != std::string::npos) {
     cmdline.erase(0, pos + 4);
 
     // remove trailing space, if present
@@ -44,7 +44,7 @@ void CommandLineParser::TrimBinary(std::wstring& cmdline) {
   }
 }
 
-std::wstring& CommandLineParser::TrimQuote(std::wstring& val) {
+std::string& CommandLineParser::TrimQuote(std::string& val) {
   if (val.starts_with(L'\"')) {
     val.erase(0, 1);
   }
@@ -54,16 +54,16 @@ std::wstring& CommandLineParser::TrimQuote(std::wstring& val) {
   return val;
 }
 
-std::vector<std::wstring> CommandLineParser::ParseArguments(std::wstring& cmdline) {
+std::vector<std::string> CommandLineParser::ParseArguments(std::string& cmdline) {
   size_t pos = 0;
-  std::vector<std::wstring> args;
+  std::vector<std::string> args;
 
   // tokenize the remainder of command line into arguments
-  while ((pos = cmdline.find(' ')) != std::wstring::npos || !cmdline.empty()) {
+  while ((pos = cmdline.find(' ')) != std::string::npos || !cmdline.empty()) {
     args.push_back(cmdline.substr(0, pos));
 
     // contains trailing space
-    if (pos != std::wstring::npos) {
+    if (pos != std::string::npos) {
       cmdline.erase(0, pos + 1);
     } else {
       // last argument, clear the string to stop loop

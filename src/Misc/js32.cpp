@@ -35,10 +35,8 @@ void* JS_GetInstancePrivate(JSContext* /*ctx*/, JSValue val, JSClassID /*class_i
 }
 
 JSValue JS_NewString(JSContext* ctx, const wchar_t* str) {
-  char* ansi_str = UnicodeToAnsi(str);
-  JSValue rval = JS_NewString(ctx, ansi_str);
-  delete[] ansi_str;
-  return rval;
+  std::string utf8 = WideToAnsi(str);
+  return JS_NewString(ctx, utf8.c_str());
 }
 
 JSValue BuildObject(JSContext* ctx, JSClassID class_id, JSFunctionSpec* funcs, size_t num_funcs, JSPropertySpec* props, size_t num_props, void* opaque,
@@ -67,7 +65,7 @@ JSValue BuildObject(JSContext* ctx, JSClassID class_id, JSFunctionSpec* funcs, s
   return obj;
 }
 
-JSValue JS_CompileFile(JSContext* ctx, JSValue /*globalObject*/, std::wstring fileName) {
+JSValue JS_CompileFile(JSContext* ctx, JSValue /*globalObject*/, std::string fileName) {
   std::ifstream t(fileName.c_str(), std::ios::binary);
   std::string str;
 
@@ -87,10 +85,8 @@ JSValue JS_CompileFile(JSContext* ctx, JSValue /*globalObject*/, std::wstring fi
     str[2] = ' ';
   }
 
-  char* nFileName = UnicodeToAnsi(fileName.c_str());
-  JSValue rval = JS_Eval(ctx, str.c_str(), str.size(), nFileName, JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
+  JSValue rval = JS_Eval(ctx, str.c_str(), str.size(), fileName.c_str(), JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
   t.close();
-  delete[] nFileName;
 
   return rval;
 }
@@ -111,10 +107,8 @@ std::optional<std::wstring> JS_ToWString(JSContext* ctx, JSValue val) {
   if (!str) {
     return std::nullopt;
   }
-  const wchar_t* tmp = AnsiToUnicode(str);
+  std::wstring ret = AnsiToWide(str);
   JS_FreeCString(ctx, str);
-  std::wstring ret = tmp;
-  delete[] tmp;
   return ret;
 }
 
@@ -147,17 +141,13 @@ void JS_ReportPendingException(JSContext* ctx) {
   // Print(L"[\u00FFc%d%hs%hs\u00FFc0 (%d)] File(%s:%d) %hs", (warn ? 9 : 1), strict, type, report->errorNumber, displayName, report->lineno, message);
 
   if (what) {
-    wchar_t* unicode_what = AnsiToUnicode(what->c_str());
     if (stackframe) {
-      wchar_t* unicode_stackframe = AnsiToUnicode(stackframe->c_str());
-      Log(L"[%hs%hs] %s\n%s", strict, type, unicode_what, unicode_stackframe);
-      Print(L"[\u00FFc%d%hs%hs\u00FFc0] %s\n%s", (warn ? 9 : 1), strict, type, unicode_what, unicode_stackframe);
-      delete[] unicode_stackframe;
+      Log(L"[%hs%hs] %S\n%S", strict, type, what->c_str(), stackframe->c_str());
+      Print(L"[\u00FFc%d%hs%hs\u00FFc0] %S\n%S", (warn ? 9 : 1), strict, type, what->c_str(), stackframe->c_str());
     } else {
-      Log(L"[%hs%hs] %s", strict, type, unicode_what);
-      Print(L"[\u00FFc%d%hs%hs\u00FFc0] %s", (warn ? 9 : 1), strict, type, unicode_what);
+      Log(L"[%hs%hs] %S", strict, type, what->c_str());
+      Print(L"[\u00FFc%d%hs%hs\u00FFc0] %S", (warn ? 9 : 1), strict, type, what->c_str());
     }
-    delete[] unicode_what;
   }
 
   // if (filename[0] == L'<')

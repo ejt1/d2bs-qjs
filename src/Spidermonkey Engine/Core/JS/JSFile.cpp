@@ -27,7 +27,7 @@
 
 struct FileData {
   int mode;
-  wchar_t* path;
+  char* path;
   bool autoflush, locked;
   FILE* fptr;
 #if DEBUG
@@ -157,12 +157,13 @@ JSAPI_FUNC(file_open) {
 
   // Convert from JS params to C values
   const char* szFile = JS_ToCString(ctx, argv[0]);
-  const wchar_t* file = AnsiToUnicode(szFile);
-  JS_FreeCString(ctx, szFile);
+  if (!szFile) {
+    return JS_EXCEPTION;
+  }
 
   int32 mode;
   if (JS_ToInt32(ctx, &mode, argv[1])) {
-    delete[] file;
+    JS_FreeCString(ctx, szFile);
     return JS_EXCEPTION;
   }
   bool binary = false;
@@ -176,8 +177,8 @@ JSAPI_FUNC(file_open) {
     lockFile = !!JS_ToBool(ctx, argv[4]);
 
   // Check that the path looks basically ok, validation is handled later
-  if (file == NULL || file[0] == '\0') {
-    delete[] file;
+  if (szFile[0] == '\0') {
+    JS_FreeCString(ctx, szFile);
     THROW_ERROR(ctx, "Invalid file name");
   }
 
@@ -191,31 +192,31 @@ JSAPI_FUNC(file_open) {
       break;
     // Bad modes
     default:
-      delete[] file;
+      JS_FreeCString(ctx, szFile);
       THROW_ERROR(ctx, "Invalid file mode");
   }
 
   if (binary)
     mode += 3;
 
-  static const wchar_t* modes[] = {L"rt", L"w+t", L"a+t", L"rb", L"w+b", L"a+b"};
-  FILE* fptr = fileOpenRelScript(file, modes[mode], ctx);
+  static const char* modes[] = {"rt", "w+t", "a+t", "rb", "w+b", "a+b"};
+  FILE* fptr = fileOpenRelScript(szFile, modes[mode], ctx);
 
   // If fileOpenRelScript failed, it already reported the error
   if (fptr == NULL) {
-    delete[] file;
+    JS_FreeCString(ctx, szFile);
     return JS_FALSE;
   }
 
   FileData* fdata = new FileData;
   if (!fdata) {
-    delete[] file;
+    JS_FreeCString(ctx, szFile);
     fclose(fptr);
     THROW_ERROR(ctx, "Couldn't allocate memory for the FileData object");
   }
 
   fdata->mode = mode;
-  fdata->path = _wcsdup(file);
+  fdata->path = _strdup(szFile);
   fdata->autoflush = autoflush;
   fdata->locked = lockFile;
   fdata->fptr = fptr;
@@ -226,7 +227,7 @@ JSAPI_FUNC(file_open) {
     fdata->line = __LINE__;
 #endif
   }
-  delete[] file;
+  JS_FreeCString(ctx, szFile);
 
   JSValue res = BuildObject(ctx, file_class_id, file_methods, _countof(file_methods), file_props, _countof(file_props), fdata);
   if (JS_IsException(res)) {
@@ -270,7 +271,7 @@ JSAPI_FUNC(file_reopen) {
   FileData* fdata = (FileData*)JS_GetInstancePrivate(ctx, this_val, file_class_id, NULL);
   if (fdata)
     if (!fdata->fptr) {
-      static const wchar_t* modes[] = {L"rt", L"w+t", L"a+t", L"rb", L"w+b", L"a+b"};
+      static const char* modes[] = {"rt", "w+t", "a+t", "rb", "w+b", "a+b"};
       fdata->fptr = fileOpenRelScript(fdata->path, modes[fdata->mode], ctx);
 
       // If fileOpenRelScript failed, it already reported the error
@@ -354,9 +355,7 @@ JSAPI_FUNC(file_read) {
       if (begin && size > 2 && result[0] == '\xEF' && result[1] == '\xBB' && result[2] == '\xBF') {  // skip BOM
         offset = 3;
       }
-      wchar_t* wresult = AnsiToUnicode(result + offset);
-      JSValue rval = JS_NewString(ctx, wresult);
-      delete[] wresult;
+      JSValue rval = JS_NewString(ctx, result + offset);
       delete[] result;
       return rval;
     }
@@ -387,9 +386,7 @@ JSAPI_FUNC(file_readLine) {
       offset = 3;
     }
 
-    wchar_t* wline = AnsiToUnicode(line + offset);
-    JSValue rval = JS_NewString(ctx, wline);
-    delete[] wline;
+    JSValue rval = JS_NewString(ctx, line + offset);
     free(line);
     return rval;
   }
@@ -422,9 +419,7 @@ JSAPI_FUNC(file_readAllLines) {
         offset = 3;
       }
 
-      wchar_t* wline = AnsiToUnicode(line + offset);
-      JS_SetPropertyUint32(ctx, arr, i++, JS_NewString(ctx, wline));
-      delete[] wline;
+      JS_SetPropertyUint32(ctx, arr, i++, JS_NewString(ctx, line + offset));
       free(line);
     }
     return arr;
@@ -479,9 +474,7 @@ JSAPI_FUNC(file_readAll) {
     if (begin && count > 2 && contents[0] == '\xEF' && contents[1] == '\xBB' && contents[2] == '\xBF') {  // skip BOM
       offset = 3;
     }
-    wchar_t* wcontents = AnsiToUnicode(contents + offset);
-    JSValue rval = JS_NewString(ctx, wcontents);
-    delete[] wcontents;
+    JSValue rval = JS_NewString(ctx, contents);
     delete[] contents;
     return rval;
   }

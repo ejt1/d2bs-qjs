@@ -11,24 +11,26 @@ namespace Reducing {
 
 #pragma warning(disable : 4512)
 
+// TODO(ejt): since mozjs => quickjs migration this class is probably broken af :)
 class JSPathReducer : public PathReducer {
  private:
   JSContext* cx;
-  JSObject* obj;
+  JSValue obj;
   jsval reject, reduce, mutate;
 
  public:
   JSPathReducer(const JSPathReducer&);
   JSPathReducer& operator=(const JSPathReducer&);
-  JSPathReducer(ActMap* /*m*/, JSContext* cx, JSValue /*obj*/, jsval _reject, jsval _reduce, jsval _mutate) : reject(_reject), reduce(_reduce), mutate(_mutate) {
-    //JS_AddRoot(cx, &reject);
-    //JS_AddRoot(cx, &reduce);
-    //JS_AddRoot(cx, &mutate);
+  JSPathReducer(ActMap* /*m*/, JSContext* cx, JSValue obj, jsval _reject, jsval _reduce, jsval _mutate) : obj(JS_DupValue(cx, obj)), reject(_reject), reduce(_reduce), mutate(_mutate) {
+    JS_DupValue(cx, reject);
+    JS_DupValue(cx, reduce);
+    JS_DupValue(cx, mutate);
   }
   ~JSPathReducer(void) {
-    //JS_RemoveRoot(cx, &reject);
-    //JS_RemoveRoot(cx, &reduce);
-    //JS_RemoveRoot(cx, &mutate);
+    JS_FreeValue(cx, obj);
+    JS_FreeValue(cx, reject);
+    JS_FreeValue(cx, reduce);
+    JS_FreeValue(cx, mutate);
   }
 
   void Reduce(const PointList& in, PointList& out, bool /*abs*/) {
@@ -38,36 +40,39 @@ class JSPathReducer : public PathReducer {
     //	JS_EnterLocalRootScope(cx);
 
     jsval* vec = new jsval[count];
-    //for (int i = 0; i < count; i++) {
-    //  jsval x = INT_TO_JSVAL(in[i].first), y = INT_TO_JSVAL(in[i].second);
+    for (int i = 0; i < count; i++) {
+      JSValue pt = JS_NewObject(cx);
+      JS_SetPropertyStr(cx, pt, "x", JS_NewInt32(cx, in[i].first));
+      JS_SetPropertyStr(cx, pt, "y", JS_NewInt32(cx, in[i].second));
+      vec[i] = pt;
+    }
+    JSValue arr = JS_NewArray(cx);
 
-    //  JSObject* pt = BuildObject(cx);
-    //  JS_SetProperty(cx, pt, "x", &x);
-    //  JS_SetProperty(cx, pt, "y", &y);
-
-    //  vec[i] = OBJECT_TO_JSVAL(pt);
-    //}
-    //JSObject* arr = JS_NewArrayObject(cx, count, vec);
-
-    //jsval argv[] = {JSVAL_NULL, JSVAL_ZERO, OBJECT_TO_JSVAL(arr)};
-    //for (int i = 0; i < count; i++) {
-    //  jsval rval = JSVAL_FALSE;
-    //  argv[0] = vec[i];
-    //  argv[1] = INT_TO_JSVAL(i);
-    //  JS_CallFunctionValue(cx, obj, reduce, 3, argv, &rval);
-    //  if (!!JSVAL_TO_BOOLEAN(rval))
-    //    out.push_back(in[i]);
-    //}
+    jsval argv[] = {
+        JS_NULL,
+        JS_NewInt32(cx, 0),
+        arr,
+    };
+    for (int i = 0; i < count; i++) {
+      jsval rval = JS_FALSE;
+      argv[0] = vec[i];
+      argv[1] = JS_NewInt32(cx, i);
+      rval = JS_Call(cx, obj, reduce, 3, argv);
+      if (!!JS_ToBool(cx, rval))
+        out.push_back(in[i]);
+    }
 
     //		JS_LeaveLocalRootScope(cx);
     delete[] vec;
   }
   bool Reject(const Point& pt, bool /*abs*/) {
-    //jsval rval = JSVAL_FALSE;
-    //jsval argv[] = {INT_TO_JSVAL(pt.first), INT_TO_JSVAL(pt.second)};
-    //JS_CallFunctionValue(cx, obj, reject, 2, argv, &rval);
-    //return !!JSVAL_TO_BOOLEAN(rval);
-    return false;
+    jsval rval = JS_FALSE;
+    jsval argv[] = {
+        JS_NewInt32(cx, pt.first),
+        JS_NewInt32(cx, pt.second),
+    };
+    rval = JS_Call(cx, obj, reject, 2, argv);
+    return !!JS_ToBool(cx, rval);
   }
   void GetOpenNodes(const Point& center, PointList& out, const Point& /*endpoint*/) {
     for (int i = 1; i >= -1; i--) {
@@ -81,16 +86,19 @@ class JSPathReducer : public PathReducer {
   int GetPenalty(const Point& /*pt*/, bool /*abs*/) {
     return 0;
   }
-  void MutatePoint(Point& /*pt*/, bool /*abs*/) {
-    //jsval rval = JSVAL_FALSE;
-    //jsval argv[] = {INT_TO_JSVAL(pt.first), INT_TO_JSVAL(pt.second)};
-    //JS_CallFunctionValue(cx, obj, mutate, 2, argv, &rval);
-    //if (JSVAL_IS_OBJECT(rval)) {
-    //  JS_GetElement(cx, JSVAL_TO_OBJECT(rval), 0, &argv[0]);
-    //  JS_GetElement(cx, JSVAL_TO_OBJECT(rval), 1, &argv[1]);
-    //  pt.first = JSVAL_TO_INT(argv[0]);
-    //  pt.second = JSVAL_TO_INT(argv[1]);
-    //}
+  void MutatePoint(Point& pt, bool /*abs*/) {
+    jsval rval = JS_FALSE;
+    jsval argv[] = {
+        JS_NewInt32(cx, pt.first),
+        JS_NewInt32(cx, pt.second),
+    };
+    rval = JS_Call(cx, obj, mutate, 2, argv);
+    if (JS_IsObject(rval)) {
+      JSValue x = JS_GetPropertyUint32(cx, rval, 0);
+      JSValue y = JS_GetPropertyUint32(cx, rval, 1);
+      JS_ToInt32(cx, &pt.first, x);
+      JS_ToInt32(cx, &pt.second, y);
+    }
   }
 };
 

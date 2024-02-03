@@ -1528,7 +1528,8 @@ JSAPI_FUNC(my_overhead) {
     if (!lpszText) {
       return JS_EXCEPTION;
     }
-    OverheadMsg* pMsg = D2COMMON_GenerateOverheadMsg(NULL, lpszText, *p_D2CLIENT_OverheadTrigger);
+    std::string ansi = UTF8ToANSI(lpszText);
+    OverheadMsg* pMsg = D2COMMON_GenerateOverheadMsg(NULL, ansi.c_str(), *p_D2CLIENT_OverheadTrigger);
     if (pMsg) {
       pUnit->pOMsg = pMsg;
     }

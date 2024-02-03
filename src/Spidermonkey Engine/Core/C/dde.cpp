@@ -8,30 +8,28 @@ HSZ hszD2BSns;
 
 HDDEDATA CALLBACK DdeCallback(UINT uType, UINT, HCONV, HSZ, HSZ, HDDEDATA hdata, DWORD, DWORD) {
   char pszItem[65535] = "";
-  wchar_t* pslzItem = AnsiToUnicode(pszItem);
   switch (uType) {
     case XTYP_CONNECT:
       return (HDDEDATA)TRUE;
     case XTYP_POKE:
       DdeGetData(hdata, (LPBYTE)pszItem, 255, 0);
-      if (SwitchToProfile(pslzItem))
-        Log(L"Switched to profile %s", pslzItem);
+      if (SwitchToProfile(pszItem))
+        Log(L"Switched to profile %S", pszItem);
       else
-        Log(L"Profile %s not found", pslzItem);
+        Log(L"Profile %S not found", pszItem);
       break;
     case XTYP_EXECUTE:
       DdeGetData(hdata, (LPBYTE)pszItem, sizeof(pszItem), 0);
-      sScriptEngine->RunCommand(pslzItem);
+      sScriptEngine->RunCommand(pszItem);
       break;
   }
-  delete[] pslzItem;
   return (HDDEDATA)0;
 }
 
 DWORD CreateDdeServer() {
   char buf[1000];
 
-  int ret = DdeInitialize(
+  int ret = DdeInitializeA(
       &DdeSrvInst, DdeCallback,
       APPCLASS_STANDARD | APPCMD_FILTERINITS | CBF_FAIL_ADVISES | CBF_FAIL_REQUESTS | CBF_SKIP_CONNECT_CONFIRMS | CBF_SKIP_REGISTRATIONS | CBF_SKIP_UNREGISTRATIONS, 0);
   if (ret != DMLERR_NO_ERROR)

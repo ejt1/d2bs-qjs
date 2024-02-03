@@ -153,11 +153,10 @@ bool __fastcall BCastEventCallback(Script* script, void* argv, uint argc) {
     evt->argc = argc;
     evt->name = "scriptmsg";
     evt->arg1 = new DWORD(argc);
-    //evt->argv = new JSAutoStructuredCloneBuffer*[argc];
-    //for (uint i = 0; i < argc; i++) {
-    //  evt->argv[i] = new JSAutoStructuredCloneBuffer;
-    //  evt->argv[i]->write(helper->cx, helper->argv[i]);
-    //}
+    evt->argv = new JSValue[argc];
+    for (uint i = 0; i < argc; ++i) {
+      evt->argv[i] = JS_DupValue(helper->cx, helper->argv[i]);
+    }
 
     script->FireEvent(evt);
   }
@@ -177,7 +176,7 @@ bool __fastcall ChatEventCallback(Script* script, void* argv, uint argc) {
     evt->argc = argc;
     evt->name = helper->name;
     evt->arg1 = _strdup(helper->nick);
-    evt->arg2 = _wcsdup(helper->msg);
+    evt->arg2 = _strdup(helper->msg);
 
     script->FireEvent(evt);
   }
@@ -191,7 +190,7 @@ bool __fastcall ChatEventCallback(Script* script, void* argv, uint argc) {
     evt->argc = argc;
     evt->name = evtname;
     evt->arg1 = _strdup(helper->nick);
-    evt->arg2 = _wcsdup(helper->msg);
+    evt->arg2 = _strdup(helper->msg);
     evt->arg4 = new DWORD(false);
     ResetEvent(Vars.eventSignal);
     script->FireEvent(evt);
@@ -208,17 +207,17 @@ bool __fastcall ChatEventCallback(Script* script, void* argv, uint argc) {
   return block;
 }
 
-bool ChatEvent(char* lpszNick, const wchar_t* lpszMsg) {
+bool ChatEvent(const char* lpszNick, const char* lpszMsg) {
   ChatEventHelper helper = {"chatmsg", lpszNick, lpszMsg};
   return sScriptEngine->ForEachScript(ChatEventCallback, &helper, 2);
 }
 
-bool ChatInputEvent(wchar_t* lpszMsg) {
+bool ChatInputEvent(const char* lpszMsg) {
   ChatEventHelper helper = {"chatinput", "me", lpszMsg};
   return sScriptEngine->ForEachScript(ChatEventCallback, &helper, 2);
 }
 
-bool WhisperEvent(char* lpszNick, wchar_t* lpszMsg) {
+bool WhisperEvent(const char* lpszNick, const char* lpszMsg) {
   ChatEventHelper helper = {"whispermsg", lpszNick, lpszMsg};
   return sScriptEngine->ForEachScript(ChatEventCallback, &helper, 2);
 }
@@ -231,14 +230,14 @@ bool __fastcall CopyDataCallback(Script* script, void* argv, uint argc) {
     evt->argc = argc;
     evt->name = "copydata";
     evt->arg1 = new DWORD(helper->mode);
-    evt->arg2 = _wcsdup(helper->msg);
+    evt->arg2 = _strdup(helper->msg);
 
     script->FireEvent(evt);
   }
   return true;
 }
 
-void CopyDataEvent(DWORD dwMode, wchar_t* lpszMsg) {
+void CopyDataEvent(DWORD dwMode, const char* lpszMsg) {
   CopyDataHelper helper = {dwMode, lpszMsg};
   sScriptEngine->ForEachScript(CopyDataCallback, &helper, 2);
 }
@@ -276,14 +275,14 @@ bool __fastcall GameActionEventCallback(Script* script, void* argv, uint argc) {
     evt->arg2 = new DWORD(helper->param1);
     evt->arg3 = new DWORD(helper->param2);
     evt->arg4 = _strdup(helper->name1);
-    evt->arg5 = _wcsdup(helper->name2);
+    evt->arg5 = _strdup(helper->name2);
 
     script->FireEvent(evt);
   }
   return true;
 }
 
-void GameActionEvent(BYTE mode, DWORD param1, DWORD param2, char* name1, wchar_t* name2) {
+void GameActionEvent(BYTE mode, DWORD param1, DWORD param2, const char* name1, const char* name2) {
   GameActionEventHelper helper = {mode, param1, param2, name1, name2};
   sScriptEngine->ForEachScript(GameActionEventCallback, &helper, 5);
 }

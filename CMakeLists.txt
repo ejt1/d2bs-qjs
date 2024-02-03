@@ -36,6 +36,7 @@ set(D2BS_SRCS
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Misc/Events.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Misc/Helpers.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Misc/js32.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/Misc/Localization.cc"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Misc/Offset.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Misc/sqlite3.c"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Misc/stringhash.cpp"

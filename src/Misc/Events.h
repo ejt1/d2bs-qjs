@@ -19,13 +19,13 @@ struct Event {
   void* arg5;
 };
 
-bool ChatEvent(char* lpszNick, const wchar_t* lpszMsg);
-bool ChatInputEvent(wchar_t* lpszMsg);
+bool ChatEvent(const char* lpszNick, const char* lpszMsg);
+bool ChatInputEvent(const char* lpszMsg);
 void LifeEvent(DWORD dwLife);
 void ManaEvent(DWORD dwMana);
-void CopyDataEvent(DWORD dwMode, wchar_t* lpszMsg);
-void GameActionEvent(BYTE mode, DWORD param1, DWORD param2, char* name1, wchar_t* name2);
-bool WhisperEvent(char* lpszNick, wchar_t* lpszMsg);
+void CopyDataEvent(DWORD dwMode, const char* lpszMsg);
+void GameActionEvent(BYTE mode, DWORD param1, DWORD param2, const char* name1, const char* name2);
+bool WhisperEvent(const char* lpszNick, const char* lpszMsg);
 bool KeyDownUpEvent(WPARAM bByte, BYTE bUp);
 void PlayerAssignEvent(DWORD dwUnitId);
 void MouseClickEvent(int button, POINT pt, bool bUp);
@@ -41,12 +41,12 @@ void TakeGameLock(void);
 
 struct ChatEventHelper {
   const char *name, *nick;
-  const wchar_t* msg;
+  const char* msg;
 };
 
 struct CopyDataHelper {
   DWORD mode;
-  wchar_t* msg;
+  const char* msg;
 };
 
 struct ItemEventHelper {
@@ -64,8 +64,8 @@ struct KeyEventHelper {
 struct GameActionEventHelper {
   BYTE mode;
   DWORD param1, param2;
-  char* name1;
-  wchar_t* name2;
+  const char* name1;
+  const char* name2;
 };
 
 struct SingleArgHelper {

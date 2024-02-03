@@ -18,28 +18,28 @@ JSValue js_hash(JSContext* ctx, int argc, JSValue* argv, char* (*hashfn)(const c
   return rval;
 }
 
-JSValue js_hash_file(JSContext* ctx, int argc, JSValue* argv, char*(hashfn)(wchar_t*)) {
+JSValue js_hash_file(JSContext* ctx, int argc, JSValue* argv, char*(hashfn)(const char*)) {
   JSValue rval = JS_NULL;
 
   if (argc != 1)
     THROW_ERROR(ctx, "Invalid arguments");
 
   const char* szFile = JS_ToCString(ctx, argv[0]);
-  const wchar_t* file = AnsiToUnicode(szFile);
-  JS_FreeCString(ctx, szFile);
-  if (!(file && file[0] && isValidPath(file))) {
-    delete[] file;
+  if (!szFile) {
+    return JS_EXCEPTION;
+  }
+  if (!(szFile && szFile[0] && isValidPath(szFile))) {
+    JS_FreeCString(ctx, szFile);
     THROW_ERROR(ctx, "Invalid file path!");
   }
 
-  wchar_t path[_MAX_FNAME + _MAX_PATH];
-  swprintf_s(path, _countof(path), L"%s\\%s", Vars.szScriptPath, file);
+  char path[_MAX_FNAME + _MAX_PATH];
+  sprintf_s(path, _countof(path), "%s\\%s", Vars.szScriptPath, szFile);
 
   char* result = hashfn(path);
   if (result && result[0])
     rval = JS_NewString(ctx, result);
   delete[] result;
-  delete[] file;
   return rval;
 }
 

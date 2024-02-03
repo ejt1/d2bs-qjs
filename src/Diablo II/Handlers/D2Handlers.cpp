@@ -20,27 +20,37 @@
 #include "Control.h"
 
 DWORD __fastcall GameInput(wchar_t* wMsg) {
-  bool send = true;
+  bool block = false;
 
   if (Vars.bDontCatchNextMsg)
     Vars.bDontCatchNextMsg = false;
   else {
-    send = !((wMsg[0] == L'.' && ProcessCommand(wMsg + 1, false)) || ChatInputEvent(wMsg));
+    if (wMsg[0] == L'.') {
+      block = ProcessCommand(wMsg + 1, false);
+    } else {
+      std::string msg = WideToAnsi(wMsg);
+      block = ChatInputEvent(msg.c_str());
+    }
   }
 
-  return send ? 0 : -1;  // -1 means block, 0 means send
+  return block ? -1 : 0;  // -1 means block, 0 means send
 }
 
 DWORD __fastcall ChannelInput(wchar_t* wMsg) {
-  bool send = true;
+  bool block = false;
 
   if (Vars.bDontCatchNextMsg)
     Vars.bDontCatchNextMsg = false;
   else {
-    send = !((wMsg[0] == L'.' && ProcessCommand(wMsg + 1, false)) || ChatInputEvent(wMsg));
+    if (wMsg[0] == L'.') {
+      block = ProcessCommand(wMsg + 1, false);
+    } else {
+      std::string msg = WideToAnsi(wMsg);
+      block = ChatInputEvent(msg.c_str());
+    }
   }
 
-  return send;  // false means ignore, true means send
+  return !block;  // false means ignore, true means send
 }
 
 void SetMaxDiff(void) {
@@ -51,11 +61,9 @@ void SetMaxDiff(void) {
   }
 }
 
-void __fastcall WhisperHandler(char* szAcc, char* szText) {
+void __fastcall WhisperHandler(const char* szAcc, const char* szText) {
   if (!Vars.bDontCatchNextMsg) {
-    wchar_t* szwText = AnsiToUnicode(szText, CP_ACP);
-    WhisperEvent(szAcc, szwText);
-    delete[] szwText;
+    WhisperEvent(szAcc, szText);
   } else
     Vars.bDontCatchNextMsg = FALSE;
 }
@@ -126,31 +134,29 @@ BOOL __fastcall ChatPacketRecv(BYTE* pPacket, int /*len*/) {
 
   if (pPacket[1] == 0xF) {
     // DWORD mode = pPacket[4];
-    char* who = (char*)pPacket + 28;
-    char* said = (char*)pPacket + 29 + strlen(who);
-    wchar_t* wsaid = AnsiToUnicode(said, CP_ACP);
+    const char* who = (char*)pPacket + 28;
+    const char* said = (char*)pPacket + 29 + strlen(who);
 
     switch (pPacket[4]) {
       case 0x02:  // channel join
-        ChatEvent(who, L"joined the channel");
+        ChatEvent(who, "joined the channel");
         break;
       case 0x03:  // channel leave
-        ChatEvent(who, L"left the channel");
+        ChatEvent(who, "left the channel");
         break;
       case 0x04:  // whispers
       case 0x0A:
-        WhisperEvent(who, wsaid);
+        WhisperEvent(who, said);
         break;
       case 0x05:  // normal text
       case 0x12:  // info blue text
       case 0x13:  // error message
       case 0x17:  // emoted text
-        ChatEvent(who, wsaid);
+        ChatEvent(who, said);
         break;
       default:
         break;
     }
-    delete[] wsaid;
     // ChannelEvent(mode,who,said);
   }
 

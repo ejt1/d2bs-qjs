@@ -14,7 +14,7 @@
 
 #include <chrono>
 
-Script::Script(const wchar_t* file, ScriptMode mode /*, uint argc, JSAutoStructuredCloneBuffer** argv*/)
+Script::Script(const char* file, ScriptMode mode /*, uint argc, JSAutoStructuredCloneBuffer** argv*/)
     : /*m_runtime(NULL),
       m_context(NULL),
       m_globalObject(NULL),
@@ -34,22 +34,22 @@ Script::Script(const wchar_t* file, ScriptMode mode /*, uint argc, JSAutoStructu
   m_hasActiveCX = false;
   m_eventSignal = CreateEvent(nullptr, true, false, nullptr);
 
-  if (m_scriptMode == kScriptModeCommand && wcslen(file) < 1) {
-    m_fileName = std::wstring(L"Command Line");
+  if (m_scriptMode == kScriptModeCommand && strlen(file) < 1) {
+    m_fileName = "Command Line";
   } else {
-    if (_waccess(file, 0) != 0) {
-      Log(L"%s (%s, %d)", file, __FILE__, __LINE__);
+    if (_access(file, 0) != 0) {
+      Log(L"%S (%s, %d)", file, __FILE__, __LINE__);
 
       throw std::exception("File not found");
     }
 
-    wchar_t* tmpName = _wcsdup(file);
+    char* tmpName = _strdup(file);
     if (!tmpName)
       throw std::exception("Could not dup filename");
 
-    _wcslwr_s(tmpName, wcslen(file) + 1);
-    m_fileName = std::wstring(tmpName);
-    replace(m_fileName.begin(), m_fileName.end(), L'/', L'\\');
+    _strlwr_s(tmpName, strlen(file) + 1);
+    m_fileName = tmpName;
+    replace(m_fileName.begin(), m_fileName.end(), '/', '\\');
     free(tmpName);
   }
 }
@@ -100,8 +100,8 @@ void Script::Stop(bool force) {
   m_isPaused = false;
   m_isReallyPaused = false;
   if (m_scriptMode != kScriptModeCommand) {
-    const wchar_t* displayName = m_fileName.c_str() + wcslen(Vars.szScriptPath) + 1;
-    Print(L"Script %s ended", displayName);
+    const char* displayName = m_fileName.c_str() + strlen(Vars.szScriptPath) + 1;
+    Print(L"Script %S ended", displayName);
   }
 
   // trigger call back so script ends
@@ -164,19 +164,19 @@ bool Script::IsAborted() {
   return m_scriptState == kScriptStateStopped;
 }
 
-void Script::RunCommand(const wchar_t* command) {
+void Script::RunCommand(const char* command) {
   Event* evt = new Event;
   evt->argc = m_argc;
   evt->name = "Command";
-  evt->arg1 = _wcsdup(command);
+  evt->arg1 = _strdup(command);
   FireEvent(evt);
 }
 
-const wchar_t* Script::GetShortFilename() {
-  if (wcscmp(m_fileName.c_str(), L"Command Line") == 0)
+const char* Script::GetShortFilename() {
+  if (strcmp(m_fileName.c_str(), "Command Line") == 0)
     return m_fileName.c_str();
   else
-    return (m_fileName.c_str() + wcslen(Vars.szScriptPath) + 1);
+    return (m_fileName.c_str() + strlen(Vars.szScriptPath) + 1);
 }
 
 DWORD Script::GetThreadId(void) {
@@ -187,34 +187,33 @@ void Script::UpdatePlayerGid(void) {
   m_me->dwUnitId = (D2CLIENT_GetPlayerUnit() == NULL ? NULL : D2CLIENT_GetPlayerUnit()->dwUnitId);
 }
 
-bool Script::IsIncluded(const wchar_t* file) {
+bool Script::IsIncluded(const char* file) {
   uint count = 0;
-  wchar_t* fname = _wcsdup(file);
+  char* fname = _strdup(file);
   if (!fname)
     return false;
 
-  _wcslwr_s(fname, wcslen(fname) + 1);
-  StringReplace(fname, '/', '\\', wcslen(fname));
-  count = m_includes.count(std::wstring(fname));
+  _strlwr_s(fname, strlen(fname) + 1);
+  StringReplace(fname, '/', '\\', strlen(fname));
+  count = m_includes.count(fname);
   free(fname);
 
   return !!count;
 }
 
-bool Script::Include(const wchar_t* file) {
+bool Script::Include(const char* file) {
   // since includes will happen on the same thread, locking here is acceptable
   EnterCriticalSection(&m_lock);
-  wchar_t* fname = _wcsdup(file);
+  char* fname = _strdup(file);
   if (!fname) {
     LeaveCriticalSection(&m_lock);
-    Log(L"!fname");
     return false;
   }
-  _wcslwr_s(fname, wcslen(fname) + 1);
-  StringReplace(fname, L'/', L'\\', wcslen(fname));
+  _strlwr_s(fname, strlen(fname) + 1);
+  StringReplace(fname, '/', '\\', strlen(fname));
 
   // don't invoke the string ctor more than once...
-  std::wstring currentFileName = std::wstring(fname);
+  std::string currentFileName = std::string(fname);
   // ignore already included, 'in-progress' includes, and self-inclusion
   if (!!m_includes.count(fname) || !!m_inProgress.count(fname) || (currentFileName.compare(m_fileName.c_str()) == 0)) {
     LeaveCriticalSection(&m_lock);
@@ -412,8 +411,11 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
   if (strcmp(evtName, "gameevent") == 0) {
     if (!clearList) {
       JSValue args[] = {
-          JS_NewUint32(m_context, *(BYTE*)evt->arg1),      JS_NewUint32(m_context, *(DWORD*)evt->arg2),        JS_NewUint32(m_context, *(DWORD*)evt->arg3),
-          JS_NewString(m_context, (const char*)evt->arg4), JS_NewString(m_context, (const wchar_t*)evt->arg5),
+          JS_NewUint32(m_context, *(BYTE*)evt->arg1),
+          JS_NewUint32(m_context, *(DWORD*)evt->arg2),
+          JS_NewUint32(m_context, *(DWORD*)evt->arg3),
+          evt->arg4 ? JS_NewString(m_context, (const char*)evt->arg4) : JS_UNDEFINED,
+          evt->arg5 ? JS_NewString(m_context, (const char*)evt->arg5) : JS_UNDEFINED,
       };
 
       ExecuteEvent(evtName, _countof(args), args);
@@ -434,7 +436,7 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
     if (!clearList) {
       JSValue args[] = {
           JS_NewUint32(m_context, *(DWORD*)evt->arg1),
-          JS_NewString(m_context, (wchar_t*)evt->arg2),
+          evt->arg2 ? JS_NewString(m_context, (const char*)evt->arg2) : JS_UNDEFINED,
       };
 
       ExecuteEvent(evtName, _countof(args), args);
@@ -453,8 +455,8 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
     bool block = false;
     if (!clearList) {
       JSValue args[] = {
-          JS_NewString(m_context, (const char*)evt->arg1),
-          JS_NewString(m_context, (const wchar_t*)evt->arg2),
+          evt->arg1 ? JS_NewString(m_context, (const char*)evt->arg1) : JS_UNDEFINED,
+          evt->arg2 ? JS_NewString(m_context, (const char*)evt->arg2) : JS_UNDEFINED,
       };
 
       ExecuteEvent(evtName, _countof(args), args, &block);
@@ -566,23 +568,19 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
     return true;
   }
   if (strcmp(evtName, "Command") == 0) {
-    wchar_t* cmd = (wchar_t*)evt->arg1;
+    const char* cmd = (const char*)evt->arg1;
     std::string test;
 
     test.append("try{ ");
-    char* szCmd = UnicodeToAnsi(cmd);
-    test.append(szCmd);
-    delete[] szCmd;
+    test.append(cmd);
     test.append(" } catch (error){print(error)}");
 
     jsval rval = JS_Eval(m_context, test.data(), test.length(), "Command Line", JS_EVAL_TYPE_GLOBAL);
     if (!JS_IsException(rval)) {
       if (!JS_IsNull(rval) && !JS_IsUndefined(rval)) {
-        const char* rstr = JS_ToCString(m_context, rval);
-        wchar_t* text = AnsiToUnicode(rstr);
-        JS_FreeCString(m_context, rstr);
-        Print(L"%s", text);
-        delete[] text;
+        const char* text = JS_ToCString(m_context, rval);
+        Print(L"%S", text);
+        JS_FreeCString(m_context, text);
       }
     }
     free(evt->arg1);
@@ -732,7 +730,7 @@ bool Script::Initialize() {
 
   // compile script file
   if (m_scriptMode == kScriptModeCommand) {
-    if (wcslen(Vars.szConsole) > 0) {
+    if (strlen(Vars.szConsole) > 0) {
       m_script = JS_CompileFile(m_context, m_globalObject, m_fileName);
     } else {
       const char* cmd = "function main() {print('ÿc2D2BSÿc0 :: Started Console'); while (true){delay(10000)};}  ";

@@ -31,9 +31,7 @@ CLASS_CTOR(profile) {
     // Profile(name) - get the named profile
     else if (argc == 1 && JS_IsString(argv[0])) {
       const char* str1 = JS_ToCString(ctx, argv[0]);
-      wchar_t* wstr1 = AnsiToUnicode(str1);
-      prof = new Profile(wstr1);
-      delete[] wstr1;
+      prof = new Profile(str1);
       JS_FreeCString(ctx, str1);
     } else if (argc > 1 && JS_IsNumber(argv[0])) {
       int32_t type = PROFILETYPE_SINGLEPLAYER;
@@ -42,11 +40,9 @@ CLASS_CTOR(profile) {
       // Profile(ProfileType.singlePlayer, charname, diff)
       if (argc == 3 && type == PROFILETYPE_SINGLEPLAYER) {
         const char* str1 = JS_ToCString(ctx, argv[1]);
-        wchar_t* wstr1 = AnsiToUnicode(str1);
         int32_t diff;
         JS_ToInt32(ctx, &diff, argv[2]);
-        prof = new Profile(PROFILETYPE_SINGLEPLAYER, wstr1, static_cast<char>(diff));
-        delete[] wstr1;
+        prof = new Profile(PROFILETYPE_SINGLEPLAYER, str1, static_cast<char>(diff));
         JS_FreeCString(ctx, str1);
       }
       // Profile(ProfileType.battleNet, account, pass, charname, gateway)
@@ -55,15 +51,7 @@ CLASS_CTOR(profile) {
         const char* str2 = JS_ToCString(ctx, argv[2]);
         const char* str3 = JS_ToCString(ctx, argv[3]);
         const char* str4 = JS_ToCString(ctx, argv[4]);
-        wchar_t* wstr1 = AnsiToUnicode(str1);
-        wchar_t* wstr2 = AnsiToUnicode(str2);
-        wchar_t* wstr3 = AnsiToUnicode(str3);
-        wchar_t* wstr4 = AnsiToUnicode(str4);
-        prof = new Profile(PROFILETYPE_BATTLENET, wstr1, wstr2, wstr3, wstr4);
-        delete[] wstr4;
-        delete[] wstr3;
-        delete[] wstr2;
-        delete[] wstr1;
+        prof = new Profile(PROFILETYPE_BATTLENET, str1, str2, str3, str4);
         JS_FreeCString(ctx, str1);
         JS_FreeCString(ctx, str2);
         JS_FreeCString(ctx, str3);
@@ -75,15 +63,7 @@ CLASS_CTOR(profile) {
         const char* str2 = JS_ToCString(ctx, argv[2]);
         const char* str3 = JS_ToCString(ctx, argv[3]);
         const char* str4 = JS_ToCString(ctx, argv[4]);
-        wchar_t* wstr1 = AnsiToUnicode(str1);
-        wchar_t* wstr2 = AnsiToUnicode(str2);
-        wchar_t* wstr3 = AnsiToUnicode(str3);
-        wchar_t* wstr4 = AnsiToUnicode(str4);
-        prof = new Profile(PROFILETYPE_OPEN_BATTLENET, wstr1, wstr2, wstr3, wstr4);
-        delete[] wstr4;
-        delete[] wstr3;
-        delete[] wstr2;
-        delete[] wstr1;
+        prof = new Profile(PROFILETYPE_OPEN_BATTLENET, str1, str2, str3, str4);
         JS_FreeCString(ctx, str1);
         JS_FreeCString(ctx, str2);
         JS_FreeCString(ctx, str3);
@@ -93,11 +73,9 @@ CLASS_CTOR(profile) {
       else if (argc == 3 && type == PROFILETYPE_TCPIP_HOST) {
         // JS_ConvertArguments(cx, argc, argv, "isu", &pt, &str1, &i);
         const char* str1 = JS_ToCString(ctx, argv[1]);
-        wchar_t* wstr1 = AnsiToUnicode(str1);
         int32_t diff;
         JS_ToInt32(ctx, &diff, argv[2]);
-        prof = new Profile(PROFILETYPE_TCPIP_HOST, wstr1, static_cast<char>(diff));
-        delete[] wstr1;
+        prof = new Profile(PROFILETYPE_TCPIP_HOST, str1, static_cast<char>(diff));
         JS_FreeCString(ctx, str1);
       }
       // Profile(ProfileType.tcpIpJoin, charname, ip)
@@ -106,11 +84,7 @@ CLASS_CTOR(profile) {
         // &str2);
         const char* str1 = JS_ToCString(ctx, argv[1]);
         const char* str2 = JS_ToCString(ctx, argv[2]);
-        wchar_t* wstr1 = AnsiToUnicode(str1);
-        wchar_t* wstr2 = AnsiToUnicode(str2);
-        prof = new Profile(PROFILETYPE_TCPIP_JOIN, wstr1, wstr2);
-        delete[] wstr2;
-        delete[] wstr1;
+        prof = new Profile(PROFILETYPE_TCPIP_JOIN, str1, str2);
         JS_FreeCString(ctx, str1);
         JS_FreeCString(ctx, str2);
       } else {

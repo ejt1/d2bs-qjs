@@ -11,7 +11,7 @@ JSAPI_FUNC(my_login) {
   if (ClientState() != ClientStateMenu)
     return JS_UNDEFINED;
 
-  std::wstring profile;
+  std::string profile;
   const char* error;
 
   if (!JS_IsString(argv[0])) {
@@ -21,11 +21,12 @@ JSAPI_FUNC(my_login) {
       THROW_ERROR(ctx, "Invalid profile specified!");
   } else {
     const char* szProfile = JS_ToCString(ctx, argv[0]);
-    wchar_t* wszProfile = AnsiToUnicode(szProfile);
+    if (!szProfile) {
+      return JS_EXCEPTION;
+    }
+    strcpy_s(Vars.szProfile, 256, szProfile);
+    profile = szProfile;
     JS_FreeCString(ctx, szProfile);
-    wcscpy_s(Vars.szProfile, 256, wszProfile);
-    profile = wszProfile;
-    delete[] wszProfile;
   }
 
   if (profile.empty()) {
@@ -50,18 +51,19 @@ JSAPI_FUNC(my_selectChar) {
     THROW_ERROR(ctx, "Invalid parameters specified to selectCharacter");
 
   const char* szProfile = JS_ToCString(ctx, argv[0]);
-  const wchar_t* profile = AnsiToUnicode(szProfile);
-  JS_FreeCString(ctx, szProfile);
+  if (!szProfile) {
+    return JS_EXCEPTION;
+  }
 
-  if (!Profile::ProfileExists(profile)) {
-    delete[] profile;
+  if (!Profile::ProfileExists(szProfile)) {
+    JS_FreeCString(ctx, szProfile);
     THROW_ERROR(ctx, "Invalid profile specified");
   }
-  wchar_t charname[24], file[_MAX_FNAME + MAX_PATH];
-  swprintf_s(file, _countof(file), L"%sd2bs.ini", Vars.szPath);
-  GetPrivateProfileStringW(profile, L"character", L"ERROR", charname, _countof(charname), file);
+  char charname[24], file[_MAX_FNAME + MAX_PATH];
+  sprintf_s(file, _countof(file), "%sd2bs.ini", Vars.szPath);
+  GetPrivateProfileStringA(szProfile, "character", "ERROR", charname, _countof(charname), file);
 
-  delete[] profile;
+  JS_FreeCString(ctx, szProfile);
   return JS_NewBool(ctx, OOG_SelectCharacter(charname));
 }
 
@@ -69,18 +71,22 @@ JSAPI_FUNC(my_createGame) {
   if (ClientState() != ClientStateMenu)
     return JS_NULL;
 
-  std::wstring name, pass;
+  std::string name, pass;
   if (JS_IsString(argv[0])) {
-    auto jsname = JS_ToWString(ctx, argv[0]);
+    const char* jsname = JS_ToCString(ctx, argv[0]);
     if (!jsname) {
       return JS_EXCEPTION;
     }
+    name = jsname;
+    JS_FreeCString(ctx, jsname);
   }
-  if (JS_IsString(argv[0])) {
-    auto jspass= JS_ToWString(ctx, argv[0]);
+  if (JS_IsString(argv[1])) {
+    const char* jspass = JS_ToCString(ctx, argv[1]);
     if (!jspass) {
       return JS_EXCEPTION;
     }
+    pass = jspass;
+    JS_FreeCString(ctx, jspass);
   }
   int32_t diff = 3;
   if (argc > 2 && JS_IsNumber(argv[2])) {
@@ -89,7 +95,7 @@ JSAPI_FUNC(my_createGame) {
     }
   }
 
-  if (name.length() > 15 || pass.length()  > 15)
+  if (name.length() > 15 || pass.length() > 15)
     THROW_ERROR(ctx, "Invalid game name or password length");
 
   if (!OOG_CreateGame(name.c_str(), pass.c_str(), diff))
@@ -102,18 +108,22 @@ JSAPI_FUNC(my_joinGame) {
   if (ClientState() != ClientStateMenu)
     return JS_NULL;
 
-  std::wstring name, pass;
+  std::string name, pass;
   if (JS_IsString(argv[0])) {
-    auto jsname = JS_ToWString(ctx, argv[0]);
+    const char* jsname = JS_ToCString(ctx, argv[0]);
     if (!jsname) {
       return JS_EXCEPTION;
     }
+    name = jsname;
+    JS_FreeCString(ctx, jsname);
   }
-  if (JS_IsString(argv[0])) {
-    auto jspass = JS_ToWString(ctx, argv[0]);
+  if (JS_IsString(argv[1])) {
+    const char* jspass = JS_ToCString(ctx, argv[1]);
     if (!jspass) {
       return JS_EXCEPTION;
     }
+    pass = jspass;
+    JS_FreeCString(ctx, jspass);
   }
 
   if (name.length() > 15 || pass.length() > 15)
@@ -127,18 +137,19 @@ JSAPI_FUNC(my_joinGame) {
 
 JSAPI_FUNC(my_addProfile) {
   // validate the args...
-  std::wstring profile, mode, gateway, username, password, charname;
+  std::string profile, mode, gateway, username, password, charname;
   int spdifficulty = 3;
   if (argc < 6 || argc > 7)
     THROW_ERROR(ctx, "Invalid arguments passed to addProfile");
 
-  std::wstring* args[] = {&profile, &mode, &gateway, &username, &password, &charname};
+  std::string* args[] = {&profile, &mode, &gateway, &username, &password, &charname};
   for (uint i = 0; i < 6; i++) {
-    auto tmp = JS_ToWString(ctx, argv[i]);
+    const char* tmp = JS_ToCString(ctx, argv[i]);
     if (!tmp) {
-      THROW_ERROR(ctx, "Invalid argument passed to addProfile");
+      return JS_EXCEPTION;
     }
-    *args[i] = *tmp;
+    *args[i] = tmp;
+    JS_FreeCString(ctx, tmp);
   }
 
   if (argc == 7) {
@@ -148,16 +159,16 @@ JSAPI_FUNC(my_addProfile) {
   if (spdifficulty > 3 || spdifficulty < 0)
     THROW_ERROR(ctx, "Invalid argument passed to addProfile");
 
-  wchar_t file[_MAX_FNAME + _MAX_PATH];
+  char file[_MAX_FNAME + _MAX_PATH];
 
-  swprintf_s(file, _countof(file), L"%sd2bs.ini", Vars.szPath);
+  sprintf_s(file, _countof(file), "%sd2bs.ini", Vars.szPath);
   if (!Profile::ProfileExists(args[0]->c_str())) {
-    wchar_t settings[600] = L"";
-    swprintf_s(settings, _countof(settings), L"mode=%s\tgateway=%s\tusername=%s\tpassword=%s\tcharacter=%s\tspdifficulty=%d\t", mode.c_str(), gateway.c_str(),
+    char settings[600] = "";
+    sprintf_s(settings, _countof(settings), "mode=%s\tgateway=%s\tusername=%s\tpassword=%s\tcharacter=%s\tspdifficulty=%d\t", mode.c_str(), gateway.c_str(),
                username.c_str(), password.c_str(), charname.c_str(), spdifficulty);
 
     StringReplace(settings, '\t', '\0', 600);
-    WritePrivateProfileSectionW(args[0]->c_str(), settings, file);
+    WritePrivateProfileSectionA(args[0]->c_str(), settings, file);
   }
 
   return JS_NULL;
@@ -174,16 +185,18 @@ JSAPI_FUNC(my_createCharacter) {
   if (ClientState() != ClientStateMenu)
     return JS_TRUE;
 
-  std::wstring name;
+  std::string name;
   int32 type = -1;
   bool hc = false, ladder = false;
   if (!JS_IsString(argv[0]) || !JS_IsNumber(argv[1])) {
     return JS_EXCEPTION;
   }
-  auto tmp = JS_ToWString(ctx, argv[0]);
-  if (!tmp || JS_ToInt32(ctx, &type, argv[1])) {
+  const char* str = JS_ToCString(ctx, argv[0]);
+  if (!str || JS_ToInt32(ctx, &type, argv[1])) {
     return JS_EXCEPTION;
   }
+  name = str;
+  JS_FreeCString(ctx, str);
   if (JS_IsBool(argv[2])) {
     hc = JS_ToBool(ctx, argv[2]);
   }

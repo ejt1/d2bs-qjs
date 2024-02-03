@@ -34,17 +34,18 @@ JSAPI_FUNC(filetools_remove) {
     THROW_ERROR(ctx, "You must supply a file name");
 
   const char* szFile = JS_ToCString(ctx, argv[0]);
-  const wchar_t* file = AnsiToUnicode(szFile);
-  JS_FreeCString(ctx, szFile);
-  wchar_t fullpath[_MAX_PATH + _MAX_FNAME];
+  if (!szFile) {
+    return JS_EXCEPTION;
+  }
+  char fullpath[_MAX_PATH + _MAX_FNAME];
 
-  if (getPathRelScript(file, _MAX_PATH + _MAX_FNAME, fullpath) == NULL) {
-    delete[] file;
+  if (getPathRelScript(szFile, _MAX_PATH + _MAX_FNAME, fullpath) == NULL) {
+    JS_FreeCString(ctx, szFile);
     THROW_ERROR(ctx, "Invalid file name");
   }
-  delete[] file;
+  JS_FreeCString(ctx, szFile);
 
-  _wremove(fullpath);
+  remove(fullpath);
   return JS_TRUE;
 }
 
@@ -55,32 +56,30 @@ JSAPI_FUNC(filetools_rename) {
     THROW_ERROR(ctx, "You must supply a new file name");
 
   const char* szOrig = JS_ToCString(ctx, argv[0]);
-  const wchar_t* orig = AnsiToUnicode(szOrig);
-  JS_FreeCString(ctx, szOrig);
-
   const char* szNewName = JS_ToCString(ctx, argv[1]);
-  const wchar_t* newName = AnsiToUnicode(szNewName);
-  JS_FreeCString(ctx, szNewName);
+  if (!szOrig || !szNewName) {
+    return JS_EXCEPTION;
+  }
 
-  wchar_t porig[_MAX_PATH + _MAX_FNAME];
-  wchar_t pnewName[_MAX_PATH + _MAX_FNAME];
+  char porig[_MAX_PATH + _MAX_FNAME];
+  char pnewName[_MAX_PATH + _MAX_FNAME];
 
-  if (getPathRelScript(orig, _MAX_PATH + _MAX_FNAME, porig) == NULL) {
-    delete[] orig;
-    delete[] newName;
+  if (getPathRelScript(szOrig, _MAX_PATH + _MAX_FNAME, porig) == NULL) {
+    JS_FreeCString(ctx, szOrig);
+    JS_FreeCString(ctx, szNewName);
     THROW_ERROR(ctx, "Invalid original file name");
   }
 
-  if (getPathRelScript(newName, _MAX_PATH + _MAX_FNAME, pnewName) == NULL) {
-    delete[] orig;
-    delete[] newName;
+  if (getPathRelScript(szNewName, _MAX_PATH + _MAX_FNAME, pnewName) == NULL) {
+    JS_FreeCString(ctx, szOrig);
+    JS_FreeCString(ctx, szNewName);
     THROW_ERROR(ctx, "Invalid new file name");
   }
-  delete[] orig;
-  delete[] newName;
+  JS_FreeCString(ctx, szOrig);
+  JS_FreeCString(ctx, szNewName);
 
   // hehe, get rid of "ignoring return value" warning
-  if (_wrename(porig, pnewName)) {
+  if (rename(porig, pnewName)) {
     return JS_TRUE;
   }
   return JS_TRUE;
@@ -93,35 +92,33 @@ JSAPI_FUNC(filetools_copy) {
     THROW_ERROR(ctx, "You must supply a new file name");
 
   const char* szOrig = JS_ToCString(ctx, argv[0]);
-  const wchar_t* orig = AnsiToUnicode(szOrig);
-  JS_FreeCString(ctx, szOrig);
-
   const char* szNewName = JS_ToCString(ctx, argv[1]);
-  const wchar_t* newName = AnsiToUnicode(szNewName);
-  JS_FreeCString(ctx, szNewName);
+  if (!szOrig || !szNewName) {
+    return JS_EXCEPTION;
+  }
 
-  wchar_t pnewName[_MAX_PATH + _MAX_FNAME];
+  char pnewName[_MAX_PATH + _MAX_FNAME];
   bool overwrite = false;
 
   if (argc > 2 && JS_IsBool(argv[2]))
     overwrite = !!JS_ToBool(ctx, argv[2]);
 
-  if (getPathRelScript(newName, _MAX_PATH + _MAX_FNAME, pnewName) == NULL) {
-    delete[] orig;
-    delete[] newName;
+  if (getPathRelScript(szNewName, _MAX_PATH + _MAX_FNAME, pnewName) == NULL) {
+    JS_FreeCString(ctx, szOrig);
+    JS_FreeCString(ctx, szNewName);
     THROW_ERROR(ctx, "Invalid new file name");
   }
 
-  if (overwrite && _waccess(pnewName, 0) == 0) {
-    delete[] orig;
-    delete[] newName;
+  if (overwrite && _access(pnewName, 0) == 0) {
+    JS_FreeCString(ctx, szOrig);
+    JS_FreeCString(ctx, szNewName);
     return JS_TRUE;
   }
 
-  FILE* fptr1 = fileOpenRelScript(orig, L"r", ctx);
-  FILE* fptr2 = fileOpenRelScript(newName, L"w", ctx);
-  delete[] orig;
-  delete[] newName;
+  FILE* fptr1 = fileOpenRelScript(szOrig, "r", ctx);
+  FILE* fptr2 = fileOpenRelScript(szNewName, "w", ctx);
+  JS_FreeCString(ctx, szOrig);
+  JS_FreeCString(ctx, szNewName);
 
   // If fileOpenRelScript failed, it already reported the error
   if (fptr1 == NULL || fptr2 == NULL)
@@ -147,7 +144,7 @@ JSAPI_FUNC(filetools_copy) {
     fflush(fptr2);
     fclose(fptr2);
     fclose(fptr1);
-    _wremove(pnewName);  // delete the partial file so it doesnt look like we succeeded
+    remove(pnewName);  // delete the partial file so it doesnt look like we succeeded
     THROW_ERROR(ctx, "File copy failed");
   }
 
@@ -162,18 +159,19 @@ JSAPI_FUNC(filetools_exists) {
     THROW_ERROR(ctx, "Invalid file name");
 
   const char* szFile = JS_ToCString(ctx, argv[0]);
-  const wchar_t* file = AnsiToUnicode(szFile);
-  JS_FreeCString(ctx, szFile);
+  if (!szFile) {
+    return JS_EXCEPTION;
+  }
 
-  wchar_t fullpath[_MAX_PATH + _MAX_FNAME];
+  char fullpath[_MAX_PATH + _MAX_FNAME];
 
-  if (getPathRelScript(file, _MAX_PATH + _MAX_FNAME, fullpath) == NULL) {
-    delete[] file;
+  if (getPathRelScript(szFile, _MAX_PATH + _MAX_FNAME, fullpath) == NULL) {
+    JS_FreeCString(ctx, szFile);
     THROW_ERROR(ctx, "Invalid file name");
   }
-  delete[] file;
+  JS_FreeCString(ctx, szFile);
 
-  return JS_NewBool(ctx, !(_waccess(fullpath, 0) != 0 && errno == ENOENT));
+  return JS_NewBool(ctx, !(_access(fullpath, 0) != 0 && errno == ENOENT));
 }
 
 JSAPI_FUNC(filetools_readText) {
@@ -181,11 +179,12 @@ JSAPI_FUNC(filetools_readText) {
     THROW_ERROR(ctx, "You must supply a file name");
 
   const char* szFile = JS_ToCString(ctx, argv[0]);
-  const wchar_t* fname = AnsiToUnicode(szFile);
-  JS_FreeCString(ctx, szFile);
+  if (!szFile) {
+    return JS_EXCEPTION;
+  }
 
-  FILE* fptr = fileOpenRelScript(fname, L"r", ctx);
-  delete[] fname;
+  FILE* fptr = fileOpenRelScript(szFile, "r", ctx);
+  JS_FreeCString(ctx, szFile);
 
   // If fileOpenRelScript failed, it already reported the error
   if (fptr == NULL)
@@ -219,9 +218,7 @@ JSAPI_FUNC(filetools_readText) {
   }
 
   // Convert to JSVAL cleanup and return
-  wchar_t* wcontents = AnsiToUnicode(contents + offset);
-  JSValue rval = JS_NewString(ctx, wcontents);
-  delete[] wcontents;
+  JSValue rval = JS_NewString(ctx, contents + offset);
   delete[] contents;
   return rval;
 }
@@ -233,11 +230,13 @@ JSAPI_FUNC(filetools_writeText) {
   EnterCriticalSection(&Vars.cFileSection);
 
   const char* szFile = JS_ToCString(ctx, argv[0]);
-  const wchar_t* fname = AnsiToUnicode(szFile);
-  JS_FreeCString(ctx, szFile);
+  if (!szFile) {
+    LeaveCriticalSection(&Vars.cFileSection);
+    return JS_EXCEPTION;
+  }
 
-  FILE* fptr = fileOpenRelScript(fname, L"w", ctx);
-  delete[] fname;
+  FILE* fptr = fileOpenRelScript(szFile, "w", ctx);
+  JS_FreeCString(ctx, szFile);
   bool result = true;
 
   // If fileOpenRelScript failed, it already reported the error
@@ -246,7 +245,7 @@ JSAPI_FUNC(filetools_writeText) {
     return JS_EXCEPTION;
   }
 
-  for (uint i = 1; i < argc; i++)
+  for (int i = 1; i < argc; i++)
     if (!writeValue(fptr, ctx, argv[i], false, true))
       result = false;
 
@@ -265,11 +264,13 @@ JSAPI_FUNC(filetools_appendText) {
   EnterCriticalSection(&Vars.cFileSection);
 
   const char* szFile = JS_ToCString(ctx, argv[0]);
-  const wchar_t* fname = AnsiToUnicode(szFile);
-  JS_FreeCString(ctx, szFile);
+  if (!szFile) {
+    LeaveCriticalSection(&Vars.cFileSection);
+    return JS_EXCEPTION;
+  }
 
-  FILE* fptr = fileOpenRelScript(fname, L"a+", ctx);
-  delete[] fname;
+  FILE* fptr = fileOpenRelScript(szFile, "a+", ctx);
+  JS_FreeCString(ctx, szFile);
   bool result = true;
 
   // If fileOpenRelScript failed, it already reported the error
@@ -278,7 +279,7 @@ JSAPI_FUNC(filetools_appendText) {
     return JS_EXCEPTION;
   }
 
-  for (uint i = 1; i < argc; i++)
+  for (int i = 1; i < argc; i++)
     if (!writeValue(fptr, ctx, argv[i], false, true))
       result = false;
 

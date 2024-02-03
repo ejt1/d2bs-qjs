@@ -86,7 +86,7 @@ struct JSClassSpec {
 JSValue BuildObject(JSContext* ctx, JSClassID class_id, JSFunctionSpec* funcs = NULL, size_t num_funcs = 0, JSPropertySpec* props = NULL, size_t num_props = 0,
                     void* priv = NULL, JSValue new_target = JS_UNDEFINED);
 
-JSValue JS_CompileFile(JSContext* ctx, JSValue globalObject, std::wstring fileName);
+JSValue JS_CompileFile(JSContext* ctx, JSValue globalObject, std::string fileName);
 
 template <typename... Args>
 JSValue JS_ReportError(JSContext* ctx, const char* fmt, Args&&... args) {

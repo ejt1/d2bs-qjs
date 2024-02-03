@@ -37,9 +37,9 @@ static JSFunctionSpec dir_methods[] = {
 
 class DirData {
  public:
-  wchar_t name[_MAX_FNAME];
-  DirData(const wchar_t* newname) {
-    wcscpy_s(name, _MAX_FNAME, newname);
+  char name[_MAX_FNAME];
+  DirData(const char* newname) {
+    strcpy_s(name, _MAX_FNAME, newname);
   }
 };
 

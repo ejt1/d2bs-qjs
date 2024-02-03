@@ -264,31 +264,31 @@ JSAPI_STRICT_PROP(box_setProperty) {
 
   switch (magic) {
     case BOX_X:
-        pBoxHook->SetX(ival);
+      pBoxHook->SetX(ival);
       break;
     case BOX_Y:
-        pBoxHook->SetY(ival);
+      pBoxHook->SetY(ival);
       break;
     case BOX_XSIZE:
-        pBoxHook->SetXSize(ival);
+      pBoxHook->SetXSize(ival);
       break;
     case BOX_YSIZE:
-        pBoxHook->SetYSize(ival);
+      pBoxHook->SetYSize(ival);
       break;
     case BOX_OPACITY:
-        pBoxHook->SetOpacity((ushort)ival);
+      pBoxHook->SetOpacity((ushort)ival);
       break;
     case BOX_COLOR:
-        pBoxHook->SetColor((ushort)ival);
+      pBoxHook->SetColor((ushort)ival);
       break;
     case BOX_ALIGN:
-        pBoxHook->SetAlign((Align)ival);
+      pBoxHook->SetAlign((Align)ival);
       break;
     case BOX_VISIBLE:
-        pBoxHook->SetIsVisible(!!bval);
+      pBoxHook->SetIsVisible(!!bval);
       break;
     case BOX_ZORDER:
-        pBoxHook->SetZOrder((ushort)ival);
+      pBoxHook->SetZOrder((ushort)ival);
       break;
     case BOX_ONCLICK:
       pBoxHook->SetClickHandler(val);
@@ -333,7 +333,7 @@ JSAPI_FUNC(line_ctor) {
     THROW_ERROR(ctx, "Failed to create line object");
   }
 
-  LineHook* pLineHook = new LineHook(script, hook, x, y, x2, y2, color, automap, Left, state);
+  LineHook* pLineHook = new LineHook(script, hook, x, y, x2, y2, static_cast<ushort>(color), automap, Left, state);
 
   if (!pLineHook) {
     THROW_ERROR(ctx, "Unable to initalize a line class.");
@@ -414,7 +414,7 @@ JSAPI_STRICT_PROP(line_setProperty) {
       pLineHook->SetColor((ushort)ival);
       break;
     case LINE_VISIBLE:
-        pLineHook->SetIsVisible(!!bval);
+      pLineHook->SetIsVisible(!!bval);
       break;
     case LINE_ZORDER:
       pLineHook->SetZOrder((ushort)ival);
@@ -439,14 +439,14 @@ JSAPI_FUNC(text_ctor) {
   uint x = 0, y = 0, color = 0, font = 0, align = Left;
   bool automap = false;
   jsval click = JS_UNDEFINED, hover = JS_UNDEFINED;
-  const wchar_t* szText = nullptr;
+  std::wstring szText;
 
   if (argc > 0 && JS_IsString(argv[0])) {
     const char* str = JS_ToCString(ctx, argv[0]);
     if (!str) {
       return JS_EXCEPTION;
     }
-    szText = AnsiToUnicode(str);
+    szText = AnsiToWide(str);
     JS_FreeCString(ctx, str);
   }
   if (argc > 1 && JS_IsNumber(argv[1]))
@@ -468,22 +468,18 @@ JSAPI_FUNC(text_ctor) {
 
   JSValue hook = BuildObject(ctx, text_class_id, text_methods, _countof(text_methods), text_props, _countof(text_props));
   if (!hook) {
-    delete[] szText;
     THROW_ERROR(ctx, "Failed to create text object");
   }
 
-  TextHook* pTextHook = new TextHook(script, hook, szText ? szText : L"", x, y, font, color, automap, (Align)align, state);
+  TextHook* pTextHook = new TextHook(script, hook, szText.c_str(), x, y, static_cast<ushort>(font), static_cast<ushort>(color), automap, (Align)align, state);
 
   if (!pTextHook) {
-    delete[] szText;
     THROW_ERROR(ctx, "Failed to create texthook");
   }
 
   JS_SetPrivate(ctx, hook, pTextHook);
   pTextHook->SetClickHandler(click);
   pTextHook->SetHoverHandler(hover);
-
-  delete[] szText;
   return hook;
 }
 
@@ -560,17 +556,16 @@ JSAPI_STRICT_PROP(text_setProperty) {
         if (!szText) {
           return JS_EXCEPTION;
         }
-        const wchar_t* pText = AnsiToUnicode(szText);
-        pTextHook->SetText(pText);
+        std::wstring pText = AnsiToWide(szText);
+        pTextHook->SetText(pText.c_str());
         JS_FreeCString(ctx, szText);
-        delete[] pText;
       }
       break;
     case TEXT_ALIGN:
       pTextHook->SetAlign((Align)ival);
       break;
     case TEXT_VISIBLE:
-        pTextHook->SetIsVisible(!!bval);
+      pTextHook->SetIsVisible(!!bval);
       break;
     case TEXT_ZORDER:
       pTextHook->SetZOrder((ushort)ival);
@@ -595,16 +590,14 @@ JSAPI_FUNC(image_ctor) {
   uint x = 0, y = 0, color = 0, align = Left;
   bool automap = false;
   jsval click = JS_UNDEFINED, hover = JS_UNDEFINED;
-  const wchar_t* szText = nullptr;
+  const char* szText = nullptr;
   wchar_t path[_MAX_FNAME + _MAX_PATH];
 
   if (argc > 0 && JS_IsString(argv[0])) {
-    const char* str = JS_ToCString(ctx, argv[0]);
-    if (!str) {
+    szText = JS_ToCString(ctx, argv[0]);
+    if (!szText) {
       return JS_EXCEPTION;
     }
-    szText = AnsiToUnicode(str);
-    JS_FreeCString(ctx, str);
   }
   if (argc > 1 && JS_IsNumber(argv[1]))
     JS_ToUint32(ctx, &x, argv[1]);
@@ -621,11 +614,11 @@ JSAPI_FUNC(image_ctor) {
   if (argc > 7 && JS_IsFunction(ctx, argv[7]))
     hover = argv[7];
 
-  if (isValidPath(path)) {
-    delete[] szText;
-    swprintf_s(path, _countof(path), L"%s", szText);
+  if (isValidPath(szText)) {
+    swprintf_s(path, _countof(path), L"%S", szText);
+    JS_FreeCString(ctx, szText);
   } else {
-    delete[] szText;
+    JS_FreeCString(ctx, szText);
     THROW_ERROR(ctx, "Invalid image file path");
   }
 
@@ -633,7 +626,7 @@ JSAPI_FUNC(image_ctor) {
   if (!hook)
     THROW_ERROR(ctx, "Failed to create image object");
 
-  ImageHook* pImageHook = new ImageHook(script, hook, path, x, y, color, automap, (Align)align, state, true);
+  ImageHook* pImageHook = new ImageHook(script, hook, path, x, y, static_cast<ushort>(color), automap, (Align)align, state, true);
 
   if (!pImageHook)
     THROW_ERROR(ctx, "Failed to create ImageHook");
@@ -706,17 +699,16 @@ JSAPI_STRICT_PROP(image_setProperty) {
         if (!szText) {
           return JS_EXCEPTION;
         }
-        const wchar_t* pText = AnsiToUnicode(szText);
-        pImageHook->SetImage(pText);
+        std::wstring pText = AnsiToWide(szText);
+        pImageHook->SetImage(pText.c_str());
         JS_FreeCString(ctx, szText);
-        delete[] pText;
       }
       break;
     case IMAGE_ALIGN:
       pImageHook->SetAlign((Align)ival);
       break;
     case IMAGE_VISIBLE:
-        pImageHook->SetIsVisible(!!bval);
+      pImageHook->SetIsVisible(!!bval);
       break;
     case IMAGE_ZORDER:
       pImageHook->SetZOrder((ushort)ival);
@@ -770,9 +762,8 @@ JSAPI_FUNC(screenToAutomap) {
       return rval;
     } else
       THROW_ERROR(ctx, "screenToAutomap expects two arguments to be two integers");
-  } else
-    THROW_ERROR(ctx, "Invalid arguments specified for screenToAutomap");
-  return JS_UNDEFINED;
+  }
+  THROW_ERROR(ctx, "Invalid arguments specified for screenToAutomap");
 }
 
 // POINT result = {ix, iy};
@@ -819,8 +810,6 @@ JSAPI_FUNC(automapToScreen) {
     } else {
       THROW_ERROR(ctx, "automapToScreen expects two arguments to be two integers");
     }
-  } else {
-    THROW_ERROR(ctx, "Invalid arguments specified for automapToScreen");
   }
-  return JS_UNDEFINED;
+  THROW_ERROR(ctx, "Invalid arguments specified for automapToScreen");
 }

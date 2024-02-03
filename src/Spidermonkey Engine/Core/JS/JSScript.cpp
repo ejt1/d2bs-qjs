@@ -8,7 +8,7 @@ EMPTY_CTOR(script)
 
 struct FindHelper {
   DWORD tid;
-  wchar_t* name;
+  char* name;
   Script* script;
 };
 
@@ -24,10 +24,7 @@ JSAPI_PROP(script_getProperty) {
 
   switch (magic) {
     case SCRIPT_FILENAME: {
-      char* szShortFilename = UnicodeToAnsi(script->GetShortFilename());
-      JSValue rval = JS_NewString(ctx, szShortFilename);
-      delete[] szShortFilename;
-      return rval;
+      return JS_NewString(ctx, script->GetShortFilename());
     } break;
     case SCRIPT_GAMETYPE:
       return JS_NewBool(ctx, script->GetMode() == kScriptModeGame ? false : true);
@@ -147,14 +144,12 @@ JSAPI_FUNC(my_getScript) {
     if (!name) {
       return JS_EXCEPTION;
     }
-    wchar_t* unicode_name = AnsiToUnicode(name);
+    char* fname = _strdup(name);
     JS_FreeCString(ctx, name);
-
-    if (unicode_name)
-      StringReplace(unicode_name, L'/', L'\\', wcslen(unicode_name));
-    FindHelper args = {0, unicode_name, NULL};
+    StringReplace(fname, '/', '\\', strlen(fname));
+    FindHelper args = {0, fname, NULL};
     sScriptEngine->ForEachScript(FindScriptByName, &args, 1);
-    delete[] unicode_name;
+    free(fname);
     if (args.script != NULL)
       iterp = args.script;
     else
@@ -199,8 +194,8 @@ JSAPI_FUNC(my_getScripts) {
 bool __fastcall FindScriptByName(Script* script, void* argv, uint /*argc*/) {
   FindHelper* helper = (FindHelper*)argv;
   // static uint pathlen = wcslen(Vars.szScriptPath) + 1;
-  const wchar_t* fname = script->GetShortFilename();
-  if (_wcsicmp(fname, helper->name) == 0) {
+  const char* fname = script->GetShortFilename();
+  if (_stricmp(fname, helper->name) == 0) {
     helper->script = script;
     return false;
   }
