@@ -9,7 +9,6 @@
 #include "JSSocket.h"
 #include "JSFileTools.h"
 #include "JSDirectory.h"
-#include "JSSQLite.h"
 #include "JSScreenHook.h"
 #include "JSParty.h"
 #include "JSArea.h"
@@ -75,8 +74,6 @@ static JSCFunctionListEntry global_funcs[] = {
     JS_FN("js_strict", my_js_strict, 0, FUNCTION_FLAGS),
     JS_FN("version", my_version, 0, FUNCTION_FLAGS),
     JS_FN("scriptBroadcast", my_scriptBroadcast, 1, FUNCTION_FLAGS),
-    JS_FN("sqlite_version", my_sqlite_version, 0, FUNCTION_FLAGS),
-    JS_FN("sqlite_memusage", my_sqlite_memusage, 0, FUNCTION_FLAGS),
     JS_FN("dopen", my_openDir, 1, FUNCTION_FLAGS),
     JS_FN("debugLog", my_debugLog, 1, FUNCTION_FLAGS),
     JS_FN("showConsole", my_showConsole, 0, FUNCTION_FLAGS),

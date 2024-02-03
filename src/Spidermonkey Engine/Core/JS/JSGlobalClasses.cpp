@@ -1,7 +1,6 @@
 #include "js32.h"
 #include "JSFile.h"
 #include "JSSocket.h"
-#include "JSSQLite.h"
 #include "JSUnit.h"
 #include "JSScreenHook.h"
 #include "JSPresetUnit.h"
@@ -15,8 +14,6 @@
 #include "JSScript.h"
 #include "JSProfile.h"
 
-JSClassID sqlite_db_class_id;
-JSClassID sqlite_stmt_class_id;
 JSClassID script_class_id;
 JSClassID frame_class_id;
 JSClassID box_class_id;
@@ -37,16 +34,6 @@ JSClassID unit_class_id;
 JSClassID profile_class_id;
 JSClassID profileType_class_id;
 JSClassID dialogLine_class_id;
-
-JSClassDef sqlite_db = {
-    .class_name = "SQLite",
-    .finalizer = sqlite_finalizer,
-};
-
-JSClassDef sqlite_stmt = {
-    .class_name = "DBStatement",
-    .finalizer = sqlite_stmt_finalizer,
-};
 
 JSClassDef script_class = {
     .class_name = "D2BSScript",
@@ -154,9 +141,6 @@ JSClassSpec global_classes[] = {
     {&socket_class_id, &socket_class, 0, socket_ctor, 0, socket_methods, _countof(socket_methods), socket_props, _countof(socket_props), socket_s_methods,
      _countof(socket_s_methods), NULL, 0},
     {&filetools_class_id, &filetools_class, 0, filetools_ctor, 0, NULL, 0, NULL, 0, filetools_s_methods, _countof(filetools_s_methods), NULL, 0},
-    {&sqlite_db_class_id, &sqlite_db, 0, sqlite_ctor, 0, sqlite_methods, _countof(sqlite_methods), sqlite_props, _countof(sqlite_props), NULL, 0, NULL, 0},
-    {&sqlite_stmt_class_id, &sqlite_stmt, 0, sqlite_stmt_ctor, 0, sqlite_stmt_methods, _countof(sqlite_stmt_methods), sqlite_stmt_props, _countof(sqlite_stmt_props),
-     NULL, 0, NULL, 0},
     {&script_class_id, &script_class, 0, script_ctor, 0, script_methods, _countof(script_methods), script_props, _countof(script_props), NULL, 0, NULL, 0},
 
     {&frame_class_id, &frame_class, 0, frame_ctor, 0, frame_methods, _countof(frame_methods), frame_props, _countof(frame_props), NULL, 0, NULL, 0},

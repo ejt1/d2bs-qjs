@@ -38,7 +38,6 @@ set(D2BS_SRCS
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Misc/js32.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Misc/Localization.cc"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Misc/Offset.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/Misc/sqlite3.c"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Misc/stringhash.cpp"
 
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/C/Control.cpp"
@@ -70,7 +69,6 @@ set(D2BS_SRCS
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSScreenHook.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSScript.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSSocket.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSSQLite.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSUnit.cpp"
   
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Engine/AutoRoot.cpp"
