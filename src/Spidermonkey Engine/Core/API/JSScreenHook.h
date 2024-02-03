@@ -15,7 +15,7 @@ JSAPI_STRICT_PROP(frame_setProperty);
 
 enum frame_tinyid { FRAME_X, FRAME_Y, FRAME_XSIZE, FRAME_YSIZE, FRAME_VISIBLE, FRAME_ALIGN, FRAME_ONCLICK, FRAME_ONHOVER, FRAME_ZORDER };
 
-static JSPropertySpec frame_props[] = {
+static JSCFunctionListEntry frame_props[] = {
     JS_CGETSET_MAGIC_DEF("x", frame_getProperty, frame_setProperty, FRAME_X),
     JS_CGETSET_MAGIC_DEF("y", frame_getProperty, frame_setProperty, FRAME_Y),
     JS_CGETSET_MAGIC_DEF("xsize", frame_getProperty, frame_setProperty, FRAME_XSIZE),

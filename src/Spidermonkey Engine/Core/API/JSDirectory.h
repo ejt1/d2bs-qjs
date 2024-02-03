@@ -24,7 +24,7 @@ JSAPI_PROP(dir_getProperty);
 
 enum { DIR_NAME };
 
-static JSPropertySpec dir_props[] = {
+static JSCFunctionListEntry dir_props[] = {
     JS_CGETSET_MAGIC_DEF("name", dir_getProperty, nullptr, DIR_NAME),
 };
 

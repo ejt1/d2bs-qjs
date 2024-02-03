@@ -24,7 +24,6 @@ typedef int32_t jsint;
 typedef uint32_t jsuint;
 typedef uint16_t uint16;
 typedef JSValue jsval;
-typedef JSCFunctionListEntry JSPropertySpec;
 
 // #define NUM(x) #x
 // #define NAME(line, v) (__FILE__ ":" NUM(line) " -> " #v)
@@ -82,7 +81,8 @@ struct JSClassSpec {
     return JS_ThrowReferenceError(ctx, "Invalid Operation"); \
   }
 
-JSValue BuildObject(JSContext* ctx, JSClassID class_id, JSCFunctionListEntry* funcs = NULL, size_t num_funcs = 0, JSPropertySpec* props = NULL, size_t num_props = 0,
+JSValue BuildObject(JSContext* ctx, JSClassID class_id, JSCFunctionListEntry* funcs = NULL, size_t num_funcs = 0, JSCFunctionListEntry* props = NULL,
+                    size_t num_props = 0,
                     void* priv = NULL, JSValue new_target = JS_UNDEFINED);
 
 JSValue JS_CompileFile(JSContext* ctx, JSValue globalObject, std::string fileName);

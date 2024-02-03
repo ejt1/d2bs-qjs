@@ -95,7 +95,7 @@ int file.position - object - the current position in the file
 bool file.eof - object - determines if the file is at end-of-file or not
 **/
 
-static JSPropertySpec file_props[] = {
+static JSCFunctionListEntry file_props[] = {
     JS_CGETSET_MAGIC_DEF("readable", file_getProperty, nullptr, FILE_READABLE),
     JS_CGETSET_MAGIC_DEF("writeable", file_getProperty, nullptr, FILE_WRITEABLE),
     JS_CGETSET_MAGIC_DEF("seekable", file_getProperty, nullptr, FILE_SEEKABLE),

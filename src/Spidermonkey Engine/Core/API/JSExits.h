@@ -11,7 +11,7 @@ JSAPI_PROP(exit_getProperty);
 
 enum exit_tinyid { EXIT_X, EXIT_Y, EXIT_TARGET, EXIT_TYPE, EXIT_TILEID, EXIT_LEVELID };
 
-static JSPropertySpec exit_props[] = {
+static JSCFunctionListEntry exit_props[] = {
     JS_CGETSET_MAGIC_DEF("x", exit_getProperty, nullptr, EXIT_X),           JS_CGETSET_MAGIC_DEF("y", exit_getProperty, nullptr, EXIT_Y),
     JS_CGETSET_MAGIC_DEF("target", exit_getProperty, nullptr, EXIT_TARGET), JS_CGETSET_MAGIC_DEF("type", exit_getProperty, nullptr, EXIT_TYPE),
     JS_CGETSET_MAGIC_DEF("tileid", exit_getProperty, nullptr, EXIT_TILEID), JS_CGETSET_MAGIC_DEF("level", exit_getProperty, nullptr, EXIT_LEVELID),
