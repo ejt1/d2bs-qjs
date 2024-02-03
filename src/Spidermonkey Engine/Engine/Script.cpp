@@ -843,13 +843,11 @@ void Script::Cleanup() {
   Genhook::Clean(this);
 
   if (m_context) {
-    Log(L"Destroying context for %S", m_fileName.c_str());
     JS_FreeValue(m_context, m_script);
     JS_FreeValue(m_context, m_globalObject);
     JS_FreeContext(m_context);
   }
   if (m_runtime) {
-    Log(L"Destroying runtime for %S", m_fileName.c_str());
     JS_FreeRuntime(m_runtime);
   }
   m_hasActiveCX = false;

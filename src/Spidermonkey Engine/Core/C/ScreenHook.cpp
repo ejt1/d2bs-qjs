@@ -170,7 +170,7 @@ Genhook::Genhook(Script* nowner, JSValue nself, uint32_t x, uint32_t y, ushort n
   // InitializeCriticalSection(&hookSection);
   clicked = JS_UNDEFINED;
   hovered = JS_UNDEFINED;
-  self = JS_DupValue(nowner->GetContext(), nself);
+  self = nself;
   SetX(x);
   SetY(y);
   EnterCriticalSection(&globalSection);
@@ -180,11 +180,6 @@ Genhook::Genhook(Script* nowner, JSValue nself, uint32_t x, uint32_t y, ushort n
 
 Genhook::~Genhook(void) {
   Lock();
-  if (owner && !JS_IsFunction(owner->GetContext(), clicked))
-    JS_FreeValue(owner->GetContext(), clicked);
-  if (owner && !JS_IsFunction(owner->GetContext(), hovered))
-    JS_FreeValue(owner->GetContext(), hovered);
-  JS_FreeValue(owner->GetContext(), self);
 
   EnterCriticalSection(&globalSection);
 
@@ -257,13 +252,7 @@ void Genhook::SetClickHandler(JSValue handler) {
     return;
   Lock();
 
-  JSContext* cx = owner->GetContext();
-  if (JS_IsFunction(cx, handler)) {
-    if (JS_IsFunction(owner->GetContext(), clicked)) {
-      JS_FreeValue(owner->GetContext(), clicked);
-    }
-    clicked = JS_DupValue(cx, handler);
-  }
+  clicked = handler;
   //	if(!JSVAL_IS_VOID(clicked))
   //	{
   //		if(JS_AddRoot(owner->GetContext(),&clicked) == JS_FALSE)

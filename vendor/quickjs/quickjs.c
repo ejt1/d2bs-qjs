@@ -99,8 +99,8 @@
 /* dump objects leaking when freeing the runtime */
 #define DUMP_LEAKS  1
 #define DUMP_LEAKS_OBJECTS 1
-#define DUMP_LEAKS_ATOMS 0
-#define DUMP_LEAKS_STRINGS 0
+#define DUMP_LEAKS_ATOMS 1
+#define DUMP_LEAKS_STRINGS 1
 /* dump memory usage before running the garbage collector */
 //#define DUMP_MEM
 //#define DUMP_OBJECTS    /* dump objects in JS_FreeContext */

@@ -49,8 +49,8 @@ class Genhook {
   POINT location;
   // CRITICAL_SECTION hookSection;
 
-  Genhook(const Genhook&);
-  Genhook& operator=(const Genhook&);
+  Genhook(const Genhook&) = delete;
+  Genhook& operator=(const Genhook&) = delete;
 
  public:
   Genhook(Script* nowner, JSValue nself, uint32_t x, uint32_t y, ushort nopacity, bool nisAutomap = false, Align nalign = Left, ScreenhookState ngameState = Perm);
