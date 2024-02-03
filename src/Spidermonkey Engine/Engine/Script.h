@@ -7,7 +7,6 @@
 
 #include "js32.h"
 #include "JSGlobalClasses.h"
-#include "AutoRoot.h"
 #include "JSUnit.h"
 #include "Events.h"
 

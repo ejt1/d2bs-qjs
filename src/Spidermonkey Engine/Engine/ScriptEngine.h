@@ -5,7 +5,6 @@
 #include <string>
 
 #include "js32.h"
-#include "AutoRoot.h"
 #include "Script.h"
 
 typedef std::map<std::string, Script*> ScriptMap;

@@ -17,13 +17,6 @@
 
 JSValue JS_NewString(JSContext* ctx, const wchar_t* str);
 
-// JSBool JSVAL_IS_OBJECT(JSValue v);
-
-struct JSClass2 {
-  JSClassID* classpid;
-  JSClassDef* classp;
-};
-
 struct JSClassSpec {
   JSClassID* pclass_id;
   JSClassDef* classp;
@@ -40,11 +33,6 @@ struct JSClassSpec {
   int num_s_properties;
 };
 
-// #define JSVAL_IS_FUNCTION(cx, var) (!JSVAL_IS_PRIMITIVE(var) && JS_ObjectIsFunction(cx, JSVAL_TO_OBJECT(var)))
-//
-// #define JSPROP_PERMANENT_VAR (JSPROP_READONLY | JSPROP_ENUMERATE | JSPROP_PERMANENT)
-// #define JSPROP_STATIC_VAR (JSPROP_ENUMERATE | JSPROP_PERMANENT)
-//
 #define CLASS_CTOR(name) \
   JSValue name##_ctor([[maybe_unused]] JSContext* ctx, [[maybe_unused]] JSValueConst new_target, [[maybe_unused]] int argc, [[maybe_unused]] JSValueConst* argv)
 
@@ -80,10 +68,6 @@ void JS_ReportPendingException(JSContext* ctx);
     return JS_EXCEPTION;       \
   }
 
-//
-// #define JSPROP_DEFAULT JSPROP_ENUMERATE | JSPROP_PERMANENT
-// #define JSPROP_STATIC JSPROP_ENUMERATE | JSPROP_PERMANENT | JSPROP_READONLY
-//
 #define JSAPI_FUNC(name) \
   JSValue name##([[maybe_unused]] JSContext * ctx, [[maybe_unused]] JSValueConst this_val, [[maybe_unused]] int argc, [[maybe_unused]] JSValueConst* argv)
 
@@ -93,30 +77,3 @@ void JS_ReportPendingException(JSContext* ctx);
 //
 #define JS_FN(name, func, length, flags) JS_CFUNC_DEF(name, length, func)
 #define JS_FS(name, func, length, flags) JS_CFUNC_DEF(name, length, func)
-//
-// #define JS_PS(name, id, flags, getter, setter) \
-//  { name, id, flags, getter, setter }
-//
-// #define JS_PS_END JS_PS(0, 0, 0, 0, 0)
-//
-// #define JS_CS(classp, proto, ctor, argc, methods, props, static_methods, static_props) \
-//  { classp, proto, ctor, argc, methods, props, static_methods, static_props }
-//
-// #define JS_CS_END \
-//  { 0 }
-//
-// #define JS_MS(name, classes, static_methods, static_properties) \
-//  { L##name, classes, static_methods, static_properties }
-//
-// #define JS_MS_END \
-//  { 0, 0, 0, 0 }
-//
-// #define JSCLASS_SPEC(add, del, get, set, enumerate, resolve, convert, finalize, ctor) \
-//  add, del, get, set, enumerate, resolve, convert, finalize, NULL, NULL, NULL, ctor, NULL
-//
-// #define JSCLASS_DEFAULT_WITH_CTOR(ctor) \
-//  JSCLASS_SPEC(JS_PropertyStub, JS_PropertyStub, JS_PropertyStub, JS_StrictPropertyStub, JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub, JS_FinalizeStub, ctor)
-//
-// #define JSCLASS_DEFAULT_STANDARD_MEMBERS \
-//  JS_PropertyStub, JS_PropertyStub, JS_PropertyStub, JS_StrictPropertyStub, JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub, JS_FinalizeStub,
-//  JSCLASS_NO_OPTIONAL_MEMBERS
