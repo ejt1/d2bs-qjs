@@ -11,6 +11,7 @@ CLASS_FINALIZER(area) {
 
   if (pArea) {
     JS_SetOpaque(val, NULL);
+    JS_FreeValueRT(rt, pArea->ExitArray);
     delete pArea;
   }
 }
@@ -27,7 +28,7 @@ JSAPI_PROP(area_getProperty) {
 
   switch (magic) {
     case AUNIT_EXITS: {
-      if (pArea->ExitArray == NULL) {
+      if (pArea->ExitArray == JS_UNDEFINED) {
         pArea->ExitArray = JS_NewArray(ctx);
 
         ActMap* map = ActMap::GetMap(pLevel);
@@ -53,7 +54,7 @@ JSAPI_PROP(area_getProperty) {
           JS_SetPropertyUint32(ctx, pArea->ExitArray, i, pExit);
         }
       }
-      return pArea->ExitArray;
+      return JS_DupValue(ctx, pArea->ExitArray);
     } break;
     case AUNIT_NAME: {
       LevelTxt* pTxt = D2COMMON_GetLevelText(pArea->AreaId);
@@ -106,7 +107,7 @@ JSAPI_FUNC(my_getArea) {
   }
 
   pArea->AreaId = nArea;
-  pArea->ExitArray = NULL;
+  pArea->ExitArray = JS_UNDEFINED;
 
   JSValue unit = BuildObject(ctx, area_class_id, NULL, 0, area_props, _countof(area_props), pArea);
   if (JS_IsException(unit)) {
