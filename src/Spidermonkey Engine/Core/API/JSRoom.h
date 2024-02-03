@@ -33,7 +33,7 @@ enum room_tinyid {
   ROOM_CORRECTTOMB,
 };
 
-static JSPropertySpec room_props[] = {
+static JSCFunctionListEntry room_props[] = {
     JS_CGETSET_MAGIC_DEF("number", room_getProperty, nullptr, ROOM_NUM),
     JS_CGETSET_MAGIC_DEF("x", room_getProperty, nullptr, ROOM_XPOS),
     JS_CGETSET_MAGIC_DEF("y", room_getProperty, nullptr, ROOM_YPOS),
@@ -45,7 +45,7 @@ static JSPropertySpec room_props[] = {
     JS_CGETSET_MAGIC_DEF("correcttomb", room_getProperty, nullptr, ROOM_CORRECTTOMB),
 };
 
-static JSFunctionSpec room_methods[] = {
+static JSCFunctionListEntry room_methods[] = {
     JS_FS("getNext", room_getNext, 0, FUNCTION_FLAGS),
     JS_FS("reveal", room_reveal, 1, FUNCTION_FLAGS),
     JS_FS("getPresetUnits", room_getPresetUnits, 0, FUNCTION_FLAGS),

@@ -27,7 +27,7 @@ enum jsProfileProperty_ids {
   PROFILE_MAXCHARSELTIME
 };
 
-static JSPropertySpec profile_props[] = {
+static JSCFunctionListEntry profile_props[] = {
     JS_CGETSET_MAGIC_DEF("type", profile_getProperty, nullptr, PROFILE_TYPE),
     JS_CGETSET_MAGIC_DEF("ip", profile_getProperty, nullptr, PROFILE_IP),
     JS_CGETSET_MAGIC_DEF("username", profile_getProperty, nullptr, PROFILE_USERNAME),
@@ -38,7 +38,7 @@ static JSPropertySpec profile_props[] = {
     JS_CGETSET_MAGIC_DEF("maxCharacterSelectTime", profile_getProperty, nullptr, PROFILE_MAXCHARSELTIME),
 };
 
-static JSFunctionSpec profile_methods[] = {
+static JSCFunctionListEntry profile_methods[] = {
     JS_FS("login", profile_login, 0, FUNCTION_FLAGS),
 };
 
@@ -46,7 +46,7 @@ CLASS_CTOR(profileType);
 
 JSAPI_PROP(profileType_getProperty);
 
-static JSPropertySpec profileType_props[] = {
+static JSCFunctionListEntry profileType_props[] = {
     JS_CGETSET_MAGIC_DEF("singlePlayer", profileType_getProperty, nullptr, PROFILETYPE_SINGLEPLAYER),
     JS_CGETSET_MAGIC_DEF("battleNet", profileType_getProperty, nullptr, PROFILETYPE_BATTLENET),
     JS_CGETSET_MAGIC_DEF("openBattleNet", profileType_getProperty, nullptr, PROFILETYPE_OPEN_BATTLENET),

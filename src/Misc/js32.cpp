@@ -39,7 +39,7 @@ JSValue JS_NewString(JSContext* ctx, const wchar_t* str) {
   return JS_NewString(ctx, utf8.c_str());
 }
 
-JSValue BuildObject(JSContext* ctx, JSClassID class_id, JSFunctionSpec* funcs, size_t num_funcs, JSPropertySpec* props, size_t num_props, void* opaque,
+JSValue BuildObject(JSContext* ctx, JSClassID class_id, JSCFunctionListEntry* funcs, size_t num_funcs, JSPropertySpec* props, size_t num_props, void* opaque,
                     JSValue new_target) {
   JSValue proto;
   if (JS_IsUndefined(new_target)) {

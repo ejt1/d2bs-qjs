@@ -45,7 +45,7 @@ enum control_tinyid {
   CONTROL_DISABLED
 };
 
-static JSPropertySpec control_props[] = {
+static JSCFunctionListEntry control_props[] = {
     JS_CGETSET_MAGIC_DEF("text", control_getProperty, control_setProperty, CONTROL_TEXT),
     JS_CGETSET_MAGIC_DEF("x", control_getProperty, nullptr, CONTROL_X),
     JS_CGETSET_MAGIC_DEF("y", control_getProperty, nullptr, CONTROL_Y),
@@ -60,7 +60,7 @@ static JSPropertySpec control_props[] = {
     JS_CGETSET_MAGIC_DEF("disabled", control_getProperty, control_setProperty, CONTROL_DISABLED),
 };
 
-static JSFunctionSpec control_funcs[] = {
+static JSCFunctionListEntry control_funcs[] = {
     JS_FS("getNext", control_getNext, 0, FUNCTION_FLAGS),
     JS_FS("click", control_click, 0, FUNCTION_FLAGS),
     JS_FS("setText", control_setText, 1, FUNCTION_FLAGS),

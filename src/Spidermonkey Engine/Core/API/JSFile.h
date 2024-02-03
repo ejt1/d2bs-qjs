@@ -44,7 +44,7 @@ or optionally lines, in the file, optionally from the start of the file, stops a
 to disk File file.reset() - object - seek to the beginning of the file File file.end() - object - seek to the end of the file
 **/
 
-static JSFunctionSpec file_methods[] = {
+static JSCFunctionListEntry file_methods[] = {
     JS_FN("close", file_close, 0, FUNCTION_FLAGS),
     JS_FN("reopen", file_reopen, 0, FUNCTION_FLAGS),
     JS_FN("read", file_read, 1, FUNCTION_FLAGS),
@@ -58,7 +58,7 @@ static JSFunctionSpec file_methods[] = {
     JS_FN("end", file_end, 0, FUNCTION_FLAGS),
 };
 
-static JSFunctionSpec file_s_methods[] = {
+static JSCFunctionListEntry file_s_methods[] = {
     JS_FN("open", file_open, 2, FUNCTION_FLAGS),
 };
 

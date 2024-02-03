@@ -23,7 +23,7 @@ enum party_tinyid {
   PARTY_LEVEL,
 };
 
-static JSPropertySpec party_props[] = {
+static JSCFunctionListEntry party_props[] = {
     JS_CGETSET_MAGIC_DEF("x", party_getProperty, nullptr, PARTY_X),
     JS_CGETSET_MAGIC_DEF("y", party_getProperty, nullptr, PARTY_Y),
     JS_CGETSET_MAGIC_DEF("area", party_getProperty, nullptr, PARTY_AREA),
@@ -36,7 +36,7 @@ static JSPropertySpec party_props[] = {
     JS_CGETSET_MAGIC_DEF("level", party_getProperty, nullptr, PARTY_LEVEL),
 };
 
-static JSFunctionSpec party_methods[] = {
+static JSCFunctionListEntry party_methods[] = {
     JS_FS("getNext", party_getNext, 0, FUNCTION_FLAGS),
 };
 
