@@ -86,7 +86,7 @@ JSAPI_FUNC(my_getParty) {
   if (argc == 1) {
     UnitAny* inUnit = NULL;
     const char* nPlayerName = nullptr;
-    uint32 nPlayerId = NULL;
+    uint32_t nPlayerId = NULL;
 
     if (JS_IsString(argv[0])) {
       nPlayerName = JS_ToCString(ctx, argv[0]);

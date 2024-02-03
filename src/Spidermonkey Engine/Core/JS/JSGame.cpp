@@ -205,8 +205,8 @@ JSAPI_FUNC(my_getPath) {
   if (argc < 5)
     THROW_ERROR(ctx, "Not enough parameters were passed to getPath!");
 
-  uint lvl = 0, x = 0, y = 0, dx = 0, dy = 0, reductionType = 0, radius = 20;
-  uint* args[] = {&lvl, &x, &y, &dx, &dy, &reductionType, &radius};
+  uint32_t lvl = 0, x = 0, y = 0, dx = 0, dy = 0, reductionType = 0, radius = 20;
+  uint32_t* args[] = {&lvl, &x, &y, &dx, &dy, &reductionType, &radius};
   for (int i = 0; i < argc && i < _countof(args); ++i) {
     if (JS_IsNumber(argv[i]) && JS_ToUint32(ctx, args[i], argv[i])) {
       return JS_EXCEPTION;
@@ -291,8 +291,8 @@ JSAPI_FUNC(my_getCollision) {
     THROW_WARNING(ctx, "Game not ready");
   }
 
-  uint32 nLevelId, nX, nY;
-  uint* args[] = {&nLevelId, &nX, &nY};
+  uint32_t nLevelId, nX, nY;
+  uint32_t* args[] = {&nLevelId, &nX, &nY};
   for (int i = 0; i < argc && i < _countof(args); ++i) {
     if (JS_IsNumber(argv[i]) && JS_ToUint32(ctx, args[i], argv[i])) {
       return JS_EXCEPTION;
@@ -386,8 +386,8 @@ JSAPI_FUNC(my_clickItem) {
     delete cRoom;
     return rval;
   } else if (argc == 2 && JS_IsNumber(argv[0]) && JS_IsNumber(argv[1])) {
-    jsint nClickType;
-    jsint nBodyLoc;
+    int32_t nClickType;
+    int32_t nBodyLoc;
     JS_ToInt32(ctx, &nClickType, argv[0]);
     JS_ToInt32(ctx, &nBodyLoc, argv[1]);
 
@@ -425,7 +425,7 @@ JSAPI_FUNC(my_clickItem) {
 
     pUnit = D2CLIENT_FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
 
-    jsint nClickType;
+    int32_t nClickType;
     JS_ToInt32(ctx, &nClickType, argv[0]);
 
     if (!pUnit || !(pUnit->dwType == UNIT_ITEM) || !pUnit->pItemData) {
@@ -518,10 +518,10 @@ JSAPI_FUNC(my_clickItem) {
     }
   } else if (argc == 4) {
     if (JS_IsNumber(argv[0]) && JS_IsNumber(argv[1]) && JS_IsNumber(argv[2]) && JS_IsNumber(argv[3])) {
-      jsint nButton;
-      jsint nX;
-      jsint nY;
-      jsint nLoc;
+      int32_t nButton;
+      int32_t nX;
+      int32_t nY;
+      int32_t nLoc;
       JS_ToInt32(ctx, &nButton, argv[0]);
       JS_ToInt32(ctx, &nX, argv[1]);
       JS_ToInt32(ctx, &nY, argv[2]);
@@ -652,8 +652,8 @@ JSAPI_FUNC(my_rand) {
   else
     seed = rand();
 
-  jsint high;
-  jsint low;
+  int32_t high;
+  int32_t low;
   JS_ToInt32(ctx, &low, argv[0]);
   JS_ToInt32(ctx, &high, argv[1]);
 
@@ -670,10 +670,10 @@ JSAPI_FUNC(my_getDistance) {
     THROW_WARNING(ctx, "Game not ready");
 
   // TODO: Add the type of distance to the api design
-  jsint nX1 = NULL;
-  jsint nX2 = NULL;
-  jsint nY1 = NULL;
-  jsint nY2 = NULL;
+  int32_t nX1 = NULL;
+  int32_t nX2 = NULL;
+  int32_t nY1 = NULL;
+  int32_t nY2 = NULL;
 
   if (argc == 1 && JS_IsObject(argv[0])) {
     JSValue x1 = JS_GetPropertyStr(ctx, argv[0], "x");
@@ -749,8 +749,8 @@ JSAPI_FUNC(my_gold) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  jsint nGold = NULL;
-  jsint nMode = 1;
+  int32_t nGold = NULL;
+  int32_t nMode = 1;
 
   if (argc > 0 && JS_IsNumber(argv[0]))
     JS_ToInt32(ctx, &nGold, argv[0]);
@@ -769,7 +769,7 @@ JSAPI_FUNC(my_checkCollision) {
   if (argc == 3 && JS_IsObject(argv[0]) && JS_IsObject(argv[1]) && JS_IsNumber(argv[2])) {
     myUnit* pUnitA = (myUnit*)JS_GetPrivate(ctx, argv[0]);
     myUnit* pUnitB = (myUnit*)JS_GetPrivate(ctx, argv[1]);
-    jsint nBitMask;
+    int32_t nBitMask;
     JS_ToInt32(ctx, &nBitMask, argv[2]);
 
     if (!pUnitA || (pUnitA->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT || !pUnitB || (pUnitB->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
@@ -788,7 +788,7 @@ JSAPI_FUNC(my_checkCollision) {
 }
 
 JSAPI_FUNC(my_getCursorType) {
-  jsint nType = NULL;
+  int32_t nType = NULL;
 
   if (argc > 0)
     JS_ToInt32(ctx, &nType, argv[0]);
@@ -819,7 +819,7 @@ JSAPI_FUNC(my_getSkillById) {
   if (argc < 1 || !JS_IsNumber(argv[0]))
     return JS_TRUE;
 
-  jsint nId;
+  int32_t nId;
   JS_ToInt32(ctx, &nId, argv[0]);
 
   int row = 0;
@@ -874,7 +874,7 @@ JSAPI_FUNC(my_getTradeInfo) {
   if (!JS_IsNumber(argv[0]))
     return JS_FALSE;
 
-  jsint nMode;
+  int32_t nMode;
   JS_ToInt32(ctx, &nMode, argv[0]);
   switch (nMode) {
     case 0:
@@ -900,7 +900,7 @@ JSAPI_FUNC(my_getUIFlag) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  jsint nUIId;
+  int32_t nUIId;
   JS_ToInt32(ctx, &nUIId, argv[0]);
   return JS_NewBool(ctx, D2CLIENT_GetUIState(nUIId));
 }
@@ -913,7 +913,7 @@ JSAPI_FUNC(my_getWaypoint) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  jsint nWaypointId;
+  int32_t nWaypointId;
   JS_ToInt32(ctx, &nWaypointId, argv[0]);
 
   if (nWaypointId > 40)
@@ -948,7 +948,7 @@ JSAPI_FUNC(my_playSound) {
     return JS_FALSE;
   }
 
-  // jsint nSoundId = JSVAL_TO_INT(JS_ARGV(cx, vp)[0]);
+  // int32_t nSoundId = JSVAL_TO_INT(JS_ARGV(cx, vp)[0]);
   // D2CLIENT_PlaySound(nSoundId);
 
   return JS_TRUE;
@@ -991,7 +991,7 @@ JSAPI_FUNC(my_clickParty) {
   if (!bFound)
     return rval;
 
-  jsint nMode;
+  int32_t nMode;
   JS_ToInt32(ctx, &nMode, argv[1]);
 
   BnetData* pData = (*p_D2LAUNCH_BnData);
@@ -1040,7 +1040,7 @@ JSAPI_FUNC(my_useStatPoint) {
     THROW_WARNING(ctx, "Game not ready");
 
   uint32_t stat = 0;
-  int32 count = 1;
+  int32_t count = 1;
   JS_ToUint32(ctx, &stat, argv[0]);
   if (argc > 1) {
     JS_ToInt32(ctx, &count, argv[1]);
@@ -1055,7 +1055,7 @@ JSAPI_FUNC(my_useSkillPoint) {
     THROW_WARNING(ctx, "Game not ready");
 
   uint32_t skill = 0;
-  int32 count = 1;
+  int32_t count = 1;
   JS_ToUint32(ctx, &skill, argv[0]);
   if (argc > 1) {
     JS_ToInt32(ctx, &count, argv[1]);
@@ -1068,9 +1068,9 @@ JSAPI_FUNC(my_useSkillPoint) {
 JSAPI_FUNC(my_getBaseStat) {
   if (argc > 2) {
     const char *szStatName = NULL, *szTableName = NULL;
-    jsint nBaseStat = 0;
-    jsint nClassId = 0;
-    jsint nStat = -1;
+    int32_t nBaseStat = 0;
+    int32_t nClassId = 0;
+    int32_t nStat = -1;
     if (JS_IsString(argv[0])) {
       szTableName = JS_ToCString(ctx, argv[0]);
       if (!szTableName) {
@@ -1110,7 +1110,7 @@ JSAPI_FUNC(my_weaponSwitch) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  jsint nParameter = NULL;
+  int32_t nParameter = NULL;
   if (argc > 0) {
     if (JS_ToInt32(ctx, &nParameter, argv[0])) {
       THROW_ERROR(ctx, "Could not convert value");
@@ -1157,8 +1157,8 @@ JSAPI_FUNC(my_getPlayerFlag) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  uint32 nFirstUnitId = (uint32)-1;
-  uint32 nSecondUnitId = (uint32)-1;
+  uint32_t nFirstUnitId = (uint32_t)-1;
+  uint32_t nSecondUnitId = (uint32_t)-1;
   uint32_t nFlag;
   JS_ToUint32(ctx, &nFirstUnitId, argv[0]);
   JS_ToUint32(ctx, &nSecondUnitId, argv[1]);

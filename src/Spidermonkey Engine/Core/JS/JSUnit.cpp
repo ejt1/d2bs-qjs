@@ -507,9 +507,9 @@ JSAPI_FUNC(unit_getUnit) {
     return JS_UNDEFINED;
 
   int nType = -1;
-  uint32 nClassId = (uint32)-1;
-  uint32 nMode = (uint32)-1;
-  uint32 nUnitId = (uint32)-1;
+  uint32_t nClassId = (uint32_t)-1;
+  uint32_t nMode = (uint32_t)-1;
+  uint32_t nUnitId = (uint32_t)-1;
   const char* szName = nullptr;
 
   if (argc > 0 && JS_IsNumber(argv[0]))
@@ -580,10 +580,10 @@ JSAPI_FUNC(unit_getNext) {
     }
 
     if (argc > 0 && JS_IsNumber(argv[0]) && !JS_IsNull(argv[1]))
-      JS_ToUint32(ctx, (uint32*)&(lpUnit->dwClassId), argv[0]);
+      JS_ToUint32(ctx, (uint32_t*)&(lpUnit->dwClassId), argv[0]);
 
     if (argc > 1 && JS_IsNumber(argv[1]) && !JS_IsNull(argv[2]))
-      JS_ToUint32(ctx, (uint32*)&(lpUnit->dwMode), argv[1]);
+      JS_ToUint32(ctx, (uint32_t*)&(lpUnit->dwMode), argv[1]);
 
     pUnit = GetNextUnit(pUnit, lpUnit->szName, lpUnit->dwClassId, lpUnit->dwType, lpUnit->dwMode);
     if (!pUnit) {
@@ -615,10 +615,10 @@ JSAPI_FUNC(unit_getNext) {
     }
 
     if (argc > 0 && JS_IsNumber(argv[0]) && !JS_IsNull(argv[1]))
-      JS_ToUint32(ctx, (uint32*)&(pmyUnit->dwClassId), argv[0]);
+      JS_ToUint32(ctx, (uint32_t*)&(pmyUnit->dwClassId), argv[0]);
 
     if (argc > 1 && JS_IsNumber(argv[1]) && !JS_IsNull(argv[2]))
-      JS_ToUint32(ctx, (uint32*)&(pmyUnit->dwMode), argv[1]);
+      JS_ToUint32(ctx, (uint32_t*)&(pmyUnit->dwMode), argv[1]);
 
     UnitAny* nextItem = GetInvNextUnit(pUnit, pOwner, pmyUnit->szName, pmyUnit->dwClassId, pmyUnit->dwMode);
     if (!nextItem) {
@@ -645,11 +645,11 @@ JSAPI_FUNC(unit_cancel) {
     THROW_WARNING(ctx, "Game not ready");
 
   DWORD automapOn = *p_D2CLIENT_AutomapOn;
-  jsint mode = -1;
+  int32_t mode = -1;
 
   if (argc > 0) {
     if (JS_IsNumber(argv[0]))
-      JS_ToUint32(ctx, (uint32*)&mode, argv[0]);
+      JS_ToUint32(ctx, (uint32_t*)&mode, argv[0]);
   } else if (IsScrollingText())
     mode = 3;
   else if (D2CLIENT_GetCurrentInteractingNPC())
@@ -758,7 +758,7 @@ JSAPI_FUNC(unit_interact) {
 
   if (pUnit->dwType == UNIT_OBJECT && argc == 1 && JS_IsNumber(argv[0])) {
     // TODO: check the range on argv[0] to make sure it won't crash the game - Done! TechnoHunter
-    jsint nWaypointID;
+    int32_t nWaypointID;
     if (JS_ToInt32(ctx, &nWaypointID, argv[0])) {
       return JS_FALSE;
     }
@@ -800,8 +800,8 @@ JSAPI_FUNC(unit_getStat) {
   if (!pUnit)
     return JS_FALSE;
 
-  jsint nStat = 0;
-  jsint nSubIndex = 0;
+  int32_t nStat = 0;
+  int32_t nSubIndex = 0;
   JS_ToInt32(ctx, &nStat, argv[0]);
   if (JS_IsNumber(argv[1])) {
     JS_ToInt32(ctx, &nSubIndex, argv[1]);
@@ -970,7 +970,7 @@ JSAPI_FUNC(unit_getState) {
   if (!pUnit || !JS_IsNumber(argv[0]))
     return JS_FALSE;
 
-  jsint nState;
+  int32_t nState;
   if (JS_ToInt32(ctx, &nState, argv[0])) {
     return JS_FALSE;
   }
@@ -1016,7 +1016,7 @@ JSAPI_FUNC(item_getFlag) {
   if (!pUnit || pUnit->dwType != UNIT_ITEM)
     return JS_UNDEFINED;
 
-  jsint nFlag;
+  int32_t nFlag;
   JS_ToInt32(ctx, &nFlag, argv[0]);
 
   return JS_NewBool(ctx, !!(nFlag & pUnit->pItemData->dwFlags));
@@ -1026,10 +1026,10 @@ JSAPI_FUNC(item_getItemCost) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  jsint nMode;
+  int32_t nMode;
   UnitAny* npc = D2CLIENT_GetCurrentInteractingNPC();
-  jsint nNpcClassId = (npc ? npc->dwTxtFileNo : 0x9A);  // defaults to Charsi's NPC id
-  jsint nDifficulty = D2CLIENT_GetDifficulty();
+  int32_t nNpcClassId = (npc ? npc->dwTxtFileNo : 0x9A);  // defaults to Charsi's NPC id
+  int32_t nDifficulty = D2CLIENT_GetDifficulty();
 
   if (argc < 1 || !JS_IsNumber(argv[0]))
     return JS_UNDEFINED;
@@ -1141,8 +1141,8 @@ JSAPI_FUNC(unit_getSkill) {
     THROW_WARNING(ctx, "Game not ready");
 
   bool nCharge = false;
-  jsint nSkillId = NULL;
-  jsint nExt = NULL;
+  int32_t nSkillId = NULL;
+  int32_t nExt = NULL;
 
   myUnit* pmyUnit = (myUnit*)JS_GetPrivate(ctx, this_val);
   if (!pmyUnit)
@@ -1562,9 +1562,9 @@ JSAPI_FUNC(unit_getItem) {
   if (!pUnit || !pUnit->pInventory)
     return JS_UNDEFINED;
 
-  uint32 nClassId = (uint32)-1;
-  uint32 nMode = (uint32)-1;
-  uint32 nUnitId = (uint32)-1;
+  uint32_t nClassId = (uint32_t)-1;
+  uint32_t nMode = (uint32_t)-1;
+  uint32_t nUnitId = (uint32_t)-1;
   char szName[128] = "";
 
   if (argc > 0 && JS_IsString(argv[0])) {
@@ -1620,7 +1620,7 @@ JSAPI_FUNC(unit_move) {
   if (!pPlayer || !pUnit)
     return JS_UNDEFINED;
 
-  int32 x, y;
+  int32_t x, y;
 
   if (pUnit == pPlayer) {
     if (argc < 2)
@@ -1676,8 +1676,8 @@ JSAPI_FUNC(unit_getQuest) {
   if (argc < 2 || !JS_IsNumber(argv[0]) || !JS_IsNumber(argv[1]))
     return JS_UNDEFINED;
 
-  jsint nAct;
-  jsint nQuest;
+  int32_t nAct;
+  int32_t nQuest;
   JS_ToInt32(ctx, &nAct, argv[0]);
   JS_ToInt32(ctx, &nQuest, argv[1]);
 
@@ -1691,7 +1691,7 @@ JSAPI_FUNC(unit_getMinionCount) {
   if (argc < 1 || !JS_IsNumber(argv[0]))
     return JS_UNDEFINED;
 
-  jsint nType;
+  int32_t nType;
   JS_ToInt32(ctx, &nType, argv[0]);
 
   myUnit* pmyUnit = (myUnit*)JS_GetPrivate(ctx, this_val);
@@ -1712,7 +1712,7 @@ JSAPI_FUNC(me_getRepairCost) {
     THROW_WARNING(ctx, "Game not ready");
 
   UnitAny* npc = D2CLIENT_GetCurrentInteractingNPC();
-  jsint nNpcClassId = (npc ? npc->dwTxtFileNo : 0x9A);
+  int32_t nNpcClassId = (npc ? npc->dwTxtFileNo : 0x9A);
 
   if (argc > 0 && JS_IsNumber(argv[0]))
     JS_ToInt32(ctx, &nNpcClassId, argv[0]);

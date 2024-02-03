@@ -194,7 +194,7 @@ void Engine::OnUpdate() {
 
         D2CLIENT_InitInventory();
         sScriptEngine->ForEachScript(
-            [](Script* script, void*, uint) {
+            [](Script* script, void*, uint32_t) {
               script->UpdatePlayerGid();
               return true;
             },

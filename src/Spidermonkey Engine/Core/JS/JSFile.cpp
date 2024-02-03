@@ -107,21 +107,21 @@ JSAPI_PROP(file_getProperty) {
       case FILE_ACCESSED:
         if (fdata->fptr) {
           _fstat(_fileno(fdata->fptr), &filestat);
-          return JS_NewFloat64(ctx, (jsdouble)filestat.st_atime);
+          return JS_NewFloat64(ctx, (double)filestat.st_atime);
         } else
           return JS_NewInt32(ctx, 0);  //= JSVAL_ZERO;
         break;
       case FILE_MODIFIED:
         if (fdata->fptr) {
           _fstat(_fileno(fdata->fptr), &filestat);
-          return JS_NewFloat64(ctx, (jsdouble)filestat.st_mtime);
+          return JS_NewFloat64(ctx, (double)filestat.st_mtime);
         } else
           return JS_NewInt32(ctx, 0);
         break;
       case FILE_CREATED:
         if (fdata->fptr) {
           _fstat(_fileno(fdata->fptr), &filestat);
-          return JS_NewFloat64(ctx, (jsdouble)filestat.st_ctime);
+          return JS_NewFloat64(ctx, (double)filestat.st_ctime);
         } else
           return JS_NewInt32(ctx, 0);
         break;
@@ -161,7 +161,7 @@ JSAPI_FUNC(file_open) {
     return JS_EXCEPTION;
   }
 
-  int32 mode;
+  int32_t mode;
   if (JS_ToInt32(ctx, &mode, argv[1])) {
     JS_FreeCString(ctx, szFile);
     return JS_EXCEPTION;
@@ -294,7 +294,7 @@ JSAPI_FUNC(file_read) {
   FileData* fdata = (FileData*)JS_GetInstancePrivate(ctx, this_val, file_class_id, NULL);
   if (fdata && fdata->fptr) {
     clearerr(fdata->fptr);
-    int32 count = 1;
+    int32_t count = 1;
     if (!(argc > 0 && JS_ToInt32(ctx, &count, argv[0])))
       THROW_ERROR(ctx, "Invalid arguments");
 
@@ -302,13 +302,13 @@ JSAPI_FUNC(file_read) {
       // binary mode
       int* result = new int[count + 1];
       memset(result, 0, count + 1);
-      uint32 size = 0;
+      uint32_t size = 0;
       if (fdata->locked)
         size = fread(result, sizeof(int), count, fdata->fptr);
       else
         size = _fread_nolock(result, sizeof(int), count, fdata->fptr);
 
-      if (size != (uint32)count && ferror(fdata->fptr)) {
+      if (size != (uint32_t)count && ferror(fdata->fptr)) {
         delete[] result;
         THROW_ERROR(ctx, "Read failed");
       }
@@ -322,7 +322,7 @@ JSAPI_FUNC(file_read) {
         return arr;
       }
     } else {
-      uint size = 0;
+      uint32_t size = 0;
       int offset = 0;
       bool begin = false;
 
@@ -347,7 +347,7 @@ JSAPI_FUNC(file_read) {
       else
         size = _fread_nolock(result, sizeof(char), count, fdata->fptr);
 
-      if (size != (uint32)count && ferror(fdata->fptr)) {
+      if (size != (uint32_t)count && ferror(fdata->fptr)) {
         delete[] result;
         THROW_ERROR(ctx, "Read failed");
       }
@@ -366,7 +366,7 @@ JSAPI_FUNC(file_read) {
 JSAPI_FUNC(file_readLine) {
   FileData* fdata = (FileData*)JS_GetInstancePrivate(ctx, this_val, file_class_id, NULL);
   if (fdata && fdata->fptr) {
-    uint size = 0;
+    uint32_t size = 0;
     int offset = 0;
     bool begin = false;
 
@@ -399,7 +399,7 @@ JSAPI_FUNC(file_readAllLines) {
     JSValue arr = JS_NewArray(ctx);
     int i = 0;
     while (!feof(fdata->fptr)) {
-      uint size = 0;
+      uint32_t size = 0;
       int offset = 0;
       bool begin = false;
 
@@ -430,7 +430,7 @@ JSAPI_FUNC(file_readAllLines) {
 JSAPI_FUNC(file_readAll) {
   FileData* fdata = (FileData*)JS_GetInstancePrivate(ctx, this_val, file_class_id, NULL);
   if (fdata && fdata->fptr) {
-    uint size = 0;
+    uint32_t size = 0;
     int offset = 0;
     bool begin = false;
 
@@ -461,7 +461,7 @@ JSAPI_FUNC(file_readAll) {
 
     char* contents = new char[size + 1];
     memset(contents, 0, size + 1);
-    uint count = 0;
+    uint32_t count = 0;
     if (fdata->locked)
       count = fread(contents, sizeof(char), size, fdata->fptr);
     else
@@ -500,7 +500,7 @@ JSAPI_FUNC(file_seek) {
   FileData* fdata = (FileData*)JS_GetInstancePrivate(ctx, this_val, file_class_id, NULL);
   if (fdata && fdata->fptr) {
     if (argc > 0) {
-      int32 bytes;
+      int32_t bytes;
       bool isLines = false, fromStart = false;
       if (JS_ToInt32(ctx, &bytes, argv[0])) {
         THROW_ERROR(ctx, "Could not convert parameter 1");

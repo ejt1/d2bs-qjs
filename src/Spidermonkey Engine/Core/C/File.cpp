@@ -46,8 +46,8 @@ char* readLine(FILE* fptr, bool locking) {
 
 bool writeValue(FILE* fptr, JSContext* cx, JSValue value, bool isBinary, bool locking) {
   int len = 0, result;
-  int32 ival = 0;
-  jsdouble dval = 0;
+  int32_t ival = 0;
+  double dval = 0;
   bool bval;
 
   // TODO(ejt): better method to detect int or double
@@ -71,15 +71,15 @@ bool writeValue(FILE* fptr, JSContext* cx, JSValue value, bool isBinary, bool lo
     if (isBinary) {
       if (!JS_ToInt32(cx, &ival, value)) {
         if (locking)
-          result = fwrite(&ival, sizeof(int32), 1, fptr);
+          result = fwrite(&ival, sizeof(int32_t), 1, fptr);
         else
-          result = _fwrite_nolock(&dval, sizeof(int32), 1, fptr);
+          result = _fwrite_nolock(&dval, sizeof(int32_t), 1, fptr);
         return result == 1;
       } else if (!JS_ToFloat64(cx, &dval, value)) {
         if (locking)
-          result = fwrite(&dval, sizeof(jsdouble), 1, fptr);
+          result = fwrite(&dval, sizeof(double), 1, fptr);
         else
-          result = _fwrite_nolock(&dval, sizeof(jsdouble), 1, fptr);
+          result = _fwrite_nolock(&dval, sizeof(double), 1, fptr);
         return result == 1;
       }
       return false;
@@ -96,7 +96,7 @@ bool writeValue(FILE* fptr, JSContext* cx, JSValue value, bool isBinary, bool lo
         if (result == len)
           return true;
       } else if (!JS_ToFloat64(cx, &dval, value)) {
-        // jsdouble will never be a 64-char string, but I'd rather be safe than sorry
+        // double will never be a 64-char string, but I'd rather be safe than sorry
         char* str = new char[64];
         sprintf_s(str, 64, "%.16f", dval);
         len = strlen(str);

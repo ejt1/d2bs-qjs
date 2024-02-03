@@ -303,7 +303,7 @@ void SendMouseClick(int x, int y, int clicktype) {
   }
 }
 
-void SendKeyPress(uint type, uint key, uint ext) {
+void SendKeyPress(uint32_t type, uint32_t key, uint32_t ext) {
   LPARAM lp = 1;
   lp |= ext << 24;
   lp |= (MapVirtualKey(key, MAPVK_VK_TO_VSC) << 16);

@@ -10,7 +10,7 @@ struct Event {
   Event() : argv(nullptr), argc(0), arg1(nullptr), arg2(nullptr), arg3(nullptr), arg4(nullptr), arg5(nullptr){};
   FunctionList functions;
   JSValue* argv;
-  uint argc;
+  uint32_t argc;
   std::string name;
   void* arg1;
   void* arg2;
@@ -30,7 +30,7 @@ bool KeyDownUpEvent(WPARAM bByte, BYTE bUp);
 void PlayerAssignEvent(DWORD dwUnitId);
 void MouseClickEvent(int button, POINT pt, bool bUp);
 void MouseMoveEvent(POINT pt);
-void ScriptBroadcastEvent(JSContext* cx, uint argc, JSValue* argv);
+void ScriptBroadcastEvent(JSContext* cx, uint32_t argc, JSValue* argv);
 void ItemActionEvent(DWORD GID, char* Code, BYTE Mode, bool Global);
 bool GamePacketEvent(BYTE* pPacket, DWORD dwSize);
 bool GamePacketSentEvent(BYTE* pPacket, DWORD dwSize);
@@ -86,7 +86,7 @@ struct QuadArgHelper {
 struct BCastEventHelper {
   JSContext* cx;
   JSValue* argv;
-  uint argc;
+  uint32_t argc;
 };
 struct PacketEventHelper {
   const char* name;

@@ -15,7 +15,7 @@ bool WaitForGameReady(void);
 
 DWORD GetPlayerArea(void);
 void SendMouseClick(int x, int y, int clicktype);
-void SendKeyPress(uint type, uint key, uint ext);
+void SendKeyPress(uint32_t type, uint32_t key, uint32_t ext);
 POINT CalculateTextLen(const char* szwText, int Font);
 POINT CalculateTextLen(const wchar_t* szwText, int Font);
 void WorldToScreen(POINT* pPos);

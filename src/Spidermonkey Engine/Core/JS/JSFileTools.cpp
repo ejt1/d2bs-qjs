@@ -190,7 +190,7 @@ JSAPI_FUNC(filetools_readText) {
   if (fptr == NULL)
     return JS_EXCEPTION;
 
-  uint size, readCount;
+  uint32_t size, readCount;
   char* contents;
 
   // Determine file size

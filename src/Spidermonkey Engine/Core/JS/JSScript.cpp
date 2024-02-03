@@ -12,8 +12,8 @@ struct FindHelper {
   Script* script;
 };
 
-bool __fastcall FindScriptByTid(Script* script, void* argv, uint argc);
-bool __fastcall FindScriptByName(Script* script, void* argv, uint argc);
+bool __fastcall FindScriptByTid(Script* script, void* argv, uint32_t argc);
+bool __fastcall FindScriptByName(Script* script, void* argv, uint32_t argc);
 
 JSAPI_PROP(script_getProperty) {
   Script* script = (Script*)JS_GetInstancePrivate(ctx, this_val, script_class_id, NULL);
@@ -191,9 +191,9 @@ JSAPI_FUNC(my_getScripts) {
   return pReturnArray;
 }
 
-bool __fastcall FindScriptByName(Script* script, void* argv, uint /*argc*/) {
+bool __fastcall FindScriptByName(Script* script, void* argv, uint32_t /*argc*/) {
   FindHelper* helper = (FindHelper*)argv;
-  // static uint pathlen = wcslen(Vars.szScriptPath) + 1;
+  // static uint32_t pathlen = wcslen(Vars.szScriptPath) + 1;
   const char* fname = script->GetShortFilename();
   if (_stricmp(fname, helper->name) == 0) {
     helper->script = script;
@@ -202,7 +202,7 @@ bool __fastcall FindScriptByName(Script* script, void* argv, uint /*argc*/) {
   return true;
 }
 
-bool __fastcall FindScriptByTid(Script* script, void* argv, uint /*argc*/) {
+bool __fastcall FindScriptByTid(Script* script, void* argv, uint32_t /*argc*/) {
   FindHelper* helper = (FindHelper*)argv;
   if (script->GetThreadId() == helper->tid) {
     helper->script = script;

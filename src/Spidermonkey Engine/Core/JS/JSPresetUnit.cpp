@@ -57,15 +57,15 @@ JSAPI_FUNC(my_getPresetUnits) {
     return JS_FALSE;
   }
 
-  uint32 levelId;
+  uint32_t levelId;
   JS_ToUint32(ctx, &levelId, argv[0]);
   Level* pLevel = GetLevel(levelId);
 
   if (!pLevel)
     THROW_ERROR(ctx, "getPresetUnits failed, couldn't access the level!");
 
-  uint nClassId = NULL;
-  uint nType = NULL;
+  uint32_t nClassId = NULL;
+  uint32_t nType = NULL;
 
   if (argc >= 2)
     JS_ToUint32(ctx, &nType, argv[1]);
@@ -130,7 +130,7 @@ JSAPI_FUNC(my_getPresetUnit) {
     return JS_FALSE;
   }
 
-  uint32 levelId;
+  uint32_t levelId;
   JS_ToUint32(ctx, &levelId, argv[0]);
   Level* pLevel = GetLevel(levelId);
 

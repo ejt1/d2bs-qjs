@@ -143,7 +143,7 @@ JSAPI_FUNC(my_addProfile) {
     THROW_ERROR(ctx, "Invalid arguments passed to addProfile");
 
   std::string* args[] = {&profile, &mode, &gateway, &username, &password, &charname};
-  for (uint i = 0; i < 6; i++) {
+  for (uint32_t i = 0; i < 6; i++) {
     const char* tmp = JS_ToCString(ctx, argv[i]);
     if (!tmp) {
       return JS_EXCEPTION;
@@ -186,7 +186,7 @@ JSAPI_FUNC(my_createCharacter) {
     return JS_TRUE;
 
   std::string name;
-  int32 type = -1;
+  int32_t type = -1;
   bool hc = false, ladder = false;
   if (!JS_IsString(argv[0]) || !JS_IsNumber(argv[1])) {
     return JS_EXCEPTION;

@@ -15,15 +15,6 @@
 #include <optional>
 #include <streambuf>
 
-typedef unsigned int uint;
-typedef uint32_t uint32;
-typedef int32_t int32;
-typedef unsigned int jsrefcount;
-typedef double jsdouble;
-typedef int32_t jsint;
-typedef uint32_t jsuint;
-typedef uint16_t uint16;
-
 // #define NUM(x) #x
 // #define NAME(line, v) (__FILE__ ":" NUM(line) " -> " #v)
 //
@@ -54,7 +45,7 @@ struct JSClassSpec {
   JSClassDef* classp;
   JSClass* proto;
   JSValue (*ctor)(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst* argv);
-  uint argc;
+  uint32_t argc;
   JSCFunctionListEntry* methods;
   int num_methods;
   JSCFunctionListEntry* properties;

@@ -273,7 +273,7 @@ JSAPI_FUNC(room_getStat) {
   if (argc < 1 || !JS_IsNumber(argv[0]))
     return rval;
 
-  jsint nStat;
+  int32_t nStat;
   JS_ToInt32(ctx, &nStat, argv[0]);
 
   bool bAdded = false;
@@ -389,7 +389,7 @@ JSAPI_FUNC(my_getRoom) {
   AutoCriticalRoom* cRoom = new AutoCriticalRoom;
 
   if (argc == 1 && JS_IsNumber(argv[0])) {
-    uint32 levelId;
+    uint32_t levelId;
     JS_ToUint32(ctx, &levelId, argv[0]);
     if (levelId != 0)  // 1 Parameter, AreaId
     {
@@ -426,7 +426,7 @@ JSAPI_FUNC(my_getRoom) {
   {
     Level* pLevel = NULL;
 
-    uint32 levelId;
+    uint32_t levelId;
     JS_ToUint32(ctx, &levelId, argv[0]);
     if (argc == 3)
       pLevel = GetLevel(levelId);
@@ -438,8 +438,8 @@ JSAPI_FUNC(my_getRoom) {
       return JS_UNDEFINED;
     }
 
-    uint32 nX = NULL;
-    uint32 nY = NULL;
+    uint32_t nX = NULL;
+    uint32_t nY = NULL;
     if (argc == 2) {
       JS_ToUint32(ctx, &nX, argv[0]);
       JS_ToUint32(ctx, &nY, argv[1]);

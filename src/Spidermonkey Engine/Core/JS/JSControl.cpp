@@ -101,7 +101,7 @@ JSAPI_STRICT_PROP(control_setProperty) {
       break;
     case CONTROL_STATE:
       if (JS_IsNumber(val)) {
-        int32 nState;
+        int32_t nState;
         if (JS_ToInt32(ctx, &nState, val) || nState < 0 || nState > 3) {
           THROW_ERROR(ctx, "Invalid state value");
         }
@@ -110,7 +110,7 @@ JSAPI_STRICT_PROP(control_setProperty) {
       break;
     case CONTROL_CURSORPOS:
       if (JS_IsNumber(val)) {
-        uint32 dwPos;
+        uint32_t dwPos;
         if (JS_ToUint32(ctx, &dwPos, val)) {
           THROW_ERROR(ctx, "Invalid cursor position value");
         }
@@ -119,7 +119,7 @@ JSAPI_STRICT_PROP(control_setProperty) {
       break;
     case CONTROL_DISABLED:
       if (JS_IsNumber(val)) {
-        uint32 dwDisabled;
+        uint32_t dwDisabled;
         if (JS_ToUint32(ctx, &dwDisabled, val)) {
           THROW_ERROR(ctx, "Invalid disabled value");
         }
@@ -171,7 +171,7 @@ JSAPI_FUNC(control_click) {
     return JS_NewInt32(ctx, 0);
   }
 
-  uint32 x = (uint32)-1, y = (uint32)-1;
+  uint32_t x = (uint32_t)-1, y = (uint32_t)-1;
 
   if (argc > 1 && JS_IsNumber(argv[0]) && JS_IsNumber(argv[1])) {
     JS_ToUint32(ctx, &x, argv[0]);
@@ -254,8 +254,8 @@ JSAPI_FUNC(my_getControl) {
   if (ClientState() != ClientStateMenu)
     return JS_UNDEFINED;
 
-  int32 nType = -1, nX = -1, nY = -1, nXSize = -1, nYSize = -1;
-  int32* args[] = {&nType, &nX, &nY, &nXSize, &nYSize};
+  int32_t nType = -1, nX = -1, nY = -1, nXSize = -1, nYSize = -1;
+  int32_t* args[] = {&nType, &nX, &nY, &nXSize, &nYSize};
   for (int i = 0; i < argc; i++) {
     if (JS_IsNumber(argv[i])) {
       JS_ToInt32(ctx, args[i], argv[i]);

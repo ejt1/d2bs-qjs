@@ -224,7 +224,7 @@ DWORD FillBaseStat(JSContext* cx, JSValue* argv, int table, int row, int column,
       if (!FillBaseStat(table, row, column, &dwBuffer, sizeof(DWORD)))
         (*argv) = JS_UNDEFINED;
       else
-        *argv = JS_NewFloat64(cx, (jsdouble)dwBuffer);
+        *argv = JS_NewFloat64(cx, (double)dwBuffer);
       return TRUE;
 
     case FIELDTYPE_CALC_TO_DWORD:

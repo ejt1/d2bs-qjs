@@ -105,7 +105,7 @@ JSAPI_FUNC(dir_getFiles) {
   _finddata_t found;
   JSValue jsarray = JS_NewArray(ctx);
   if ((hFile = _findfirst(search, &found)) != -1L) {
-    jsint element = 0;
+    int32_t element = 0;
     do {
       if ((found.attrib & _A_SUBDIR))
         continue;
@@ -153,7 +153,7 @@ JSAPI_FUNC(dir_getFolders) {
   JSValue jsarray = JS_NewArray(ctx);
 
   if ((hFile = _findfirst(search, &found)) != -1L) {
-    jsint element = 0;
+    int32_t element = 0;
     do {
       if (!strcmp(found.name, "..") || !strcmp(found.name, ".") || !(found.attrib & _A_SUBDIR))
         continue;

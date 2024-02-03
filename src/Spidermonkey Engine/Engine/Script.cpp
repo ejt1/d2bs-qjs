@@ -14,7 +14,7 @@
 
 #include <chrono>
 
-Script::Script(const char* file, ScriptMode mode /*, uint argc, JSAutoStructuredCloneBuffer** argv*/)
+Script::Script(const char* file, ScriptMode mode /*, uint32_t argc, JSAutoStructuredCloneBuffer** argv*/)
     : m_runtime(NULL),
       m_context(NULL),
       m_globalObject(JS_UNDEFINED),
@@ -188,7 +188,7 @@ void Script::UpdatePlayerGid(void) {
 }
 
 bool Script::IsIncluded(const char* file) {
-  uint count = 0;
+  uint32_t count = 0;
   char* fname = _strdup(file);
   if (!fname)
     return false;
@@ -592,7 +592,7 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
     DWORD* argc = (DWORD*)evt->arg1;
     if (!clearList) {
       std::vector<JSValue> args;
-      for (uint i = 0; i < *argc; ++i) {
+      for (uint32_t i = 0; i < *argc; ++i) {
         args.push_back(evt->argv[i]);
       }
 
@@ -615,7 +615,7 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
       DWORD* size = (DWORD*)evt->arg2;
 
       JSValue arr = JS_NewArray(m_context);
-      for (uint i = 0; i < *size; i++) {
+      for (uint32_t i = 0; i < *size; i++) {
         JS_SetPropertyUint32(m_context, arr, i, JS_NewUint32(m_context, help[i]));
       }
 
@@ -760,7 +760,7 @@ void Script::RunMain() {
   // args passed from load
   // JS::AutoValueVector args(m_context);
   // args.resize(m_argc);
-  // for (uint i = 0; i < m_argc; i++) {
+  // for (uint32_t i = 0; i < m_argc; i++) {
   //  JSValue v;
   //  m_argv[i]->read(m_context, &v);
   //  args.append(v);
@@ -892,7 +892,7 @@ DWORD WINAPI ScriptThread(LPVOID lpThreadParameter) {
   return 0;
 }
 
-// JSBool contextCallback(JSContext* ctx, uint contextOp) {
+// JSBool contextCallback(JSContext* ctx, uint32_t contextOp) {
 //   if (contextOp == JSCONTEXT_DESTROY) {
 //     Script* script = (Script*)JS_GetContextPrivate(ctx);
 //     script->OnDestroyContext();

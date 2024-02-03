@@ -117,7 +117,7 @@ JSAPI_FUNC(my_clearInterval) {
 }
 
 JSAPI_FUNC(my_delay) {
-  uint32 nDelay = 0;
+  uint32_t nDelay = 0;
   if (JS_ToUint32(ctx, &nDelay, argv[0])) {
     return JS_EXCEPTION;
   }
@@ -159,7 +159,7 @@ JSAPI_FUNC(my_load) {
   StringReplace(buf, '/', '\\', _countof(buf));
 
   // JSAutoStructuredCloneBuffer** autoBuffer = new JSAutoStructuredCloneBuffer*[argc - 1];
-  // for (uint i = 1; i < argc; i++) {
+  // for (uint32_t i = 1; i < argc; i++) {
   //   autoBuffer[i - 1] = new JSAutoStructuredCloneBuffer;
   //   autoBuffer[i - 1]->write(cx, JS_ARGV(cx, vp)[i]);
   // }
@@ -221,7 +221,7 @@ JSAPI_FUNC(my_stacktrace) {
 }
 
 JSAPI_FUNC(my_beep) {
-  jsint nBeepId = NULL;
+  int32_t nBeepId = NULL;
 
   if (argc > 0 && JS_IsNumber(argv[0])) {
     JS_ToInt32(ctx, &nBeepId, argv[0]);
@@ -323,7 +323,7 @@ JSAPI_FUNC(my_sendCopyData) {
 
   const char *windowClassName = NULL, *windowName = NULL;
   const char* data = NULL;
-  jsint nModeId = NULL;
+  int32_t nModeId = NULL;
   HWND hWnd = NULL;
 
   if (JS_IsString(argv[0]) && !JS_IsNull(argv[0])) {
@@ -567,8 +567,8 @@ JSAPI_FUNC(my_getIP) {
 }
 
 JSAPI_FUNC(my_sendClick) {
-  uint32 x = 0;
-  uint32 y = 0;
+  uint32_t x = 0;
+  uint32_t y = 0;
   if (JS_ToUint32(ctx, &x, argv[0]) || JS_ToUint32(ctx, &y, argv[1])) {
     return JS_EXCEPTION;
   }
@@ -583,7 +583,7 @@ JSAPI_FUNC(my_sendClick) {
 }
 
 JSAPI_FUNC(my_sendKey) {
-  uint32 key;
+  uint32_t key;
   if (JS_ToUint32(ctx, &key, argv[0])) {
     return JS_EXCEPTION;
   }

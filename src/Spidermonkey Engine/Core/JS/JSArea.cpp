@@ -82,7 +82,7 @@ JSAPI_FUNC(my_getArea) {
   if (!WaitForGameReady())
     THROW_ERROR(ctx, "Get Area: Game not ready");
 
-  int32 nArea = GetPlayerArea();
+  int32_t nArea = GetPlayerArea();
 
   if (argc == 1) {
     if (JS_ToInt32(ctx, &nArea, argv[0])) {

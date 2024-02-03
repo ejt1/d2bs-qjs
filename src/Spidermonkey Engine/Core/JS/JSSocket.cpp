@@ -82,7 +82,7 @@ JSAPI_FUNC(socket_open) {
   //  return JS_TRUE;
   //}
   //char* hostName = NULL;
-  //int32 port = 0;
+  //int32_t port = 0;
   //if (JSVAL_IS_STRING(JS_ARGV(cx, vp)[0]))
   //  hostName = JS_EncodeStringToUTF8(cx, JSVAL_TO_STRING(JS_ARGV(cx, vp)[0]));
 

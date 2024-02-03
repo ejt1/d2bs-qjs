@@ -27,7 +27,7 @@ enum ScriptState {
 class Script {
   friend class ScriptEngine;
 
-  Script(const char* file, ScriptMode mode/*, uint argc = 0, JSAutoStructuredCloneBuffer** argv = NULL*/);
+  Script(const char* file, ScriptMode mode/*, uint32_t argc = 0, JSAutoStructuredCloneBuffer** argv = NULL*/);
   ~Script();
 
  public:
@@ -119,7 +119,7 @@ class Script {
   JSValue m_globalObject;
   JSValue m_script;
   myUnit* m_me;
-  uint m_argc;
+  uint32_t m_argc;
   //JSAutoStructuredCloneBuffer** m_argv;
   DWORD m_LastGC;
   // wtf is this trying to do anyway, why not just check m_context or m_runtime?
@@ -146,5 +146,5 @@ struct RUNCOMMANDSTRUCT {
 
 DWORD WINAPI ScriptThread(LPVOID lpThreadParameter);
 
-//JSBool contextCallback(JSContext* ctx, uint contextOp);
+//JSBool contextCallback(JSContext* ctx, uint32_t contextOp);
 //void reportError(JSContext* cx, const char* message, JSErrorReport* report);

@@ -13,12 +13,12 @@
 #include "Helpers.h"
 
 // internal ForEachScript helper functions
-bool __fastcall DisposeScript(Script* script, void*, uint) {
+bool __fastcall DisposeScript(Script* script, void*, uint32_t) {
   sScriptEngine->DisposeScript(script);
   return true;
 }
 
-bool __fastcall StopScript(Script* script, void* argv, uint /*argc*/) {
+bool __fastcall StopScript(Script* script, void* argv, uint32_t /*argc*/) {
   script->TriggerOperationCallback();
   if (script->GetMode() != kScriptModeCommand)
     script->Stop(*(bool*)(argv));
@@ -68,7 +68,7 @@ void ScriptEngine::Shutdown(void) {
   DeleteCriticalSection(&m_lock);
 }
 
-Script* ScriptEngine::NewScript(const char* file, ScriptMode mode/*, uint argc, JSAutoStructuredCloneBuffer** argv*/, bool /*recompile*/) {
+Script* ScriptEngine::NewScript(const char* file, ScriptMode mode/*, uint32_t argc, JSAutoStructuredCloneBuffer** argv*/, bool /*recompile*/) {
   char* fileName = _strdup(file);
   _strlwr_s(fileName, strlen(file) + 1);
 
@@ -145,7 +145,7 @@ void ScriptEngine::UnLockScriptList(const char* /*loc*/) {
   LeaveCriticalSection(&m_scriptListLock);
 }
 
-bool ScriptEngine::ForEachScript(ScriptCallback callback, void* argv, uint argc) {
+bool ScriptEngine::ForEachScript(ScriptCallback callback, void* argv, uint32_t argc) {
   if (callback == NULL || m_scripts.size() < 1)
     return false;
   bool block = false;
@@ -190,7 +190,7 @@ void ScriptEngine::UpdateConsole() {
   m_console->UpdatePlayerGid();
 }
 
-bool __fastcall StopIngameScript(Script* script, void*, uint) {
+bool __fastcall StopIngameScript(Script* script, void*, uint32_t) {
   if (script->GetMode() == kScriptModeGame)
     script->Stop(true);
   return true;

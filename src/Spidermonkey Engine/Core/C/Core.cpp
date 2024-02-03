@@ -25,7 +25,7 @@ bool SplitLines(const std::wstring& str, size_t maxWidth, const wchar_t delim, s
 
   int byteIdx = MaxLineFit(str, 0, str.length() + 1, maxWidth);
   //std::wstring ts = str.substr(0, byteIdx);
-  //uint cmdsize = CalculateTextLen(ts.c_str(), Vars.dwConsoleFont).x;
+  //uint32_t cmdsize = CalculateTextLen(ts.c_str(), Vars.dwConsoleFont).x;
   //int numchars = ts.length();
   //int sizechar = (cmdsize + numchars - 1) / numchars;
   //int maxLength = (maxWidth + sizechar - 1) / sizechar - 1;
