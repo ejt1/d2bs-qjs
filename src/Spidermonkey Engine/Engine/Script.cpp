@@ -696,7 +696,6 @@ bool Script::Initialize() {
     }
 
     if (entry->ctor) {
-      // define ctor
       obj = JS_NewCFunction2(m_context, entry->ctor, entry->classp->class_name, 0, JS_CFUNC_constructor, 0);
       JS_SetConstructor(m_context, obj, proto);
     } else {
@@ -852,6 +851,10 @@ void Script::Cleanup() {
   }
   m_hasActiveCX = false;
   m_scriptState = kScriptStateStopped;
+
+  // TODO(ejt): revisit this
+  if (Vars.bDisableCache)
+    sScriptEngine->DisposeScript(this);
 }
 
 // return != 0 if the JS code needs to be interrupted
@@ -893,8 +896,6 @@ DWORD WINAPI ScriptThread(LPVOID lpThreadParameter) {
     SetThreadName(0xFFFFFFFF, script->GetShortFilename());
 #endif
     script->Run();
-    if (Vars.bDisableCache)
-      sScriptEngine->DisposeScript(script);
   }
   return 0;
 }

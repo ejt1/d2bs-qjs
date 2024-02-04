@@ -22,6 +22,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+ // clang-format off
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -6492,13 +6495,14 @@ static void build_backtrace(JSContext *ctx, JSValueConst error_obj,
     JSValue str;
     DynBuf dbuf;
     const char *func_name_str;
-    const char *str1;
+    const char *fun_name;
     JSObject *p;
     BOOL backtrace_barrier;
     
     js_dbuf_init(ctx, &dbuf);
     if (filename) {
-        dbuf_printf(&dbuf, "    at @%s", filename);
+        dbuf_putc(&dbuf, '@');
+        dbuf_printf(&dbuf, filename);
         if (line_num != -1)
             dbuf_printf(&dbuf, ":%d", line_num);
         dbuf_putc(&dbuf, '\n');
@@ -6517,12 +6521,12 @@ static void build_backtrace(JSContext *ctx, JSValueConst error_obj,
         }
         func_name_str = get_func_name(ctx, sf->cur_func);
         if (!func_name_str || func_name_str[0] == '\0')
-            str1 = "<anonymous>";
+            fun_name = "<anonymous>";
         else
-            str1 = func_name_str;
-        dbuf_printf(&dbuf, "    at %s", str1);
+            fun_name = func_name_str;
+        dbuf_printf(&dbuf, fun_name);
         JS_FreeCString(ctx, func_name_str);
-
+        dbuf_putc(&dbuf, '@');
         p = JS_VALUE_GET_OBJ(sf->cur_func);
         backtrace_barrier = FALSE;
         if (js_class_has_bytecode(p->class_id)) {
@@ -6536,15 +6540,13 @@ static void build_backtrace(JSContext *ctx, JSValueConst error_obj,
                 line_num1 = find_line_num(ctx, b,
                                           sf->cur_pc - b->byte_code_buf - 1);
                 atom_str = JS_AtomToCString(ctx, b->debug.filename);
-                dbuf_printf(&dbuf, " (@%s",
-                            atom_str ? atom_str : "<null>");
+                dbuf_printf(&dbuf, atom_str ? atom_str : "<null>");
                 JS_FreeCString(ctx, atom_str);
                 if (line_num1 != -1)
                     dbuf_printf(&dbuf, ":%d", line_num1);
-                dbuf_putc(&dbuf, ')');
             }
         } else {
-            dbuf_printf(&dbuf, " (native)");
+            dbuf_printf(&dbuf, "(native)");
         }
         dbuf_putc(&dbuf, '\n');
         /* stop backtrace if JS_EVAL_FLAG_BACKTRACE_BARRIER was used */
@@ -54099,3 +54101,5 @@ void JS_AddIntrinsicTypedArrays(JSContext *ctx)
     JS_AddIntrinsicAtomics(ctx);
 #endif
 }
+
+// clang-format on
