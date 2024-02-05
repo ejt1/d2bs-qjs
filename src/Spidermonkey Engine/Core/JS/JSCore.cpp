@@ -216,7 +216,7 @@ JSAPI_FUNC(my_stop) {
 }
 
 JSAPI_FUNC(my_stacktrace) {
-  GetStackWalk();
+  Log(L"stacktrace is deprecated");
   return JS_TRUE;
 }
 

@@ -9,9 +9,6 @@
 #include "Helpers.h"
 #include "DbgHelp.h"
 #include "Profile.h"
-#include "StackWalker.h"
-#include <tlhelp32.h>
-#include <wctype.h>
 
 bool SwitchToProfile(const char* profile) {
   if (Vars.bUseProfileScript != TRUE || !Profile::ProfileExists(profile))
@@ -209,61 +206,6 @@ bool ProcessCommand(const wchar_t* command, bool unprocessedIsCommand) {
   return result;
 }
 
-SYMBOL_INFO* GetSymFromAddr(HANDLE hProcess, DWORD64 addr) {
-  char* symbols = new char[sizeof(SYMBOL_INFO) + 512];
-  memset(symbols, 0, sizeof(SYMBOL_INFO) + 512);
-
-  SYMBOL_INFO* sym = (SYMBOL_INFO*)(symbols);
-  sym->SizeOfStruct = sizeof(SYMBOL_INFO);
-  sym->MaxNameLen = 512;
-
-  DWORD64 dummy;
-  bool success = SymFromAddr(hProcess, addr, &dummy, sym) == TRUE ? true : false;
-  if (!success) {
-    delete[] symbols;
-    sym = NULL;
-  }
-
-  return sym;
-}
-
-IMAGEHLP_LINE64* GetLineFromAddr(HANDLE hProcess, DWORD64 addr) {
-  IMAGEHLP_LINE64* line = new IMAGEHLP_LINE64;
-  line->SizeOfStruct = sizeof(IMAGEHLP_LINE64);
-
-  DWORD dummy;
-  bool success = SymGetLineFromAddr64(hProcess, addr, &dummy, line) == TRUE ? true : false;
-  if (!success) {
-    delete line;
-    line = NULL;
-  }
-  return line;
-}
-
-char* DllLoadAddrStrs() {
-  const char* dlls[] = {"D2Client.DLL", "D2Common.DLL", "D2Gfx.DLL",    "D2Lang.DLL", "D2Win.DLL", "D2Net.DLL",  "D2Game.DLL",
-                        "D2Launch.DLL", "Fog.DLL",      "BNClient.DLL", "Storm.DLL",  "D2Cmp.DLL", "D2Multi.DLL"};
-  size_t strMaxLen;
-  char* result;
-  char lineBuf[80];
-  unsigned int i;
-
-  strMaxLen = sizeof(lineBuf) * sizeof(dlls) / sizeof(dlls[0]);
-  result = (char*)malloc(strMaxLen);
-
-  result[0] = '\0';
-
-  for (i = 0; i < sizeof(dlls) / sizeof(dlls[0]); ++i) {
-    sprintf_s(lineBuf, sizeof(lineBuf), "%s loaded at: 0x%08x.", dlls[i], (uint32_t)(GetModuleHandle(dlls[i])));
-    strcat_s(result, strMaxLen, lineBuf);
-    if (i != (sizeof(dlls) / sizeof(dlls[0]) - 1)) {
-      strcat_s(result, strMaxLen, "\n");
-    }
-  }
-
-  return result;
-}
-
 LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* ptrs) {
   static bool already_crashed = false;
   if (already_crashed) {
@@ -292,54 +234,6 @@ LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* ptrs) {
   std::terminate();
 }
 
-int __cdecl _purecall(void) {
-  GetStackWalk();
-  return 0;
-}
-
-class MyStackWalker : public StackWalker {
- public:
-  MyStackWalker() : StackWalker() {
-  }
-
- protected:
-  virtual void OnOutput(LPCSTR szText) {
-    Log(L"%hs", szText);
-  }
-};
-
-std::vector<DWORD> GetThreadIds() {
-  std::vector<DWORD> threadIds;
-
-  HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, GetCurrentProcessId());
-
-  if (hSnapshot != INVALID_HANDLE_VALUE) {
-    THREADENTRY32 threadEntry;
-    threadEntry.dwSize = sizeof(THREADENTRY32);
-
-    if (Thread32First(hSnapshot, &threadEntry)) {
-      do {
-        if (threadEntry.th32OwnerProcessID == GetCurrentProcessId())
-          threadIds.push_back(threadEntry.th32ThreadID);
-
-      } while (Thread32Next(hSnapshot, &threadEntry));
-    }
-  }
-  CloseHandle(hSnapshot);
-
-  return threadIds;
-}
-
-void ResumeProcess() {
-  std::vector<DWORD> threadIds = GetThreadIds();
-
-  for (std::vector<DWORD>::iterator it = threadIds.begin(); it != threadIds.end(); ++it) {
-    HANDLE hThread = OpenThread(THREAD_SUSPEND_RESUME, FALSE, *it);
-    ResumeThread(hThread);
-    CloseHandle(hThread);
-  }
-}
-
 void InitCommandLine() {
   char* line = GetCommandLineA();
   memcpy(Vars.szCommandLine, line, min(sizeof(Vars.szCommandLine), sizeof(char) * strlen(line)));
@@ -347,28 +241,4 @@ void InitCommandLine() {
   wchar_t* wline = GetCommandLineW();
   LPCWSTR cline = L"C:\\Program Files (x86)\\Diablo II\\Game.exe -w";
   memcpy(wline, line, sizeof(LPCWSTR) * wcslen(cline));
-}
-
-bool GetStackWalk() {
-  std::vector<DWORD> threadIds = GetThreadIds();
-  DWORD current = GetCurrentThreadId();
-
-  MyStackWalker sw;
-  for (std::vector<DWORD>::iterator it = threadIds.begin(); it != threadIds.end(); ++it) {
-    if (*it == current)
-      continue;
-
-    HANDLE hThread = OpenThread(THREAD_GET_CONTEXT, false, *it);
-
-    if (hThread == INVALID_HANDLE_VALUE)
-      return false;
-
-    Log(L"Stack Walk Thread: %d", *it);
-    sw.ShowCallstack(hThread);
-  }
-
-  Log(L"Stack Walk Thread: %d", current);
-  sw.ShowCallstack();
-
-  return true;
 }

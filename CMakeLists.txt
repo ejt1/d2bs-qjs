@@ -71,14 +71,12 @@ set(D2BS_SRCS
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSSocket.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSUnit.cpp"
   
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Engine/CallArgs.cc"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Engine/Script.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Engine/ScriptEngine.cpp"
 
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Engine.cc"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Globals.cc"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cc"
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/StackWalker.cpp"
 
   "version.rc")
 

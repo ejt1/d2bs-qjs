@@ -265,7 +265,21 @@ void __declspec(naked) FailToJoin() {
   }
 }
 
-int EraseCacheFiles() {
+HMODULE __stdcall Multi(LPSTR /*Class*/, LPSTR /*Window*/) {
+  return 0;
+}
+
+HANDLE __stdcall Windowname(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR /*lpWindowName*/, DWORD dwStyle, int x, int y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu,
+                            HINSTANCE hInstance, LPVOID lpParam) {
+  CHAR szWindowName[200] = "D2";
+
+  if (strlen(Vars.szTitle) > 1)
+    strcpy_s(szWindowName, _countof(szWindowName), Vars.szTitle);
+
+  return CreateWindowExA(dwExStyle, lpClassName, szWindowName, dwStyle, x, y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+}
+
+static int EraseCacheFiles() {
   CHAR path[MAX_PATH];
   GetCurrentDirectoryA(MAX_PATH, path);
 
@@ -294,29 +308,8 @@ int EraseCacheFiles() {
   return 0;
 }
 
-HMODULE __stdcall Multi(LPSTR Class, LPSTR Window) {
-  (Class);   // unreferenced formal parameter
-  (Window);  // unreferenced formal parameter
-
-  return 0;
-}
-
-HANDLE __stdcall Windowname(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int x, int y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu,
-                            HINSTANCE hInstance, LPVOID lpParam) {
-  (lpWindowName);  // unreferenced formal parameter
-
-  CHAR szWindowName[200] = "D2";
-
-  if (strlen(Vars.szTitle) > 1)
-    strcpy_s(szWindowName, _countof(szWindowName), Vars.szTitle);
-
-  return CreateWindowExA(dwExStyle, lpClassName, szWindowName, dwStyle, x, y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
-}
-
-HANDLE __stdcall CacheFix(LPCSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition,
+HANDLE __stdcall CacheFix(LPCSTR /*lpFileName*/, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition,
                           DWORD dwFlagsAndAttributes, HANDLE hTemplateFile) {
-  (lpFileName);
-
   EraseCacheFiles();
   CHAR path[MAX_PATH];
   GetCurrentDirectoryA(MAX_PATH, path);
@@ -341,16 +334,12 @@ HANDLE __stdcall CacheFix(LPCSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShar
   return CreateFileA(path, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
 }
 
-int WINAPI LogMessageBoxA_Intercept(HWND hWnd, LPCSTR lpText, LPCSTR lpCaption, UINT uType) {
-  GetStackWalk();
-  char* dllAddrs;
-  Log(L"Error message box, caption: \"%hs\", message:\n%hs\n%hs", lpCaption, lpText, dllAddrs = DllLoadAddrStrs());
-  free(dllAddrs);
-  return MessageBoxA(hWnd, lpText, lpCaption, uType);
+int WINAPI LogMessageBoxA_Intercept(HWND /*hWnd*/, LPCSTR /*lpText*/, LPCSTR /*lpCaption*/, UINT /*uType*/) {
+  ExceptionHandler(nullptr);
+  exit(0);
 }
 
-char __fastcall ErrorReportLaunch(const char* crash_file, int /*a2*/) {
-  GetStackWalk();
-  Log(L"Crash File: %hs\n", crash_file);
+char __fastcall ErrorReportLaunch(const char* /*crash_file*/, int /*a2*/) {
+  ExceptionHandler(nullptr);
   exit(0);
 }
