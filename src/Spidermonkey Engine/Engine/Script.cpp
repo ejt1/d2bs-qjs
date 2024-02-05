@@ -848,11 +848,15 @@ void Script::Cleanup() {
 
   if (m_context) {
     JS_FreeValue(m_context, m_script);
+    m_script = JS_UNDEFINED;
     JS_FreeValue(m_context, m_globalObject);
+    m_globalObject = JS_UNDEFINED;
     JS_FreeContext(m_context);
+    m_context = nullptr;
   }
   if (m_runtime) {
     JS_FreeRuntime(m_runtime);
+    m_runtime = nullptr;
   }
   m_hasActiveCX = false;
   m_scriptState = kScriptStateStopped;
