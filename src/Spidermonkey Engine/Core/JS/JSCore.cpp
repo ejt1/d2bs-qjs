@@ -48,7 +48,7 @@ JSAPI_FUNC(my_print) {
     JS_FreeCString(ctx, str);
   }
   std::string finalstr = ss.str();
-  Log(L"%S", finalstr.c_str());
+  Print(finalstr.c_str());
   return JS_NULL;
 }
 
@@ -165,7 +165,7 @@ JSAPI_FUNC(my_load) {
     newScript->Start();
   } else {
     // TODO: Should this actually be there? No notification is bad, but do we want this? maybe throw an exception?
-    Print(L"File \"%S\" not found.", file);
+    Print("File \"%s\" not found.", file);
   }
   JS_FreeCString(ctx, file);
   return JS_NULL;
@@ -211,7 +211,7 @@ JSAPI_FUNC(my_stop) {
 }
 
 JSAPI_FUNC(my_stacktrace) {
-  Log(L"stacktrace is deprecated");
+  Log("stacktrace is deprecated");
   return JS_TRUE;
 }
 
@@ -258,7 +258,7 @@ JSAPI_FUNC(my_version) {
     return JS_NewString(ctx, D2BS_VERSION);
   }
 
-  Print(L"\u00FFc4D2BS\u00FFc1 \u00FFc3%s for Diablo II 1.14d.", D2BS_VERSION);
+  Print("ÿc4D2BSÿc1 ÿc3%s for Diablo II 1.14d.", D2BS_VERSION);
   return JS_TRUE;
 }
 
@@ -277,8 +277,7 @@ JSAPI_FUNC(my_debugLog) {
     JS_FreeCString(ctx, str);
   }
   std::string finalstr = ss.str();
-  std::wstring wstr(finalstr.begin(), finalstr.end());
-  Log(wstr.c_str());
+  Log(finalstr.c_str());
   return JS_UNDEFINED;
 }
 

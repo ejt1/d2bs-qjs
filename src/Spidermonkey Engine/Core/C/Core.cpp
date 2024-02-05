@@ -10,8 +10,8 @@
 #include "Console.h"
 #include "Game/Unorganized.h"
 
-bool SplitLines(const std::wstring& str, size_t maxWidth, const wchar_t delim, std::list<std::wstring>& lst) {
-  std::wstring tmp(str);
+bool SplitLines(const std::string& str, size_t maxWidth, const char delim, std::list<std::string>& lst) {
+  std::string tmp(str);
 
   if (str.length() < 1 || maxWidth < 40)
     return false;
@@ -33,12 +33,12 @@ bool SplitLines(const std::wstring& str, size_t maxWidth, const wchar_t delim, s
   int pos = tmp.find_last_of(delim, byteIdx - 1);
   if (!pos || pos == std::string::npos) {
     // Target delimiter was not found, breaking at byteIdx
-    std::wstring _ts = tmp.substr(0, byteIdx);
+    std::string _ts = tmp.substr(0, byteIdx);
     lst.push_back(_ts);
     tmp.erase(0, byteIdx);
   } else {
     // We found the last delimiter before byteIdx
-    std::wstring _ts = tmp.substr(0, pos);
+    std::string _ts = tmp.substr(0, pos);
     lst.push_back(_ts);
     tmp.erase(0, pos);
   }
@@ -46,17 +46,17 @@ bool SplitLines(const std::wstring& str, size_t maxWidth, const wchar_t delim, s
   return SplitLines(tmp, maxWidth, delim, lst);
 }
 
-void Print(const wchar_t* szFormat, ...) {
+void Print(const char* szFormat, ...) {
   va_list vaArgs;
   va_start(vaArgs, szFormat);
 
-  int len = _vscwprintf(szFormat, vaArgs);
-  wchar_t* str = new wchar_t[len + 1];
-  vswprintf_s(str, len + 1, szFormat, vaArgs);
+  int len = _vscprintf(szFormat, vaArgs);
+  char* str = new char[len + 1];
+  vsprintf_s(str, len + 1, szFormat, vaArgs);
   va_end(vaArgs);
 
   EnterCriticalSection(&Vars.cPrintSection);
-  Vars.qPrintBuffer.push(std::wstring(str));
+  Vars.qPrintBuffer.push(str);
   LeaveCriticalSection(&Vars.cPrintSection);
 
   delete[] str;
@@ -204,11 +204,11 @@ int UTF8Length(std::string str) {
   return len;
 }
 
-int MeasureText(const std::wstring& str, int index) {
+int MeasureText(const std::string& str, int index) {
   return CalculateTextLen(str.substr(0, index).c_str(), Vars.dwConsoleFont).x;
 }
 
-int MaxLineFit(const std::wstring& str, int start_idx, int end_idx, int maxWidth) {
+int MaxLineFit(const std::string& str, int start_idx, int end_idx, int maxWidth) {
   if (start_idx == end_idx) {
     return MeasureText(str, start_idx) <= maxWidth ? start_idx : -1;
   }

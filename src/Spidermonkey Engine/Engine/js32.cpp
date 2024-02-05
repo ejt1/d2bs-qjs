@@ -117,16 +117,13 @@ void JS_ReportPendingException(JSContext* ctx) {
   // if (_wcsicmp(L"Command Line", filename) != 0 && _wcsicmp(L"<unknown>", filename) != 0)
   //   displayName = filename + wcslen(Vars.szPath);
 
-  // Log(L"[%hs%hs] Code(%d) File(%s:%d) %hs\nLine: %hs", strict, type, report->errorNumber, filename, report->lineno, message, report->linebuf);
-  // Print(L"[\u00FFc%d%hs%hs\u00FFc0 (%d)] File(%s:%d) %hs", (warn ? 9 : 1), strict, type, report->errorNumber, displayName, report->lineno, message);
-
   if (what) {
     if (stackframe) {
-      Log(L"[%hs%hs] %S\n%S", strict, type, what->c_str(), stackframe->c_str());
-      Print(L"[\u00FFc%d%hs%hs\u00FFc0] %S\n%S", (warn ? 9 : 1), strict, type, what->c_str(), stackframe->c_str());
+      Log("[%hs%hs] %s\n%s", strict, type, what->c_str(), stackframe->c_str());
+      Print("[ÿc%d%hs%hsÿc0] %s\n%s", (warn ? 9 : 1), strict, type, what->c_str(), stackframe->c_str());
     } else {
-      Log(L"[%hs%hs] %S", strict, type, what->c_str());
-      Print(L"[\u00FFc%d%hs%hs\u00FFc0] %S", (warn ? 9 : 1), strict, type, what->c_str());
+      Log("[%hs%hs] %s", strict, type, what->c_str());
+      Print("[ÿc%d%hs%hs\ÿc0] %s", (warn ? 9 : 1), strict, type, what->c_str());
     }
   }
 

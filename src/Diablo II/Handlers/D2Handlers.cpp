@@ -24,10 +24,10 @@ DWORD __fastcall GameInput(wchar_t* wMsg) {
   if (Vars.bDontCatchNextMsg)
     Vars.bDontCatchNextMsg = false;
   else {
+    std::string msg = WideToAnsi(wMsg);
     if (wMsg[0] == L'.') {
-      block = ProcessCommand(wMsg + 1, false);
+      block = ProcessCommand(msg.c_str() + 1, false);
     } else {
-      std::string msg = WideToAnsi(wMsg);
       block = ChatInputEvent(msg.c_str());
     }
   }
@@ -41,10 +41,10 @@ DWORD __fastcall ChannelInput(wchar_t* wMsg) {
   if (Vars.bDontCatchNextMsg)
     Vars.bDontCatchNextMsg = false;
   else {
+    std::string msg = WideToAnsi(wMsg);
     if (wMsg[0] == L'.') {
-      block = ProcessCommand(wMsg + 1, false);
+      block = ProcessCommand(msg.c_str() + 1, false);
     } else {
-      std::string msg = WideToAnsi(wMsg);
       block = ChatInputEvent(msg.c_str());
     }
   }
@@ -96,7 +96,7 @@ void GameLeave(void) {
 DWORD __fastcall GamePacketReceived(BYTE* pPacket, DWORD dwSize) {
   switch (pPacket[0]) {
     case 0xAE:
-      Log(L"Warden activity detected! Terminating Diablo to ensure your safety :)");
+      Log("Warden activity detected! Terminating Diablo to ensure your safety :)");
       TerminateProcess(GetCurrentProcess(), 0);
       break;
     case 0x15:

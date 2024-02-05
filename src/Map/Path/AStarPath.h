@@ -122,7 +122,7 @@ class AStarPath : public MapPath {
         ticks = GetTickCount();
       }
       if (!GameReady() || startLvl != player->pPath->pRoom1->pRoom2->pLevel->dwLevelNo) {
-        Log(L"Pather lvl change while pathing");
+        Log("Pather lvl change while pathing");
         return;
       }
       if (Vars.bQuitting)

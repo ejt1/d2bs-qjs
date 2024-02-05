@@ -8,10 +8,10 @@
 
 bool Console::visible = false;
 bool Console::enabled = false;
-std::deque<std::wstring> Console::history = std::deque<std::wstring>();
-std::deque<std::wstring> Console::lines = std::deque<std::wstring>();
-std::deque<std::wstring> Console::commands = std::deque<std::wstring>();
-std::wstringstream Console::cmd = std::wstringstream();
+std::deque<std::string> Console::history = std::deque<std::string>();
+std::deque<std::string> Console::lines = std::deque<std::string>();
+std::deque<std::string> Console::commands = std::deque<std::string>();
+std::stringstream Console::cmd = std::stringstream();
 unsigned int Console::lineCount = 14;
 unsigned int Console::lineWidth = 625;
 unsigned int Console::commandPos = 0;
@@ -31,7 +31,7 @@ void Console::ExecuteCommand(void) {
   commands.push_back(cmd.str());
   commandPos = commands.size();
   ProcessCommand(cmd.str().c_str(), true);
-  cmd.str(L"");
+  cmd.str("");
 }
 
 void Console::RemoveLastKey(void) {
@@ -51,11 +51,11 @@ void Console::PrevCommand(void) {
   EnterCriticalSection(&Vars.cConsoleSection);
 
   if (commandPos < 1 || commandPos > commands.size()) {
-    cmd.str(L"");
+    cmd.str("");
   } else {
     if (commandPos >= 1)
       commandPos--;
-    cmd.str(L"");
+    cmd.str("");
     cmd << commands[commandPos];
   }
 
@@ -68,7 +68,7 @@ void Console::NextCommand(void) {
 
   EnterCriticalSection(&Vars.cConsoleSection);
 
-  cmd.str(L"");
+  cmd.str("");
   cmd << commands[commandPos];
 
   if (commandPos < commands.size() - 1)
@@ -97,19 +97,20 @@ void Console::ScrollDown(void) {
   LeaveCriticalSection(&Vars.cConsoleSection);
 }
 
-void Console::AddLine(std::wstring line) {
+void Console::AddLine(std::string line) {
   EnterCriticalSection(&Vars.cConsoleSection);
-  std::list<std::wstring> buf;
-  SplitLines(line, Console::MaxWidth(), L' ', buf);
-  for (std::list<std::wstring>::iterator it2 = buf.begin(); it2 != buf.end(); it2++) {
+  std::list<std::string> buf;
+  SplitLines(line, Console::MaxWidth(), ' ', buf);
+  for (std::list<std::string>::iterator it2 = buf.begin(); it2 != buf.end(); it2++) {
     history.push_back(*it2);
   }
 
   while (history.size() > 300)  // set history cap at 300
     history.pop_front();
 
-  if (Vars.bLogConsole)
+  if (Vars.bLogConsole) {
     LogNoFormat(line.c_str());
+  }
 
   scrollIndex = history.size() < lineCount ? 0 : history.size() - lineCount;
   Console::UpdateLines();
@@ -212,9 +213,9 @@ void Console::Draw(void) {
 
     int cmdsize = 0;
     int cmdlines = 0;
-    std::list<std::wstring> cmdsplit;
+    std::list<std::string> cmdsplit;
     if (IsEnabled()) {
-      std::wstring cmdstr = cmd.str();
+      std::string cmdstr = cmd.str();
       if (cmdstr.length() > 0) {
         SplitLines(cmdstr, Console::MaxWidth(), L' ', cmdsplit);
         cmdsize = CalculateTextLen(cmdsplit.back().c_str(), Vars.dwConsoleFont).x;
@@ -226,7 +227,7 @@ void Console::Draw(void) {
     // draw the box large enough to hold the whole thing
     D2GFX_DrawRectangle(0, 0, xsize, Console::height, 0xdf, 0);
 
-    std::deque<std::wstring>::reverse_iterator it = lines.rbegin();
+    std::deque<std::string>::reverse_iterator it = lines.rbegin();
     if (scrollIndex == 0 && lines.size() == lineCount && IsEnabled())  // handle index 0, top of console
       it++;
 
@@ -235,11 +236,11 @@ void Console::Draw(void) {
     if (IsEnabled()) {
       if (cmdsplit.size() > 0) {
         int dy = _height + 3;
-        for (std::list<std::wstring>::iterator it2 = cmdsplit.begin(); it2 != cmdsplit.end(); it2++, dy += charheight)
+        for (std::list<std::string>::iterator it2 = cmdsplit.begin(); it2 != cmdsplit.end(); it2++, dy += charheight)
           myDrawText(it2->c_str(), charwidth, dy, 0, Vars.dwConsoleFont);
       }
 
-      myDrawText(L">", 1, Console::height - 3, 0, Vars.dwConsoleFont);
+      myDrawText(">", 1, Console::height - 3, 0, Vars.dwConsoleFont);
       DWORD tick = GetTickCount();
       if ((tick - count) < 600) {
         int lx = cmdsize + charwidth, ly = Console::height - (charheight / 3);

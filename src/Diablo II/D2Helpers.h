@@ -14,8 +14,8 @@
 
 #include <Windows.h> // POINT
 
-void Log(const wchar_t* szFormat, ...);
-void LogNoFormat(const wchar_t* szString);
+void Log(const char* szFormat, ...);
+void LogNoFormat(const char* szString);
 
 enum ClientGameState { ClientStateNull, ClientStateMenu, ClientStateInGame, ClientStateBusy };
 ClientGameState ClientState(void);
@@ -33,7 +33,9 @@ POINT ScreenToAutomap(int x, int y);
 void AutomapToScreen(POINT* pPos);
 D2DrlgLevelStrc* GetLevel(DWORD dwLevelNo);
 void D2CLIENT_Interact(D2UnitStrc* pUnit, DWORD dwMoveType);
+void myDrawText(const char* szwText, int x, int y, int color, int font);
 void myDrawText(const wchar_t* szwText, int x, int y, int color, int font);
+void myDrawCenterText(const char* szwText, int x, int y, int color, int font, int div);
 void myDrawCenterText(const wchar_t* szwText, int x, int y, int color, int font, int div);
 // D2UnitStrc* FindItemByPosition(DWORD x, DWORD y, DWORD Location);
 BYTE CalcPercent(DWORD dwVal, DWORD dwMaxVal, BYTE iMin = NULL);

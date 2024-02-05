@@ -18,13 +18,13 @@
 #include "Game/D2WinControl.h"
 #include "Game/D2WinUnknown.h"
 
-void Log(const wchar_t* szFormat, ...) {
+void Log(const char* szFormat, ...) {
   va_list vaArgs;
 
   va_start(vaArgs, szFormat);
-  int len = _vscwprintf(szFormat, vaArgs);
-  wchar_t* szString = new wchar_t[len + 1];
-  vswprintf_s(szString, len + 1, szFormat, vaArgs);
+  int len = _vscprintf(szFormat, vaArgs);
+  char* szString = new char[len + 1];
+  vsprintf_s(szString, len + 1, szFormat, vaArgs);
   va_end(vaArgs);
 
   if (len > 0 && szString[len - 1] == L'\n')
@@ -34,7 +34,7 @@ void Log(const wchar_t* szFormat, ...) {
   delete[] szString;
 }
 
-void LogNoFormat(const wchar_t* szString) {
+void LogNoFormat(const char* szString) {
   time_t tTime;
   struct tm timestamp;
   char szTime[128] = "";
@@ -50,9 +50,8 @@ void LogNoFormat(const wchar_t* szString) {
 #endif
   static DWORD id = GetProcessId(GetCurrentProcess());
   DWORD tid = GetCurrentThreadId();
-  std::string sString = WideToAnsi(szString);
   strftime(szTime, sizeof(szTime), "%x %X", &timestamp);
-  fprintf(log, "[%s pid %d tid %d] D2BS: %s\n", szTime, id, tid, sString.c_str());
+  fprintf(log, "[%s pid %d tid %d] D2BS: %s\n", szTime, id, tid, szString);
 #ifndef DEBUG
   fflush(log);
   fclose(log);
@@ -365,17 +364,27 @@ void AutomapToScreen(POINT* pPos) {
   pPos->y = 8 + D2CLIENT_Offset->y + (pPos->y * (*D2CLIENT_AutomapMode));
 }
 
+void myDrawText(const char* szwText, int x, int y, int color, int font) {
+  std::wstring str = AnsiToWide(szwText);
+  myDrawText(str.c_str(), x, y, color, font);
+}
+
 void myDrawText(const wchar_t* szwText, int x, int y, int color, int font) {
   DWORD dwOld = D2WIN_SetTextSize(font);
   D2WIN_DrawText(szwText, x, y, color, 0);
   D2WIN_SetTextSize(dwOld);
 }
 
+void myDrawCenterText(const char* szText, int x, int y, int color, int font, int div) {
+  std::wstring str = AnsiToWide(szText);
+  myDrawCenterText(str.c_str(), x, y, color, font, div);
+}
+
 void myDrawCenterText(const wchar_t* szText, int x, int y, int color, int font, int div) {
   DWORD dwWidth = NULL, dwFileNo = NULL, dwOldSize = NULL;
 
   dwOldSize = D2WIN_SetTextSize(font);
-  D2WIN_GetTextSize((wchar_t*)szText, &dwWidth, &dwFileNo);
+  D2WIN_GetTextSize(szText, &dwWidth, &dwFileNo);
   D2WIN_SetTextSize(dwOldSize);
   myDrawText(szText, x - (dwWidth >> div), y, color, font);
 }
@@ -590,7 +599,7 @@ D2CellFileStrc* LoadCellFile(const char* lpszPath, DWORD bMPQ) {
 
 D2CellFileStrc* LoadCellFile(const wchar_t* lpszPath, DWORD bMPQ) {
   if (bMPQ != 0) {
-    Log(L"Cannot specify wide character path for MPQ: %s", lpszPath);
+    Log("Cannot specify wide character path for MPQ: %s", lpszPath);
     return NULL;
   }
 

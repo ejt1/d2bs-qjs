@@ -37,7 +37,7 @@ Script::Script(const char* file, ScriptMode mode /*, uint32_t argc, JSAutoStruct
     m_fileName = "Command Line";
   } else {
     if (_access(file, 0) != 0) {
-      Log(L"%S (%s, %d)", file, __FILE__, __LINE__);
+      Log("%s (%s, %d)", file, __FILE__, __LINE__);
 
       throw std::exception("File not found");
     }
@@ -103,7 +103,7 @@ void Script::Stop(bool force) {
   m_isReallyPaused = false;
   if (m_scriptMode != kScriptModeCommand) {
     const char* displayName = m_fileName.c_str() + strlen(Vars.szScriptPath) + 1;
-    Print(L"Script %S ended", displayName);
+    Print("Script %s ended", displayName);
   }
 
   // trigger call back so script ends
@@ -585,7 +585,7 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
     if (!JS_IsException(rval)) {
       if (!JS_IsNull(rval) && !JS_IsUndefined(rval)) {
         const char* text = JS_ToCString(m_context, rval);
-        Print(L"%S", text);
+        Print(text);
         JS_FreeCString(m_context, text);
       }
       JS_FreeValue(m_context, rval);
@@ -647,7 +647,6 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
     return true;
   }
   if (strcmp(evtName, "DisposeMe") == 0) {
-    Log(L"DisposeMe");
     sScriptEngine->DisposeScript(this);
   }
 
@@ -663,7 +662,7 @@ bool Script::Initialize() {
 
   m_context = JS_NewContext(m_runtime);
   if (!m_context) {
-    Log(L"Couldn't create the context");
+    Log("Couldn't create the context");
     return false;
   }
   JS_SetContextOpaque(m_context, this);
@@ -721,7 +720,7 @@ bool Script::Initialize() {
 
   JSValue meObject = BuildObject(m_context, unit_class_id, FUNCLIST(me_proto_funcs), m_me);
   if (!meObject) {
-    Log(L"failed to build object 'me'");
+    Log("failed to build object 'me'");
     return false;
   }
 

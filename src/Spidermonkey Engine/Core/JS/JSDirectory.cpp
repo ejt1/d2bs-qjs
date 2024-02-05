@@ -50,7 +50,7 @@ JSAPI_FUNC(my_openDir) {
   }
 
   if (!isValidPath(szName)) {
-    Log(L"The following path was deemed invalid: %S. (%s, %s)", szName, L"JSDirectory.cpp", L"my_openDir");
+    Log("The following path was deemed invalid: %s. (%s, %s)", szName, "JSDirectory.cpp", "my_openDir");
     JS_FreeCString(ctx, szName);
     return JS_EXCEPTION;
   }
@@ -94,11 +94,11 @@ JSAPI_FUNC(dir_getFiles) {
   sprintf_s(path, _MAX_PATH, "%s\\%s", Vars.szScriptPath, d->name);
 
   if (!_getcwd(oldpath, _MAX_PATH)) {
-    Log(L"Error getting current working directory. (%s, %s)", L"JSDirectory.cpp", L"dir_getFiles");
+    Log("Error getting current working directory. (%s, %s)", "JSDirectory.cpp", "dir_getFiles");
     return JS_EXCEPTION;
   }
   if (_chdir(path) == -1) {
-    Log(L"Changing directory to %S. (%s, %s)", path, L"JSDirectory.cpp", L"dir_getFiles");
+    Log("Changing directory to %s. (%s, %s)", path, "JSDirectory.cpp", "dir_getFiles");
     return JS_EXCEPTION;
   }
 
@@ -114,7 +114,7 @@ JSAPI_FUNC(dir_getFiles) {
   }
 
   if (_chdir(oldpath) == -1) {
-    Log(L"Error changing directory back to %S. (%s, %s)", oldpath, L"JSDirectory.cpp", L"dir_getFiles");
+    Log("Error changing directory back to %s. (%s, %s)", oldpath, "JSDirectory.cpp", "dir_getFiles");
     return JS_EXCEPTION;
   }
 
@@ -141,11 +141,11 @@ JSAPI_FUNC(dir_getFolders) {
   sprintf_s(path, _MAX_PATH, "%s\\%s", Vars.szScriptPath, d->name);
 
   if (!_getcwd(oldpath, _MAX_PATH)) {
-    Log(L"Error getting current working directory. (%s, %s)", L"JSDirectory.cpp", L"dir_getFolders");
+    Log("Error getting current working directory. (%s, %s)", "JSDirectory.cpp", "dir_getFolders");
     return JS_EXCEPTION;
   }
   if (_chdir(path) == -1) {
-    Log(L"Changing directory to %S. (%s, %s)", path, L"JSDirectory.cpp", L"dir_getFolders");
+    Log("Changing directory to %s. (%s, %s)", path, "JSDirectory.cpp", "dir_getFolders");
     return JS_EXCEPTION;
   }
 
@@ -162,7 +162,7 @@ JSAPI_FUNC(dir_getFolders) {
   }
 
   if (_chdir(oldpath) == -1) {
-    Log(L"Error changing directory back to %S. (%s, %s)", oldpath, L"JSDirectory.cpp", L"dir_getFolders");
+    Log("Error changing directory back to %s. (%s, %s)", oldpath, "JSDirectory.cpp", "dir_getFolders");
     return JS_EXCEPTION;
   }
 

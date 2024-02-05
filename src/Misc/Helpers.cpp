@@ -121,11 +121,11 @@ bool StartScript(const char* scriptname, ScriptMode mode) {
 
 void Reload(void) {
   if (sScriptEngine->GetCount() > 0)
-    Print(L"\u00FFc2D2BS\u00FFc0 :: Stopping all scripts");
+    Print("ÿc2D2BSÿc0 :: Stopping all scripts");
   sScriptEngine->StopAll();
 
   if (Vars.bDisableCache != TRUE)
-    Print(L"\u00FFc2D2BS\u00FFc0 :: Flushing the script cache");
+    Print("ÿc2D2BSÿc0 :: Flushing the script cache");
   sScriptEngine->FlushCache();
 
   // wait for things to catch up
@@ -134,47 +134,46 @@ void Reload(void) {
   if (!Vars.bUseProfileScript) {
     const char* script = GetStarterScriptName();
     if (StartScript(script, GetStarterScriptState()))
-      Print(L"\u00FFc2D2BS\u00FFc0 :: Started %s", script);
+      Print("ÿc2D2BSÿc0 :: Started %s", script);
     else
-      Print(L"\u00FFc2D2BS\u00FFc0 :: Failed to start %s", script);
+      Print("ÿc2D2BSÿc0 :: Failed to start %s", script);
   }
 }
 
-bool ProcessCommand(const wchar_t* command, bool unprocessedIsCommand) {
+bool ProcessCommand(const char* command, bool unprocessedIsCommand) {
   bool result = false;
-  wchar_t* buf = _wcsdup(command);
-  wchar_t* next_token1 = NULL;
-  wchar_t* argv = wcstok_s(buf, L" ", &next_token1);
+  char* buf = _strdup(command);
+  char* next_token1 = NULL;
+  char* argv = strtok_s(buf, " ", &next_token1);
 
   // no command?
   if (argv == NULL)
     return false;
 
-  if (_wcsicmp(argv, L"start") == 0) {
+  if (_stricmp(argv, "start") == 0) {
     const char* script = GetStarterScriptName();
     if (StartScript(script, GetStarterScriptState()))
-      Print(L"\u00FFc2D2BS\u00FFc0 :: Started %S", script);
+      Print("ÿc2D2BSÿc0 :: Started %s", script);
     else
-      Print(L"\u00FFc2D2BS\u00FFc0 :: Failed to start %S", script);
+      Print("ÿc2D2BSÿc0 :: Failed to start %s", script);
     result = true;
-  } else if (_wcsicmp(argv, L"stop") == 0) {
+  } else if (_stricmp(argv, "stop") == 0) {
     if (sScriptEngine->GetCount() > 0)
-      Print(L"\u00FFc2D2BS\u00FFc0 :: Stopping all scripts");
+      Print("ÿc2D2BSÿc0 :: Stopping all scripts");
     sScriptEngine->StopAll();
     result = true;
-  } else if (_wcsicmp(argv, L"flush") == 0) {
+  } else if (_stricmp(argv, "flush") == 0) {
     if (Vars.bDisableCache != TRUE)
-      Print(L"\u00FFc2D2BS\u00FFc0 :: Flushing the script cache");
+      Print("ÿc2D2BSÿc0 :: Flushing the script cache");
     sScriptEngine->FlushCache();
     result = true;
-  } else if (_wcsicmp(argv, L"load") == 0) {
-    std::string script = WideToAnsi(command + 5);
-    if (StartScript(script.c_str(), GetStarterScriptState()))
-      Print(L"\u00FFc2D2BS\u00FFc0 :: Started %S", script.c_str());
+  } else if (_stricmp(argv, "load") == 0) {
+    if (StartScript(command + 5, GetStarterScriptState()))
+      Print("ÿc2D2BSÿc0 :: Started %s", command + 5);
     else
-      Print(L"\u00FFc2D2BS\u00FFc0 :: Failed to start %S", script.c_str());
+      Print("ÿc2D2BSÿc0 :: Failed to start %s", command + 5);
     result = true;
-  } else if (_wcsicmp(argv, L"reload") == 0) {
+  } else if (_stricmp(argv, "reload") == 0) {
     Reload();
     result = true;
   }
@@ -192,13 +191,11 @@ bool ProcessCommand(const wchar_t* command, bool unprocessedIsCommand) {
     result = true;
   }
 #endif
-  else if (_wcsicmp(argv, L"exec") == 0 && !unprocessedIsCommand) {
-    std::string cmd = WideToAnsi(command + 5);
-    ExecCommand(cmd.c_str());
+  else if (_stricmp(argv, "exec") == 0 && !unprocessedIsCommand) {
+    ExecCommand(command + 5);
     result = true;
   } else if (unprocessedIsCommand) {
-    std::string cmd = WideToAnsi(command);
-    ExecCommand(cmd.c_str());
+    ExecCommand(command + 5);
     result = true;
   }
   free(buf);

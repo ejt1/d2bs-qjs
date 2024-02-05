@@ -99,7 +99,7 @@ int ActMap::GetMapData(const Point& point, bool abs) const {
     }
   }
   if (!this->act || !this->act->pMisc || !this->act->pRoom1) {
-    Print(L"\u00FFc1ActMap Level Not Loaded");
+    Print("ÿc1ActMap Level Not Loaded");
     return ActMap::Avoid;
   }
   if (!currLevel) {

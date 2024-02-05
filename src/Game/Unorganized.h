@@ -80,8 +80,8 @@ inline void(__fastcall* D2CLIENT_CloseInteract)(void) = nullptr;
 inline void(__fastcall* D2CLIENT_ClickMap)(uint32_t MouseFlag, uint32_t x, uint32_t y, uint32_t Type) = nullptr;
 inline uint32_t(__fastcall* D2CLIENT_GetMouseXOffset)(void) = nullptr;
 inline uint32_t(__fastcall* D2CLIENT_GetMouseYOffset)(void) = nullptr;
-inline void(__fastcall* D2CLIENT_PrintGameString)(wchar_t* wMessage, int nColor) = nullptr;
-inline void(__fastcall* D2CLIENT_PrintPartyString)(wchar_t* wMessage, int nColor) = nullptr;
+inline void(__fastcall* D2CLIENT_PrintGameString)(const wchar_t* wMessage, int nColor) = nullptr;
+inline void(__fastcall* D2CLIENT_PrintPartyString)(const wchar_t* wMessage, int nColor) = nullptr;
 inline void(__fastcall* D2CLIENT_LeaveParty)(void) = nullptr;
 inline void(__fastcall* D2CLIENT_AcceptTrade)(void) = nullptr;
 inline void(__fastcall* D2CLIENT_CancelTrade)(void) = nullptr;
@@ -322,7 +322,7 @@ inline D2CellFileStrc*(__fastcall* D2WIN_LoadCellFile)(const char* szFile, int T
 
 inline void(__fastcall* D2WIN_TakeScreenshot)() = nullptr;
 inline void(__fastcall* D2WIN_DrawText)(const wchar_t* wStr, int xPos, int yPos, DWORD dwColor, DWORD dwUnk) = nullptr;
-inline DWORD(__fastcall* D2WIN_GetTextSize)(wchar_t* wStr, DWORD* dwWidth, DWORD* dwFileNo) = nullptr;
+inline DWORD(__fastcall* D2WIN_GetTextSize)(const wchar_t* wStr, DWORD* dwWidth, DWORD* dwFileNo) = nullptr;
 inline DWORD(__fastcall* D2WIN_SetTextSize)(DWORD dwSize) = nullptr;
 inline DWORD(__fastcall* D2WIN_GetTextWidthFileNo)(wchar_t* wStr, DWORD* dwWidth, DWORD* dwFileNo) = nullptr;
 inline DWORD(__fastcall* D2WIN_InitMPQ)(const char* mpqfile, char* mpqname, int v4, int v5) = nullptr;

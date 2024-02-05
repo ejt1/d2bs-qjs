@@ -95,7 +95,6 @@ static BOOL isTcpIp(ProfileType pt) {
 }
 
 DWORD Profile::login(const char** error) {
-  Log(L"login");
   // Sleep(10000);
   bool loginComplete = FALSE, skippedToBnet = TRUE;
   int location = 0;
