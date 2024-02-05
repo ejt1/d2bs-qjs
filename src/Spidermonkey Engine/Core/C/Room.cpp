@@ -11,7 +11,7 @@ BOOL RevealRoom(Room2* pRoom2, BOOL revealPresets) {
   if (!pRoom2)
     return false;
 
-  AutoCriticalRoom* cRoom = new AutoCriticalRoom;
+  AutoCriticalRoom cRoom;
 
   UnitAny* player = D2CLIENT_GetPlayerUnit();
   // Check if we have Room1(Needed in order to reveal)
@@ -20,7 +20,6 @@ BOOL RevealRoom(Room2* pRoom2, BOOL revealPresets) {
     bAdded = true;
   }
   if (!(pRoom2 && pRoom2->pRoom1)) {  // second check added to see if we DID indeed init the room!
-    delete cRoom;
     return false;
   }
 
@@ -44,7 +43,6 @@ BOOL RevealRoom(Room2* pRoom2, BOOL revealPresets) {
   if (bInit)
     InitAutomapLayer(dwLevelNo);
 
-  delete cRoom;
   return true;
 }
 

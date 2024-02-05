@@ -72,7 +72,7 @@ JSAPI_FUNC(my_getPresetUnits) {
   if (argc >= 3)
     JS_ToUint32(ctx, &nClassId, argv[2]);
 
-  AutoCriticalRoom* cRoom = new AutoCriticalRoom;
+  AutoCriticalRoom cRoom;
 
   bool bAddedRoom = FALSE;
   DWORD dwArrayCount = NULL;
@@ -102,7 +102,6 @@ JSAPI_FUNC(my_getPresetUnits) {
         JSValue unit = BuildObject(ctx, presetunit_class_id, NULL, 0, presetunit_props, _countof(presetunit_props), mypUnit);
         if (JS_IsException(unit)) {
           delete mypUnit;
-          delete cRoom;
           JS_FreeValue(ctx, pReturnArray);
           THROW_ERROR(ctx, "Failed to build object?");
         }
@@ -119,7 +118,6 @@ JSAPI_FUNC(my_getPresetUnits) {
     }
   }
 
-  delete cRoom;
   return pReturnArray;
 }
 
@@ -146,7 +144,7 @@ JSAPI_FUNC(my_getPresetUnit) {
   if (argc >= 3)
     JS_ToUint32(ctx, &nClassId, argv[2]);
 
-  AutoCriticalRoom* cRoom = new AutoCriticalRoom;
+  AutoCriticalRoom cRoom;
 
   bool bAddedRoom = FALSE;
 
@@ -174,11 +172,9 @@ JSAPI_FUNC(my_getPresetUnit) {
 
         JSValue obj = BuildObject(ctx, presetunit_class_id, NULL, 0, presetunit_props, _countof(presetunit_props), mypUnit);
         if (JS_IsException(obj)) {
-          delete cRoom;
           delete mypUnit;
           THROW_ERROR(ctx, "Failed to create presetunit object");
         }
-        delete cRoom;
         return obj;
       }
     }
@@ -189,6 +185,5 @@ JSAPI_FUNC(my_getPresetUnit) {
     }
   }
 
-  delete cRoom;
   return JS_FALSE;
 }

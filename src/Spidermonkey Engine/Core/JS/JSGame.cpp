@@ -114,7 +114,7 @@ JSAPI_FUNC(my_acceptTrade) {
     }
   }
 
-  AutoCriticalRoom* cRoom = new AutoCriticalRoom;
+  AutoCriticalRoom cRoom;
 
   if ((*p_D2CLIENT_RecentTradeId) == 3 || (*p_D2CLIENT_RecentTradeId) == 5 || (*p_D2CLIENT_RecentTradeId) == 7) {
     JSValue rval = JS_FALSE;
@@ -130,10 +130,8 @@ JSAPI_FUNC(my_acceptTrade) {
       D2CLIENT_AcceptTrade();
       rval = JS_TRUE;
     }
-    delete cRoom;
     return rval;
   }
-  delete cRoom;
   return JS_ThrowInternalError(ctx, "Invalid parameter passed to acceptTrade!");
 }
 
@@ -141,7 +139,7 @@ JSAPI_FUNC(my_tradeOk) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  AutoCriticalRoom* cRoom = new AutoCriticalRoom;
+  AutoCriticalRoom cRoom;
   TransactionDialogsInfo_t* pTdi = *p_D2CLIENT_pTransactionDialogsInfo;
   unsigned int i;
 
@@ -151,12 +149,10 @@ JSAPI_FUNC(my_tradeOk) {
       // the dialog list, but if it's not 1, a crash is guaranteed. (CrazyCasta)
       if (pTdi->dialogLines[i].handler == D2CLIENT_TradeOK && *p_D2CLIENT_TransactionDialogs == 1) {
         D2CLIENT_TradeOK();
-        delete cRoom;
         return JS_TRUE;
       }
     }
   }
-  delete cRoom;
   return JS_ThrowInternalError(ctx, "Not in proper state to click ok to trade.");
 }
 
@@ -167,7 +163,7 @@ JSAPI_FUNC(my_getDialogLines) {
   JSValue pReturnArray;
   JSValue line;
 
-  AutoCriticalRoom* cRoom = new AutoCriticalRoom;
+  AutoCriticalRoom cRoom;
 
   if (pTdi != NULL) {
     pReturnArray = JS_NewArray(ctx);
@@ -182,7 +178,6 @@ JSAPI_FUNC(my_getDialogLines) {
     }
     rval = pReturnArray;
   }
-  delete cRoom;
   return rval;
 }
 
@@ -323,11 +318,10 @@ JSAPI_FUNC(my_clickItem) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  AutoCriticalRoom* cRoom = new AutoCriticalRoom;
+  AutoCriticalRoom cRoom;
 
   if (*p_D2CLIENT_TransactionDialog != 0 || *p_D2CLIENT_TransactionDialogs != 0 || *p_D2CLIENT_TransactionDialogs_2 != 0) {
     rval = JS_FALSE;
-    delete cRoom;
     return rval;
   }
 
@@ -365,26 +359,22 @@ JSAPI_FUNC(my_clickItem) {
     pmyUnit = (myUnit*)JS_GetOpaque3(argv[0]);
 
     if (!pmyUnit || (pmyUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT) {
-      delete cRoom;
       return rval;
     }
 
     pUnit = D2CLIENT_FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
 
     if (!pUnit) {
-      delete cRoom;
       return rval;
     }
 
     clickequip* click = (clickequip*)*(DWORD*)(D2CLIENT_BodyClickTable + (4 * pUnit->pItemData->BodyLocation));
 
     if (!click) {
-      delete cRoom;
       return rval;
     }
 
     click(D2CLIENT_GetPlayerUnit(), D2CLIENT_GetPlayerUnit()->pInventory, pUnit->pItemData->BodyLocation);
-    delete cRoom;
     return rval;
   } else if (argc == 2 && JS_IsNumber(argv[0]) && JS_IsNumber(argv[1])) {
     int32_t nClickType;
@@ -396,7 +386,6 @@ JSAPI_FUNC(my_clickItem) {
       clickequip* click = (clickequip*)*(DWORD*)(D2CLIENT_BodyClickTable + (4 * nBodyLoc));
 
       if (!click) {
-        delete cRoom;
         return rval;
       }
 
@@ -414,13 +403,11 @@ JSAPI_FUNC(my_clickItem) {
         }
       }
     }
-    delete cRoom;
     return rval;
   } else if (argc == 2 && JS_IsNumber(argv[0]) && JS_IsObject(argv[1])) {
     pmyUnit = (myUnit*)JS_GetOpaque3(argv[1]);
 
     if (!pmyUnit || (pmyUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT) {
-      delete cRoom;
       return rval;
     }
 
@@ -430,7 +417,6 @@ JSAPI_FUNC(my_clickItem) {
     JS_ToInt32(ctx, &nClickType, argv[0]);
 
     if (!pUnit || !(pUnit->dwType == UNIT_ITEM) || !pUnit->pItemData) {
-      delete cRoom;
       THROW_ERROR(ctx, "Object is not an item!");
     }
 
@@ -454,7 +440,6 @@ JSAPI_FUNC(my_clickItem) {
             rval = JS_TRUE;
             D2CLIENT_MercItemAction(0x61, pUnit->pItemData->BodyLocation);
           }
-      delete cRoom;
       return rval;
     } else if (InventoryLocation == LOCATION_INVENTORY || InventoryLocation == LOCATION_STASH || InventoryLocation == LOCATION_CUBE) {
       switch (InventoryLocation) {
@@ -487,7 +472,6 @@ JSAPI_FUNC(my_clickItem) {
       int i = x;
 
       if (i < 0 || i > 0x0F) {
-        delete cRoom;
         return rval;
       }
 
@@ -504,14 +488,12 @@ JSAPI_FUNC(my_clickItem) {
         D2CLIENT_ClickBeltRight(D2CLIENT_GetPlayerUnit()->pInventory, D2CLIENT_GetPlayerUnit(), nClickType == 1 ? FALSE : TRUE, i);
     } else if (D2CLIENT_GetCursorItem() == pUnit) {
       if (nClickType < 1 || nClickType > 12) {
-        delete cRoom;
         return rval;
       }
 
       clickequip* click = (clickequip*)*(DWORD*)(D2CLIENT_BodyClickTable + (4 * nClickType));
 
       if (!click) {
-        delete cRoom;
         return rval;
       }
 
@@ -580,7 +562,6 @@ JSAPI_FUNC(my_clickItem) {
         else if (nButton == 2)  // Shift Left Click
           D2CLIENT_LeftClickItem(clickTarget, D2CLIENT_GetPlayerUnit(), D2CLIENT_GetPlayerUnit()->pInventory, x, y, 5, pLayout);
 
-        delete cRoom;
         return JS_TRUE;
       } else if (nLoc == LOCATION_BELT)  // Belt
       {
@@ -594,7 +575,6 @@ JSAPI_FUNC(my_clickItem) {
         }
 
         if (z == -1) {
-          delete cRoom;
           return rval;
         }
 
@@ -616,12 +596,10 @@ JSAPI_FUNC(my_clickItem) {
         else if (nButton == 2)
           D2CLIENT_ClickBeltRight(D2CLIENT_GetPlayerUnit(), D2CLIENT_GetPlayerUnit()->pInventory, TRUE, z);
 
-        delete cRoom;
         return JS_TRUE;
       }
     }
   }
-  delete cRoom;
   return JS_TRUE;
 }
 
@@ -1327,15 +1305,13 @@ JSAPI_FUNC(my_revealLevel) {
   if (argc == 1 && JS_IsBool(argv[0])) {
     bDrawPresets = !!JS_ToBool(ctx, argv[0]);
   }
-  AutoCriticalRoom* cRoom = new AutoCriticalRoom;
+  AutoCriticalRoom cRoom;
   if (!GameReady()) {
-    delete cRoom;
     return JS_UNDEFINED;
   }
 
   for (Room2* room = level->pRoom2First; room; room = room->pRoom2Next) {
     RevealRoom(room, bDrawPresets);
   }
-  delete cRoom;
   return JS_UNDEFINED;
 }

@@ -363,7 +363,7 @@ JSAPI_PROP(unit_getProperty) {
       if (pUnit->dwType != UNIT_ITEM)
         break;
 
-      AutoCriticalRoom* cRoom = new AutoCriticalRoom;
+      AutoCriticalRoom cRoom;
 
       wchar_t wBuffer[2048] = L"";
       wchar_t bBuffer[1] = {1};
@@ -375,7 +375,6 @@ JSAPI_PROP(unit_getProperty) {
         D2CLIENT_LoadItemDesc(pUnit->pItemData->pOwnerInventory->pOwner, 0);
         ReadProcessBYTES(GetCurrentProcess(), GetDllOffset("D2Win.dll", 0x841EC8 - 0x400000), wBuffer, 2047);
       }
-      delete cRoom;
       if (wcslen(wBuffer) > 0) {
         return JS_NewString(ctx, wBuffer);
       }
@@ -1248,29 +1247,25 @@ JSAPI_FUNC(item_shop) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  AutoCriticalRoom* cRoom = new AutoCriticalRoom;
+  AutoCriticalRoom cRoom;
 
   if (*p_D2CLIENT_TransactionDialog != 0 || *p_D2CLIENT_TransactionDialogs != 0 || *p_D2CLIENT_TransactionDialogs_2 != 0) {
-    delete cRoom;
     return JS_FALSE;
   }
 
   myUnit* lpItem = (myUnit*)JS_GetOpaque3(this_val);
 
   if (!lpItem || (lpItem->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT) {
-    delete cRoom;
     return JS_FALSE;
   }
 
   UnitAny* pItem = D2CLIENT_FindUnit(lpItem->dwUnitId, lpItem->dwType);
 
   if (!pItem || pItem->dwType != UNIT_ITEM) {
-    delete cRoom;
     return JS_FALSE;
   }
 
   if (!D2CLIENT_GetUIState(UI_NPCSHOP)) {
-    delete cRoom;
     return JS_FALSE;
   }
 
@@ -1280,13 +1275,11 @@ JSAPI_FUNC(item_shop) {
 
   // Check if we are interacted.
   if (!pNPC) {
-    delete cRoom;
     return JS_FALSE;
   }
 
   // Check for proper mode.
   if ((dwMode != 1) && (dwMode != 2) && (dwMode != 6)) {
-    delete cRoom;
     return JS_FALSE;
   }
 
@@ -1294,7 +1287,6 @@ JSAPI_FUNC(item_shop) {
   if (dwMode == 1) {
     // Check if we own the item!
     if (pItem->pItemData->pOwnerInventory->pOwner->dwUnitId != D2CLIENT_GetPlayerUnit()->dwUnitId) {
-      delete cRoom;
       return JS_FALSE;
     }
 
@@ -1302,7 +1294,6 @@ JSAPI_FUNC(item_shop) {
   } else {
     // Make sure the item is owned by the NPC interacted with.
     if (pItem->pItemData->pOwnerInventory->pOwner->dwUnitId != pNPC->dwUnitId) {
-      delete cRoom;
       return JS_FALSE;
     }
 
@@ -1346,7 +1337,6 @@ JSAPI_FUNC(item_shop) {
 
    D2NET_SendPacket(sizeof(pPacket), 1, pPacket);*/
 
-  delete cRoom;
   return JS_TRUE;
 }
 
