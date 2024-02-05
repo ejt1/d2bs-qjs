@@ -187,6 +187,7 @@ void InitOffsets() {
   InitOffset(&D2CLIENT_ClickParty_I, base + 0x79EB0);
   InitOffset(&D2CLIENT_ClickParty_II, base + 0x9B990);
   InitOffset(&D2CLIENT_ShopAction_I, base + 0x7D030);
+  InitOffset(&D2CLIENT_GetUnitName_I, base + 0x64A60);
   InitOffset(&D2CLIENT_GetItemDesc_I, base + 0x2E380);
   InitOffset(&D2CLIENT_AssignPlayer_I, base + 0x66200);
   InitOffset(&D2CLIENT_InputCall_I, base + 0x787B0);
