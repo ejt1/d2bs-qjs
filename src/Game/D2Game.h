@@ -12,3 +12,5 @@ struct D2GameInfoStrc {
   uint8_t _2[0x158];          // 0xED
   char szGamePassword[0x18];  // 0x245
 };
+
+inline D2GameInfoStrc** D2CLIENT_GameInfo = nullptr;

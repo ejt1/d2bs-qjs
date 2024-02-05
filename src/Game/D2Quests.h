@@ -8,3 +8,5 @@ struct D2QuestInfoStrc {
   uint32_t _1;    // 0x04
 };
 #pragma pack(pop)
+
+inline void* (*D2CLIENT_GetQuestInfo)() = nullptr;

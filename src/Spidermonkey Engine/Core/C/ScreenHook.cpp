@@ -35,7 +35,7 @@ bool __fastcall ClickHook(Genhook* hook, void* argv, uint32_t /*argc*/) {
 }
 
 bool __fastcall DrawHook(Genhook* hook, void* argv, uint32_t /*argc*/) {
-  if ((hook->GetGameState() == (ScreenhookState)(int)argv || hook->GetGameState() == Perm) && (!hook->GetIsAutomap() || (hook->GetIsAutomap() && *p_D2CLIENT_AutomapOn)))
+  if ((hook->GetGameState() == (ScreenhookState)(int)argv || hook->GetGameState() == Perm) && (!hook->GetIsAutomap() || (hook->GetIsAutomap() && *D2CLIENT_AutomapOn)))
     hook->Draw();
   return true;
 }

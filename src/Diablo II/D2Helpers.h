@@ -7,6 +7,9 @@
 #include "Game/D2Inventory.h"
 #include "Game/D2Gfx.h"
 #include "Game/Drlg/D2DrlgDrlg.h"
+#include "Game/Units/Units.h"
+#include "Game/Unorganized.h"
+#include "Game/D2DataTbls.h"
 
 void Log(const wchar_t* szFormat, ...);
 void LogNoFormat(const wchar_t* szString);

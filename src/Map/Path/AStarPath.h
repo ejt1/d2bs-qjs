@@ -3,6 +3,7 @@
 #include "Path.h"
 #include "..\Map.h"
 #include "Reduction\PathReducer.h"
+#include "Game/Units/Units.h"
 #include <vector>
 #include <set>
 #include <queue>

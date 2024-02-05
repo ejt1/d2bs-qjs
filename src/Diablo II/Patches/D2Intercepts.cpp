@@ -2,6 +2,9 @@
 #include "D2Ptrs.h"
 #include "Engine.h"
 #include "Helpers.h"
+
+#include "Game/Unorganized.h"
+
 #include <shlwapi.h>
 
 void __declspec(naked) GameInput_Intercept() {
@@ -151,7 +154,7 @@ void __declspec(naked) GameAttack_Intercept() {
 		mov [esp+0x08+0x4+0x4], 1  // bool unit
 
 OldCode:
-		mov eax, [p_D2CLIENT_MouseY]
+		mov eax, [D2CLIENT_MouseY]
 		mov eax, [eax]
 		retn
   }
@@ -241,7 +244,7 @@ SkipInput:
 // C4740: flow in or out of inline asm code suppresses global optimization
 #pragma warning(disable : 4740)
 VOID __declspec(naked) __fastcall ClassicSTUB() {
-  *p_BNCLIENT_ClassicKey = Vars.szClassic;
+  *BNCLIENT_ClassicKey = Vars.szClassic;
   __asm {
 		
 		jmp BNCLIENT_DClass;
@@ -249,7 +252,7 @@ VOID __declspec(naked) __fastcall ClassicSTUB() {
 }
 
 VOID __declspec(naked) __fastcall LodSTUB() {
-  *p_BNCLIENT_XPacKey = Vars.szLod;
+  *BNCLIENT_XPacKey = Vars.szLod;
   __asm {
 		
 		jmp BNCLIENT_DLod;

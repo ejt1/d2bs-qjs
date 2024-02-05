@@ -24,3 +24,5 @@ struct D2RosterUnitStrc {
   D2RosterUnitStrc* pNext;  // 0x80
 };
 #pragma pack(pop)
+
+inline D2RosterUnitStrc** D2CLIENT_PlayerUnitList = nullptr;

@@ -2,6 +2,9 @@
 #include "CriticalSections.h"
 #include "D2Ptrs.h"
 #include "D2Helpers.h"
+#include "Game/D2DataTbls.h"
+#include "Game/Units/Units.h"
+#include "Game/Unorganized.h"
 
 bool RevealRoom(D2DrlgRoomStrc* pRoom2, bool revealPresets) {
   bool bAdded = false;
@@ -32,7 +35,7 @@ bool RevealRoom(D2DrlgRoomStrc* pRoom2, bool revealPresets) {
   }
 
   // Reveal this room!
-  D2CLIENT_RevealAutomapRoom(pRoom2->pRoom1, TRUE, (*p_D2CLIENT_AutomapLayer));
+  D2CLIENT_RevealAutomapRoom(pRoom2->pRoom1, TRUE, (*D2CLIENT_AutomapLayer));
 
   if (revealPresets)
     DrawPresets(pRoom2);
@@ -103,7 +106,7 @@ void DrawPresets(D2DrlgRoomStrc* pRoom2) {
       pCell->xPixel = (WORD)((((pX - pY) * 16) / 10) + 1);
       pCell->yPixel = (WORD)((((pY + pX) * 8) / 10) - 3);
 
-      D2CLIENT_AddAutomapCell(pCell, &((*p_D2CLIENT_AutomapLayer)->pObjects));
+      D2CLIENT_AddAutomapCell(pCell, &((*D2CLIENT_AutomapLayer)->pObjects));
     }
   }
 }

@@ -26,7 +26,7 @@ struct D2DynamicPathStrc {
   D2UnitStrc* pTargetUnit;     // 0x58
   uint32_t dwTargetType;       // 0x5C
   uint32_t dwTargetId;         // 0x60
-  BYTE bDirection;             // 0x64
+  uint8_t bDirection;          // 0x64
 };
 
 struct D2StaticPathStrc {

@@ -1,6 +1,8 @@
 #pragma once
 
-#include "D2Ptrs.h"
+#include "Game/Units/Units.h"
+
+#include <Windows.h>
 
 D2UnitStrc* GetUnit(const char* szName, DWORD dwClassId, DWORD dwType, DWORD dwMode, DWORD dwUnitId);
 D2UnitStrc* GetNextUnit(D2UnitStrc* pUnit, const char* szName, DWORD dwClassId, DWORD dwType, DWORD dwMode);

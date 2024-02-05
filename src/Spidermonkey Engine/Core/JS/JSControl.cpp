@@ -289,7 +289,7 @@ JSAPI_FUNC(my_getControls) {
   DWORD dwArrayCount = NULL;
 
   JSValue pReturnArray = JS_NewArray(ctx);
-  for (Control* pControl = *p_D2WIN_FirstControl; pControl; pControl = pControl->pNext) {
+  for (Control* pControl = *D2WIN_FirstControl; pControl; pControl = pControl->pNext) {
     ControlData* data = new ControlData;
     data->dwType = pControl->dwType;
     data->dwX = pControl->dwPosX;

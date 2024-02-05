@@ -53,8 +53,8 @@ DWORD __fastcall ChannelInput(wchar_t* wMsg) {
 }
 
 void SetMaxDiff(void) {
-  if (D2CLIENT_GetDifficulty() == 1 && *p_D2CLIENT_ExpCharFlag) {
-    BnetData* pData = *p_D2LAUNCH_BnData;
+  if (D2CLIENT_GetDifficulty() == 1 && *D2CLIENT_ExpCharFlag) {
+    BnetData* pData = *D2LAUNCH_BnData;
     if (pData)
       pData->nMaxDiff = 10;
   }

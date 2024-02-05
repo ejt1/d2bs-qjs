@@ -9,6 +9,7 @@
 #include "Game/D2Skills.h"
 #include "Game/Drlg/D2DrlgDrlg.h"
 #include "Game/D2Gfx.h"
+#include "Game/D2Inventory.h"
 
 #include <cstdint>
 
@@ -40,7 +41,7 @@ struct D2UnitStrc {
   uint32_t dwFrameRemain;       // 0x48
   uint16_t wFrameRate;          // 0x4C
   uint16_t _4;                  // 0x4E
-  BYTE* pGfxUnk;                // 0x50
+  uint8_t* pGfxUnk;             // 0x50
   uint32_t* pGfxInfo;           // 0x54
   uint32_t _5;                  // 0x58
   D2StatListExStrc* pStats;     // 0x5C
@@ -75,3 +76,28 @@ struct D2UnitStrc {
 struct UnitHashTable {
   D2UnitStrc* table[128];
 };
+
+inline D2UnitStrc*(__fastcall* D2CLIENT_FindClientSideUnit)(uint32_t dwId, uint32_t dwType) = nullptr;
+inline D2UnitStrc*(__fastcall* D2CLIENT_FindServerSideUnit)(uint32_t dwId, uint32_t dwType) = nullptr;
+inline D2UnitStrc*(__fastcall* D2CLIENT_GetCurrentInteractingNPC)() = nullptr;
+inline D2UnitStrc*(__stdcall* D2CLIENT_GetSelectedUnit)() = nullptr;
+inline D2UnitStrc*(__fastcall* D2CLIENT_GetCursorItem)() = nullptr;
+// inline D2UnitStrc* (__fastcall *D2CLIENT_GetMercUnit)(void) = nullptr; //Updated 1.14d //00478A90-BASE 478F20 with 7 0 args
+inline void(__fastcall* D2CLIENT_SetSelectedUnit_I)(D2UnitStrc* pUnit) = nullptr;
+inline int(__fastcall* D2CLIENT_GetItemName)(D2UnitStrc* pItem, wchar_t* wBuffer, uint32_t dwSize) = nullptr;
+inline int(__stdcall* D2CLIENT_LoadItemDesc)(D2UnitStrc* pItem, int type) = nullptr;
+inline uint32_t(__fastcall* D2CLIENT_GetMonsterOwner)(uint32_t nMonsterId) = nullptr;
+inline uint32_t(__fastcall* D2CLIENT_GetUnitHPPercent)(uint32_t dwUnitId) = nullptr;
+inline void(__fastcall* D2CLIENT_InitInventory)(void) = nullptr;
+inline uint32_t(__fastcall* D2CLIENT_SetUIVar)(uint32_t varno, uint32_t howset, uint32_t unknown1) = nullptr;
+inline int(__fastcall* D2CLIENT_GetUnitX)(D2UnitStrc* pUnit) = nullptr;
+inline int(__fastcall* D2CLIENT_GetUnitY)(D2UnitStrc* pUnit) = nullptr;
+inline void(__fastcall* D2CLIENT_ShopAction)(D2UnitStrc* pNpc, D2UnitStrc* pItem, uint32_t dwSell, uint32_t unk, uint32_t dwItemCost, uint32_t dwMode, uint32_t _2,
+                                             uint32_t _3) = nullptr;
+inline void(__stdcall* D2CLIENT_LeftClickItem_I)(D2UnitStrc* pPlayer, D2InventoryStrc* pInventory, int x, int y, uint32_t dwClickType, InventoryLayout* pLayout,
+                                                 uint32_t Location) = nullptr;
+
+inline UnitHashTable* D2CLIENT_ServerSideUnitHashTables = nullptr;
+inline UnitHashTable* D2CLIENT_ClientSideUnitHashTables = nullptr;
+inline D2UnitStrc** D2CLIENT_PlayerUnit = nullptr;
+inline D2UnitStrc** D2CLIENT_SelectedInvItem = nullptr;

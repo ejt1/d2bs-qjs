@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+struct D2UnitStrc;
+
 struct D2InventoryStrc {
   uint32_t dwSignature;     // 0x00
   uint8_t* bGame1C;         // 0x04
@@ -28,3 +30,10 @@ struct InventoryLayout {
   uint8_t SlotPixelWidth;
   uint8_t SlotPixelHeight;
 };
+
+inline InventoryLayout** D2CLIENT_TradeLayout = nullptr;
+inline InventoryLayout** D2CLIENT_StashLayout = nullptr;
+inline InventoryLayout** D2CLIENT_StoreLayout = nullptr;
+inline InventoryLayout** D2CLIENT_CubeLayout = nullptr;
+inline InventoryLayout** D2CLIENT_InventoryLayout = nullptr;
+inline InventoryLayout** D2CLIENT_MercLayout = nullptr;

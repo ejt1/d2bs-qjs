@@ -106,27 +106,27 @@ JSAPI_FUNC(my_acceptTrade) {
     int32_t test = 0;
     JS_ToInt32(ctx, &test, argv[0]);
     if (test == 1) {  // Called with a '1' it will return if we already accepted it or not
-      return JS_NewBool(ctx, *p_D2CLIENT_bTradeAccepted);
+      return JS_NewBool(ctx, *D2CLIENT_bTradeAccepted);
     } else if (test == 2) {  // Called with a '2' it will return the trade flag
-      return JS_NewInt32(ctx, *p_D2CLIENT_RecentTradeId);
+      return JS_NewInt32(ctx, *D2CLIENT_RecentTradeId);
     } else if (test == 3) {  // Called with a '3' it will return if the 'check' is red or not
-      return JS_NewBool(ctx, *p_D2CLIENT_bTradeBlock);
+      return JS_NewBool(ctx, *D2CLIENT_bTradeBlock);
     }
   }
 
   AutoCriticalRoom cRoom;
 
-  if ((*p_D2CLIENT_RecentTradeId) == 3 || (*p_D2CLIENT_RecentTradeId) == 5 || (*p_D2CLIENT_RecentTradeId) == 7) {
+  if ((*D2CLIENT_RecentTradeId) == 3 || (*D2CLIENT_RecentTradeId) == 5 || (*D2CLIENT_RecentTradeId) == 7) {
     JSValue rval = JS_FALSE;
-    if ((*p_D2CLIENT_bTradeBlock)) {
+    if ((*D2CLIENT_bTradeBlock)) {
       // Don't operate if we can't trade anyway ...
       rval = JS_FALSE;
-    } else if ((*p_D2CLIENT_bTradeAccepted)) {
-      (*p_D2CLIENT_bTradeAccepted) = FALSE;
+    } else if ((*D2CLIENT_bTradeAccepted)) {
+      (*D2CLIENT_bTradeAccepted) = FALSE;
       D2CLIENT_CancelTrade();
       rval = JS_TRUE;
     } else {
-      (*p_D2CLIENT_bTradeAccepted) = TRUE;
+      (*D2CLIENT_bTradeAccepted) = TRUE;
       D2CLIENT_AcceptTrade();
       rval = JS_TRUE;
     }
@@ -140,14 +140,14 @@ JSAPI_FUNC(my_tradeOk) {
     THROW_WARNING(ctx, "Game not ready");
 
   AutoCriticalRoom cRoom;
-  TransactionDialogsInfo_t* pTdi = *p_D2CLIENT_pTransactionDialogsInfo;
+  TransactionDialogsInfo_t* pTdi = *D2CLIENT_pTransactionDialogsInfo;
   unsigned int i;
 
   if (pTdi != NULL) {
     for (i = 0; i < pTdi->numLines; ++i) {
       // Not sure if *p_D2CLIENT_TransactionDialogs == 1 necessary if it's in
       // the dialog list, but if it's not 1, a crash is guaranteed. (CrazyCasta)
-      if (pTdi->dialogLines[i].handler == D2CLIENT_TradeOK && *p_D2CLIENT_TransactionDialogs == 1) {
+      if (pTdi->dialogLines[i].handler == D2CLIENT_TradeOK && *D2CLIENT_TransactionDialogs == 1) {
         D2CLIENT_TradeOK();
         return JS_TRUE;
       }
@@ -158,7 +158,7 @@ JSAPI_FUNC(my_tradeOk) {
 
 JSAPI_FUNC(my_getDialogLines) {
   JSValue rval = JS_UNDEFINED;
-  TransactionDialogsInfo_t* pTdi = *p_D2CLIENT_pTransactionDialogsInfo;
+  TransactionDialogsInfo_t* pTdi = *D2CLIENT_pTransactionDialogsInfo;
   unsigned int i;
   JSValue pReturnArray;
   JSValue line;
@@ -308,7 +308,7 @@ JSAPI_FUNC(my_clickItem) {
 
   AutoCriticalRoom cRoom;
 
-  if (*p_D2CLIENT_TransactionDialog != 0 || *p_D2CLIENT_TransactionDialogs != 0 || *p_D2CLIENT_TransactionDialogs_2 != 0) {
+  if (*D2CLIENT_TransactionDialog != 0 || *D2CLIENT_TransactionDialogs != 0 || *D2CLIENT_TransactionDialogs_2 != 0) {
     rval = JS_FALSE;
     return rval;
   }
@@ -340,8 +340,8 @@ JSAPI_FUNC(my_clickItem) {
       {3, 3},  // 15
   };
 
-  *p_D2CLIENT_CursorHoverX = 0xFFFFFFFF;
-  *p_D2CLIENT_CursorHoverY = 0xFFFFFFFF;
+  *D2CLIENT_CursorHoverX = 0xFFFFFFFF;
+  *D2CLIENT_CursorHoverY = 0xFFFFFFFF;
 
   if (argc == 1 && JS_IsObject(argv[0])) {
     pmyUnit = (myUnit*)JS_GetOpaque3(argv[0]);
@@ -414,8 +414,8 @@ JSAPI_FUNC(my_clickItem) {
     int x = pUnit->pItemPath->dwPosX;
     int y = pUnit->pItemPath->dwPosY;
 
-    *p_D2CLIENT_CursorHoverX = x;
-    *p_D2CLIENT_CursorHoverY = y;
+    *D2CLIENT_CursorHoverX = x;
+    *D2CLIENT_CursorHoverY = y;
 
     InventoryLayout* pLayout = NULL;
 
@@ -432,15 +432,15 @@ JSAPI_FUNC(my_clickItem) {
     } else if (InventoryLocation == LOCATION_INVENTORY || InventoryLocation == LOCATION_STASH || InventoryLocation == LOCATION_CUBE) {
       switch (InventoryLocation) {
         case LOCATION_INVENTORY:
-          pLayout = (InventoryLayout*)p_D2CLIENT_InventoryLayout;
+          pLayout = (InventoryLayout*)D2CLIENT_InventoryLayout;
           ClickLocation = CLICKTARGET_INVENTORY;
           break;
         case LOCATION_STASH:
-          pLayout = (InventoryLayout*)p_D2CLIENT_StashLayout;
+          pLayout = (InventoryLayout*)D2CLIENT_StashLayout;
           ClickLocation = CLICKTARGET_STASH;
           break;
         case LOCATION_CUBE:
-          pLayout = (InventoryLayout*)p_D2CLIENT_CubeLayout;
+          pLayout = (InventoryLayout*)D2CLIENT_CubeLayout;
           ClickLocation = CLICKTARGET_CUBE;
           break;
       }
@@ -501,8 +501,8 @@ JSAPI_FUNC(my_clickItem) {
       int clickTarget = LOCATION_NULL;
       InventoryLayout* pLayout = NULL;
 
-      *p_D2CLIENT_CursorHoverX = nX;
-      *p_D2CLIENT_CursorHoverY = nY;
+      *D2CLIENT_CursorHoverX = nX;
+      *D2CLIENT_CursorHoverY = nY;
 
       // Fixing the x/y click spot for items taking more than one inventory square- so Diablo can handle it!
       if (nLoc != LOCATION_BELT) {
@@ -523,19 +523,19 @@ JSAPI_FUNC(my_clickItem) {
       if (nLoc == LOCATION_INVENTORY || nLoc == LOCATION_TRADE || nLoc == LOCATION_CUBE || nLoc == LOCATION_STASH) {
         switch (nLoc) {
           case LOCATION_INVENTORY:
-            pLayout = (InventoryLayout*)p_D2CLIENT_InventoryLayout;
+            pLayout = (InventoryLayout*)D2CLIENT_InventoryLayout;
             clickTarget = CLICKTARGET_INVENTORY;
             break;
           case LOCATION_TRADE:
-            pLayout = (InventoryLayout*)p_D2CLIENT_TradeLayout;
+            pLayout = (InventoryLayout*)D2CLIENT_TradeLayout;
             clickTarget = CLICKTARGET_TRADE;
             break;
           case LOCATION_CUBE:
-            pLayout = (InventoryLayout*)p_D2CLIENT_CubeLayout;
+            pLayout = (InventoryLayout*)D2CLIENT_CubeLayout;
             clickTarget = CLICKTARGET_CUBE;
             break;
           case LOCATION_STASH:
-            pLayout = (InventoryLayout*)p_D2CLIENT_StashLayout;
+            pLayout = (InventoryLayout*)D2CLIENT_StashLayout;
             clickTarget = CLICKTARGET_STASH;
             break;
         }
@@ -760,7 +760,7 @@ JSAPI_FUNC(my_getCursorType) {
   if (argc > 0)
     JS_ToInt32(ctx, &nType, argv[0]);
 
-  return JS_NewInt32(ctx, nType == 1 ? *p_D2CLIENT_ShopCursorType : *p_D2CLIENT_RegularCursorType);
+  return JS_NewInt32(ctx, nType == 1 ? *D2CLIENT_ShopCursorType : *D2CLIENT_RegularCursorType);
 }
 
 JSAPI_FUNC(my_getSkillByName) {
@@ -845,7 +845,7 @@ JSAPI_FUNC(my_getTradeInfo) {
   JS_ToInt32(ctx, &nMode, argv[0]);
   switch (nMode) {
     case 0:
-      return JS_NewInt32(ctx, *p_D2CLIENT_RecentTradeId);
+      return JS_NewInt32(ctx, *D2CLIENT_RecentTradeId);
     case 1:
       // FIXME
       // char* tmp = UnicodeToAnsi((wchar_t*)(*p_D2CLIENT_RecentTradeName));
@@ -854,7 +854,7 @@ JSAPI_FUNC(my_getTradeInfo) {
       // Temporary return value to keep it kosher
       return JS_NULL;
     case 2:
-      return JS_NewInt32(ctx, *p_D2CLIENT_RecentTradeId);
+      return JS_NewInt32(ctx, *D2CLIENT_RecentTradeId);
   }
   return JS_FALSE;
 }
@@ -886,7 +886,7 @@ JSAPI_FUNC(my_getWaypoint) {
   if (nWaypointId > 40)
     nWaypointId = NULL;
 
-  return JS_NewBool(ctx, (!!D2COMMON_CheckWaypoint((*p_D2CLIENT_WaypointTable), nWaypointId)));
+  return JS_NewBool(ctx, (!!D2COMMON_CheckWaypoint((*D2CLIENT_WaypointTable), nWaypointId)));
 }
 
 JSAPI_FUNC(my_quitGame) {
@@ -944,7 +944,7 @@ JSAPI_FUNC(my_clickParty) {
 
   D2UnitStrc* myUnit = D2CLIENT_GetPlayerUnit();
   D2RosterUnitStrc* pUnit = (D2RosterUnitStrc*)JS_GetOpaque3(argv[0]);
-  D2RosterUnitStrc* mypUnit = *p_D2CLIENT_PlayerUnitList;
+  D2RosterUnitStrc* mypUnit = *D2CLIENT_PlayerUnitList;
 
   if (!pUnit || !mypUnit)
     return rval;
@@ -961,7 +961,7 @@ JSAPI_FUNC(my_clickParty) {
   int32_t nMode;
   JS_ToInt32(ctx, &nMode, argv[1]);
 
-  BnetData* pData = (*p_D2LAUNCH_BnData);
+  BnetData* pData = (*D2LAUNCH_BnData);
 
   // Attempt to loot player, check first if it's hardcore
   if (nMode == 0 && pData && !(pData->nCharFlags & PLAYER_TYPE_HARDCORE))
@@ -1086,7 +1086,7 @@ JSAPI_FUNC(my_weaponSwitch) {
 
   if (nParameter == NULL) {
     // don't perform a weapon switch if current gametype is classic
-    BnetData* pData = (*p_D2LAUNCH_BnData);
+    BnetData* pData = (*D2LAUNCH_BnData);
     if (pData) {
       if (!(pData->nCharFlags & PLAYER_TYPE_EXPAC))
         return JS_FALSE;
@@ -1098,7 +1098,7 @@ JSAPI_FUNC(my_weaponSwitch) {
     D2NET_SendPacket(1, 1, aPacket);
     return JS_TRUE;
   }
-  return JS_NewInt32(ctx, *p_D2CLIENT_bWeapSwitch);
+  return JS_NewInt32(ctx, *D2CLIENT_bWeapSwitch);
 }
 
 JSAPI_FUNC(my_transmute) {
@@ -1144,11 +1144,11 @@ JSAPI_FUNC(my_getMouseCoords) {
 
   JSValue pObj = NULL;
 
-  POINT Coords = {static_cast<LONG>(*p_D2CLIENT_MouseX), static_cast<LONG>(*p_D2CLIENT_MouseY)};
+  POINT Coords = {static_cast<LONG>(*D2CLIENT_MouseX), static_cast<LONG>(*D2CLIENT_MouseY)};
 
   if (nFlag) {
-    Coords.x += *p_D2CLIENT_ViewportX;
-    Coords.y += *p_D2CLIENT_ViewportY;
+    Coords.x += *D2CLIENT_ViewportX;
+    Coords.y += *D2CLIENT_ViewportY;
 
     D2COMMON_AbsScreenToMap(&Coords.x, &Coords.y);
   }
@@ -1178,11 +1178,11 @@ JSAPI_FUNC(my_submitItem) {
   if (D2UnitStrc* pUnit = D2CLIENT_GetCursorItem()) {
     if (D2CLIENT_GetPlayerUnit()->dwAct == 1) {
       if (GetPlayerArea() == D2CLIENT_GetPlayerUnit()->pAct->pMisc->dwStaffTombLevel) {
-        *p_D2CLIENT_CursorItemMode = 3;
+        *D2CLIENT_CursorItemMode = 3;
         BYTE aPacket[17] = {NULL};
         aPacket[0] = 0x44;
         *(DWORD*)&aPacket[1] = D2CLIENT_GetPlayerUnit()->dwUnitId;
-        *(DWORD*)&aPacket[5] = *p_D2CLIENT_OrificeId;
+        *(DWORD*)&aPacket[5] = *D2CLIENT_OrificeId;
         *(DWORD*)&aPacket[9] = pUnit->dwUnitId;
         *(DWORD*)&aPacket[13] = 3;
         D2NET_SendPacket(17, 1, aPacket);
@@ -1191,7 +1191,7 @@ JSAPI_FUNC(my_submitItem) {
         rval = JS_FALSE;
     } else if (D2CLIENT_GetPlayerUnit()->dwAct == 0 || D2CLIENT_GetPlayerUnit()->dwAct == 4)  // dwAct is 0-4, not 1-5
     {
-      if (*p_D2CLIENT_RecentInteractId && D2COMMON_IsTownByLevelNo(GetPlayerArea())) {
+      if (*D2CLIENT_RecentInteractId && D2COMMON_IsTownByLevelNo(GetPlayerArea())) {
         D2CLIENT_SubmitItem(pUnit->dwUnitId);
         rval = JS_TRUE;
       } else

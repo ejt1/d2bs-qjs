@@ -7,6 +7,9 @@
 #include "D2Skills.h"
 #include "MPQStats.h"
 
+#include "Game/D2Game.h"
+#include "Game/D2Quests.h"
+
 EMPTY_CTOR(unit)
 
 CLASS_FINALIZER(unit) {
@@ -30,8 +33,8 @@ CLASS_FINALIZER(unit) {
 }
 
 JSAPI_PROP(unit_getProperty) {
-  BnetData* pData = *p_D2LAUNCH_BnData;
-  D2GameInfoStrc* pInfo = *p_D2CLIENT_GameInfo;
+  BnetData* pData = *D2LAUNCH_BnData;
+  D2GameInfoStrc* pInfo = *D2CLIENT_GameInfo;
 
   switch (magic) {
     case ME_PID:
@@ -71,7 +74,7 @@ JSAPI_PROP(unit_getProperty) {
     case ME_GAMESTARTTIME:
       return JS_NewFloat64(ctx, Vars.dwGameTime);
     case ME_GAMETYPE:
-      return JS_NewInt32(ctx, *p_D2CLIENT_ExpCharFlag);
+      return JS_NewInt32(ctx, *D2CLIENT_ExpCharFlag);
     case ME_PLAYERTYPE:
       if (pData) {
         return JS_NewBool(ctx, !!(pData->nCharFlags & PLAYER_TYPE_HARDCORE));
@@ -80,7 +83,7 @@ JSAPI_PROP(unit_getProperty) {
     case ME_ITEMONCURSOR:
       return JS_NewBool(ctx, !!(D2CLIENT_GetCursorItem()));
     case ME_AUTOMAP:
-      return JS_NewBool(ctx, *p_D2CLIENT_AutomapOn);
+      return JS_NewBool(ctx, *D2CLIENT_AutomapOn);
     case ME_LADDER:
       if (pData) {
         return JS_NewFloat64(ctx, pData->ladderflag);
@@ -100,11 +103,11 @@ JSAPI_PROP(unit_getProperty) {
       return JS_NewString(ctx, szTitle);
     } break;
     case ME_PING:
-      return JS_NewInt32(ctx, *p_D2CLIENT_Ping);
+      return JS_NewInt32(ctx, *D2CLIENT_Ping);
     case ME_FPS:
-      return JS_NewInt32(ctx, *p_D2CLIENT_FPS);
+      return JS_NewInt32(ctx, *D2CLIENT_FPS);
     case ME_LOCALE:
-      return JS_NewInt32(ctx, *p_D2CLIENT_Lang);
+      return JS_NewInt32(ctx, *D2CLIENT_Lang);
     case OOG_INGAME:
       return JS_NewBool(ctx, (ClientState() == ClientStateMenu ? false : true));
     case OOG_QUITONERROR:
@@ -112,7 +115,7 @@ JSAPI_PROP(unit_getProperty) {
     case OOG_MAXGAMETIME:
       return JS_NewInt32(ctx, Vars.dwMaxGameTime);
     case ME_MERCREVIVECOST:
-      return JS_NewInt32(ctx, *p_D2CLIENT_MercReviveCost);
+      return JS_NewInt32(ctx, *D2CLIENT_MercReviveCost);
     case ME_BLOCKKEYS:
       return JS_NewBool(ctx, Vars.bBlockKeys);
     case ME_BLOCKMOUSE:
@@ -153,9 +156,9 @@ JSAPI_PROP(unit_getProperty) {
       return JS_NewString(ctx, tmp);
     } break;
     case ME_MAPID:
-      return JS_NewInt32(ctx, *p_D2CLIENT_MapId);
+      return JS_NewInt32(ctx, *D2CLIENT_MapId);
     case ME_NOPICKUP:
-      return JS_NewBool(ctx, !!*p_D2CLIENT_NoPickUp);
+      return JS_NewBool(ctx, !!*D2CLIENT_NoPickUp);
     case UNIT_ACT:
       return JS_NewUint32(ctx, pUnit->dwAct + 1);
     case UNIT_AREA:
@@ -203,7 +206,7 @@ JSAPI_PROP(unit_getProperty) {
       return JS_NewInt32(ctx, D2COMMON_GetUnitStat(pUnit, 12, 0));
     case ME_RUNWALK:
       if (pUnit == D2CLIENT_GetPlayerUnit()) {
-        return JS_NewInt32(ctx, *p_D2CLIENT_AlwaysRun);
+        return JS_NewInt32(ctx, *D2CLIENT_AlwaysRun);
       }
       break;
     case UNIT_SPECTYPE:
@@ -437,7 +440,7 @@ JSAPI_PROP(unit_getProperty) {
       break;
     case ME_WSWITCH:
       if (pUnit == D2CLIENT_GetPlayerUnit()) {
-        return JS_NewInt32(ctx, *p_D2CLIENT_bWeapSwitch);
+        return JS_NewInt32(ctx, *D2CLIENT_bWeapSwitch);
       }
       break;
     default:
@@ -488,13 +491,13 @@ JSAPI_STRICT_PROP(unit_setProperty) {
         Vars.bBlockMouse = bval;
       break;
     case ME_RUNWALK:
-      *p_D2CLIENT_AlwaysRun = !!ival;
+      *D2CLIENT_AlwaysRun = !!ival;
       break;
     case ME_AUTOMAP:
-      *p_D2CLIENT_AutomapOn = bval ? 1 : 0;
+      *D2CLIENT_AutomapOn = bval ? 1 : 0;
       break;
     case ME_NOPICKUP:
-      *p_D2CLIENT_NoPickUp = !!ival;
+      *D2CLIENT_NoPickUp = !!ival;
       break;
   }
 
@@ -533,7 +536,7 @@ JSAPI_FUNC(unit_getUnit) {
   else if (nType == 101) {
     pUnit = D2CLIENT_GetSelectedUnit();
     if (!pUnit)
-      pUnit = (*p_D2CLIENT_SelectedInvItem);
+      pUnit = (*D2CLIENT_SelectedInvItem);
   } else
     pUnit = GetUnit(szName ? szName : "", nClassId, nType, nMode, nUnitId);
 
@@ -643,7 +646,7 @@ JSAPI_FUNC(unit_cancel) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  DWORD automapOn = *p_D2CLIENT_AutomapOn;
+  DWORD automapOn = *D2CLIENT_AutomapOn;
   int32_t mode = -1;
 
   if (argc > 0) {
@@ -673,7 +676,7 @@ JSAPI_FUNC(unit_cancel) {
       break;
   }
 
-  *p_D2CLIENT_AutomapOn = automapOn;
+  *D2CLIENT_AutomapOn = automapOn;
   return JS_TRUE;
 }
 
@@ -690,7 +693,7 @@ JSAPI_FUNC(unit_repair) {
 
   BYTE aPacket[17] = {NULL};
   aPacket[0] = 0x35;
-  *(DWORD*)&aPacket[1] = *p_D2CLIENT_RecentInteractId;
+  *(DWORD*)&aPacket[1] = *D2CLIENT_RecentInteractId;
   aPacket[16] = 0x80;
   D2NET_SendPacket(17, 1, aPacket);
 
@@ -1081,10 +1084,10 @@ JSAPI_FUNC(item_getItemCost) {
   switch (nMode) {
     case 0:  // Buy
     case 1:  // Sell
-      return JS_NewInt32(ctx, D2COMMON_GetItemPrice(D2CLIENT_GetPlayerUnit(), pUnit, nDifficulty, *p_D2CLIENT_ItemPriceList, nNpcClassId, nMode));
+      return JS_NewInt32(ctx, D2COMMON_GetItemPrice(D2CLIENT_GetPlayerUnit(), pUnit, nDifficulty, *D2CLIENT_ItemPriceList, nNpcClassId, nMode));
       break;
     case 2:  // Repair
-      return JS_NewInt32(ctx, D2COMMON_GetItemPrice(D2CLIENT_GetPlayerUnit(), pUnit, nDifficulty, *p_D2CLIENT_ItemPriceList, nNpcClassId, 3));
+      return JS_NewInt32(ctx, D2COMMON_GetItemPrice(D2CLIENT_GetPlayerUnit(), pUnit, nDifficulty, *D2CLIENT_ItemPriceList, nNpcClassId, 3));
       break;
     default:
       break;
@@ -1250,7 +1253,7 @@ JSAPI_FUNC(item_shop) {
 
   AutoCriticalRoom cRoom;
 
-  if (*p_D2CLIENT_TransactionDialog != 0 || *p_D2CLIENT_TransactionDialogs != 0 || *p_D2CLIENT_TransactionDialogs_2 != 0) {
+  if (*D2CLIENT_TransactionDialog != 0 || *D2CLIENT_TransactionDialogs != 0 || *D2CLIENT_TransactionDialogs_2 != 0) {
     return JS_FALSE;
   }
 
@@ -1526,7 +1529,7 @@ JSAPI_FUNC(my_overhead) {
       return JS_EXCEPTION;
     }
     std::string ansi = UTF8ToANSI(lpszText);
-    OverheadMsg* pMsg = D2COMMON_GenerateOverheadMsg(NULL, ansi.c_str(), *p_D2CLIENT_OverheadTrigger);
+    OverheadMsg* pMsg = D2COMMON_GenerateOverheadMsg(NULL, ansi.c_str(), *D2CLIENT_OverheadTrigger);
     if (pMsg) {
       pUnit->pOMsg = pMsg;
     }
@@ -1714,5 +1717,5 @@ JSAPI_FUNC(me_getRepairCost) {
   if (argc > 0 && JS_IsNumber(argv[0]))
     JS_ToInt32(ctx, &nNpcClassId, argv[0]);
 
-  return JS_NewInt32(ctx, D2COMMON_GetRepairCost(NULL, D2CLIENT_GetPlayerUnit(), nNpcClassId, D2CLIENT_GetDifficulty(), *p_D2CLIENT_ItemPriceList, 0));
+  return JS_NewInt32(ctx, D2COMMON_GetRepairCost(NULL, D2CLIENT_GetPlayerUnit(), nNpcClassId, D2CLIENT_GetDifficulty(), *D2CLIENT_ItemPriceList, 0));
 }

@@ -43,12 +43,12 @@ D2UnitStrc* GetUnit(const char* szName, DWORD dwClassId, DWORD dwType, DWORD dwM
   // If we have a valid type, just check that value, other wise, check all
   // values. There are 6 valid types, 0-5
   if (dwType == 3)
-    return GetUnitFromTables(p_D2CLIENT_ClientSideUnitHashTables, dwType, dwType, szName, dwClassId, dwType, dwMode, dwUnitId);
+    return GetUnitFromTables(D2CLIENT_ClientSideUnitHashTables, dwType, dwType, szName, dwClassId, dwType, dwMode, dwUnitId);
 
   if (dwType >= 0 && dwType <= 5)
-    return GetUnitFromTables(p_D2CLIENT_ServerSideUnitHashTables, dwType, dwType, szName, dwClassId, dwType, dwMode, dwUnitId);
+    return GetUnitFromTables(D2CLIENT_ServerSideUnitHashTables, dwType, dwType, szName, dwClassId, dwType, dwMode, dwUnitId);
   else
-    return GetUnitFromTables(p_D2CLIENT_ServerSideUnitHashTables, 0, 5, szName, dwClassId, dwType, dwMode, dwUnitId);
+    return GetUnitFromTables(D2CLIENT_ServerSideUnitHashTables, 0, 5, szName, dwClassId, dwType, dwMode, dwUnitId);
 }
 
 static DWORD dwMax(DWORD a, DWORD b) {
@@ -102,12 +102,12 @@ D2UnitStrc* GetNextUnit(D2UnitStrc* pUnit, const char* szName, DWORD dwClassId, 
   if (!pUnit)
     return NULL;
   if (dwType == 3)
-    return GetNextUnitFromTables(pUnit, p_D2CLIENT_ClientSideUnitHashTables, dwType, dwType, szName, dwClassId, dwType, dwMode);
+    return GetNextUnitFromTables(pUnit, D2CLIENT_ClientSideUnitHashTables, dwType, dwType, szName, dwClassId, dwType, dwMode);
 
   if (dwType >= 0 && dwType <= 5)
-    return GetNextUnitFromTables(pUnit, p_D2CLIENT_ServerSideUnitHashTables, dwType, dwType, szName, dwClassId, dwType, dwMode);
+    return GetNextUnitFromTables(pUnit, D2CLIENT_ServerSideUnitHashTables, dwType, dwType, szName, dwClassId, dwType, dwMode);
   else
-    return GetNextUnitFromTables(pUnit, p_D2CLIENT_ServerSideUnitHashTables, 0, 5, szName, dwClassId, dwType, dwMode);
+    return GetNextUnitFromTables(pUnit, D2CLIENT_ServerSideUnitHashTables, 0, 5, szName, dwClassId, dwType, dwMode);
 }
 
 D2UnitStrc* GetInvUnit(D2UnitStrc* pOwner, const char* szName, DWORD dwClassId, DWORD dwMode, DWORD dwUnitId) {

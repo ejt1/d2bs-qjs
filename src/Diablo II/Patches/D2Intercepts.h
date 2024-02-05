@@ -1,6 +1,10 @@
 #ifndef D2INTERCEPTS_H
 #define D2INTERCEPTS_H
 
+#include "Game/Units/Units.h"
+
+#include <Windows.h>
+
 void GameInput_Intercept();
 void RealmPacketRecv_Interception();
 void GamePacketReceived_Intercept();
@@ -16,8 +20,8 @@ void GameActChange_Intercept(void);
 void GameActChange2_Intercept(void);
 void GameLeave_Intercept(void);
 void ChannelInput_Intercept(void);
-VOID __fastcall ClassicSTUB();
-VOID __fastcall LodSTUB();
+void __fastcall ClassicSTUB();
+void __fastcall LodSTUB();
 void FailToJoin();
 HMODULE __stdcall Multi(LPSTR Class, LPSTR Window);
 HANDLE __stdcall Windowname(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int x, int y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu,

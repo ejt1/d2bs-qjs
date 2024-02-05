@@ -77,7 +77,7 @@ JSAPI_FUNC(my_getParty) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  D2RosterUnitStrc* pUnit = *p_D2CLIENT_PlayerUnitList;
+  D2RosterUnitStrc* pUnit = *D2CLIENT_PlayerUnitList;
 
   if (!pUnit)
     return JS_UNDEFINED;

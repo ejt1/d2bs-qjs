@@ -30,11 +30,11 @@ Control* findControl(int Type, const char* Text, int Disabled, int PosX, int Pos
     return NULL;
 
   if (Type == -1 && Text == NULL && Disabled == -1 && PosX == -1 && PosY == -1 && SizeX == -1 && SizeY == -1)
-    return *p_D2WIN_FirstControl;
+    return *D2WIN_FirstControl;
 
   BOOL bFound = FALSE;
 
-  for (Control* pControl = *p_D2WIN_FirstControl; pControl; pControl = pControl->pNext) {
+  for (Control* pControl = *D2WIN_FirstControl; pControl; pControl = pControl->pNext) {
     if (Type >= 0 && static_cast<int>(pControl->dwType) == Type)
       bFound = TRUE;
     else if (Type >= 0 && static_cast<int>(pControl->dwType) != Type) {

@@ -107,7 +107,8 @@ bool Engine::Initialize(HMODULE hModule) {
   Vars.bIgnoreMouse = FALSE;
 
   Genhook::Initialize();
-  DefineOffsets();
+  DefineOffsets(); // deprecated
+  InitOffsets();
   InstallPatches();
   InstallConditional();
 
@@ -153,9 +154,9 @@ void Engine::OnUpdate() {
     }
 
     if (ClientState() == ClientStateMenu && Vars.bStartAtMenu)
-      clickControl(*p_D2WIN_FirstControl);
+      clickControl(*D2WIN_FirstControl);
 
-    *p_D2CLIENT_Lang = D2CLIENT_GetGameLanguageCode();
+    *D2CLIENT_Lang = D2CLIENT_GetGameLanguageCode();
 
     // TODO(ejt): use these in Initialize?
     CommandLineParser cmdline(Vars.szCommandLine);

@@ -58,7 +58,7 @@ void LogNoFormat(const wchar_t* szString) {
 ClientGameState ClientState(void) {
   ClientGameState state = ClientStateNull;
   D2UnitStrc* player = D2CLIENT_GetPlayerUnit();
-  Control* firstControl = *p_D2WIN_FirstControl;
+  Control* firstControl = *D2WIN_FirstControl;
 
   if (player && !firstControl) {
     if (player && player->pUpdateUnit) {
@@ -345,8 +345,8 @@ POINT ScreenToAutomap(int x, int y) {
   POINT result = {0, 0};
   x *= 32;
   y *= 32;
-  result.x = ((x - y) / 2 / (*p_D2CLIENT_Divisor)) - (*p_D2CLIENT_Offset).x + 8;
-  result.y = ((x + y) / 4 / (*p_D2CLIENT_Divisor)) - (*p_D2CLIENT_Offset).y - 8;
+  result.x = ((x - y) / 2 / (*D2CLIENT_Divisor)) - (*D2CLIENT_Offset).x + 8;
+  result.y = ((x + y) / 4 / (*D2CLIENT_Divisor)) - (*D2CLIENT_Offset).y - 8;
 
   if (D2CLIENT_GetAutomapSize()) {
     --result.x;
@@ -356,8 +356,8 @@ POINT ScreenToAutomap(int x, int y) {
 }
 
 void AutomapToScreen(POINT* pPos) {
-  pPos->x = 8 - p_D2CLIENT_Offset->x + (pPos->x * (*p_D2CLIENT_AutomapMode));
-  pPos->y = 8 + p_D2CLIENT_Offset->y + (pPos->y * (*p_D2CLIENT_AutomapMode));
+  pPos->x = 8 - D2CLIENT_Offset->x + (pPos->x * (*D2CLIENT_AutomapMode));
+  pPos->y = 8 + D2CLIENT_Offset->y + (pPos->y * (*D2CLIENT_AutomapMode));
 }
 
 void myDrawText(const wchar_t* szwText, int x, int y, int color, int font) {
@@ -391,10 +391,10 @@ void D2CLIENT_Interact(D2UnitStrc* pUnit, DWORD dwMoveType) {
 typedef void (*fnClickEntry)(void);
 
 BOOL ClickNPCMenu(DWORD NPCClassId, DWORD MenuId) {
-  NPCMenu* pMenu = (NPCMenu*)p_D2CLIENT_NPCMenu;
+  NPCMenu* pMenu = (NPCMenu*)D2CLIENT_NPCMenu;
   fnClickEntry pClick = (fnClickEntry)NULL;
 
-  for (UINT i = 0; i < *p_D2CLIENT_NPCMenuAmount; i++) {
+  for (UINT i = 0; i < *D2CLIENT_NPCMenuAmount; i++) {
     if (pMenu->dwNPCClassId == NPCClassId) {
       if (pMenu->wEntryId1 == MenuId) {
         pClick = (fnClickEntry)pMenu->dwEntryFunc1;
@@ -486,7 +486,7 @@ D2UnitStrc* D2CLIENT_FindUnit(DWORD dwId, DWORD dwType) {
 
 POINT GetScreenSize() {
   // HACK: p_D2CLIENT_ScreenSize is wrong for out of game, which is hardcoded to 800x600
-  POINT ingame = {static_cast<LONG>(*p_D2CLIENT_ScreenSizeX), static_cast<LONG>(*p_D2CLIENT_ScreenSizeY)}, oog = {800, 600}, p = {0};
+  POINT ingame = {static_cast<LONG>(*D2CLIENT_ScreenSizeX), static_cast<LONG>(*D2CLIENT_ScreenSizeY)}, oog = {800, 600}, p = {0};
   if (ClientState() == ClientStateMenu)
     p = oog;
   else
@@ -830,7 +830,7 @@ void __declspec(naked) __fastcall D2CLIENT_PlaySound(DWORD /*dwSoundId*/) {
 			PUSH NULL
 			PUSH NULL
 			PUSH NULL
-			MOV EAX, p_D2CLIENT_PlayerUnit
+			MOV EAX, D2CLIENT_PlayerUnit
 			MOV EAX, [EAX]
 		MOV ECX, EAX
 			MOV EDX, EBX
@@ -957,7 +957,7 @@ bool IsScrollingText() {
     return false;
 
   HWND d2Hwnd = D2GFX_GetHwnd();
-  WindowHandlerList* whl = p_STORM_WindowHandlers->table[(0x534D5347 ^ (DWORD)d2Hwnd) % p_STORM_WindowHandlers->length];
+  WindowHandlerList* whl = STORM_WindowHandlers->table[(0x534D5347 ^ (DWORD)d2Hwnd) % STORM_WindowHandlers->length];
   MessageHandlerHashTable* mhht;
   MessageHandlerList* mhl;
 

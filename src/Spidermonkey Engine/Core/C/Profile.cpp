@@ -116,7 +116,7 @@ DWORD Profile::login(const char** error) {
     location = OOG_GetLocation();
     switch (location) {
       case OOG_D2SPLASH:
-        clickControl(*p_D2WIN_FirstControl);
+        clickControl(*D2WIN_FirstControl);
         break;
 
       case OOG_CHAR_SELECT:

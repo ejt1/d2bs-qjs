@@ -5,6 +5,8 @@
 #include "MapHeader.h"
 #include "JSGlobalClasses.h"
 
+#include "Game/D2DataTbls.h"
+
 EMPTY_CTOR(area)
 
 CLASS_FINALIZER(area) {
