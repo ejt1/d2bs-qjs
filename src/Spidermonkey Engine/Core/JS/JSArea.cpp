@@ -9,7 +9,7 @@
 EMPTY_CTOR(area)
 
 CLASS_FINALIZER(area) {
-  myArea* pArea = (myArea*)JS_GetOpaque3(val);
+  JSArea* pArea = (JSArea*)JS_GetOpaque3(val);
 
   if (pArea) {
     JS_SetOpaque(val, NULL);
@@ -19,7 +19,7 @@ CLASS_FINALIZER(area) {
 }
 
 JSAPI_PROP(area_getProperty) {
-  myArea* pArea = (myArea*)JS_GetOpaque3(this_val);
+  JSArea* pArea = (JSArea*)JS_GetOpaque3(this_val);
 
   if (!pArea)
     return JS_EXCEPTION;
@@ -40,7 +40,7 @@ JSAPI_PROP(area_getProperty) {
         map->CleanUp();
         int count = exits.size();
         for (int i = 0; i < count; i++) {
-          myExit* exit = new myExit;
+          JSExit* exit = new JSExit;
           exit->id = exits[i].Target;
           exit->x = exits[i].Position.first;
           exit->y = exits[i].Position.second;
@@ -101,7 +101,7 @@ JSAPI_FUNC(my_getArea) {
     return JS_FALSE;
   }
 
-  myArea* pArea = new myArea;
+  JSArea* pArea = new JSArea;
   if (!pArea) {
     return JS_FALSE;
   }

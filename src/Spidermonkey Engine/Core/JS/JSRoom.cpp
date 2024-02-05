@@ -95,7 +95,7 @@ JSAPI_FUNC(room_getPresetUnits) {
   JSValue pReturnArray = JS_NewArray(ctx);
   for (D2PresetUnitStrc* pUnit = pRoom2->pPreset; pUnit; pUnit = pUnit->pPresetNext) {
     if ((pUnit->dwType == nType || nType == NULL) && (pUnit->dwTxtFileNo == nClass || nClass == NULL)) {
-      myPresetUnit* mypUnit = new myPresetUnit;
+      JSPresetUnit* mypUnit = new JSPresetUnit;
 
       mypUnit->dwPosX = pUnit->dwPosX;
       mypUnit->dwPosY = pUnit->dwPosY;
@@ -342,8 +342,8 @@ JSAPI_FUNC(room_unitInRoom) {
   if (!pRoom2 || argc < 1 || !JS_IsObject(argv[0]))
     return JS_UNDEFINED;
 
-  myUnit* pmyUnit = (myUnit*)JS_GetOpaque3(argv[0]);
-  if (!pmyUnit || (pmyUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
+  JSUnit* pmyUnit = (JSUnit*)JS_GetOpaque3(argv[0]);
+  if (!pmyUnit || (pmyUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_UNDEFINED;
 
   D2UnitStrc* pUnit = D2CLIENT_FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);

@@ -12,7 +12,7 @@ JSAPI_PROP(presetunit_getProperty);
 JSAPI_FUNC(my_getPresetUnit);
 JSAPI_FUNC(my_getPresetUnits);
 
-struct myPresetUnit {
+struct JSPresetUnit {
   DWORD dwType;
   DWORD dwRoomX;
   DWORD dwRoomY;

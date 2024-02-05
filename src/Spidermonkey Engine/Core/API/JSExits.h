@@ -9,7 +9,7 @@ CLASS_FINALIZER(exit);
 
 JSAPI_PROP(exit_getProperty);
 
-struct myExit {
+struct JSExit {
   DWORD x;
   DWORD y;
   DWORD id;

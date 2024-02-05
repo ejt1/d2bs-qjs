@@ -20,40 +20,37 @@
 
 JSAPI_FUNC(my_copyUnit) {
   if (argc >= 1 && JS_IsObject(argv[0]) && !JS_IsNull(argv[0])) {
-    Private* myPrivate = (Private*)JS_GetOpaque3(argv[0]);
+    JSUnit* lpOldUnit = (JSUnit*)JS_GetOpaque3(argv[0]);
+    JSUnit* lpNewUnit = nullptr;
 
-    if (!myPrivate)
+    if (!lpOldUnit)
       return JS_UNDEFINED;
 
-    if (myPrivate->dwPrivateType == PRIVATE_UNIT) {
-      myUnit* lpOldUnit = (myUnit*)JS_GetOpaque3(argv[0]);
-      myUnit* lpUnit = new myUnit;
-
-      if (lpUnit) {
-        memcpy(lpUnit, lpOldUnit, sizeof(myUnit));
-        JSValue jsunit = BuildObject(ctx, unit_class_id, FUNCLIST(unit_proto_funcs), lpUnit);
-        if (JS_IsException(jsunit)) {
-          delete lpUnit;
-          lpUnit = NULL;
-          THROW_ERROR(ctx, "Couldn't copy unit");
-        }
-        return jsunit;
+    if (lpOldUnit->dwPrivateType == PRIVATE_UNIT) {
+      lpNewUnit = new JSUnit;
+      if (!lpNewUnit) {
+        return JS_UNDEFINED;
       }
-    } else if (myPrivate->dwPrivateType == PRIVATE_ITEM) {
-      invUnit* lpOldUnit = (invUnit*)JS_GetOpaque3(argv[0]);
-      invUnit* lpUnit = new invUnit;
-
-      if (lpUnit) {
-        memcpy(lpUnit, lpOldUnit, sizeof(invUnit));
-        JSValue jsunit = BuildObject(ctx, unit_class_id, FUNCLIST(unit_proto_funcs), lpUnit);
-        if (JS_IsException(jsunit)) {
-          delete lpUnit;
-          lpUnit = NULL;
-          THROW_ERROR(ctx, "Couldn't copy unit");
-        }
-        return jsunit;
+      memcpy(lpNewUnit, lpOldUnit, sizeof(JSUnit));
+    } else if (lpOldUnit->dwPrivateType == PRIVATE_ITEM) {
+      lpNewUnit = new JSItem;
+      if (!lpNewUnit) {
+        return JS_UNDEFINED;
       }
+      memcpy(lpNewUnit, lpOldUnit, sizeof(JSItem));
     }
+    if (!lpNewUnit) {
+      // this can only be reached if dwPrivateType was invalid
+      return JS_UNDEFINED;
+    }
+
+    JSValue jsunit = BuildObject(ctx, unit_class_id, FUNCLIST(unit_proto_funcs), lpNewUnit);
+    if (JS_IsException(jsunit)) {
+      delete lpNewUnit;
+      lpNewUnit = NULL;
+      THROW_ERROR(ctx, "Couldn't copy unit");
+    }
+    return jsunit;
   }
 
   return JS_UNDEFINED;
@@ -77,9 +74,9 @@ JSAPI_FUNC(my_clickMap) {
     JS_ToUint32(ctx, &nY, argv[3]);
 
   if (argc == 3 && JS_IsNumber(argv[0]) && (JS_IsNumber(argv[1]) || JS_IsBool(argv[1])) && JS_IsObject(argv[2]) && !JS_IsNull(argv[2])) {
-    myUnit* mypUnit = (myUnit*)JS_GetOpaque3(argv[2]);
+    JSUnit* mypUnit = (JSUnit*)JS_GetOpaque3(argv[2]);
 
-    if (!mypUnit || (mypUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
+    if (!mypUnit || (mypUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
       return JS_FALSE;
 
     D2UnitStrc* pUnit = D2CLIENT_FindUnit(mypUnit->dwUnitId, mypUnit->dwType);
@@ -314,7 +311,7 @@ JSAPI_FUNC(my_clickItem) {
     return rval;
   }
 
-  myUnit* pmyUnit = NULL;
+  JSUnit* pmyUnit = NULL;
   D2UnitStrc* pUnit = NULL;
 
   // int ScreenSize = D2GFX_GetScreenSize();
@@ -345,9 +342,9 @@ JSAPI_FUNC(my_clickItem) {
   *D2CLIENT_CursorHoverY = 0xFFFFFFFF;
 
   if (argc == 1 && JS_IsObject(argv[0])) {
-    pmyUnit = (myUnit*)JS_GetOpaque3(argv[0]);
+    pmyUnit = (JSUnit*)JS_GetOpaque3(argv[0]);
 
-    if (!pmyUnit || (pmyUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT) {
+    if (!pmyUnit || (pmyUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT) {
       return rval;
     }
 
@@ -394,9 +391,9 @@ JSAPI_FUNC(my_clickItem) {
     }
     return rval;
   } else if (argc == 2 && JS_IsNumber(argv[0]) && JS_IsObject(argv[1])) {
-    pmyUnit = (myUnit*)JS_GetOpaque3(argv[1]);
+    pmyUnit = (JSUnit*)JS_GetOpaque3(argv[1]);
 
-    if (!pmyUnit || (pmyUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT) {
+    if (!pmyUnit || (pmyUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT) {
       return rval;
     }
 
@@ -672,9 +669,9 @@ JSAPI_FUNC(my_getDistance) {
     }
   } else if (argc == 3) {
     if (JS_IsObject(argv[0]) && JS_IsNumber(argv[1]) && JS_IsNumber(argv[2])) {
-      myUnit* pUnit1 = (myUnit*)JS_GetOpaque3(argv[0]);
+      JSUnit* pUnit1 = (JSUnit*)JS_GetOpaque3(argv[0]);
 
-      if (!pUnit1 || (pUnit1->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
+      if (!pUnit1 || (pUnit1->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
         return JS_UNDEFINED;
 
       D2UnitStrc* pUnitA = D2CLIENT_FindUnit(pUnit1->dwUnitId, pUnit1->dwType);
@@ -687,9 +684,9 @@ JSAPI_FUNC(my_getDistance) {
       JS_ToInt32(ctx, &nX2, argv[1]);
       JS_ToInt32(ctx, &nY2, argv[2]);
     } else if (JS_IsNumber(argv[0]) && JS_IsNumber(argv[1]) && JS_IsObject(argv[2])) {
-      myUnit* pUnit1 = (myUnit*)JS_GetOpaque3(argv[2]);
+      JSUnit* pUnit1 = (JSUnit*)JS_GetOpaque3(argv[2]);
 
-      if (!pUnit1 || (pUnit1->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
+      if (!pUnit1 || (pUnit1->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
         return JS_UNDEFINED;
 
       D2UnitStrc* pUnitA = D2CLIENT_FindUnit(pUnit1->dwUnitId, pUnit1->dwType);
@@ -735,12 +732,12 @@ JSAPI_FUNC(my_checkCollision) {
     THROW_WARNING(ctx, "Game not ready");
 
   if (argc == 3 && JS_IsObject(argv[0]) && JS_IsObject(argv[1]) && JS_IsNumber(argv[2])) {
-    myUnit* pUnitA = (myUnit*)JS_GetOpaque3(argv[0]);
-    myUnit* pUnitB = (myUnit*)JS_GetOpaque3(argv[1]);
+    JSUnit* pUnitA = (JSUnit*)JS_GetOpaque3(argv[0]);
+    JSUnit* pUnitB = (JSUnit*)JS_GetOpaque3(argv[1]);
     int32_t nBitMask;
     JS_ToInt32(ctx, &nBitMask, argv[2]);
 
-    if (!pUnitA || (pUnitA->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT || !pUnitB || (pUnitB->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
+    if (!pUnitA || (pUnitA->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT || !pUnitB || (pUnitB->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
       return JS_UNDEFINED;
 
     D2UnitStrc* pUnit1 = D2CLIENT_FindUnit(pUnitA->dwUnitId, pUnitA->dwType);
@@ -1221,12 +1218,12 @@ JSAPI_FUNC(my_getInteractedNPC) {
     return JS_FALSE;
   }
 
-  myUnit* pmyUnit = new myUnit;  // leaked?
+  JSUnit* pmyUnit = new JSUnit;  // leaked?
   if (!pmyUnit)
     return JS_UNDEFINED;
 
   char szName[256] = "";
-  pmyUnit->_dwPrivateType = PRIVATE_UNIT;
+  pmyUnit->dwPrivateType = PRIVATE_UNIT;
   pmyUnit->dwClassId = pNPC->dwTxtFileNo;
   pmyUnit->dwMode = pNPC->dwMode;
   pmyUnit->dwType = pNPC->dwType;
@@ -1252,7 +1249,7 @@ JSAPI_FUNC(my_moveNPC) {
   if (argc < 2)
     THROW_ERROR(ctx, "Not enough parameters were passed to moveNPC!");
 
-  myUnit* pNpc = (myUnit*)JS_GetOpaque3(argv[0]);
+  JSUnit* pNpc = (JSUnit*)JS_GetOpaque3(argv[0]);
 
   if (!pNpc || pNpc->dwType != 1)
     THROW_ERROR(ctx, "Invalid NPC passed to moveNPC!");

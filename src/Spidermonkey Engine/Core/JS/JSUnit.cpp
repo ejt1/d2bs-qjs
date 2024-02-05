@@ -13,18 +13,17 @@
 EMPTY_CTOR(unit)
 
 CLASS_FINALIZER(unit) {
-  Private* lpUnit = (Private*)JS_GetOpaque3(val);
+  JSUnit* lpUnit = static_cast<JSUnit*>(JS_GetOpaque3(val));
 
   if (lpUnit) {
     switch (lpUnit->dwPrivateType) {
       case PRIVATE_UNIT: {
-        myUnit* unit = (myUnit*)lpUnit;
-        delete unit;
+        delete lpUnit;
         break;
       }
       case PRIVATE_ITEM: {
-        invUnit* unit = (invUnit*)lpUnit;
-        delete unit;
+        JSItem* lpItem = static_cast<JSItem*>(lpUnit);
+        delete lpItem;
         break;
       }
     }
@@ -133,8 +132,8 @@ JSAPI_PROP(unit_getProperty) {
   if (ClientState() != ClientStateInGame)
     return JS_UNDEFINED;
 
-  myUnit* lpUnit = (myUnit*)JS_GetOpaque3(this_val);
-  if (!lpUnit || (lpUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
+  JSUnit* lpUnit = (JSUnit*)JS_GetOpaque3(this_val);
+  if (!lpUnit || (lpUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_UNDEFINED;
 
   D2UnitStrc* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
@@ -545,14 +544,14 @@ JSAPI_FUNC(unit_getUnit) {
     return JS_UNDEFINED;
   }
 
-  myUnit* pmyUnit = new myUnit;  // leaked?
+  JSUnit* pmyUnit = new JSUnit;  // leaked?
 
   if (!pmyUnit) {
     JS_FreeCString(ctx, szName);
     return JS_UNDEFINED;
   }
 
-  pmyUnit->_dwPrivateType = PRIVATE_UNIT;
+  pmyUnit->dwPrivateType = PRIVATE_UNIT;
   pmyUnit->dwClassId = nClassId;
   pmyUnit->dwMode = nMode;
   pmyUnit->dwType = pUnit->dwType;
@@ -564,13 +563,13 @@ JSAPI_FUNC(unit_getUnit) {
 }
 
 JSAPI_FUNC(unit_getNext) {
-  Private* unit = (Private*)JS_GetOpaque3(this_val);
+  JSUnit* unit = (JSUnit*)JS_GetOpaque3(this_val);
 
   if (!unit)
     return JS_UNDEFINED;
 
   if (unit->dwPrivateType == PRIVATE_UNIT) {
-    myUnit* lpUnit = (myUnit*)unit;
+    JSUnit* lpUnit = (JSUnit*)unit;
     D2UnitStrc* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
 
     if (!pUnit)
@@ -601,7 +600,7 @@ JSAPI_FUNC(unit_getNext) {
       return JS_TRUE;
     }
   } else if (unit->dwPrivateType == PRIVATE_ITEM) {
-    invUnit* pmyUnit = (invUnit*)unit;
+    JSItem* pmyUnit = (JSItem*)unit;
     if (!pmyUnit)
       return JS_UNDEFINED;
 
@@ -681,9 +680,9 @@ JSAPI_FUNC(unit_cancel) {
 }
 
 JSAPI_FUNC(unit_repair) {
-  myUnit* lpUnit = (myUnit*)JS_GetOpaque3(this_val);
+  JSUnit* lpUnit = (JSUnit*)JS_GetOpaque3(this_val);
 
-  if (!lpUnit || (lpUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
+  if (!lpUnit || (lpUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_FALSE;
 
   D2UnitStrc* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
@@ -704,12 +703,12 @@ JSAPI_FUNC(unit_repair) {
 }
 
 JSAPI_FUNC(unit_useMenu) {
-  myUnit* lpUnit = (myUnit*)JS_GetOpaque3(this_val);
+  JSUnit* lpUnit = (JSUnit*)JS_GetOpaque3(this_val);
 
   if (argc < 1 || !JS_IsNumber(argv[0]))
     return JS_FALSE;
 
-  if (!lpUnit || (lpUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
+  if (!lpUnit || (lpUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_FALSE;
 
   D2UnitStrc* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
@@ -726,9 +725,9 @@ JSAPI_FUNC(unit_interact) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  myUnit* lpUnit = (myUnit*)JS_GetOpaque3(this_val);
+  JSUnit* lpUnit = (JSUnit*)JS_GetOpaque3(this_val);
 
-  if (!lpUnit || (lpUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
+  if (!lpUnit || (lpUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_FALSE;
 
   D2UnitStrc* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
@@ -792,8 +791,8 @@ JSAPI_FUNC(unit_getStat) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  myUnit* lpUnit = (myUnit*)JS_GetOpaque3(this_val);
-  if (!lpUnit || (lpUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
+  JSUnit* lpUnit = (JSUnit*)JS_GetOpaque3(this_val);
+  if (!lpUnit || (lpUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_FALSE;
 
   D2UnitStrc* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
@@ -969,9 +968,9 @@ JSAPI_FUNC(unit_getState) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  myUnit* lpUnit = (myUnit*)JS_GetOpaque3(this_val);
+  JSUnit* lpUnit = (JSUnit*)JS_GetOpaque3(this_val);
 
-  if (!lpUnit || (lpUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
+  if (!lpUnit || (lpUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_FALSE;
 
   D2UnitStrc* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
@@ -995,9 +994,9 @@ JSAPI_FUNC(item_getFlags) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  myUnit* lpUnit = (myUnit*)JS_GetOpaque3(this_val);
+  JSUnit* lpUnit = (JSUnit*)JS_GetOpaque3(this_val);
 
-  if (!lpUnit || (lpUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
+  if (!lpUnit || (lpUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_UNDEFINED;
 
   D2UnitStrc* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
@@ -1015,9 +1014,9 @@ JSAPI_FUNC(item_getFlag) {
   if (argc < 1 || !JS_IsNumber(argv[0]))
     return JS_UNDEFINED;
 
-  myUnit* lpUnit = (myUnit*)JS_GetOpaque3(this_val);
+  JSUnit* lpUnit = (JSUnit*)JS_GetOpaque3(this_val);
 
-  if (!lpUnit || (lpUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
+  if (!lpUnit || (lpUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_UNDEFINED;
 
   D2UnitStrc* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
@@ -1043,9 +1042,9 @@ JSAPI_FUNC(item_getItemCost) {
   if (argc < 1 || !JS_IsNumber(argv[0]))
     return JS_UNDEFINED;
 
-  myUnit* lpUnit = (myUnit*)JS_GetOpaque3(this_val);
+  JSUnit* lpUnit = (JSUnit*)JS_GetOpaque3(this_val);
 
-  if (!lpUnit || (lpUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
+  if (!lpUnit || (lpUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_UNDEFINED;
 
   D2UnitStrc* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
@@ -1057,9 +1056,9 @@ JSAPI_FUNC(item_getItemCost) {
 
   if (argc > 1) {
     if (JS_IsObject(argv[1])) {
-      myUnit* pmyNpc = (myUnit*)JS_GetOpaque3(argv[1]);
+      JSUnit* pmyNpc = (JSUnit*)JS_GetOpaque3(argv[1]);
 
-      if (!pmyNpc || (pmyNpc->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
+      if (!pmyNpc || (pmyNpc->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
         return JS_UNDEFINED;
 
       D2UnitStrc* pNpc = D2CLIENT_FindUnit(pmyNpc->dwUnitId, pmyNpc->dwType);
@@ -1100,9 +1099,9 @@ JSAPI_FUNC(unit_getItems) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  myUnit* lpUnit = (myUnit*)JS_GetOpaque3(this_val);
+  JSUnit* lpUnit = (JSUnit*)JS_GetOpaque3(this_val);
 
-  if (!lpUnit || (lpUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
+  if (!lpUnit || (lpUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_UNDEFINED;
 
   D2UnitStrc* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
@@ -1118,12 +1117,12 @@ JSAPI_FUNC(unit_getItems) {
   DWORD dwArrayCount = 0;
 
   for (D2UnitStrc* pItem = pUnit->pInventory->pFirstItem; pItem; pItem = D2COMMON_GetNextItemFromInventory(pItem), dwArrayCount++) {
-    invUnit* pmyUnit = new invUnit;
+    JSItem* pmyUnit = new JSItem;
 
     if (!pmyUnit)
       continue;
 
-    pmyUnit->_dwPrivateType = PRIVATE_UNIT;
+    pmyUnit->dwPrivateType = PRIVATE_UNIT;
     pmyUnit->szName[0] = NULL;
     pmyUnit->dwMode = pItem->dwMode;
     pmyUnit->dwClassId = pItem->dwTxtFileNo;
@@ -1154,7 +1153,7 @@ JSAPI_FUNC(unit_getSkill) {
   int32_t nSkillId = NULL;
   int32_t nExt = NULL;
 
-  myUnit* pmyUnit = (myUnit*)JS_GetOpaque3(this_val);
+  JSUnit* pmyUnit = (JSUnit*)JS_GetOpaque3(this_val);
   if (!pmyUnit)
     return JS_UNDEFINED;
 
@@ -1257,9 +1256,9 @@ JSAPI_FUNC(item_shop) {
     return JS_FALSE;
   }
 
-  myUnit* lpItem = (myUnit*)JS_GetOpaque3(this_val);
+  JSUnit* lpItem = (JSUnit*)JS_GetOpaque3(this_val);
 
-  if (!lpItem || (lpItem->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT) {
+  if (!lpItem || (lpItem->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT) {
     return JS_FALSE;
   }
 
@@ -1348,9 +1347,9 @@ JSAPI_FUNC(unit_getParent) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  myUnit* lpUnit = (myUnit*)JS_GetOpaque3(this_val);
+  JSUnit* lpUnit = (JSUnit*)JS_GetOpaque3(this_val);
 
-  if (!lpUnit || (lpUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
+  if (!lpUnit || (lpUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_UNDEFINED;
 
   D2UnitStrc* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
@@ -1367,11 +1366,11 @@ JSAPI_FUNC(unit_getParent) {
     if (!pMonster)
       return JS_UNDEFINED;
 
-    myUnit* pmyUnit = new myUnit;
+    JSUnit* pmyUnit = new JSUnit;
     if (!pmyUnit)
       return JS_UNDEFINED;
 
-    pmyUnit->_dwPrivateType = PRIVATE_UNIT;
+    pmyUnit->dwPrivateType = PRIVATE_UNIT;
     pmyUnit->dwUnitId = pMonster->dwUnitId;
     pmyUnit->dwClassId = pMonster->dwTxtFileNo;
     pmyUnit->dwMode = pMonster->dwMode;
@@ -1387,12 +1386,12 @@ JSAPI_FUNC(unit_getParent) {
     }
   } else if (pUnit->dwType == UNIT_ITEM) {
     if (pUnit->pItemData && pUnit->pItemData->pOwnerInventory && pUnit->pItemData->pOwnerInventory->pOwner) {
-      myUnit* pmyUnit = new myUnit;  // leaks
+      JSUnit* pmyUnit = new JSUnit;  // leaks
 
       if (!pmyUnit)
         return JS_UNDEFINED;
 
-      pmyUnit->_dwPrivateType = PRIVATE_UNIT;
+      pmyUnit->dwPrivateType = PRIVATE_UNIT;
       pmyUnit->dwUnitId = pUnit->pItemData->pOwnerInventory->pOwner->dwUnitId;
       pmyUnit->dwClassId = pUnit->pItemData->pOwnerInventory->pOwner->dwTxtFileNo;
       pmyUnit->dwMode = pUnit->pItemData->pOwnerInventory->pOwner->dwMode;
@@ -1401,7 +1400,7 @@ JSAPI_FUNC(unit_getParent) {
       return BuildObject(ctx, unit_class_id, FUNCLIST(unit_proto_funcs), pmyUnit);
     }
   } else if (pUnit->dwType == UNIT_MISSILE) {
-    auto* pmyUnit = new myUnit;
+    auto* pmyUnit = new JSUnit;
     if (!pmyUnit)
       return JS_UNDEFINED;
 
@@ -1409,7 +1408,7 @@ JSAPI_FUNC(unit_getParent) {
     if (!pOwner)
       return JS_UNDEFINED;
 
-    pmyUnit->_dwPrivateType = PRIVATE_UNIT;
+    pmyUnit->dwPrivateType = PRIVATE_UNIT;
     pmyUnit->dwUnitId = pOwner->dwUnitId;
     pmyUnit->dwClassId = pOwner->dwTxtFileNo;
     pmyUnit->dwMode = pOwner->dwMode;
@@ -1427,16 +1426,16 @@ JSAPI_FUNC(unit_getMerc) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  myUnit* lpUnit = (myUnit*)JS_GetOpaque3(this_val);
+  JSUnit* lpUnit = (JSUnit*)JS_GetOpaque3(this_val);
 
-  if (lpUnit && (lpUnit->_dwPrivateType & PRIVATE_UNIT) == PRIVATE_UNIT) {
+  if (lpUnit && (lpUnit->dwPrivateType & PRIVATE_UNIT) == PRIVATE_UNIT) {
     D2UnitStrc* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
     if (pUnit && pUnit->dwType == UNIT_PLAYER) {
       D2UnitStrc* pMerc = GetMercUnit(pUnit);
       if (pMerc) {
-        myUnit* pmyUnit = new myUnit;
+        JSUnit* pmyUnit = new JSUnit;
 
-        pmyUnit->_dwPrivateType = PRIVATE_UNIT;
+        pmyUnit->dwPrivateType = PRIVATE_UNIT;
         pmyUnit->dwUnitId = pMerc->dwUnitId;
         pmyUnit->dwClassId = pMerc->dwTxtFileNo;
         pmyUnit->dwMode = NULL;
@@ -1453,8 +1452,8 @@ JSAPI_FUNC(unit_getMerc) {
 JSAPI_FUNC(unit_getMercHP) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
-  myUnit* lpUnit = (myUnit*)JS_GetOpaque3(this_val);
-  // myUnit* lpUnit = (myUnit*)JS_GetOpaque3(test);
+  JSUnit* lpUnit = (JSUnit*)JS_GetOpaque3(this_val);
+  // JSUnit* lpUnit = (JSUnit*)JS_GetOpaque3(test);
 
   D2UnitStrc* pUnit = lpUnit ? D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType) : D2CLIENT_GetPlayerUnit();
 
@@ -1496,7 +1495,7 @@ JSAPI_FUNC(unit_setskill) {
 
   if (argc == 3 && JS_IsObject(argv[2])) {
     if (JS_IsInstanceOf(ctx, argv[2], this_val)) {
-      myUnit* unit = (myUnit*)JS_GetOpaque3(argv[2]);
+      JSUnit* unit = (JSUnit*)JS_GetOpaque3(argv[2]);
       if (unit->dwType == UNIT_ITEM)
         itemId = unit->dwUnitId;
     }
@@ -1513,9 +1512,9 @@ JSAPI_FUNC(my_overhead) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  myUnit* pmyUnit = (myUnit*)JS_GetOpaque3(this_val);
+  JSUnit* pmyUnit = (JSUnit*)JS_GetOpaque3(this_val);
 
-  if (!pmyUnit || (pmyUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
+  if (!pmyUnit || (pmyUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_FALSE;
 
   D2UnitStrc* pUnit = D2CLIENT_FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
@@ -1552,9 +1551,9 @@ JSAPI_FUNC(unit_getItem) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  myUnit* pmyUnit = (myUnit*)JS_GetOpaque3(this_val);
+  JSUnit* pmyUnit = (JSUnit*)JS_GetOpaque3(this_val);
 
-  if (!pmyUnit || (pmyUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
+  if (!pmyUnit || (pmyUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_UNDEFINED;
 
   D2UnitStrc* pUnit = D2CLIENT_FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
@@ -1587,12 +1586,12 @@ JSAPI_FUNC(unit_getItem) {
   if (!pItem)
     return JS_UNDEFINED;
 
-  invUnit* pmyItem = new invUnit;  // leaked?
+  JSItem* pmyItem = new JSItem;  // leaked?
 
   if (!pmyItem)
     return JS_UNDEFINED;
 
-  pmyItem->_dwPrivateType = PRIVATE_ITEM;
+  pmyItem->dwPrivateType = PRIVATE_ITEM;
   pmyItem->dwClassId = nClassId;
   pmyItem->dwMode = nMode;
   pmyItem->dwType = pItem->dwType;
@@ -1608,9 +1607,9 @@ JSAPI_FUNC(unit_move) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  myUnit* pmyUnit = (myUnit*)JS_GetOpaque3(this_val);
+  JSUnit* pmyUnit = (JSUnit*)JS_GetOpaque3(this_val);
 
-  if (!pmyUnit || (pmyUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
+  if (!pmyUnit || (pmyUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_UNDEFINED;
 
   D2UnitStrc* pUnit = D2CLIENT_FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
@@ -1649,9 +1648,9 @@ JSAPI_FUNC(unit_getEnchant) {
   if (argc < 1 || !JS_IsNumber(argv[0]))
     return JS_UNDEFINED;
 
-  myUnit* pmyUnit = (myUnit*)JS_GetOpaque3(this_val);
+  JSUnit* pmyUnit = (JSUnit*)JS_GetOpaque3(this_val);
 
-  if (!pmyUnit || (pmyUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
+  if (!pmyUnit || (pmyUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_UNDEFINED;
 
   D2UnitStrc* pUnit = D2CLIENT_FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
@@ -1694,9 +1693,9 @@ JSAPI_FUNC(unit_getMinionCount) {
   int32_t nType;
   JS_ToInt32(ctx, &nType, argv[0]);
 
-  myUnit* pmyUnit = (myUnit*)JS_GetOpaque3(this_val);
+  JSUnit* pmyUnit = (JSUnit*)JS_GetOpaque3(this_val);
 
-  if (!pmyUnit || (pmyUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
+  if (!pmyUnit || (pmyUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_UNDEFINED;
 
   D2UnitStrc* pUnit = D2CLIENT_FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);

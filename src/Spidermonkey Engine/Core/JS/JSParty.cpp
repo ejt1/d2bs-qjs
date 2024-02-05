@@ -91,7 +91,7 @@ JSAPI_FUNC(my_getParty) {
     } else if (JS_IsNumber(argv[0]) && JS_ToUint32(ctx, &nPlayerId, argv[0])) {
       THROW_ERROR(ctx, "Unable to get ID");
     } else if (JS_IsObject(argv[0])) {
-      myUnit* lpUnit = (myUnit*)JS_GetOpaque3(argv[0]);
+      JSUnit* lpUnit = (JSUnit*)JS_GetOpaque3(argv[0]);
 
       if (!lpUnit)
         return JS_UNDEFINED;

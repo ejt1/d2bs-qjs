@@ -19,10 +19,10 @@ JSAPI_FUNC(dir_delete);
 
 JSAPI_FUNC(my_openDir);
 
-class DirData {
+class JSDirectory {
  public:
   char name[_MAX_FNAME];
-  DirData(const char* newname) {
+  JSDirectory(const char* newname) {
     strcpy_s(name, _MAX_FNAME, newname);
   }
 };

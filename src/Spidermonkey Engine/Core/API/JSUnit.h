@@ -41,12 +41,8 @@ JSAPI_FUNC(item_getItemCost);
 #define PRIVATE_UNIT 1
 #define PRIVATE_ITEM 3
 
-struct Private {
+struct JSUnit {
   DWORD dwPrivateType;
-};
-
-struct myUnit {
-  DWORD _dwPrivateType;
   DWORD dwUnitId;
   DWORD dwClassId;
   DWORD dwType;
@@ -54,13 +50,7 @@ struct myUnit {
   char szName[128];
 };
 
-struct invUnit {
-  DWORD _dwPrivateType;
-  DWORD dwUnitId;
-  DWORD dwClassId;
-  DWORD dwType;
-  DWORD dwMode;
-  char szName[128];
+struct JSItem : JSUnit {
   DWORD dwOwnerId;
   DWORD dwOwnerType;
 };

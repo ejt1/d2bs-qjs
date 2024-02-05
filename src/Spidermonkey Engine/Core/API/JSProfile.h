@@ -11,10 +11,6 @@ JSAPI_FUNC(profile_login);
 
 JSAPI_PROP(profile_getProperty);
 
-struct jsProfilePrivate {
-  char* password;
-};
-
 enum jsProfileProperty_ids {
   PROFILE_TYPE,
   PROFILE_IP,

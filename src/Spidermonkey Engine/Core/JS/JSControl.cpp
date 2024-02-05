@@ -6,7 +6,7 @@
 EMPTY_CTOR(control)
 
 CLASS_FINALIZER(control) {
-  ControlData* pData = ((ControlData*)JS_GetOpaque3(val));
+  JSControl* pData = ((JSControl*)JS_GetOpaque3(val));
 
   if (pData) {
     JS_SetOpaque(val, NULL);
@@ -18,7 +18,7 @@ JSAPI_PROP(control_getProperty) {
   if (ClientState() != ClientStateMenu)
     return JS_EXCEPTION;
 
-  ControlData* pData = ((ControlData*)JS_GetOpaque3(this_val));
+  JSControl* pData = ((JSControl*)JS_GetOpaque3(this_val));
   if (!pData)
     return JS_EXCEPTION;
 
@@ -80,7 +80,7 @@ JSAPI_STRICT_PROP(control_setProperty) {
   if (ClientState() != ClientStateMenu)
     return JS_EXCEPTION;
 
-  ControlData* pData = ((ControlData*)JS_GetOpaque3(this_val));
+  JSControl* pData = ((JSControl*)JS_GetOpaque3(this_val));
   if (!pData)
     return JS_EXCEPTION;
 
@@ -135,7 +135,7 @@ JSAPI_FUNC(control_getNext) {
   if (ClientState() != ClientStateMenu)
     return JS_UNDEFINED;
 
-  ControlData* pData = ((ControlData*)JS_GetOpaque3(this_val));
+  JSControl* pData = ((JSControl*)JS_GetOpaque3(this_val));
   if (!pData)
     return JS_UNDEFINED;
 
@@ -163,7 +163,7 @@ JSAPI_FUNC(control_click) {
   if (ClientState() != ClientStateMenu)
     return JS_UNDEFINED;
 
-  ControlData* pData = ((ControlData*)JS_GetOpaque3(this_val));
+  JSControl* pData = ((JSControl*)JS_GetOpaque3(this_val));
   if (!pData)
     return JS_UNDEFINED;
 
@@ -188,7 +188,7 @@ JSAPI_FUNC(control_setText) {
   if (ClientState() != ClientStateMenu)
     return JS_UNDEFINED;
 
-  ControlData* pData = ((ControlData*)JS_GetOpaque3(this_val));
+  JSControl* pData = ((JSControl*)JS_GetOpaque3(this_val));
   if (!pData)
     return JS_UNDEFINED;
 
@@ -213,7 +213,7 @@ JSAPI_FUNC(control_getText) {
   if (ClientState() != ClientStateMenu)
     return JS_UNDEFINED;
 
-  ControlData* pData = ((ControlData*)JS_GetOpaque3(this_val));
+  JSControl* pData = ((JSControl*)JS_GetOpaque3(this_val));
   if (!pData)
     return JS_UNDEFINED;
 
@@ -267,7 +267,7 @@ JSAPI_FUNC(my_getControl) {
   if (!pControl)
     return JS_UNDEFINED;
 
-  ControlData* data = new ControlData;
+  JSControl* data = new JSControl;
   data->dwType = pControl->dwType;
   data->dwX = pControl->dwPosX;
   data->dwY = pControl->dwPosY;
@@ -290,7 +290,7 @@ JSAPI_FUNC(my_getControls) {
 
   JSValue pReturnArray = JS_NewArray(ctx);
   for (D2WinControlStrc* pControl = *D2WIN_FirstControl; pControl; pControl = pControl->pNext) {
-    ControlData* data = new ControlData;
+    JSControl* data = new JSControl;
     data->dwType = pControl->dwType;
     data->dwX = pControl->dwPosX;
     data->dwY = pControl->dwPosY;

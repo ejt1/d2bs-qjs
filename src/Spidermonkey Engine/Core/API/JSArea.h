@@ -11,7 +11,7 @@ JSAPI_PROP(area_getProperty);
 
 JSAPI_FUNC(my_getArea);
 
-struct myArea {
+struct JSArea {
   DWORD AreaId;
   DWORD Exits;
   JSValue ExitArray;

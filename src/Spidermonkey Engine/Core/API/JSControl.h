@@ -17,7 +17,7 @@ JSAPI_FUNC(control_click);
 JSAPI_FUNC(control_setText);
 JSAPI_FUNC(control_getText);
 
-struct ControlData {
+struct JSControl {
   DWORD _dwPrivate;
   D2WinControlStrc* pControl;
 

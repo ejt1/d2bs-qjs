@@ -709,15 +709,15 @@ bool Script::Initialize() {
   }
 
   // define 'me' property
-  m_me = new myUnit;
-  memset(m_me, NULL, sizeof(myUnit));
+  m_me = new JSUnit;
+  memset(m_me, NULL, sizeof(JSUnit));
 
   D2UnitStrc* player = D2CLIENT_GetPlayerUnit();
   m_me->dwMode = (DWORD)-1;
   m_me->dwClassId = (DWORD)-1;
   m_me->dwType = UNIT_PLAYER;
   m_me->dwUnitId = player ? player->dwUnitId : NULL;
-  m_me->_dwPrivateType = PRIVATE_UNIT;
+  m_me->dwPrivateType = PRIVATE_UNIT;
 
   JSValue meObject = BuildObject(m_context, unit_class_id, FUNCLIST(me_proto_funcs), m_me);
   if (!meObject) {

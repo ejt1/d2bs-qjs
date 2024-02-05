@@ -8,7 +8,7 @@
 EMPTY_CTOR(presetunit)
 
 CLASS_FINALIZER(presetunit) {
-  myPresetUnit* pUnit = (myPresetUnit*)JS_GetOpaque3(val);
+  JSPresetUnit* pUnit = (JSPresetUnit*)JS_GetOpaque3(val);
 
   if (pUnit) {
     JS_SetOpaque(val, NULL);
@@ -17,7 +17,7 @@ CLASS_FINALIZER(presetunit) {
 }
 
 JSAPI_PROP(presetunit_getProperty) {
-  myPresetUnit* pUnit = (myPresetUnit*)JS_GetOpaque3(this_val);
+  JSPresetUnit* pUnit = (JSPresetUnit*)JS_GetOpaque3(this_val);
 
   if (!pUnit)
     return JS_UNDEFINED;
@@ -90,7 +90,7 @@ JSAPI_FUNC(my_getPresetUnits) {
     for (D2PresetUnitStrc* pUnit = pRoom->pPreset; pUnit; pUnit = pUnit->pPresetNext) {
       // Does it fit?
       if ((nType == NULL || pUnit->dwType == nType) && (nClassId == NULL || pUnit->dwTxtFileNo == nClassId)) {
-        myPresetUnit* mypUnit = new myPresetUnit;
+        JSPresetUnit* mypUnit = new JSPresetUnit;
 
         mypUnit->dwPosX = pUnit->dwPosX;
         mypUnit->dwPosY = pUnit->dwPosY;
@@ -161,7 +161,7 @@ JSAPI_FUNC(my_getPresetUnit) {
       // Does it fit?
       if ((nType == NULL || pUnit->dwType == nType) && (nClassId == NULL || pUnit->dwTxtFileNo == nClassId)) {
         // Yes it fits! Return it
-        myPresetUnit* mypUnit = new myPresetUnit;
+        JSPresetUnit* mypUnit = new JSPresetUnit;
 
         mypUnit->dwPosX = pUnit->dwPosX;
         mypUnit->dwPosY = pUnit->dwPosY;
