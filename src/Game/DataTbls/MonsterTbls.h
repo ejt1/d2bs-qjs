@@ -2,8 +2,7 @@
 
 #include <Windows.h>
 
-// rename D2MonStatsTxt
-struct MonsterTxt {
+struct D2MonStatsTxt {
   BYTE _1[0x6];       // 0x00
   WORD nLocaleTxtNo;  // 0x06
   WORD flag;          // 0x08

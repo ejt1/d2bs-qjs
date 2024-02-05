@@ -25,17 +25,17 @@ void WorldToScreen(POINT* pPos);
 void ScreenToWorld(POINT* ptPos);
 POINT ScreenToAutomap(int x, int y);
 void AutomapToScreen(POINT* pPos);
-Level* GetLevel(DWORD dwLevelNo);
-void D2CLIENT_Interact(UnitAny* pUnit, DWORD dwMoveType);
+D2DrlgLevelStrc* GetLevel(DWORD dwLevelNo);
+void D2CLIENT_Interact(D2UnitStrc* pUnit, DWORD dwMoveType);
 void myDrawText(const wchar_t* szwText, int x, int y, int color, int font);
 void myDrawCenterText(const wchar_t* szwText, int x, int y, int color, int font, int div);
-// UnitAny* FindItemByPosition(DWORD x, DWORD y, DWORD Location);
+// D2UnitStrc* FindItemByPosition(DWORD x, DWORD y, DWORD Location);
 BYTE CalcPercent(DWORD dwVal, DWORD dwMaxVal, BYTE iMin = NULL);
-DWORD GetTileLevelNo(Room2* lpRoom2, DWORD dwTileNo);
-UnitAny* GetMercUnit(UnitAny* pUnit);
+DWORD GetTileLevelNo(D2DrlgRoomStrc* lpRoom2, DWORD dwTileNo);
+D2UnitStrc* GetMercUnit(D2UnitStrc* pUnit);
 
 BOOL ClickNPCMenu(DWORD NPCClassId, DWORD MenuId);
-int GetItemLocation(UnitAny* pItem);
+int GetItemLocation(D2UnitStrc* pItem);
 // void	SelectInventoryItem(DWORD x, DWORD y, DWORD dwLocation);
 
 int GetSkill(WORD wSkillId);
@@ -43,10 +43,10 @@ BOOL SetSkill(JSContext* cx, WORD wSkillId, BOOL bLeft, DWORD dwItemId = 0xFFFFF
 char* GetSkillByID(WORD id);
 WORD GetSkillByName(const char* szSkillName);
 
-const char* GetUnitName(UnitAny* pUnit, char* szBuf, size_t bufSize);
-void GetItemCode(UnitAny* pUnit, char* szBuf);
+const char* GetUnitName(D2UnitStrc* pUnit, char* szBuf, size_t bufSize);
+void GetItemCode(D2UnitStrc* pUnit, char* szBuf);
 
-UnitAny* D2CLIENT_FindUnit(DWORD dwId, DWORD dwType);
+D2UnitStrc* D2CLIENT_FindUnit(DWORD dwId, DWORD dwType);
 
 POINT GetScreenSize();
 int D2GetScreenSizeX();
@@ -54,25 +54,25 @@ int D2GetScreenSizeY();
 
 AutomapLayer* InitAutomapLayer(DWORD levelno);
 DWORD __fastcall D2CLIENT_InitAutomapLayer_STUB(DWORD nLayerNo);
-void myDrawAutomapCell(CellFile* cellfile, int xpos, int ypos, BYTE col);
+void myDrawAutomapCell(D2CellFileStrc* cellfile, int xpos, int ypos, BYTE col);
 
-CellFile* LoadCellFile(const char* lpszPath, DWORD bMPQ = TRUE);
-CellFile* LoadCellFile(const wchar_t* lpszPath, DWORD bMPQ = 3);
-CellFile* LoadBmpCellFile(BYTE* buf1, int width, int height);
-CellFile* LoadBmpCellFile(const char* filename);
-CellFile* LoadBmpCellFile(const wchar_t* filename);
-CellFile* myInitCellFile(CellFile* cf);
+D2CellFileStrc* LoadCellFile(const char* lpszPath, DWORD bMPQ = TRUE);
+D2CellFileStrc* LoadCellFile(const wchar_t* lpszPath, DWORD bMPQ = 3);
+D2CellFileStrc* LoadBmpCellFile(BYTE* buf1, int width, int height);
+D2CellFileStrc* LoadBmpCellFile(const char* filename);
+D2CellFileStrc* LoadBmpCellFile(const wchar_t* filename);
+D2CellFileStrc* myInitCellFile(D2CellFileStrc* cf);
 
-static inline UnitAny* GetPlayerUnit() {
+static inline D2UnitStrc* GetPlayerUnit() {
   return D2CLIENT_GetPlayerUnit();
 }
-static inline void AddRoomData(Room2* room) {
+static inline void AddRoomData(D2DrlgRoomStrc* room) {
   D2COMMON_AddRoomData(room->pLevel->pMisc->pAct, room->pLevel->dwLevelNo, room->dwPosX, room->dwPosY, room->pRoom1);
 }
-static inline void RemoveRoomData(Room2* room) {
+static inline void RemoveRoomData(D2DrlgRoomStrc* room) {
   D2COMMON_RemoveRoomData(room->pLevel->pMisc->pAct, room->pLevel->dwLevelNo, room->dwPosX, room->dwPosY, room->pRoom1);
 }
-static inline char* __stdcall GetLevelName(const Level* level) {
+static inline char* __stdcall GetLevelName(const D2DrlgLevelStrc* level) {
   return D2COMMON_GetLevelText(level->dwLevelNo)->szName;
 }
 static inline char* __stdcall GetLevelIdName(DWORD level) {
@@ -88,18 +88,18 @@ void __fastcall D2CLIENT_ClickShopItem_ASM(DWORD x, DWORD y, DWORD BuyOrSell);
 void __fastcall D2CLIENT_ShopAction_ASM(DWORD pTable, DWORD pItem, DWORD pNPC, DWORD _1, DWORD pTable2 /* Could be also the ItemCost?*/, DWORD dwMode, DWORD _2,
                                         DWORD _3);
 void __fastcall D2CLIENT_ClickItemRight_ASM(DWORD x, DWORD y, DWORD Location, DWORD pItem, DWORD pItemPath);
-void __fastcall D2CLIENT_ClickBelt(DWORD x, DWORD y, Inventory* pInventoryData);
+void __fastcall D2CLIENT_ClickBelt(DWORD x, DWORD y, D2InventoryStrc* pInventoryData);
 void __fastcall D2CLIENT_ClickBeltRight_ASM(DWORD pInventory, DWORD pPlayer, DWORD HoldShift, DWORD dwPotPos);
 void __fastcall D2CLIENT_GetItemDesc_ASM(DWORD pUnit, wchar_t* pBuffer);
 void __fastcall D2COMMON_DisplayOverheadMsg_ASM(DWORD pUnit);
 void __fastcall D2CLIENT_MercItemAction_ASM(DWORD bPacketType, DWORD dwSlot);
 void __fastcall D2CLIENT_PlaySound(DWORD dwSoundId);
 void __fastcall D2GFX_DrawRectFrame_STUB(RECT* rect);
-DWORD __cdecl D2CLIENT_GetMinionCount(UnitAny* pUnit, DWORD dwType);
-void __fastcall D2CLIENT_HostilePartyUnit(RosterUnit* pUnit, DWORD dwButton);
+DWORD __cdecl D2CLIENT_GetMinionCount(D2UnitStrc* pUnit, DWORD dwType);
+void __fastcall D2CLIENT_HostilePartyUnit(D2RosterUnitStrc* pUnit, DWORD dwButton);
 void __stdcall D2CLIENT_TakeWaypoint(DWORD dwWaypointId, DWORD dwArea);
 DWORD __fastcall D2CLIENT_SendGamePacket_ASM(DWORD dwLen, BYTE* bPacket);
-void __stdcall D2CLIENT_LeftClickItem(DWORD Location, UnitAny* pPlayer, Inventory* pInventory, int x, int y, DWORD dwClickType, InventoryLayout* pLayout);
+void __stdcall D2CLIENT_LeftClickItem(DWORD Location, D2UnitStrc* pPlayer, D2InventoryStrc* pInventory, int x, int y, DWORD dwClickType, InventoryLayout* pLayout);
 
 enum DistanceType { Euclidean, Chebyshev, Manhattan };
 double GetDistance(long x1, long y1, long x2, long y2, DistanceType type = Euclidean);

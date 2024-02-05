@@ -57,7 +57,7 @@ void LogNoFormat(const wchar_t* szString) {
 // Do not edit without the express consent of bsdunx or lord2800
 ClientGameState ClientState(void) {
   ClientGameState state = ClientStateNull;
-  UnitAny* player = D2CLIENT_GetPlayerUnit();
+  D2UnitStrc* player = D2CLIENT_GetPlayerUnit();
   Control* firstControl = *p_D2WIN_FirstControl;
 
   if (player && !firstControl) {
@@ -103,7 +103,7 @@ DWORD GetPlayerArea(void) {
 }
 
 // NOTE TO CALLERS: szTmp must be a PRE-INITIALIZED string.
-const char* GetUnitName(UnitAny* pUnit, char* szTmp, size_t bufSize) {
+const char* GetUnitName(D2UnitStrc* pUnit, char* szTmp, size_t bufSize) {
   if (!pUnit) {
     strcpy_s(szTmp, bufSize, "Unknown");
     return szTmp;
@@ -139,9 +139,9 @@ const char* GetUnitName(UnitAny* pUnit, char* szTmp, size_t bufSize) {
 }
 
 // szBuf must be a 4-character string
-void GetItemCode(UnitAny* pUnit, char* szBuf) {
+void GetItemCode(D2UnitStrc* pUnit, char* szBuf) {
   if (pUnit->dwType == UNIT_ITEM) {
-    ItemTxt* pTxt = D2COMMON_GetItemText(pUnit->dwTxtFileNo);
+    D2ItemsTxt* pTxt = D2COMMON_GetItemText(pUnit->dwTxtFileNo);
     if (pTxt) {
       memcpy(szBuf, pTxt->szCode, 3);
       szBuf[3] = 0x00;
@@ -153,8 +153,8 @@ bool InArea(int x, int y, int x2, int y2, int sizex, int sizey) {
   return !!(x >= x2 && x < x2 + sizex && y >= y2 && y < y2 + sizey);
 }
 
-/*UnitAny* FindItemByPosition(DWORD x, DWORD y, DWORD Location) {
-for(UnitAny* pItem = D2COMMON_GetItemFromInventory(D2CLIENT_GetPlayerUnit()->pInventory); pItem; pItem = D2COMMON_GetNextItemFromInventory(pItem)) {
+/*D2UnitStrc* FindItemByPosition(DWORD x, DWORD y, DWORD Location) {
+for(D2UnitStrc* pItem = D2COMMON_GetItemFromInventory(D2CLIENT_GetPlayerUnit()->pInventory); pItem; pItem = D2COMMON_GetNextItemFromInventory(pItem)) {
 if((DWORD)GetItemLocation(pItem) == Location &&
 InArea(x,y,pItem->pObjectPath->dwPosX,pItem->pObjectPath->dwPosY,D2COMMON_GetItemText(pItem->dwTxtFileNo)->xSize,D2COMMON_GetItemText(pItem->dwTxtFileNo)->ySize))
 return pItem;
@@ -167,13 +167,13 @@ return NULL;
 *(DWORD*)&p_D2CLIENT_SelectedInvItem = (DWORD)FindItemByPosition(x, y, dwLocation);
 }*/
 
-Level* GetLevel(DWORD dwLevelNo) {
+D2DrlgLevelStrc* GetLevel(DWORD dwLevelNo) {
   AutoCriticalRoom cRoom;
 
   if (!GameReady())
     return nullptr;
 
-  Level* pLevel = D2CLIENT_GetPlayerUnit()->pAct->pMisc->pLevelFirst;
+  D2DrlgLevelStrc* pLevel = D2CLIENT_GetPlayerUnit()->pAct->pMisc->pLevelFirst;
 
   while (pLevel) {
     if (pLevel->dwLevelNo == dwLevelNo) {
@@ -223,7 +223,7 @@ int GetSkill(WORD wSkillId) {
   if (!D2CLIENT_GetPlayerUnit())
     return 0;
 
-  for (Skill* pSkill = D2CLIENT_GetPlayerUnit()->pInfo->pFirstSkill; pSkill; pSkill = pSkill->pNextSkill)
+  for (D2SkillStrc* pSkill = D2CLIENT_GetPlayerUnit()->pInfo->pFirstSkill; pSkill; pSkill = pSkill->pNextSkill)
     if (pSkill->pSkillInfo->wSkillId == wSkillId)
       return D2COMMON_GetSkillLevel(D2CLIENT_GetPlayerUnit(), pSkill, TRUE);
 
@@ -247,10 +247,10 @@ BOOL SetSkill(JSContext* cx, WORD wSkillId, BOOL bLeft, DWORD dwItemId) {
 
   D2CLIENT_SendGamePacket(9, aPacket);
 
-  UnitAny* Me = D2CLIENT_GetPlayerUnit();
+  D2UnitStrc* Me = D2CLIENT_GetPlayerUnit();
 
   int timeout = 0;
-  Skill* hand = NULL;
+  D2SkillStrc* hand = NULL;
   while (ClientState() == ClientStateInGame) {
     hand = (bLeft ? Me->pInfo->pLeftSkill : Me->pInfo->pRightSkill);
     if (hand->pSkillInfo->wSkillId != wSkillId) {
@@ -375,7 +375,7 @@ void myDrawCenterText(const wchar_t* szText, int x, int y, int color, int font, 
   myDrawText(szText, x - (dwWidth >> div), y, color, font);
 }
 
-void D2CLIENT_Interact(UnitAny* pUnit, DWORD dwMoveType) {
+void D2CLIENT_Interact(D2UnitStrc* pUnit, DWORD dwMoveType) {
   if (!pUnit)
     return;
 
@@ -432,7 +432,7 @@ BOOL ClickNPCMenu(DWORD NPCClassId, DWORD MenuId) {
   return FALSE;
 }
 
-int GetItemLocation(UnitAny* pItem) {
+int GetItemLocation(D2UnitStrc* pItem) {
   if (!pItem || !pItem->pItemData)
     return -1;
 
@@ -450,8 +450,8 @@ BYTE CalcPercent(DWORD dwVal, DWORD dwMaxVal, BYTE iMin) {
   return max(iRes, iMin);
 }
 
-DWORD GetTileLevelNo(Room2* lpRoom2, DWORD dwTileNo) {
-  for (RoomTile* pRoomTile = lpRoom2->pRoomTiles; pRoomTile; pRoomTile = pRoomTile->pNext) {
+DWORD GetTileLevelNo(D2DrlgRoomStrc* lpRoom2, DWORD dwTileNo) {
+  for (D2RoomTileStrc* pRoomTile = lpRoom2->pRoomTiles; pRoomTile; pRoomTile = pRoomTile->pNext) {
     if (*(pRoomTile->nNum) == dwTileNo)
       return pRoomTile->pRoom2->pLevel->dwLevelNo;
   }
@@ -459,9 +459,9 @@ DWORD GetTileLevelNo(Room2* lpRoom2, DWORD dwTileNo) {
   return NULL;
 }
 
-UnitAny* GetMercUnit(UnitAny* pUnit) {
-  for (Room1* pRoom = pUnit->pAct->pRoom1; pRoom; pRoom = pRoom->pRoomNext)
-    for (UnitAny* pMerc = pRoom->pUnitFirst; pMerc; pMerc = pMerc->pRoomNext)
+D2UnitStrc* GetMercUnit(D2UnitStrc* pUnit) {
+  for (D2ActiveRoomStrc* pRoom = pUnit->pAct->pRoom1; pRoom; pRoom = pRoom->pRoomNext)
+    for (D2UnitStrc* pMerc = pRoom->pUnitFirst; pMerc; pMerc = pMerc->pRoomNext)
       if (pMerc->dwType == UNIT_MONSTER &&
           (pMerc->dwTxtFileNo == MERC_A1 || pMerc->dwTxtFileNo == MERC_A2 || pMerc->dwTxtFileNo == MERC_A3 || pMerc->dwTxtFileNo == MERC_A5) &&
           D2CLIENT_GetMonsterOwner(pMerc->dwUnitId) == pUnit->dwUnitId)
@@ -470,17 +470,17 @@ UnitAny* GetMercUnit(UnitAny* pUnit) {
 
 #if 0
 	// Wanted way of doing things, but D2CLIENT_GetMercUnit does some wierd internal things (drawing, causing screen flicker)
-	for(UnitAny* pMerc = D2CLIENT_GetMercUnit(); pMerc; pMerc = pMerc->pRoomNext)
+	for(D2UnitStrc* pMerc = D2CLIENT_GetMercUnit(); pMerc; pMerc = pMerc->pRoomNext)
 		if (D2CLIENT_GetMonsterOwner(pMerc->dwUnitId) == pUnit->dwUnitId)
 			return pMerc;
 	return NULL;
 #endif
 }
 
-UnitAny* D2CLIENT_FindUnit(DWORD dwId, DWORD dwType) {
+D2UnitStrc* D2CLIENT_FindUnit(DWORD dwId, DWORD dwType) {
   if (dwId == -1)
     return NULL;
-  UnitAny* pUnit = D2CLIENT_FindServerSideUnit(dwId, dwType);
+  D2UnitStrc* pUnit = D2CLIENT_FindServerSideUnit(dwId, dwType);
   return pUnit ? pUnit : D2CLIENT_FindClientSideUnit(dwId, dwType);
 }
 
@@ -502,10 +502,10 @@ int D2GetScreenSizeY() {
   return GetScreenSize().y;
 }
 
-void myDrawAutomapCell(CellFile* cellfile, int xpos, int ypos, BYTE col) {
+void myDrawAutomapCell(D2CellFileStrc* cellfile, int xpos, int ypos, BYTE col) {
   if (!cellfile)
     return;
-  CellContext ct;
+  D2GfxDataStrc ct;
   memset(&ct, 0, sizeof(ct));
   ct.pCellFile = cellfile;
 
@@ -568,22 +568,22 @@ static void* memcpy2(void* dest, const void* src, size_t count) {
 }
 
 // TODO: Rewrite this and split it into two functions
-CellFile* LoadCellFile(const char* lpszPath, DWORD bMPQ) {
+D2CellFileStrc* LoadCellFile(const char* lpszPath, DWORD bMPQ) {
   if (bMPQ == TRUE) {
     unsigned __int32 hash = sfh((char*)lpszPath, (int)strlen((char*)lpszPath));
     if (Vars.mCachedCellFiles.count(hash) > 0)
       return Vars.mCachedCellFiles[hash];
-    CellFile* result = (CellFile*)D2WIN_LoadCellFile((char*)lpszPath, 0);
+    D2CellFileStrc* result = (D2CellFileStrc*)D2WIN_LoadCellFile((char*)lpszPath, 0);
     Vars.mCachedCellFiles[hash] = result;
     return result;
   } else {
     std::wstring path = AnsiToWide(lpszPath);
-    CellFile* ret = LoadCellFile(path.c_str(), bMPQ);
+    D2CellFileStrc* ret = LoadCellFile(path.c_str(), bMPQ);
     return ret;
   }
 }
 
-CellFile* LoadCellFile(const wchar_t* lpszPath, DWORD bMPQ) {
+D2CellFileStrc* LoadCellFile(const wchar_t* lpszPath, DWORD bMPQ) {
   if (bMPQ != 0) {
     Log(L"Cannot specify wide character path for MPQ: %s", lpszPath);
     return NULL;
@@ -611,7 +611,7 @@ CellFile* LoadCellFile(const wchar_t* lpszPath, DWORD bMPQ) {
 
   // see if the file exists first
   if (!(_waccess(lpszPath, 0) != 0 && errno == ENOENT)) {
-    CellFile* result = myInitCellFile((CellFile*)LoadBmpCellFile(lpszPath));
+    D2CellFileStrc* result = myInitCellFile((D2CellFileStrc*)LoadBmpCellFile(lpszPath));
     Vars.mCachedCellFiles[hash] = result;
     return result;
   }
@@ -619,7 +619,7 @@ CellFile* LoadCellFile(const wchar_t* lpszPath, DWORD bMPQ) {
   return NULL;
 }
 
-CellFile* LoadBmpCellFile(BYTE* buf1, int width, int height) {
+D2CellFileStrc* LoadBmpCellFile(BYTE* buf1, int width, int height) {
   BYTE *buf2 = new BYTE[(width * height * 2) + height], *dest = buf2;
 
   for (int i = 0; i < height; i++) {
@@ -645,10 +645,10 @@ CellFile* LoadBmpCellFile(BYTE* buf1, int width, int height) {
   memset(memcpy2(memcpy2(ret, dc6head, sizeof(dc6head)), buf2, dc6head[14]), 0xee, 3);
   delete[] buf2;
 
-  return (CellFile*)ret;
+  return (D2CellFileStrc*)ret;
 }
 
-CellFile* LoadBmpCellFile(const char* filename) {
+D2CellFileStrc* LoadBmpCellFile(const char* filename) {
   BYTE* ret = 0;
 
   BYTE* buf1 = AllocReadFile(filename);
@@ -659,10 +659,10 @@ CellFile* LoadBmpCellFile(const char* filename) {
   }
   delete[] buf1;
 
-  return (CellFile*)ret;
+  return (D2CellFileStrc*)ret;
 }
 
-CellFile* LoadBmpCellFile(const wchar_t* filename) {
+D2CellFileStrc* LoadBmpCellFile(const wchar_t* filename) {
   BYTE* ret = 0;
 
   BYTE* buf1 = AllocReadFile(filename);
@@ -673,10 +673,10 @@ CellFile* LoadBmpCellFile(const wchar_t* filename) {
   }
   delete[] buf1;
 
-  return (CellFile*)ret;
+  return (D2CellFileStrc*)ret;
 }
 
-CellFile* myInitCellFile(CellFile* cf) {
+D2CellFileStrc* myInitCellFile(D2CellFileStrc* cf) {
   if (cf)
     D2CMP_InitCellFile(cf, &cf, "?", 0, (DWORD)-1, "?");
   return cf;
@@ -750,14 +750,14 @@ void __declspec(naked) __fastcall D2CLIENT_ShopAction_ASM(DWORD /*pItem*/, DWORD
   }
 }
 
-void __declspec(naked) __fastcall D2CLIENT_ClickBelt(DWORD /*x*/, DWORD /*y*/, Inventory* /*pInventoryData*/) {
+void __declspec(naked) __fastcall D2CLIENT_ClickBelt(DWORD /*x*/, DWORD /*y*/, D2InventoryStrc* /*pInventoryData*/) {
   __asm {
 		mov eax, edx
 			jmp D2CLIENT_ClickBelt_I
   }
 }
 
-void __declspec(naked) __stdcall D2CLIENT_LeftClickItem(DWORD /*Location*/, UnitAny* /*pPlayer*/, Inventory* /*pInventory*/, int /*x*/, int /*y*/, DWORD /*dwClickType*/,
+void __declspec(naked) __stdcall D2CLIENT_LeftClickItem(DWORD /*Location*/, D2UnitStrc* /*pPlayer*/, D2InventoryStrc* /*pInventory*/, int /*x*/, int /*y*/, DWORD /*dwClickType*/,
                                                         InventoryLayout* /*pLayout*/) {
   __asm
   {
@@ -881,7 +881,7 @@ void __declspec(naked) __fastcall D2GFX_DrawRectFrame_STUB(RECT* /*rect*/) {
   }
 }
 
-DWORD __cdecl D2CLIENT_GetMinionCount(UnitAny* pUnit, DWORD dwType) {
+DWORD __cdecl D2CLIENT_GetMinionCount(D2UnitStrc* pUnit, DWORD dwType) {
   DWORD dwResult;
 
   __asm
@@ -901,7 +901,7 @@ DWORD __cdecl D2CLIENT_GetMinionCount(UnitAny* pUnit, DWORD dwType) {
   return dwResult;
 }
 
-__declspec(naked) void __fastcall D2CLIENT_HostilePartyUnit(RosterUnit* /*pUnit*/, DWORD /*dwButton*/) {
+__declspec(naked) void __fastcall D2CLIENT_HostilePartyUnit(D2RosterUnitStrc* /*pUnit*/, DWORD /*dwButton*/) {
   __asm
   {
 		mov eax, edx

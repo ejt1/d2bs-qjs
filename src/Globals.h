@@ -61,7 +61,7 @@ struct Variables {
   long SectionCount;
 
   std::queue<std::wstring> qPrintBuffer;
-  std::map<unsigned __int32, CellFile*> mCachedCellFiles;
+  std::map<unsigned __int32, D2CellFileStrc*> mCachedCellFiles;
   std::vector<std::pair<DWORD, DWORD>> vUnitList;
   // std::list<Event*> EventList;
   CRITICAL_SECTION cEventSection;

@@ -2,8 +2,7 @@
 
 #include <Windows.h>
 
-// rename D2ItemsTxt
-struct ItemTxt {
+struct D2ItemsTxt {
   wchar_t szName2[0x40];  // 0x00
   union {
     DWORD dwCode;

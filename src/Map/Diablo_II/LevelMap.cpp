@@ -6,7 +6,7 @@ namespace Mapping {
 
 LevelMapList LevelMap::cache = LevelMapList();
 
-// LevelMap* LevelMap::GetMap(Level* level) // commit easier than fix error
+// LevelMap* LevelMap::GetMap(D2DrlgLevelStrc* level) // commit easier than fix error
 //{
 //	if(cache.count(level->dwLevelNo) > 0)
 //		return cache[level->dwLevelNo];
@@ -23,7 +23,7 @@ void LevelMap::ClearCache(void) {
   cache.clear();
 }
 
-LevelMap::LevelMap(const Level* level) {
+LevelMap::LevelMap(const D2DrlgLevelStrc* level) {
   lock = new CRITICAL_SECTION;
   InitializeCriticalSection(lock);
 
@@ -41,7 +41,7 @@ LevelMap::LevelMap(const Level* level) {
   posY = (level->dwPosY == -1 ? 0 : level->dwPosY * 5);
 
   bool added = false;
-  Room2* room = level->pRoom2First;
+  D2DrlgRoomStrc* room = level->pRoom2First;
   cachedLevel = room->pLevel;
   if (!level->pRoom2First->pRoom1) {
     AddRoomData(room);
@@ -66,7 +66,7 @@ void LevelMap::Build(void) {
 mapPoints = Matrix<CollisionFlag>(height, width, LevelMap::Avoid);
 
 RoomList addedRooms;
-UnitAny* player = GetPlayerUnit();
+D2UnitStrc* player = GetPlayerUnit();
 AddRoom(level->pRoom2First, addedRooms, player);
 
 FillGaps();
@@ -76,7 +76,7 @@ DrillExits();
 LeaveCriticalSection(lock);*/
 }
 
-void LevelMap::AddRoom(Room2* const room, RoomList& rooms, UnitAny* player) {
+void LevelMap::AddRoom(D2DrlgRoomStrc* const room, RoomList& rooms, D2UnitStrc* player) {
   if (!room || room->pLevel->dwLevelNo != level->dwLevelNo)
     return;
 
@@ -97,9 +97,9 @@ void LevelMap::AddRoom(Room2* const room, RoomList& rooms, UnitAny* player) {
   // if(room->pRoom1)
   //	AddCollisionMap(room->pRoom1);
 
-  for (Room2* pRooms = level->pRoom2First; pRooms; pRooms = pRooms->pRoom2Next) AddRoom(pRooms, rooms, player);
+  for (D2DrlgRoomStrc* pRooms = level->pRoom2First; pRooms; pRooms = pRooms->pRoom2Next) AddRoom(pRooms, rooms, player);
 
-  /*Room2** pRooms = room->pRoom2Near;
+  /*D2DrlgRoomStrc** pRooms = room->pRoom2Near;
   for(DWORD i = 0; i < room->dwRoomsNear; i++)
           AddRoom(pRooms[i], rooms, player);*/
 
@@ -108,8 +108,8 @@ void LevelMap::AddRoom(Room2* const room, RoomList& rooms, UnitAny* player) {
     RemoveRoomData(room);
 }
 
-void LevelMap::AddCollisionMap(Room1* pRoom1) {
-  CollMap* map = pRoom1->Coll;
+void LevelMap::AddCollisionMap(D2ActiveRoomStrc* pRoom1) {
+  D2DrlgCoordsStrc* map = pRoom1->Coll;
   if (map == NULL)
     return;
 
@@ -136,7 +136,7 @@ void LevelMap::AddCollisionMap(Room1* pRoom1) {
     }
   }
 
-  for (UnitAny* pUnit = pRoom1->pUnitFirst; pUnit; pUnit = pUnit->pRoomNext) {
+  for (D2UnitStrc* pUnit = pRoom1->pUnitFirst; pUnit; pUnit = pUnit->pRoomNext) {
     char tmp[128] = "";
     GetUnitName(pUnit, tmp, 128);
     if (pUnit->dwType == 2 &&
@@ -251,7 +251,7 @@ void LevelMap::GetExits(ExitArray& exits) const {
 
   RoomList added;
 
-  for (Room2* room = level->pRoom2First; room; room = room->pRoom2Next) {
+  for (D2DrlgRoomStrc* room = level->pRoom2First; room; room = room->pRoom2Next) {
     if (!room->pRoom1) {
       AddRoomData(room);
       added.push_back(room);
@@ -341,13 +341,13 @@ bool LevelMap::ExitExists(DWORD dwLevelNo, ExitArray& exits) const {
 void LevelMap::FindRoomLinkageExits(ExitArray& exits, RoomList& added) const {
   static const Point empty(0, 0);
 
-  UnitAny* player = GetPlayerUnit();
+  D2UnitStrc* player = GetPlayerUnit();
   const Point playerOrigin(player->pPath->xPos - posX, player->pPath->yPos - posY);
 
   std::multimap<int, std::pair<Point, std::pair<Point, int>>> exitMap;  // <level, <rooms[i], <middlepoint, size> > >
 
-  for (Room2* room = level->pRoom2First; room; room = room->pRoom2Next) {
-    Room2** rooms = room->pRoom2Near;
+  for (D2DrlgRoomStrc* room = level->pRoom2First; room; room = room->pRoom2Next) {
+    D2DrlgRoomStrc** rooms = room->pRoom2Near;
     for (DWORD i = 0; i < room->dwRoomsNear; i++) {
       if (!rooms[i]->pRoom1) {
         AddRoomData(rooms[i]);
@@ -503,8 +503,8 @@ Point LevelMap::GetEdgeCenterPoint(const Point& currentPoint, const Point& edgeD
   return Point((left.first + right.first) / 2, (left.second + right.second) / 2);
 }
 
-void LevelMap::FindRoomTileExits(Room2* room, ExitArray& exits) const {
-  for (PresetUnit* preset = room->pPreset; preset; preset = preset->pPresetNext) {
+void LevelMap::FindRoomTileExits(D2DrlgRoomStrc* room, ExitArray& exits) const {
+  for (D2PresetUnitStrc* preset = room->pPreset; preset; preset = preset->pPresetNext) {
     if (preset->dwType == 5)  // UNIT_TILE
     {
       DWORD levelId = GetLevelNo(room, preset->dwTxtFileNo);
@@ -535,7 +535,7 @@ void LevelMap::FindRoomTileExits(Room2* room, ExitArray& exits) const {
  *                         2    +--- pRoom1Adjecent           r    5
  *    distanceAdjecent     3  __|                                  6
  */
-bool LevelMap::EdgeIsWalkable(const Point& edgePoint, const Point& offsetPoint, Room1* pRoom1Adjecent, bool abs) const {
+bool LevelMap::EdgeIsWalkable(const Point& edgePoint, const Point& offsetPoint, D2ActiveRoomStrc* pRoom1Adjecent, bool abs) const {
   int k;
   const int distanceLocal = -2;
   const int distanceAdjecent = 3;
@@ -586,7 +586,7 @@ bool LevelMap::SpaceIsWalkableForExit(const Point& point, bool abs) const {
            SpaceHasFlag(LevelMap::BlockPlayer, point, abs));
 }
 
-bool LevelMap::RoomSpaceIsWalkable(Room1* pRoom1, const Point& point, bool abs) const {
+bool LevelMap::RoomSpaceIsWalkable(D2ActiveRoomStrc* pRoom1, const Point& point, bool abs) const {
   unsigned int x = point.first, y = point.second;
   if (abs) {
     // convert to origin

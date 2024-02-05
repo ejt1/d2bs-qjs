@@ -2,8 +2,7 @@
 
 #include <Windows.h>
 
-// rename D2LevelsTxt
-struct LevelTxt {
+struct D2LevelsTxt {
   DWORD dwLevelNo;            // 0x00
   DWORD _1[60];               // 0x04
   BYTE _2;                    // 0xF4

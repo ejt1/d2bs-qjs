@@ -129,7 +129,7 @@ void __fastcall Say(const wchar_t* szFormat, ...) {
   delete[] szBuffer;
 }
 
-bool ClickMap(DWORD dwClickType, int wX, int wY, BOOL bShift, UnitAny* pUnit) {
+bool ClickMap(DWORD dwClickType, int wX, int wY, BOOL bShift, D2UnitStrc* pUnit) {
   if (ClientState() != ClientStateInGame)
     return false;
 

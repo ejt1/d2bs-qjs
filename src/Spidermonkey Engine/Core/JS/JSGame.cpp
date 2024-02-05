@@ -81,7 +81,7 @@ JSAPI_FUNC(my_clickMap) {
     if (!mypUnit || (mypUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
       return JS_FALSE;
 
-    UnitAny* pUnit = D2CLIENT_FindUnit(mypUnit->dwUnitId, mypUnit->dwType);
+    D2UnitStrc* pUnit = D2CLIENT_FindUnit(mypUnit->dwUnitId, mypUnit->dwType);
 
     if (!pUnit)
       return JS_FALSE;
@@ -215,7 +215,7 @@ JSAPI_FUNC(my_getPath) {
   if (lvl == 0) {
     THROW_ERROR(ctx, "Invalid level passed to getPath");
   }
-  Level* level = GetLevel(lvl);
+  D2DrlgLevelStrc* level = GetLevel(lvl);
 
   if (!level)
     return JS_EXCEPTION;
@@ -284,7 +284,7 @@ JSAPI_FUNC(my_getCollision) {
   }
 
   Point point(nX, nY);
-  Level* level = GetLevel(nLevelId);
+  D2DrlgLevelStrc* level = GetLevel(nLevelId);
   if (!level) {
     THROW_ERROR(ctx, "Level Not loaded");
   }
@@ -301,7 +301,7 @@ JSAPI_FUNC(my_getCollision) {
 
 JSAPI_FUNC(my_clickItem) {
   JSValue rval = JS_NULL;
-  typedef void __fastcall clickequip(UnitAny * pPlayer, Inventory * pIventory, int loc);
+  typedef void __fastcall clickequip(D2UnitStrc * pPlayer, D2InventoryStrc * pIventory, int loc);
 
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
@@ -314,7 +314,7 @@ JSAPI_FUNC(my_clickItem) {
   }
 
   myUnit* pmyUnit = NULL;
-  UnitAny* pUnit = NULL;
+  D2UnitStrc* pUnit = NULL;
 
   // int ScreenSize = D2GFX_GetScreenSize();
 
@@ -383,7 +383,7 @@ JSAPI_FUNC(my_clickItem) {
     // Click Merc Gear
     else if (nClickType == 4) {
       if (nBodyLoc == 1 || nBodyLoc == 3 || nBodyLoc == 4) {
-        UnitAny* pMerc = GetMercUnit(D2CLIENT_GetPlayerUnit());
+        D2UnitStrc* pMerc = GetMercUnit(D2CLIENT_GetPlayerUnit());
 
         if (pMerc) {
           D2CLIENT_MercItemAction(0x61, nBodyLoc);
@@ -420,7 +420,7 @@ JSAPI_FUNC(my_clickItem) {
     InventoryLayout* pLayout = NULL;
 
     if (nClickType == 4) {
-      UnitAny* pMerc = GetMercUnit(D2CLIENT_GetPlayerUnit());
+      D2UnitStrc* pMerc = GetMercUnit(D2CLIENT_GetPlayerUnit());
 
       if (pMerc)
         if (pUnit->pItemData && pUnit->pItemData->pOwner)
@@ -506,9 +506,9 @@ JSAPI_FUNC(my_clickItem) {
 
       // Fixing the x/y click spot for items taking more than one inventory square- so Diablo can handle it!
       if (nLoc != LOCATION_BELT) {
-        UnitAny* pItem = D2CLIENT_GetCursorItem();
+        D2UnitStrc* pItem = D2CLIENT_GetCursorItem();
         if (pItem) {
-          ItemTxt* pTxt = D2COMMON_GetItemText(pItem->dwTxtFileNo);
+          D2ItemsTxt* pTxt = D2COMMON_GetItemText(pItem->dwTxtFileNo);
           if (pTxt) {
             if (pTxt->ySize > 1)
               nY += 1;
@@ -676,7 +676,7 @@ JSAPI_FUNC(my_getDistance) {
       if (!pUnit1 || (pUnit1->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
         return JS_UNDEFINED;
 
-      UnitAny* pUnitA = D2CLIENT_FindUnit(pUnit1->dwUnitId, pUnit1->dwType);
+      D2UnitStrc* pUnitA = D2CLIENT_FindUnit(pUnit1->dwUnitId, pUnit1->dwType);
 
       if (!pUnitA)
         return JS_UNDEFINED;
@@ -691,7 +691,7 @@ JSAPI_FUNC(my_getDistance) {
       if (!pUnit1 || (pUnit1->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
         return JS_UNDEFINED;
 
-      UnitAny* pUnitA = D2CLIENT_FindUnit(pUnit1->dwUnitId, pUnit1->dwType);
+      D2UnitStrc* pUnitA = D2CLIENT_FindUnit(pUnit1->dwUnitId, pUnit1->dwType);
 
       if (!pUnitA)
         return JS_UNDEFINED;
@@ -742,8 +742,8 @@ JSAPI_FUNC(my_checkCollision) {
     if (!pUnitA || (pUnitA->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT || !pUnitB || (pUnitB->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
       return JS_UNDEFINED;
 
-    UnitAny* pUnit1 = D2CLIENT_FindUnit(pUnitA->dwUnitId, pUnitA->dwType);
-    UnitAny* pUnit2 = D2CLIENT_FindUnit(pUnitB->dwUnitId, pUnitB->dwType);
+    D2UnitStrc* pUnit1 = D2CLIENT_FindUnit(pUnitA->dwUnitId, pUnitA->dwType);
+    D2UnitStrc* pUnit2 = D2CLIENT_FindUnit(pUnitB->dwUnitId, pUnitB->dwType);
 
     if (!pUnit1 || !pUnit2)
       return JS_UNDEFINED;
@@ -942,16 +942,16 @@ JSAPI_FUNC(my_clickParty) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  UnitAny* myUnit = D2CLIENT_GetPlayerUnit();
-  RosterUnit* pUnit = (RosterUnit*)JS_GetOpaque3(argv[0]);
-  RosterUnit* mypUnit = *p_D2CLIENT_PlayerUnitList;
+  D2UnitStrc* myUnit = D2CLIENT_GetPlayerUnit();
+  D2RosterUnitStrc* pUnit = (D2RosterUnitStrc*)JS_GetOpaque3(argv[0]);
+  D2RosterUnitStrc* mypUnit = *p_D2CLIENT_PlayerUnitList;
 
   if (!pUnit || !mypUnit)
     return rval;
 
   BOOL bFound = FALSE;
 
-  for (RosterUnit* pScan = mypUnit; pScan; pScan = pScan->pNext)
+  for (D2RosterUnitStrc* pScan = mypUnit; pScan; pScan = pScan->pNext)
     if (pScan->dwUnitId == pUnit->dwUnitId)
       bFound = TRUE;
 
@@ -1175,7 +1175,7 @@ JSAPI_FUNC(my_submitItem) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  if (UnitAny* pUnit = D2CLIENT_GetCursorItem()) {
+  if (D2UnitStrc* pUnit = D2CLIENT_GetCursorItem()) {
     if (D2CLIENT_GetPlayerUnit()->dwAct == 1) {
       if (GetPlayerArea() == D2CLIENT_GetPlayerUnit()->pAct->pMisc->dwStaffTombLevel) {
         *p_D2CLIENT_CursorItemMode = 3;
@@ -1215,7 +1215,7 @@ JSAPI_FUNC(my_getInteractedNPC) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  UnitAny* pNPC = D2CLIENT_GetCurrentInteractingNPC();
+  D2UnitStrc* pNPC = D2CLIENT_GetCurrentInteractingNPC();
   if (!pNPC) {
     return JS_FALSE;
   }
@@ -1276,13 +1276,13 @@ JSAPI_FUNC(my_moveNPC) {
 }
 
 JSAPI_FUNC(my_revealLevel) {
-  UnitAny* unit = D2CLIENT_GetPlayerUnit();
+  D2UnitStrc* unit = D2CLIENT_GetPlayerUnit();
 
   if (!unit) {
     return JS_UNDEFINED;
   }
 
-  Level* level = unit->pPath->pRoom1->pRoom2->pLevel;
+  D2DrlgLevelStrc* level = unit->pPath->pRoom1->pRoom2->pLevel;
 
   if (!level) {
     return JS_UNDEFINED;
@@ -1298,7 +1298,7 @@ JSAPI_FUNC(my_revealLevel) {
     return JS_UNDEFINED;
   }
 
-  for (Room2* room = level->pRoom2First; room; room = room->pRoom2Next) {
+  for (D2DrlgRoomStrc* room = level->pRoom2First; room; room = room->pRoom2Next) {
     RevealRoom(room, bDrawPresets);
   }
   return JS_UNDEFINED;

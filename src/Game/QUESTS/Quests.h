@@ -2,9 +2,8 @@
 
 #include <Window.h>
 
-// rename D2QuestInfoStrc
 #pragma pack(push, 1)
-struct QuestInfo {
+struct D2QuestInfoStrc {
   void* pBuffer;  // 0x00
   DWORD _1;       // 0x04
 };

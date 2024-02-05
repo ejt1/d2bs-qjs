@@ -11,15 +11,15 @@
 #pragma warning(disable : 4201)
 #pragma optimize("", off)
 
-struct UnitAny;
-struct Room1;
-struct Room2;
-struct Level;
-struct Act;
-struct ActMisc;
-struct RosterUnit;
+struct D2UnitStrc;
+struct D2ActiveRoomStrc;
+struct D2DrlgRoomStrc;
+struct D2DrlgLevelStrc;
+struct D2DrlgActStrc;
+struct D2DrlgStrc;
+struct D2RosterUnitStrc;
 struct OverheadMsg;
-struct Skill;
+struct D2SkillStrc;
 
 // rename D2AutomapCellStrc
 struct AutomapCell {
@@ -34,13 +34,13 @@ struct AutomapCell {
 
 struct UnitInteraction {
   DWORD dwMoveType;       // 0x00
-  UnitAny* lpPlayerUnit;  // 0x04
-  UnitAny* lpTargetUnit;  // 0x08
+  D2UnitStrc* lpPlayerUnit;  // 0x04
+  D2UnitStrc* lpTargetUnit;  // 0x08
   DWORD dwTargetX;        // 0x0C
   DWORD dwTargetY;        // 0x10
   DWORD _1;               // 0x14
   DWORD _2;               // 0x18
-  Skill* pSkill;
+  D2SkillStrc* pSkill;
 };
 
 // rename D2AutomapLayerStrc

@@ -22,7 +22,7 @@ JSAPI_PROP(area_getProperty) {
   if (!pArea)
     return JS_EXCEPTION;
 
-  Level* pLevel = GetLevel(pArea->AreaId);
+  D2DrlgLevelStrc* pLevel = GetLevel(pArea->AreaId);
   if (!pLevel)
     return JS_EXCEPTION;
 
@@ -57,7 +57,7 @@ JSAPI_PROP(area_getProperty) {
       return JS_DupValue(ctx, pArea->ExitArray);
     } break;
     case AUNIT_NAME: {
-      LevelTxt* pTxt = D2COMMON_GetLevelText(pArea->AreaId);
+      D2LevelsTxt* pTxt = D2COMMON_GetLevelText(pArea->AreaId);
       if (pTxt) {
         return JS_NewString(ctx, pTxt->szName);
       }
@@ -93,7 +93,7 @@ JSAPI_FUNC(my_getArea) {
     THROW_ERROR(ctx, "Invalid parameter passed to getArea!");
   }
 
-  Level* pLevel = GetLevel(nArea);
+  D2DrlgLevelStrc* pLevel = GetLevel(nArea);
 
   if (!pLevel) {
     return JS_FALSE;

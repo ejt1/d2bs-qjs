@@ -31,7 +31,7 @@ CLASS_FINALIZER(unit) {
 
 JSAPI_PROP(unit_getProperty) {
   BnetData* pData = *p_D2LAUNCH_BnData;
-  GameStructInfo* pInfo = *p_D2CLIENT_GameInfo;
+  D2GameInfoStrc* pInfo = *p_D2CLIENT_GameInfo;
 
   switch (magic) {
     case ME_PID:
@@ -134,11 +134,11 @@ JSAPI_PROP(unit_getProperty) {
   if (!lpUnit || (lpUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_UNDEFINED;
 
-  UnitAny* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
+  D2UnitStrc* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
   if (!pUnit) {
     return JS_UNDEFINED;
   }
-  Room1* pRoom = NULL;
+  D2ActiveRoomStrc* pRoom = NULL;
 
   switch (magic) {
     case UNIT_TYPE:
@@ -233,7 +233,7 @@ JSAPI_PROP(unit_getProperty) {
     case ITEM_CODE:  // replace with better method if found
       if (!(pUnit->dwType == UNIT_ITEM) && pUnit->pItemData)
         break;
-      ItemTxt* pTxt;
+      D2ItemsTxt* pTxt;
       pTxt = D2COMMON_GetItemText(pUnit->dwTxtFileNo);
       if (!pTxt) {
         return JS_NewString(ctx, "Unknown");
@@ -526,7 +526,7 @@ JSAPI_FUNC(unit_getUnit) {
   if (argc > 3 && JS_IsNumber(argv[3]) && !JS_IsNull(argv[3]))
     JS_ToUint32(ctx, &nUnitId, argv[3]);
 
-  UnitAny* pUnit = NULL;
+  D2UnitStrc* pUnit = NULL;
 
   if (nType == 100)
     pUnit = D2CLIENT_GetCursorItem();
@@ -568,7 +568,7 @@ JSAPI_FUNC(unit_getNext) {
 
   if (unit->dwPrivateType == PRIVATE_UNIT) {
     myUnit* lpUnit = (myUnit*)unit;
-    UnitAny* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
+    D2UnitStrc* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
 
     if (!pUnit)
       return JS_UNDEFINED;
@@ -602,8 +602,8 @@ JSAPI_FUNC(unit_getNext) {
     if (!pmyUnit)
       return JS_UNDEFINED;
 
-    UnitAny* pUnit = D2CLIENT_FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
-    UnitAny* pOwner = D2CLIENT_FindUnit(pmyUnit->dwOwnerId, pmyUnit->dwOwnerType);
+    D2UnitStrc* pUnit = D2CLIENT_FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
+    D2UnitStrc* pOwner = D2CLIENT_FindUnit(pmyUnit->dwOwnerId, pmyUnit->dwOwnerType);
     if (!pUnit || !pOwner)
       return JS_UNDEFINED;
 
@@ -619,7 +619,7 @@ JSAPI_FUNC(unit_getNext) {
     if (argc > 1 && JS_IsNumber(argv[1]) && !JS_IsNull(argv[2]))
       JS_ToUint32(ctx, (uint32_t*)&(pmyUnit->dwMode), argv[1]);
 
-    UnitAny* nextItem = GetInvNextUnit(pUnit, pOwner, pmyUnit->szName, pmyUnit->dwClassId, pmyUnit->dwMode);
+    D2UnitStrc* nextItem = GetInvNextUnit(pUnit, pOwner, pmyUnit->szName, pmyUnit->dwClassId, pmyUnit->dwMode);
     if (!nextItem) {
       // set current object to null breaks the unit_finilize cleanup cycle
       /*JSObject* obj = JS_THIS_OBJECT(cx, vp);
@@ -683,7 +683,7 @@ JSAPI_FUNC(unit_repair) {
   if (!lpUnit || (lpUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_FALSE;
 
-  UnitAny* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
+  D2UnitStrc* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
 
   if (!pUnit)
     return JS_FALSE;
@@ -709,7 +709,7 @@ JSAPI_FUNC(unit_useMenu) {
   if (!lpUnit || (lpUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_FALSE;
 
-  UnitAny* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
+  D2UnitStrc* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
 
   if (!pUnit)
     return JS_FALSE;
@@ -728,7 +728,7 @@ JSAPI_FUNC(unit_interact) {
   if (!lpUnit || (lpUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_FALSE;
 
-  UnitAny* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
+  D2UnitStrc* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
 
   if (!pUnit || pUnit == D2CLIENT_GetPlayerUnit())
     return JS_FALSE;
@@ -782,8 +782,8 @@ JSAPI_FUNC(unit_interact) {
   return JS_TRUE;
 }
 
-void InsertStatsToGenericObject(UnitAny* pUnit, StatList* pStatList, JSContext* pJSContext, JSValue pGenericObject);
-void InsertStatsNow(Stat* pStat, int nStat, JSContext* cx, JSValue pArray);
+void InsertStatsToGenericObject(D2UnitStrc* pUnit, D2StatListExStrc* pStatList, JSContext* pJSContext, JSValue pGenericObject);
+void InsertStatsNow(D2StatStrc* pStat, int nStat, JSContext* cx, JSValue pArray);
 
 JSAPI_FUNC(unit_getStat) {
   if (!WaitForGameReady())
@@ -793,7 +793,7 @@ JSAPI_FUNC(unit_getStat) {
   if (!lpUnit || (lpUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_FALSE;
 
-  UnitAny* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
+  D2UnitStrc* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
   if (!pUnit)
     return JS_FALSE;
 
@@ -816,11 +816,11 @@ JSAPI_FUNC(unit_getStat) {
   } else if (nStat == STAT_ITEMLEVELREQ) {
     return JS_NewInt32(ctx, D2COMMON_GetItemLevelRequirement(pUnit, D2CLIENT_GetPlayerUnit()));
   } else if (nStat == -1) {
-    Stat aStatList[256] = {NULL};
-    StatList* pStatList = D2COMMON_GetStatList(pUnit, NULL, 0x40);
+    D2StatStrc aStatList[256] = {NULL};
+    D2StatListExStrc* pStatList = D2COMMON_GetStatList(pUnit, NULL, 0x40);
 
     if (pStatList) {
-      DWORD dwStats = D2COMMON_CopyStatList(pStatList, (Stat*)aStatList, 256);
+      DWORD dwStats = D2COMMON_CopyStatList(pStatList, (D2StatStrc*)aStatList, 256);
 
       JSValue statArray = JS_NewArray(ctx);
       for (int j = 0; j < pUnit->pStats->StatVec.wCount; j++) {
@@ -865,10 +865,10 @@ JSAPI_FUNC(unit_getStat) {
     long result = D2COMMON_GetUnitStat(pUnit, nStat, nSubIndex);
     if (result == 0)  // if stat isnt found look up preset list
     {
-      StatList* pStatList = D2COMMON_GetStatList(pUnit, NULL, 0x40);
-      Stat aStatList[256] = {NULL};
+      D2StatListExStrc* pStatList = D2COMMON_GetStatList(pUnit, NULL, 0x40);
+      D2StatStrc aStatList[256] = {NULL};
       if (pStatList) {
-        DWORD dwStats = D2COMMON_CopyStatList(pStatList, (Stat*)aStatList, 256);
+        DWORD dwStats = D2COMMON_CopyStatList(pStatList, (D2StatStrc*)aStatList, 256);
         for (UINT i = 0; i < dwStats; i++) {
           if (nStat == aStatList[i].wStatIndex && nSubIndex == aStatList[i].wSubIndex)
             result = (aStatList[i].dwStatValue);
@@ -878,8 +878,8 @@ JSAPI_FUNC(unit_getStat) {
   return JS_NewFloat64(ctx, result);
   }
 
-void InsertStatsToGenericObject(UnitAny* pUnit, StatList* pStatList, JSContext* cx, JSValue pArray) {
-  Stat* pStat = NULL;
+void InsertStatsToGenericObject(D2UnitStrc* pUnit, D2StatListExStrc* pStatList, JSContext* cx, JSValue pArray) {
+  D2StatStrc* pStat = NULL;
   if (!pStatList)
     return;
   if ((pStatList->dwUnitId == pUnit->dwUnitId && pStatList->dwUnitType == pUnit->dwType) || pStatList->pUnit == pUnit) {
@@ -898,7 +898,7 @@ void InsertStatsToGenericObject(UnitAny* pUnit, StatList* pStatList, JSContext* 
   }
 }
 
-void InsertStatsNow(Stat* pStat, int nStat, JSContext* cx, JSValue pArray) {
+void InsertStatsNow(D2StatStrc* pStat, int nStat, JSContext* cx, JSValue pArray) {
   if (pStat[nStat].wSubIndex > 0x200) {
     // subindex is the skill id and level
     int skill = pStat[nStat].wSubIndex >> 6, level = pStat[nStat].wSubIndex & 0x3F, charges = 0, maxcharges = 0;
@@ -971,7 +971,7 @@ JSAPI_FUNC(unit_getState) {
   if (!lpUnit || (lpUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_FALSE;
 
-  UnitAny* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
+  D2UnitStrc* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
 
   if (!pUnit || !JS_IsNumber(argv[0]))
     return JS_FALSE;
@@ -997,7 +997,7 @@ JSAPI_FUNC(item_getFlags) {
   if (!lpUnit || (lpUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_UNDEFINED;
 
-  UnitAny* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
+  D2UnitStrc* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
 
   if (!pUnit || pUnit->dwType != UNIT_ITEM)
     return JS_UNDEFINED;
@@ -1017,7 +1017,7 @@ JSAPI_FUNC(item_getFlag) {
   if (!lpUnit || (lpUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_UNDEFINED;
 
-  UnitAny* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
+  D2UnitStrc* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
 
   if (!pUnit || pUnit->dwType != UNIT_ITEM)
     return JS_UNDEFINED;
@@ -1033,7 +1033,7 @@ JSAPI_FUNC(item_getItemCost) {
     THROW_WARNING(ctx, "Game not ready");
 
   int32_t nMode;
-  UnitAny* npc = D2CLIENT_GetCurrentInteractingNPC();
+  D2UnitStrc* npc = D2CLIENT_GetCurrentInteractingNPC();
   int32_t nNpcClassId = (npc ? npc->dwTxtFileNo : 0x9A);  // defaults to Charsi's NPC id
   int32_t nDifficulty = D2CLIENT_GetDifficulty();
 
@@ -1045,7 +1045,7 @@ JSAPI_FUNC(item_getItemCost) {
   if (!lpUnit || (lpUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_UNDEFINED;
 
-  UnitAny* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
+  D2UnitStrc* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
 
   if (!pUnit || pUnit->dwType != UNIT_ITEM)
     return JS_UNDEFINED;
@@ -1059,7 +1059,7 @@ JSAPI_FUNC(item_getItemCost) {
       if (!pmyNpc || (pmyNpc->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
         return JS_UNDEFINED;
 
-      UnitAny* pNpc = D2CLIENT_FindUnit(pmyNpc->dwUnitId, pmyNpc->dwType);
+      D2UnitStrc* pNpc = D2CLIENT_FindUnit(pmyNpc->dwUnitId, pmyNpc->dwType);
 
       if (!pNpc)
         return JS_UNDEFINED;
@@ -1102,7 +1102,7 @@ JSAPI_FUNC(unit_getItems) {
   if (!lpUnit || (lpUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_UNDEFINED;
 
-  UnitAny* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
+  D2UnitStrc* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
 
   if (!pUnit || !pUnit->pInventory || !pUnit->pInventory->pFirstItem)
     return JS_UNDEFINED;
@@ -1114,7 +1114,7 @@ JSAPI_FUNC(unit_getItems) {
 
   DWORD dwArrayCount = 0;
 
-  for (UnitAny* pItem = pUnit->pInventory->pFirstItem; pItem; pItem = D2COMMON_GetNextItemFromInventory(pItem), dwArrayCount++) {
+  for (D2UnitStrc* pItem = pUnit->pInventory->pFirstItem; pItem; pItem = D2COMMON_GetNextItemFromInventory(pItem), dwArrayCount++) {
     invUnit* pmyUnit = new invUnit;
 
     if (!pmyUnit)
@@ -1155,7 +1155,7 @@ JSAPI_FUNC(unit_getSkill) {
   if (!pmyUnit)
     return JS_UNDEFINED;
 
-  UnitAny* pUnit = D2CLIENT_FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
+  D2UnitStrc* pUnit = D2CLIENT_FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
   if (!pUnit)
     return JS_UNDEFINED;
 
@@ -1210,7 +1210,7 @@ JSAPI_FUNC(unit_getSkill) {
       case 4: {
         JSValue pReturnArray = JS_NewArray(ctx);
         int i = 0;
-        for (Skill* pSkill = pUnit->pInfo->pFirstSkill; pSkill; pSkill = pSkill->pNextSkill) {
+        for (D2SkillStrc* pSkill = pUnit->pInfo->pFirstSkill; pSkill; pSkill = pSkill->pNextSkill) {
           JSValue pArrayInsert = JS_NewArray(ctx);
           if (JS_IsException(pArrayInsert))
             continue;
@@ -1232,7 +1232,7 @@ JSAPI_FUNC(unit_getSkill) {
   }
 
   if (pUnit && pUnit->pInfo && pUnit->pInfo->pFirstSkill) {
-    for (Skill* pSkill = pUnit->pInfo->pFirstSkill; pSkill; pSkill = pSkill->pNextSkill) {
+    for (D2SkillStrc* pSkill = pUnit->pInfo->pFirstSkill; pSkill; pSkill = pSkill->pNextSkill) {
       if (pSkill->pSkillInfo && pSkill->pSkillInfo->wSkillId == nSkillId) {
         if ((argc == 2 && pSkill->IsCharge == 0) || (argc == 3 && (nCharge == false || pSkill->IsCharge == 1))) {
           return JS_NewInt32(ctx, D2COMMON_GetSkillLevel(pUnit, pSkill, nExt));
@@ -1260,7 +1260,7 @@ JSAPI_FUNC(item_shop) {
     return JS_FALSE;
   }
 
-  UnitAny* pItem = D2CLIENT_FindUnit(lpItem->dwUnitId, lpItem->dwType);
+  D2UnitStrc* pItem = D2CLIENT_FindUnit(lpItem->dwUnitId, lpItem->dwType);
 
   if (!pItem || pItem->dwType != UNIT_ITEM) {
     return JS_FALSE;
@@ -1270,7 +1270,7 @@ JSAPI_FUNC(item_shop) {
     return JS_FALSE;
   }
 
-  UnitAny* pNPC = D2CLIENT_GetCurrentInteractingNPC();
+  D2UnitStrc* pNPC = D2CLIENT_GetCurrentInteractingNPC();
   uint32_t dwMode;
   JS_ToUint32(ctx, &dwMode, argv[argc - 1]);
 
@@ -1350,7 +1350,7 @@ JSAPI_FUNC(unit_getParent) {
   if (!lpUnit || (lpUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_UNDEFINED;
 
-  UnitAny* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
+  D2UnitStrc* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
 
   if (!pUnit)
     return JS_UNDEFINED;
@@ -1360,7 +1360,7 @@ JSAPI_FUNC(unit_getParent) {
     if (dwOwnerId == -1)
       return JS_UNDEFINED;
 
-    UnitAny* pMonster = GetUnit(NULL, (DWORD)-1, (DWORD)-1, (DWORD)-1, dwOwnerId);
+    D2UnitStrc* pMonster = GetUnit(NULL, (DWORD)-1, (DWORD)-1, (DWORD)-1, dwOwnerId);
     if (!pMonster)
       return JS_UNDEFINED;
 
@@ -1402,7 +1402,7 @@ JSAPI_FUNC(unit_getParent) {
     if (!pmyUnit)
       return JS_UNDEFINED;
 
-    UnitAny* pOwner = D2COMMON_GetMissileOwnerUnit(pUnit);
+    D2UnitStrc* pOwner = D2COMMON_GetMissileOwnerUnit(pUnit);
     if (!pOwner)
       return JS_UNDEFINED;
 
@@ -1427,9 +1427,9 @@ JSAPI_FUNC(unit_getMerc) {
   myUnit* lpUnit = (myUnit*)JS_GetOpaque3(this_val);
 
   if (lpUnit && (lpUnit->_dwPrivateType & PRIVATE_UNIT) == PRIVATE_UNIT) {
-    UnitAny* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
+    D2UnitStrc* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
     if (pUnit && pUnit->dwType == UNIT_PLAYER) {
-      UnitAny* pMerc = GetMercUnit(pUnit);
+      D2UnitStrc* pMerc = GetMercUnit(pUnit);
       if (pMerc) {
         myUnit* pmyUnit = new myUnit;
 
@@ -1453,10 +1453,10 @@ JSAPI_FUNC(unit_getMercHP) {
   myUnit* lpUnit = (myUnit*)JS_GetOpaque3(this_val);
   // myUnit* lpUnit = (myUnit*)JS_GetOpaque3(test);
 
-  UnitAny* pUnit = lpUnit ? D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType) : D2CLIENT_GetPlayerUnit();
+  D2UnitStrc* pUnit = lpUnit ? D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType) : D2CLIENT_GetPlayerUnit();
 
   if (pUnit) {
-    UnitAny* pMerc = GetMercUnit(pUnit);
+    D2UnitStrc* pMerc = GetMercUnit(pUnit);
     if (pMerc) {
       return (pUnit->dwMode == 12 ? JS_NewInt32(ctx, 0) : JS_NewInt32(ctx, D2CLIENT_GetUnitHPPercent(pMerc->dwUnitId)));
     }
@@ -1515,7 +1515,7 @@ JSAPI_FUNC(my_overhead) {
   if (!pmyUnit || (pmyUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_FALSE;
 
-  UnitAny* pUnit = D2CLIENT_FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
+  D2UnitStrc* pUnit = D2CLIENT_FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
 
   if (!pUnit)
     return JS_FALSE;
@@ -1554,7 +1554,7 @@ JSAPI_FUNC(unit_getItem) {
   if (!pmyUnit || (pmyUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_UNDEFINED;
 
-  UnitAny* pUnit = D2CLIENT_FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
+  D2UnitStrc* pUnit = D2CLIENT_FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
 
   if (!pUnit || !pUnit->pInventory)
     return JS_UNDEFINED;
@@ -1579,7 +1579,7 @@ JSAPI_FUNC(unit_getItem) {
   if (argc > 2 && JS_IsNumber(argv[2]) && !JS_IsNull(argv[2]))
     JS_ToUint32(ctx, &nUnitId, argv[2]);
 
-  UnitAny* pItem = GetInvUnit(pUnit, szName, nClassId, nMode, nUnitId);
+  D2UnitStrc* pItem = GetInvUnit(pUnit, szName, nClassId, nMode, nUnitId);
 
   if (!pItem)
     return JS_UNDEFINED;
@@ -1610,9 +1610,9 @@ JSAPI_FUNC(unit_move) {
   if (!pmyUnit || (pmyUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_UNDEFINED;
 
-  UnitAny* pUnit = D2CLIENT_FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
+  D2UnitStrc* pUnit = D2CLIENT_FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
 
-  UnitAny* pPlayer = D2CLIENT_GetPlayerUnit();
+  D2UnitStrc* pPlayer = D2CLIENT_GetPlayerUnit();
 
   if (!pPlayer || !pUnit)
     return JS_UNDEFINED;
@@ -1651,7 +1651,7 @@ JSAPI_FUNC(unit_getEnchant) {
   if (!pmyUnit || (pmyUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_UNDEFINED;
 
-  UnitAny* pUnit = D2CLIENT_FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
+  D2UnitStrc* pUnit = D2CLIENT_FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
 
   if (!pUnit || pUnit->dwType != UNIT_MONSTER)
     return JS_UNDEFINED;
@@ -1696,7 +1696,7 @@ JSAPI_FUNC(unit_getMinionCount) {
   if (!pmyUnit || (pmyUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_UNDEFINED;
 
-  UnitAny* pUnit = D2CLIENT_FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
+  D2UnitStrc* pUnit = D2CLIENT_FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
 
   if (!pUnit || (pUnit->dwType != UNIT_MONSTER && pUnit->dwType != UNIT_PLAYER))
     return JS_UNDEFINED;
@@ -1708,7 +1708,7 @@ JSAPI_FUNC(me_getRepairCost) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  UnitAny* npc = D2CLIENT_GetCurrentInteractingNPC();
+  D2UnitStrc* npc = D2CLIENT_GetCurrentInteractingNPC();
   int32_t nNpcClassId = (npc ? npc->dwTxtFileNo : 0x9A);
 
   if (argc > 0 && JS_IsNumber(argv[0]))

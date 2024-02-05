@@ -1,6 +1,5 @@
 #pragma once
 
-// rename D2SkillsTxt
-struct SkillInfo {
+struct D2SkillsTxt {
   WORD wSkillId;  // 0x00
 };

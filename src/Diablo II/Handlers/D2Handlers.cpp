@@ -80,7 +80,7 @@ DWORD __fastcall GameAttack(UnitInteraction* pAttack) {
   return NULL;
 }
 
-void __fastcall GamePlayerAssignment(UnitAny* pPlayer) {
+void __fastcall GamePlayerAssignment(D2UnitStrc* pPlayer) {
   if (!pPlayer)
     return;
 

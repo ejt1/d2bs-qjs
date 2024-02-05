@@ -59,7 +59,7 @@ JSAPI_FUNC(my_getPresetUnits) {
 
   uint32_t levelId;
   JS_ToUint32(ctx, &levelId, argv[0]);
-  Level* pLevel = GetLevel(levelId);
+  D2DrlgLevelStrc* pLevel = GetLevel(levelId);
 
   if (!pLevel)
     THROW_ERROR(ctx, "getPresetUnits failed, couldn't access the level!");
@@ -78,7 +78,7 @@ JSAPI_FUNC(my_getPresetUnits) {
   DWORD dwArrayCount = NULL;
 
   JSValue pReturnArray = JS_NewArray(ctx);
-  for (Room2* pRoom = pLevel->pRoom2First; pRoom; pRoom = pRoom->pRoom2Next) {
+  for (D2DrlgRoomStrc* pRoom = pLevel->pRoom2First; pRoom; pRoom = pRoom->pRoom2Next) {
     bAddedRoom = FALSE;
 
     if (!pRoom->pPreset) {
@@ -86,7 +86,7 @@ JSAPI_FUNC(my_getPresetUnits) {
       bAddedRoom = TRUE;
     }
 
-    for (PresetUnit* pUnit = pRoom->pPreset; pUnit; pUnit = pUnit->pPresetNext) {
+    for (D2PresetUnitStrc* pUnit = pRoom->pPreset; pUnit; pUnit = pUnit->pPresetNext) {
       // Does it fit?
       if ((nType == NULL || pUnit->dwType == nType) && (nClassId == NULL || pUnit->dwTxtFileNo == nClassId)) {
         myPresetUnit* mypUnit = new myPresetUnit;
@@ -131,7 +131,7 @@ JSAPI_FUNC(my_getPresetUnit) {
 
   uint32_t levelId;
   JS_ToUint32(ctx, &levelId, argv[0]);
-  Level* pLevel = GetLevel(levelId);
+  D2DrlgLevelStrc* pLevel = GetLevel(levelId);
 
   if (!pLevel)
     THROW_ERROR(ctx, "getPresetUnits failed, couldn't access the level!");
@@ -148,7 +148,7 @@ JSAPI_FUNC(my_getPresetUnit) {
 
   bool bAddedRoom = FALSE;
 
-  for (Room2* pRoom = pLevel->pRoom2First; pRoom; pRoom = pRoom->pRoom2Next) {
+  for (D2DrlgRoomStrc* pRoom = pLevel->pRoom2First; pRoom; pRoom = pRoom->pRoom2Next) {
     bAddedRoom = FALSE;
 
     if (!pRoom->pRoom1) {
@@ -156,7 +156,7 @@ JSAPI_FUNC(my_getPresetUnit) {
       bAddedRoom = TRUE;
     }
 
-    for (PresetUnit* pUnit = pRoom->pPreset; pUnit; pUnit = pUnit->pPresetNext) {
+    for (D2PresetUnitStrc* pUnit = pRoom->pPreset; pUnit; pUnit = pUnit->pPresetNext) {
       // Does it fit?
       if ((nType == NULL || pUnit->dwType == nType) && (nClassId == NULL || pUnit->dwTxtFileNo == nClassId)) {
         // Yes it fits! Return it

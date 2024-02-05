@@ -240,7 +240,7 @@ class TextHook : public Genhook {
 class ImageHook : public Genhook {
  private:
   wchar_t* location;
-  CellFile* image;
+  D2CellFileStrc* image;
   ushort color;
 
   ImageHook(const ImageHook&);

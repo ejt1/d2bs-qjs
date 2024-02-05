@@ -93,7 +93,7 @@ class AStarPath : public MapPath {
     std::set<Point> closed;
     PointList newNodes;
     Node* begin = AllocTraits::allocate(alloc, 1);
-    UnitAny* player = D2CLIENT_GetPlayerUnit();
+    D2UnitStrc* player = D2CLIENT_GetPlayerUnit();
     DWORD startLvl = player->pPath->pRoom1->pRoom2->pLevel->dwLevelNo;
 
     // if we don't get a valid node, just return

@@ -2,8 +2,7 @@
 
 #include <Windows.h>
 
-// rename D2GameInfoStrc
-struct GameStructInfo {
+struct D2GameInfoStrc {
   BYTE _1[0x1F];              // 0x00 // was 0x1B
   char szGameName[0x18];      // 0x1F
   char szGameServerIp[0x56];  // 0x37

@@ -6,7 +6,7 @@ void RealmPacketRecv_Interception();
 void GamePacketReceived_Intercept();
 void GamePacketSent_Interception();
 void ChatPacketRecv_Interception();
-UnitAny* GetSelectedUnit_Intercept(void);
+D2UnitStrc* GetSelectedUnit_Intercept(void);
 void Whisper_Intercept();
 void GameAttack_Intercept();
 void PlayerAssignment_Intercept();

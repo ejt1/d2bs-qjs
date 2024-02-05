@@ -104,10 +104,10 @@ Block:
   }
 }
 
-UnitAny* GetSelectedUnit_Intercept(void) {
+D2UnitStrc* GetSelectedUnit_Intercept(void) {
   if (Vars.bClickAction) {
     if (Vars.dwSelectedUnitId) {
-      UnitAny* pUnit = D2CLIENT_FindUnit(Vars.dwSelectedUnitId, Vars.dwSelectedUnitType);
+      D2UnitStrc* pUnit = D2CLIENT_FindUnit(Vars.dwSelectedUnitId, Vars.dwSelectedUnitType);
 
       return pUnit;
     }

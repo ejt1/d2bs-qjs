@@ -1,7 +1,6 @@
 #pragma once
 
-// rename D2MonsterDataStrc
-struct MonsterData {
+struct D2MonsterDataStrc {
   BYTE _1[22];  // 0x00
   struct {
     BYTE fUnk : 1;

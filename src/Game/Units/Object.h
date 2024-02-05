@@ -1,10 +1,9 @@
 #pragma once
 
-struct ObjectTxt;
+struct D2ObjectsTxt;
 
-// rename D2ObjectDataStrc
-struct ObjectData {
-  ObjectTxt* pTxt;  // 0x00
+struct D2ObjectDataStrc {
+  D2ObjectsTxt* pTxt;  // 0x00
   union {
     BYTE Type;  // 0x04 (0x0F would be a Exp Shrine)
     struct {

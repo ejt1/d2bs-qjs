@@ -399,7 +399,7 @@ Party getParty(Unit player);
  *
  * \return The first PresetUnit found of type nType and class ID nClassId.
  */
-PresetUnit getPresetUnit(uint32_t levelId, int nType = 0, int nClassId = 0);
+D2PresetUnitStrc getPresetUnit(uint32_t levelId, int nType = 0, int nClassId = 0);
 
 /** Get an array of PresetUnit s of the given type and class id.
  *
@@ -415,7 +415,7 @@ PresetUnit getPresetUnit(uint32_t levelId, int nType = 0, int nClassId = 0);
  *
  * \return An array of PresetUnit s found of type nType and class ID nClassId.
  */
-PresetUnit[] getPresetUnits(uint32_t levelId, int nType = 0, int nClassId = 0);
+D2PresetUnitStrc[] getPresetUnits(uint32_t levelId, int nType = 0, int nClassId = 0);
 
 /** Get the Area where the controlled unit currently resides.
  *

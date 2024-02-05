@@ -9,7 +9,7 @@
 EMPTY_CTOR(party)
 
 JSAPI_PROP(party_getProperty) {
-  RosterUnit* pUnit = (RosterUnit*)JS_GetOpaque3(this_val);
+  D2RosterUnitStrc* pUnit = (D2RosterUnitStrc*)JS_GetOpaque3(this_val);
 
   if (!pUnit)
     return JS_UNDEFINED;
@@ -56,7 +56,7 @@ JSAPI_FUNC(party_getNext) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  RosterUnit* pUnit = (RosterUnit*)JS_GetOpaque3(this_val);
+  D2RosterUnitStrc* pUnit = (D2RosterUnitStrc*)JS_GetOpaque3(this_val);
 
   if (!pUnit) {
     return JS_FALSE;
@@ -77,13 +77,13 @@ JSAPI_FUNC(my_getParty) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  RosterUnit* pUnit = *p_D2CLIENT_PlayerUnitList;
+  D2RosterUnitStrc* pUnit = *p_D2CLIENT_PlayerUnitList;
 
   if (!pUnit)
     return JS_UNDEFINED;
 
   if (argc == 1) {
-    UnitAny* inUnit = NULL;
+    D2UnitStrc* inUnit = NULL;
     const char* nPlayerName = nullptr;
     uint32_t nPlayerId = NULL;
 
@@ -109,7 +109,7 @@ JSAPI_FUNC(my_getParty) {
 
     BOOL bFound = FALSE;
 
-    for (RosterUnit* pScan = pUnit; pScan; pScan = pScan->pNext) {
+    for (D2RosterUnitStrc* pScan = pUnit; pScan; pScan = pScan->pNext) {
       if (nPlayerId && pScan->dwUnitId == nPlayerId) {
         bFound = TRUE;
         pUnit = pScan;

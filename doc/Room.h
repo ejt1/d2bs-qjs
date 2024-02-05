@@ -24,7 +24,7 @@ public:
 	 *
 	 * \return An array of all the PresetUnit s from the current Room.
 	 */
-	PresetUnit[] getPresetUnits(int nType = 0, int nClass = 0);
+	D2PresetUnitStrc[] getPresetUnits(int nType = 0, int nClass = 0);
 
 	/** Get the collision data for the Room.
 	 *

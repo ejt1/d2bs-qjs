@@ -2,8 +2,7 @@
 
 #include <Windows.h>
 
-// rename D2ObjectsTxt
-struct ObjectTxt {
+struct D2ObjectsTxt {
   char szName[0x40];      // 0x00
   wchar_t wszName[0x40];  // 0x40
   BYTE _1[4];             // 0xC0

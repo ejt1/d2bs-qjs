@@ -713,7 +713,7 @@ bool Script::Initialize() {
   m_me = new myUnit;
   memset(m_me, NULL, sizeof(myUnit));
 
-  UnitAny* player = D2CLIENT_GetPlayerUnit();
+  D2UnitStrc* player = D2CLIENT_GetPlayerUnit();
   m_me->dwMode = (DWORD)-1;
   m_me->dwClassId = (DWORD)-1;
   m_me->dwType = UNIT_PLAYER;

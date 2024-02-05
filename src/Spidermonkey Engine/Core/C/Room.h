@@ -3,7 +3,7 @@
 
 #include "Game/Drlg/D2DrlgDrlg.h"
 
-BOOL RevealRoom(Room2* pRoom2, BOOL revealPresets);
-void DrawPresets(Room2* pRoom2);
+BOOL RevealRoom(D2DrlgRoomStrc* pRoom2, BOOL revealPresets);
+void DrawPresets(D2DrlgRoomStrc* pRoom2);
 
 #endif

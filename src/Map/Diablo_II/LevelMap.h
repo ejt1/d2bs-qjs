@@ -27,8 +27,8 @@ class LevelMap;
 
 typedef std::vector<Exit> ExitArray;
 typedef std::map<DWORD, LevelMap*> LevelMapList;
-typedef std::list<Room2*> RoomList;
-typedef std::list<Level*> LevelList;
+typedef std::list<D2DrlgRoomStrc*> RoomList;
+typedef std::list<D2DrlgLevelStrc*> LevelList;
 static RoomList RoomsAdded;
 static RoomList roomCache;
 static LevelList levelCache;
@@ -59,52 +59,52 @@ class LevelMap : public Map {
  private:
   static LevelMapList cache;
 
-  Act* act;
-  const Level* level;
+  D2DrlgActStrc* act;
+  const D2DrlgLevelStrc* level;
   int width, height;
   int posX, posY;
   Matrix<CollisionFlag> mapPoints;
   RoomList addedRooms;
 
-  Level* cachedLevel;
+  D2DrlgLevelStrc* cachedLevel;
   CRITICAL_SECTION* lock;
 
   void Build(void);
 
-  static inline int GetLevelNo(Room2* room, DWORD tile) {
+  static inline int GetLevelNo(D2DrlgRoomStrc* room, DWORD tile) {
     return GetTileLevelNo(room, tile);
   }
 
-  void AddRoom(Room2* const room, RoomList& rooms, UnitAny* player);
-  void AddCollisionMap(Room1* pRoom1);
+  void AddRoom(D2DrlgRoomStrc* const room, RoomList& rooms, D2UnitStrc* player);
+  void AddCollisionMap(D2ActiveRoomStrc* pRoom1);
   void SetCollisionData(int x, int y, int value);
   bool IsGap(int x, int y, bool abs) const;
   void FillGaps(void);
   void ShrinkMap(void);
   void ThickenWalls(void);
 
-  bool RoomSpaceIsWalkable(Room1* pRoom1, const Point& point, bool abs) const;
+  bool RoomSpaceIsWalkable(D2ActiveRoomStrc* pRoom1, const Point& point, bool abs) const;
   bool ValueIsWalkable(const WORD* value) const;
   bool ValueHasFlag(int flag, const WORD* value) const;
 
-  bool EdgeIsWalkable(const Point& edgePoint, const Point& offsetPoint, Room1* pRoom1Adjecent, bool abs) const;
+  bool EdgeIsWalkable(const Point& edgePoint, const Point& offsetPoint, D2ActiveRoomStrc* pRoom1Adjecent, bool abs) const;
 
-  void FindRoomTileExits(Room2* room, ExitArray& exits) const;
+  void FindRoomTileExits(D2DrlgRoomStrc* room, ExitArray& exits) const;
   void FindRoomLinkageExits(ExitArray& exits, RoomList& added) const;
   Point GetEdgeCenterPoint(const Point& currentPoint, const Point& edgeDirection) const;
   bool ExitExists(Point loc, ExitArray& exits) const;
   bool ExitExists(DWORD dwLevelNo, ExitArray& exits) const;
-  bool isPointInRoom(Room2* room, const Point& pt) const;
-  bool isPointInLevel(Level* level, const Point& pt) const;
-  WORD getCollFromRoom(Room2* room, const Point& pt) const;
+  bool isPointInRoom(D2DrlgRoomStrc* room, const Point& pt) const;
+  bool isPointInLevel(D2DrlgLevelStrc* level, const Point& pt) const;
+  WORD getCollFromRoom(D2DrlgRoomStrc* room, const Point& pt) const;
 
   void DrillExits();
 
-  LevelMap(const Level* level);
+  LevelMap(const D2DrlgLevelStrc* level);
   virtual ~LevelMap(void);
 
  public:
-  static LevelMap* GetMap(Level* level);
+  static LevelMap* GetMap(D2DrlgLevelStrc* level);
   static void ClearCache(void);
   void Dump(const char* file, const PointList& points) const;
   void CleanUp(void) const;

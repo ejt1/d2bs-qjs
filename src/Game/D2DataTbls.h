@@ -7,7 +7,7 @@
 #include "DataTbls/SkillsTbls.h"
 
 // rename D2DataTablesStrc
-struct sgptDataTable {
+struct D2DataTablesStrc {
   void* pPlayerClass;
   DWORD dwPlayerClassRecords;
   void* pBodyLocs;
