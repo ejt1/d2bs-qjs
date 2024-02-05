@@ -244,7 +244,7 @@ static JSCFunctionListEntry me_props[] = {
     JS_CGETSET_MAGIC_DEF("ilvl", unit_getProperty, nullptr, ITEM_LEVEL),
 };
 
-static JSCFunctionListEntry unit_props[] = {
+static JSCFunctionListEntry unit_proto_funcs[] = {
     JS_CGETSET_MAGIC_DEF("type", unit_getProperty, nullptr, UNIT_TYPE),
     JS_CGETSET_MAGIC_DEF("classid", unit_getProperty, nullptr, UNIT_CLASSID),
     JS_CGETSET_MAGIC_DEF("mode", unit_getProperty, nullptr, UNIT_MODE),
@@ -294,9 +294,7 @@ static JSCFunctionListEntry unit_props[] = {
     JS_CGETSET_MAGIC_DEF("weaponswitch", unit_getProperty, nullptr, ME_WSWITCH),
     JS_CGETSET_MAGIC_DEF("objtype", unit_getProperty, nullptr, OBJECT_TYPE),
     JS_CGETSET_MAGIC_DEF("islocked", unit_getProperty, nullptr, OBJECT_LOCKED),
-};
 
-static JSCFunctionListEntry unit_methods[] = {
     JS_FS("getNext", unit_getNext, 0, FUNCTION_FLAGS),
     JS_FS("cancel", unit_cancel, 0, FUNCTION_FLAGS),
     JS_FS("repair", unit_repair, 0, FUNCTION_FLAGS),

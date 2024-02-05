@@ -130,5 +130,5 @@ JSAPI_FUNC(my_getParty) {
       return JS_UNDEFINED;
   }
 
-  return BuildObject(ctx, party_class_id, party_methods, _countof(party_methods), party_props, _countof(party_props), pUnit);
+  return BuildObject(ctx, party_class_id, pUnit);
 }

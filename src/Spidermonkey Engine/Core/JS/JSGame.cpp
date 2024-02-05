@@ -29,7 +29,7 @@ JSAPI_FUNC(my_copyUnit) {
 
       if (lpUnit) {
         memcpy(lpUnit, lpOldUnit, sizeof(myUnit));
-        JSValue jsunit = BuildObject(ctx, unit_class_id, unit_methods, _countof(unit_methods), unit_props, _countof(unit_props), lpUnit);
+        JSValue jsunit = BuildObject(ctx, unit_class_id, lpUnit);
         if (JS_IsException(jsunit)) {
           delete lpUnit;
           lpUnit = NULL;
@@ -43,7 +43,7 @@ JSAPI_FUNC(my_copyUnit) {
 
       if (lpUnit) {
         memcpy(lpUnit, lpOldUnit, sizeof(invUnit));
-        JSValue jsunit = BuildObject(ctx, unit_class_id, unit_methods, _countof(unit_methods), unit_props, _countof(unit_props), lpUnit);
+        JSValue jsunit = BuildObject(ctx, unit_class_id, lpUnit);
         if (JS_IsException(jsunit)) {
           delete lpUnit;
           lpUnit = NULL;
@@ -168,7 +168,7 @@ JSAPI_FUNC(my_getDialogLines) {
     pReturnArray = JS_NewArray(ctx);
 
     for (i = 0; i < pTdi->numLines; ++i) {
-      line = BuildObject(ctx, dialogLine_class_id, 0, 0, 0, 0, &pTdi->dialogLines[i]);
+      line = BuildObject(ctx, dialogLine_class_id, &pTdi->dialogLines[i]);
       JS_SetPropertyStr(ctx, line, "text", JS_NewString(ctx, pTdi->dialogLines[i].text));
       JS_SetPropertyStr(ctx, line, "selectable", JS_NewBool(ctx, pTdi->dialogLines[i].bMaybeSelectable));
 
@@ -1231,7 +1231,7 @@ JSAPI_FUNC(my_getInteractedNPC) {
   pmyUnit->dwUnitId = pNPC->dwUnitId;
   strcpy_s(pmyUnit->szName, sizeof(pmyUnit->szName), szName);
 
-  return BuildObject(ctx, unit_class_id, unit_methods, _countof(unit_methods), unit_props, _countof(unit_props), pmyUnit);
+  return BuildObject(ctx, unit_class_id, pmyUnit);
 }
 
 JSAPI_FUNC(my_takeScreenshot) {

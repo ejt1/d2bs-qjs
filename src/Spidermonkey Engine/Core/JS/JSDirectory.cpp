@@ -64,7 +64,7 @@ JSAPI_FUNC(my_openDir) {
   }
   DirData* d = new DirData(szName);
   JS_FreeCString(ctx, szName);
-  return BuildObject(ctx, folder_class_id, dir_methods, _countof(dir_methods), dir_props, _countof(dir_props), d);
+  return BuildObject(ctx, folder_class_id, d);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -194,7 +194,7 @@ JSAPI_FUNC(dir_create) {
 
   DirData* _d = new DirData(szName);
   JS_FreeCString(ctx, szName);
-  return BuildObject(ctx, folder_class_id, dir_methods, _countof(dir_methods), dir_props, _countof(dir_props), _d);
+  return BuildObject(ctx, folder_class_id, _d);
 }
 
 JSAPI_FUNC(dir_delete) {

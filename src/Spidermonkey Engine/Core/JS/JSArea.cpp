@@ -46,7 +46,7 @@ JSAPI_PROP(area_getProperty) {
           exit->tileid = exits[i].TileId;
           exit->level = pArea->AreaId;
 
-          JSValue pExit = BuildObject(ctx, exit_class_id, NULL, 0, exit_props, _countof(exit_props), exit);
+          JSValue pExit = BuildObject(ctx, exit_class_id, exit);
           if (JS_IsException(pExit)) {
             delete exit;
             THROW_ERROR(ctx, "Failed to create exit object!");
@@ -107,7 +107,7 @@ JSAPI_FUNC(my_getArea) {
   pArea->AreaId = nArea;
   pArea->ExitArray = JS_UNDEFINED;
 
-  JSValue unit = BuildObject(ctx, area_class_id, NULL, 0, area_props, _countof(area_props), pArea);
+  JSValue unit = BuildObject(ctx, area_class_id, pArea);
   if (JS_IsException(unit)) {
     delete pArea;
     pArea = NULL;

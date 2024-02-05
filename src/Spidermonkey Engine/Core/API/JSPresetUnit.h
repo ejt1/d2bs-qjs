@@ -22,10 +22,13 @@ enum presetunit_tinyid {
   PUINT_LEVEL   // 6
 };
 
-static JSCFunctionListEntry presetunit_props[] = {
-    JS_CGETSET_MAGIC_DEF("type", presetunit_getProperty, nullptr, PUNIT_TYPE),   JS_CGETSET_MAGIC_DEF("roomx", presetunit_getProperty, nullptr, PUNIT_ROOMX),
-    JS_CGETSET_MAGIC_DEF("roomy", presetunit_getProperty, nullptr, PUNIT_ROOMY), JS_CGETSET_MAGIC_DEF("x", presetunit_getProperty, nullptr, PUNIT_X),
-    JS_CGETSET_MAGIC_DEF("y", presetunit_getProperty, nullptr, PUNIT_Y),         JS_CGETSET_MAGIC_DEF("id", presetunit_getProperty, nullptr, PUNIT_ID),
+static JSCFunctionListEntry presetunit_proto_funcs[] = {
+    JS_CGETSET_MAGIC_DEF("type", presetunit_getProperty, nullptr, PUNIT_TYPE),    //
+    JS_CGETSET_MAGIC_DEF("roomx", presetunit_getProperty, nullptr, PUNIT_ROOMX),  //
+    JS_CGETSET_MAGIC_DEF("roomy", presetunit_getProperty, nullptr, PUNIT_ROOMY),  //
+    JS_CGETSET_MAGIC_DEF("x", presetunit_getProperty, nullptr, PUNIT_X),          //
+    JS_CGETSET_MAGIC_DEF("y", presetunit_getProperty, nullptr, PUNIT_Y),          //
+    JS_CGETSET_MAGIC_DEF("id", presetunit_getProperty, nullptr, PUNIT_ID),        //
     JS_CGETSET_MAGIC_DEF("level", presetunit_getProperty, nullptr, PUINT_LEVEL),
 };
 

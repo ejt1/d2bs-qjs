@@ -27,7 +27,7 @@ enum jsProfileProperty_ids {
   PROFILE_MAXCHARSELTIME
 };
 
-static JSCFunctionListEntry profile_props[] = {
+static JSCFunctionListEntry profile_proto_funcs[] = {
     JS_CGETSET_MAGIC_DEF("type", profile_getProperty, nullptr, PROFILE_TYPE),
     JS_CGETSET_MAGIC_DEF("ip", profile_getProperty, nullptr, PROFILE_IP),
     JS_CGETSET_MAGIC_DEF("username", profile_getProperty, nullptr, PROFILE_USERNAME),
@@ -36,9 +36,7 @@ static JSCFunctionListEntry profile_props[] = {
     JS_CGETSET_MAGIC_DEF("difficulty", profile_getProperty, nullptr, PROFILE_DIFFICULTY),
     JS_CGETSET_MAGIC_DEF("maxLoginTime", profile_getProperty, nullptr, PROFILE_MAXLOGINTIME),
     JS_CGETSET_MAGIC_DEF("maxCharacterSelectTime", profile_getProperty, nullptr, PROFILE_MAXCHARSELTIME),
-};
 
-static JSCFunctionListEntry profile_methods[] = {
     JS_FS("login", profile_login, 0, FUNCTION_FLAGS),
 };
 

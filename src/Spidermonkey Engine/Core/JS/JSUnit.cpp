@@ -557,7 +557,7 @@ JSAPI_FUNC(unit_getUnit) {
   strcpy_s(pmyUnit->szName, sizeof(pmyUnit->szName), szName ? szName : "");
   JS_FreeCString(ctx, szName);
 
-  return BuildObject(ctx, unit_class_id, unit_methods, _countof(unit_methods), unit_props, _countof(unit_props), pmyUnit);
+  return BuildObject(ctx, unit_class_id, pmyUnit);
 }
 
 JSAPI_FUNC(unit_getNext) {
@@ -1129,7 +1129,7 @@ JSAPI_FUNC(unit_getItems) {
     pmyUnit->dwOwnerId = pUnit->dwUnitId;
     pmyUnit->dwOwnerType = pUnit->dwType;
 
-    JSValue jsunit = BuildObject(ctx, unit_class_id, unit_methods, _countof(unit_methods), unit_props, _countof(unit_props), pmyUnit);
+    JSValue jsunit = BuildObject(ctx, unit_class_id, pmyUnit);
     if (JS_IsException(jsunit)) {
       JS_FreeValue(ctx, pReturnArray);
       THROW_ERROR(ctx, "Failed to build item array");
@@ -1375,7 +1375,7 @@ JSAPI_FUNC(unit_getParent) {
     pmyUnit->dwType = pMonster->dwType;
     pmyUnit->szName[0] = NULL;
 
-    return BuildObject(ctx, unit_class_id, unit_methods, _countof(unit_methods), unit_props, _countof(unit_props), pmyUnit);
+    return BuildObject(ctx, unit_class_id, pmyUnit);
   } else if (pUnit->dwType == UNIT_OBJECT) {
     if (pUnit->pObjectData) {
       char szBuffer[128] = "";
@@ -1395,7 +1395,7 @@ JSAPI_FUNC(unit_getParent) {
       pmyUnit->dwMode = pUnit->pItemData->pOwnerInventory->pOwner->dwMode;
       pmyUnit->dwType = pUnit->pItemData->pOwnerInventory->pOwner->dwType;
       pmyUnit->szName[0] = NULL;
-      return BuildObject(ctx, unit_class_id, unit_methods, _countof(unit_methods), unit_props, _countof(unit_props), pmyUnit);
+      return BuildObject(ctx, unit_class_id, pmyUnit);
     }
   } else if (pUnit->dwType == UNIT_MISSILE) {
     auto* pmyUnit = new myUnit;
@@ -1413,7 +1413,7 @@ JSAPI_FUNC(unit_getParent) {
     pmyUnit->dwType = pOwner->dwType;
     pmyUnit->szName[0] = NULL;
 
-    return BuildObject(ctx, unit_class_id, unit_methods, _countof(unit_methods), unit_props, _countof(unit_props), pmyUnit);
+    return BuildObject(ctx, unit_class_id, pmyUnit);
   }
 
   return JS_UNDEFINED;
@@ -1440,7 +1440,7 @@ JSAPI_FUNC(unit_getMerc) {
         pmyUnit->dwType = UNIT_MONSTER;
         pmyUnit->szName[0] = NULL;
 
-        return BuildObject(ctx, unit_class_id, unit_methods, _countof(unit_methods), unit_props, _countof(unit_props), pmyUnit);
+        return BuildObject(ctx, unit_class_id, pmyUnit);
       }
     }
   }
@@ -1598,7 +1598,7 @@ JSAPI_FUNC(unit_getItem) {
   pmyItem->dwOwnerType = pmyUnit->dwType;
   strcpy_s(pmyItem->szName, sizeof(pmyItem->szName), szName);
 
-  return BuildObject(ctx, unit_class_id, unit_methods, _countof(unit_methods), unit_props, _countof(unit_props), pmyItem);
+  return BuildObject(ctx, unit_class_id, pmyItem);
 }
 
 JSAPI_FUNC(unit_move) {

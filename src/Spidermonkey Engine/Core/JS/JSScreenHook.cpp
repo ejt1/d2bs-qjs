@@ -56,7 +56,7 @@ JSAPI_FUNC(frame_ctor) {
   if (argc > 7 && JS_IsFunction(ctx, argv[7]))
     hover = argv[7];
 
-  JSValue hook = BuildObject(ctx, frame_class_id, frame_methods, _countof(frame_methods), frame_props, _countof(frame_props));
+  JSValue hook = BuildObject(ctx, frame_class_id);
   if (JS_IsException(hook))
     THROW_ERROR(ctx, "Failed to create frame object");
 
@@ -187,7 +187,7 @@ JSAPI_FUNC(box_ctor) {
   if (argc > 9 && JS_IsFunction(ctx, argv[9]))
     hover = argv[9];
 
-  JSValue hook = BuildObject(ctx, box_class_id, box_methods, _countof(box_methods), box_props, _countof(box_props));
+  JSValue hook = BuildObject(ctx, box_class_id);
   if (!hook) {
     THROW_ERROR(ctx, "Failed to create box object");
   }
@@ -326,7 +326,7 @@ JSAPI_FUNC(line_ctor) {
   if (argc > 7 && JS_IsFunction(ctx, argv[7]))
     hover = argv[7];
 
-  JSValue hook = BuildObject(ctx, line_class_id, line_methods, _countof(line_methods), line_props, _countof(line_props));
+  JSValue hook = BuildObject(ctx, line_class_id);
   if (!hook) {
     THROW_ERROR(ctx, "Failed to create line object");
   }
@@ -464,7 +464,7 @@ JSAPI_FUNC(text_ctor) {
   if (argc > 8 && JS_IsFunction(ctx, argv[8]))
     hover = argv[8];
 
-  JSValue hook = BuildObject(ctx, text_class_id, text_methods, _countof(text_methods), text_props, _countof(text_props));
+  JSValue hook = BuildObject(ctx, text_class_id);
   if (!hook) {
     THROW_ERROR(ctx, "Failed to create text object");
   }
@@ -620,7 +620,7 @@ JSAPI_FUNC(image_ctor) {
     THROW_ERROR(ctx, "Invalid image file path");
   }
 
-  JSValue hook = BuildObject(ctx, image_class_id, image_methods, _countof(image_methods), image_props, _countof(image_props));
+  JSValue hook = BuildObject(ctx, image_class_id);
   if (!hook)
     THROW_ERROR(ctx, "Failed to create image object");
 

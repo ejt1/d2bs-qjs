@@ -97,7 +97,7 @@ CLASS_CTOR(profile) {
     THROW_ERROR(ctx, ex);
   }
 
-  return BuildObject(ctx, profile_class_id, profile_methods, _countof(profile_methods), profile_props, _countof(profile_props), prof);
+  return BuildObject(ctx, profile_class_id, prof);
 }
 
 CLASS_FINALIZER(profile) {
