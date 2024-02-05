@@ -142,7 +142,7 @@ void setControlText(Control* pControl, const char* szText) {
   D2WIN_SetControlText(pControl, wText.c_str());
 }
 
-BOOL OOG_CreateCharacter(const char* szCharacter, int type, bool /*hardcore*/, bool /*ladder*/) {
+bool OOG_CreateCharacter(const char* szCharacter, int type, bool /*hardcore*/, bool /*ladder*/) {
   if (OOG_GetLocation() != OOG_CHAR_SELECT || strlen(szCharacter) > 15 || type > 6 || type < 0)
     return FALSE;
 
@@ -186,7 +186,7 @@ BOOL OOG_CreateCharacter(const char* szCharacter, int type, bool /*hardcore*/, b
   return FALSE;
 }
 
-BOOL OOG_SelectCharacter(const char* szCharacter) {
+bool OOG_SelectCharacter(const char* szCharacter) {
   if (ClientState() != ClientStateMenu)
     return NULL;
 
@@ -237,7 +237,7 @@ void SetControlText(Control* pControl, const char* Text) {
   }
 }
 
-BOOL OOG_SelectGateway(const char* szGateway, size_t /*strSize*/) {
+bool OOG_SelectGateway(const char* szGateway, size_t /*strSize*/) {
   if (ClientState() != ClientStateMenu)
     return FALSE;
 

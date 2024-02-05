@@ -3,6 +3,7 @@
 #include "JSExits.h"
 #include "CriticalSections.h"
 #include "MapHeader.h"
+#include "JSGlobalClasses.h"
 
 EMPTY_CTOR(area)
 

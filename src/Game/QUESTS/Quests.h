@@ -1,10 +1,10 @@
 #pragma once
 
-#include <Window.h>
+#include <cstdint>
 
 #pragma pack(push, 1)
 struct D2QuestInfoStrc {
   void* pBuffer;  // 0x00
-  DWORD _1;       // 0x04
+  uint32_t _1;    // 0x04
 };
 #pragma pack(pop)

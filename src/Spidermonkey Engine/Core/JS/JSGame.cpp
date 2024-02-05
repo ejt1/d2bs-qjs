@@ -613,7 +613,7 @@ JSAPI_FUNC(my_rand) {
     seeded = true;
   }
 
-  long long seed = 0;
+  uint32_t seed = 0;
   if (ClientState() == ClientStateInGame)
     seed = D2GAME_Rand(D2CLIENT_GetPlayerUnit()->dwSeed);
   else

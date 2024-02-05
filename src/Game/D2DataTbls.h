@@ -6,13 +6,15 @@
 #include "DataTbls/ObjectsTbls.h"
 #include "DataTbls/SkillsTbls.h"
 
+#include <cstdint>
+
 // rename D2DataTablesStrc
 struct D2DataTablesStrc {
   void* pPlayerClass;
-  DWORD dwPlayerClassRecords;
+  uint32_t dwPlayerClassRecords;
   void* pBodyLocs;
-  DWORD dwBodyLocsRecords;
+  uint32_t dwBodyLocsRecords;
   void* pStorePage;
-  DWORD dwStorePageRecords;
+  uint32_t dwStorePageRecords;
   void* pElemTypes;
 };

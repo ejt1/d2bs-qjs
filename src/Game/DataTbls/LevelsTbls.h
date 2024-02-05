@@ -1,16 +1,16 @@
 #pragma once
 
-#include <Windows.h>
+#include <cinttypes>
 
 struct D2LevelsTxt {
-  DWORD dwLevelNo;            // 0x00
-  DWORD _1[60];               // 0x04
-  BYTE _2;                    // 0xF4
+  uint32_t dwLevelNo;         // 0x00
+  uint32_t _1[60];            // 0x04
+  uint8_t _2;                 // 0xF4
   char szName[40];            // 0xF5
   char szEntranceText[40];    // 0x11D
   char szLevelDesc[41];       // 0x145
   wchar_t wName[40];          // 0x16E
   wchar_t wEntranceText[40];  // 0x1BE
-  BYTE nObjGroup[8];          // 0x196
-  BYTE nObjPrb[8];            // 0x19E
+  uint8_t nObjGroup[8];       // 0x196
+  uint8_t nObjPrb[8];         // 0x19E
 };

@@ -1,6 +1,8 @@
 #pragma once
 
-#include "Engine.h"
+#include "Globals.h"
+
+#include <Windows.h>
 
 class CriticalRoom {
  private:

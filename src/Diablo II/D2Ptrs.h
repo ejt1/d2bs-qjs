@@ -129,7 +129,7 @@ enum {
 
     FUNCPTR(D2CLIENT, ClearScreen, void __fastcall, (void), 0xB4620)  // Updated 1.14d //004B4620-BASE
 
-    FUNCPTR(D2CLIENT, CloseNPCTalk, DWORD __stdcall, (void* unk), 0xA17D0)  // Updated 1.14d //004A17D0-BASE
+    FUNCPTR(D2CLIENT, CloseNPCTalk, uint32_t __stdcall, (void* unk), 0xA17D0)  // Updated 1.14d //004A17D0-BASE
 
     FUNCPTR(D2CLIENT, TestPvpFlag, DWORD __fastcall, (DWORD dwUnitId1, DWORD dwUnitId2, DWORD dwFlag), 0xDC440)  // Updated 1.14d //004DC440-BASE
 
@@ -480,7 +480,7 @@ enum {
     // D2Game Functions
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
-    FUNCPTR(D2GAME, Rand, DWORD __fastcall, (DWORD * seed), 0x5C370)  // Updated 1.14d //0045C370-BASE
+    FUNCPTR(D2GAME, Rand, uint32_t __fastcall, (uint32_t * seed), 0x5C370)  // Updated 1.14d //0045C370-BASE
 
     FUNCPTR(D2GAME, exit0, DWORD __fastcall, (), 0x576F)  // NEW 1.14d //0040576F-BASE
 

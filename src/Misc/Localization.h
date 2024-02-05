@@ -1,7 +1,7 @@
 #pragma once 
 
-#include <Windows.h>
 #include <string>
+#include <Windows.h> // Code Page values
 
 // charset conversions
 std::wstring AnsiToWide(const std::string& str, DWORD codepage = CP_UTF8);

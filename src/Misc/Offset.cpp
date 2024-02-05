@@ -12,22 +12,22 @@
 #endif
 
 void DefineOffsets() {
-  DWORD** p = (DWORD**)d2ptrs_list;
+  uint32_t** p = (uint32_t**)d2ptrs_list;
   do {
     **p = GetDllOffset(**p);
   } while (ptrdiff_t(++p) < ((ptrdiff_t)d2ptrs_list) + sizeof(d2ptrs_list));
 }
 
-DWORD GetDllOffset(const char* /*DllName*/, int Offset) {
+uint32_t GetDllOffset(const char* /*DllName*/, int Offset) {
   HMODULE hMod = GetModuleHandle(NULL);
 
   if (Offset < 0)
-    return (DWORD)GetProcAddress(hMod, (LPCSTR)(-Offset));
+    return (uint32_t)GetProcAddress(hMod, (LPCSTR)(-Offset));
 
-  return ((DWORD)hMod) + Offset;
+  return ((uint32_t)hMod) + Offset;
 }
 
-DWORD GetDllOffset(int num) {
+uint32_t GetDllOffset(int num) {
   static const char* dlls[] = {"D2Client.DLL", "D2Common.DLL", "D2Gfx.DLL",    "D2Lang.DLL", "D2Win.DLL", "D2Net.DLL",  "D2Game.DLL",
                                "D2Launch.DLL", "Fog.DLL",      "BNClient.DLL", "Storm.DLL",  "D2Cmp.DLL", "D2Multi.DLL"};
   if ((num & 0xff) > 12)
@@ -70,7 +70,7 @@ void RemoveConditional() {
   }
 }
 
-BOOL WriteBytes(void* pAddr, void* pData, DWORD dwLen) {
+bool WriteBytes(void* pAddr, void* pData, uint32_t dwLen) {
   DWORD dwOld;
 
   if (!VirtualProtect(pAddr, dwLen, PAGE_READWRITE, &dwOld))
@@ -80,7 +80,7 @@ BOOL WriteBytes(void* pAddr, void* pData, DWORD dwLen) {
   return VirtualProtect(pAddr, dwLen, dwOld, &dwOld);
 }
 
-void FillBytes(void* pAddr, BYTE bFill, DWORD dwLen) {
+void FillBytes(void* pAddr, uint8_t bFill, uint32_t dwLen) {
   BYTE* bCode = new BYTE[dwLen];
   ::memset(bCode, bFill, dwLen);
 
@@ -89,7 +89,7 @@ void FillBytes(void* pAddr, BYTE bFill, DWORD dwLen) {
   delete[] bCode;
 }
 
-void InterceptLocalCode(BYTE bInst, DWORD pAddr, DWORD pFunc, DWORD dwLen) {
+void InterceptLocalCode(uint8_t bInst, uint32_t pAddr, uint32_t pFunc, uint32_t dwLen) {
   BYTE* bCode = new BYTE[dwLen];
   ::memset(bCode, 0x90, dwLen);
   DWORD dwFunc = pFunc - (pAddr + 5);
@@ -101,24 +101,24 @@ void InterceptLocalCode(BYTE bInst, DWORD pAddr, DWORD pFunc, DWORD dwLen) {
   delete[] bCode;
 }
 
-void PatchCall(DWORD dwAddr, DWORD dwFunc, DWORD dwLen) {
+void PatchCall(uint32_t dwAddr, uint32_t dwFunc, uint32_t dwLen) {
   InterceptLocalCode(INST_CALL, dwAddr, dwFunc, dwLen);
 }
 
-void PatchJmp(DWORD dwAddr, DWORD dwFunc, DWORD dwLen) {
+void PatchJmp(uint32_t dwAddr, uint32_t dwFunc, uint32_t dwLen) {
   InterceptLocalCode(INST_JMP, dwAddr, dwFunc, dwLen);
 }
 
-void PatchBytes(DWORD dwAddr, DWORD dwValue, DWORD dwLen) {
-  BYTE* bCode = new BYTE[dwLen];
-  ::memset(bCode, (BYTE)dwValue, dwLen);
+void PatchBytes(uint32_t dwAddr, uint32_t dwValue, uint32_t dwLen) {
+  uint8_t* bCode = new uint8_t[dwLen];
+  ::memset(bCode, (uint8_t)dwValue, dwLen);
 
-  WriteBytes((LPVOID)dwAddr, bCode, dwLen);
+  WriteBytes((void*)dwAddr, bCode, dwLen);
 
   delete[] bCode;
 }
 
-PatchHook* RetrievePatchHooks(PINT pBuffer) {
+PatchHook* RetrievePatchHooks(int* pBuffer) {
   *pBuffer = ArraySize(Patches);
   return &Patches[0];
 }

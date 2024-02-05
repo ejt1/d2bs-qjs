@@ -3,6 +3,9 @@
 #include "JSPresetUnit.h"
 #include "D2Ptrs.h"
 #include "Room.h"
+#include "D2Helpers.h"
+#include "JSGlobalClasses.h"
+#include "JSUnit.h"
 
 EMPTY_CTOR(room)
 

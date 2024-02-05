@@ -16,10 +16,6 @@
 #include "D2Handlers.h"
 #include "Control.h"
 
-#ifdef _MSVC_DEBUG
-#include "D2Loader.h"
-#endif
-
 #include <MinHook.h>
 #include <mutex>
 

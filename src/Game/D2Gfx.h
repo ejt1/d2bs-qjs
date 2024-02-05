@@ -1,41 +1,43 @@
 #pragma once
 
+#include <cstdint>
+
 struct D2GfxCellStrc {
-  DWORD flags;     // 0x00
-  DWORD width;     // 0x04
-  DWORD height;    // 0x08
-  DWORD xoffs;     // 0x0C
-  DWORD yoffs;     // 0x10
-  DWORD _2;        // 0x14
-  DWORD lpParent;  // 0x18
-  DWORD length;    // 0x1C
-  BYTE cols;       // 0x20
+  uint32_t flags;     // 0x00
+  uint32_t width;     // 0x04
+  uint32_t height;    // 0x08
+  uint32_t xoffs;     // 0x0C
+  uint32_t yoffs;     // 0x10
+  uint32_t _2;        // 0x14
+  uint32_t lpParent;  // 0x18
+  uint32_t length;    // 0x1C
+  uint8_t cols;       // 0x20
 };
 
 struct D2CellFileStrc {
-  DWORD dwVersion;  // 0x00
+  uint32_t dwVersion;  // 0x00
   struct {
-    WORD dwFlags;
-    BYTE mylastcol;
-    BYTE mytabno : 1;
+    uint16_t dwFlags;
+    uint8_t mylastcol;
+    uint8_t mytabno : 1;
   } UFlags;                   // 0x04
-  DWORD eFormat;              // 0x08
-  DWORD termination;          // 0x0C
-  DWORD numdirs;              // 0x10
-  DWORD numcells;             // 0x14
+  uint32_t eFormat;           // 0x08
+  uint32_t termination;       // 0x0C
+  uint32_t numdirs;           // 0x10
+  uint32_t numcells;          // 0x14
   D2GfxCellStrc* cells[255];  // 0x18
 };
 
 struct D2GfxDataStrc {
-  DWORD _1[13];               // 0x00
+  uint32_t _1[13];            // 0x00
   D2CellFileStrc* pCellFile;  // 0x34
-  DWORD _2[4];                // 0x38
+  uint32_t _2[4];             // 0x38
 };
 
 struct D2GfxLightStrc {
-  DWORD _1[3];          // 0x00
-  DWORD dwType;         // 0x0C
-  DWORD _2[7];          // 0x10
-  DWORD dwStaticValid;  // 0x2C
-  int* pnStaticMap;     // 0x30
+  uint32_t _1[3];          // 0x00
+  uint32_t dwType;         // 0x0C
+  uint32_t _2[7];          // 0x10
+  uint32_t dwStaticValid;  // 0x2C
+  int* pnStaticMap;        // 0x30
 };

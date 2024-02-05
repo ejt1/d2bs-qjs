@@ -1,8 +1,9 @@
 #include "Room.h"
 #include "CriticalSections.h"
 #include "D2Ptrs.h"
+#include "D2Helpers.h"
 
-BOOL RevealRoom(D2DrlgRoomStrc* pRoom2, BOOL revealPresets) {
+bool RevealRoom(D2DrlgRoomStrc* pRoom2, bool revealPresets) {
   bool bAdded = false;
   bool bInit = false;
 

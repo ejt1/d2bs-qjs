@@ -8,6 +8,7 @@
 
 #include "Game/D2Gfx.h"
 
+// globals are bad // ejt
 struct Variables {
   int nChickenHP;
   int nChickenMP;

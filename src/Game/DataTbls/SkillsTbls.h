@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 struct D2SkillsTxt {
-  WORD wSkillId;  // 0x00
+  uint16_t wSkillId;  // 0x00
 };
