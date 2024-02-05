@@ -161,7 +161,7 @@ enum me_tinyid {
   ME_CHARFLAGS
 };
 
-static JSCFunctionListEntry me_props[] = {
+static JSCFunctionListEntry me_proto_funcs[] = {
     JS_CGETSET_MAGIC_DEF("account", unit_getProperty, nullptr, ME_ACCOUNT),
     JS_CGETSET_MAGIC_DEF("charname", unit_getProperty, nullptr, ME_CHARNAME),
     JS_CGETSET_MAGIC_DEF("diff", unit_getProperty, nullptr, ME_DIFF),
@@ -242,6 +242,32 @@ static JSCFunctionListEntry me_props[] = {
     JS_CGETSET_MAGIC_DEF("description", unit_getProperty, nullptr, ITEM_DESC),
     JS_CGETSET_MAGIC_DEF("bodylocation", unit_getProperty, nullptr, ITEM_BODYLOCATION),
     JS_CGETSET_MAGIC_DEF("ilvl", unit_getProperty, nullptr, ITEM_LEVEL),
+
+    JS_FS("getNext", unit_getNext, 0, FUNCTION_FLAGS),
+    JS_FS("cancel", unit_cancel, 0, FUNCTION_FLAGS),
+    JS_FS("repair", unit_repair, 0, FUNCTION_FLAGS),
+    JS_FS("useMenu", unit_useMenu, 0, FUNCTION_FLAGS),
+    JS_FS("interact", unit_interact, 0, FUNCTION_FLAGS),
+    JS_FS("getItem", unit_getItem, 3, FUNCTION_FLAGS),
+    JS_FS("getItems", unit_getItems, 0, FUNCTION_FLAGS),
+    JS_FS("getMerc", unit_getMerc, 0, FUNCTION_FLAGS),
+    JS_FS("getMercHP", unit_getMercHP, 0, FUNCTION_FLAGS),
+    JS_FS("getSkill", unit_getSkill, 0, FUNCTION_FLAGS),
+    JS_FS("getParent", unit_getParent, 0, FUNCTION_FLAGS),
+    JS_FS("overhead", my_overhead, 0, FUNCTION_FLAGS),
+    JS_FS("revive", my_revive, 0, FUNCTION_FLAGS),
+    JS_FS("getFlags", item_getFlags, 1, FUNCTION_FLAGS),
+    JS_FS("getFlag", item_getFlag, 1, FUNCTION_FLAGS),
+    JS_FS("getStat", unit_getStat, 1, FUNCTION_FLAGS),
+    JS_FS("getState", unit_getState, 1, FUNCTION_FLAGS),
+    JS_FS("getEnchant", unit_getEnchant, 1, FUNCTION_FLAGS),
+    JS_FS("shop", item_shop, 2, FUNCTION_FLAGS),
+    JS_FS("setSkill", unit_setskill, 2, FUNCTION_FLAGS),
+    JS_FS("move", unit_move, 2, FUNCTION_FLAGS),
+    JS_FS("getQuest", unit_getQuest, 2, FUNCTION_FLAGS),
+    JS_FS("getMinionCount", unit_getMinionCount, 1, FUNCTION_FLAGS),
+    JS_FS("getRepairCost", me_getRepairCost, 1, FUNCTION_FLAGS),
+    JS_FS("getItemCost", item_getItemCost, 1, FUNCTION_FLAGS),
 };
 
 static JSCFunctionListEntry unit_proto_funcs[] = {

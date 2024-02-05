@@ -275,7 +275,7 @@ JSAPI_FUNC(my_getControl) {
   data->dwSizeY = pControl->dwSizeY;
   data->pControl = pControl;
 
-  JSValue control = BuildObject(ctx, control_class_id, data);
+  JSValue control = BuildObject(ctx, control_class_id, FUNCLIST(control_proto_funcs), data);
   if (!control)
     THROW_ERROR(ctx, "Failed to build control!");
 
@@ -298,7 +298,7 @@ JSAPI_FUNC(my_getControls) {
     data->dwSizeY = pControl->dwSizeY;
     data->pControl = pControl;
 
-    JSValue res = BuildObject(ctx, control_class_id, data);
+    JSValue res = BuildObject(ctx, control_class_id, FUNCLIST(control_proto_funcs), data);
     JS_SetPropertyUint32(ctx, pReturnArray, dwArrayCount, res);
     dwArrayCount++;
   }

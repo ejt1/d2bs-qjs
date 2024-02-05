@@ -99,7 +99,7 @@ JSAPI_FUNC(my_getPresetUnits) {
         mypUnit->dwId = pUnit->dwTxtFileNo;
         mypUnit->dwLevel = levelId;
 
-        JSValue unit = BuildObject(ctx, presetunit_class_id, mypUnit);
+        JSValue unit = BuildObject(ctx, presetunit_class_id, FUNCLIST(presetunit_proto_funcs), mypUnit);
         if (JS_IsException(unit)) {
           delete mypUnit;
           JS_FreeValue(ctx, pReturnArray);
@@ -170,7 +170,7 @@ JSAPI_FUNC(my_getPresetUnit) {
         mypUnit->dwId = pUnit->dwTxtFileNo;
         mypUnit->dwLevel = levelId;
 
-        JSValue obj = BuildObject(ctx, presetunit_class_id, mypUnit);
+        JSValue obj = BuildObject(ctx, presetunit_class_id, FUNCLIST(presetunit_proto_funcs), mypUnit);
         if (JS_IsException(obj)) {
           delete mypUnit;
           THROW_ERROR(ctx, "Failed to create presetunit object");

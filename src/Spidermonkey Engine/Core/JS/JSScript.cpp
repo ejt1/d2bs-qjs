@@ -228,7 +228,7 @@ JSAPI_FUNC(my_getScript) {
       return JS_NULL;
   }
 
-  JSValue res = BuildObject(ctx, script_class_id, iterp);
+  JSValue res = BuildObject(ctx, script_class_id, FUNCLIST(script_proto_funcs), iterp);
 
   if (JS_IsException(res)) {
     THROW_ERROR(ctx, "Failed to build the script object");
@@ -243,7 +243,7 @@ JSAPI_FUNC(my_getScripts) {
   sScriptEngine->LockScriptList("getScripts");
 
   for (ScriptMap::iterator it = sScriptEngine->scripts().begin(); it != sScriptEngine->scripts().end(); it++) {
-    JSValue res = BuildObject(ctx, script_class_id, it->second);
+    JSValue res = BuildObject(ctx, script_class_id, FUNCLIST(script_proto_funcs), it->second);
     JS_SetPropertyUint32(ctx, pReturnArray, dwArrayCount, res);
     dwArrayCount++;
   }

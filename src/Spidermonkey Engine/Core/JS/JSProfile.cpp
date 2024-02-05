@@ -97,7 +97,7 @@ CLASS_CTOR(profile) {
     THROW_ERROR(ctx, ex);
   }
 
-  return BuildObject(ctx, profile_class_id, prof);
+  return BuildObject(ctx, profile_class_id, FUNCLIST(profile_proto_funcs), prof);
 }
 
 CLASS_FINALIZER(profile) {

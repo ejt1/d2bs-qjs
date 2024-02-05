@@ -101,7 +101,7 @@ JSAPI_FUNC(room_getPresetUnits) {
       mypUnit->dwType = pUnit->dwType;
       mypUnit->dwId = pUnit->dwTxtFileNo;
 
-      JSValue jsUnit = BuildObject(ctx, presetunit_class_id, mypUnit);
+      JSValue jsUnit = BuildObject(ctx, presetunit_class_id, FUNCLIST(presetunit_proto_funcs), mypUnit);
       if (JS_IsException(jsUnit)) {
         JS_FreeValue(ctx, pReturnArray);
         return JS_FALSE;
@@ -248,7 +248,7 @@ JSAPI_FUNC(room_getNearby) {
     return JS_UNDEFINED;
 
   for (DWORD i = 0; i < pRoom2->dwRoomsNear; ++i) {
-    JSValue jsroom = BuildObject(ctx, room_class_id, pRoom2->pRoom2Near[i]);
+    JSValue jsroom = BuildObject(ctx, room_class_id, FUNCLIST(room_proto_funcs), pRoom2->pRoom2Near[i]);
     if (JS_IsException(jsroom)) {
       JS_FreeValue(ctx, jsobj);
       return JS_UNDEFINED;
@@ -331,7 +331,7 @@ JSAPI_FUNC(room_getFirst) {
   if (!pRoom2 || !pRoom2->pLevel || !pRoom2->pLevel->pRoom2First)
     return JS_UNDEFINED;
 
-  return BuildObject(ctx, room_class_id, pRoom2->pLevel->pRoom2First);
+  return BuildObject(ctx, room_class_id, FUNCLIST(room_proto_funcs), pRoom2->pLevel->pRoom2First);
 }
 
 JSAPI_FUNC(room_unitInRoom) {
@@ -388,7 +388,7 @@ JSAPI_FUNC(my_getRoom) {
         return JS_UNDEFINED;
       }
 
-      JSValue jsroom = BuildObject(ctx, room_class_id, pLevel->pRoom2First);
+      JSValue jsroom = BuildObject(ctx, room_class_id, FUNCLIST(room_proto_funcs), pLevel->pRoom2First);
       if (!jsroom) {
         return JS_UNDEFINED;
       }
@@ -400,7 +400,7 @@ JSAPI_FUNC(my_getRoom) {
         return JS_UNDEFINED;
       }
 
-      JSValue jsroom = BuildObject(ctx, room_class_id, pRoom1->pRoom2);
+      JSValue jsroom = BuildObject(ctx, room_class_id, FUNCLIST(room_proto_funcs), pRoom1->pRoom2);
       if (JS_IsException(jsroom))
         return JS_UNDEFINED;
 
@@ -447,7 +447,7 @@ JSAPI_FUNC(my_getRoom) {
         if (bAdded)
           D2COMMON_RemoveRoomData(D2CLIENT_GetPlayerUnit()->pAct, pLevel->dwLevelNo, pRoom->dwPosX, pRoom->dwPosY, D2CLIENT_GetPlayerUnit()->pPath->pRoom1);
 
-        JSValue jsroom = BuildObject(ctx, room_class_id, pRoom);
+        JSValue jsroom = BuildObject(ctx, room_class_id, FUNCLIST(room_proto_funcs), pRoom);
         if (JS_IsException(jsroom))
           return JS_UNDEFINED;
 
@@ -458,13 +458,13 @@ JSAPI_FUNC(my_getRoom) {
         D2COMMON_RemoveRoomData(D2CLIENT_GetPlayerUnit()->pAct, pLevel->dwLevelNo, pRoom->dwPosX, pRoom->dwPosY, D2CLIENT_GetPlayerUnit()->pPath->pRoom1);
     }
 
-    JSValue jsroom = BuildObject(ctx, room_class_id, pLevel->pRoom2First);
+    JSValue jsroom = BuildObject(ctx, room_class_id, FUNCLIST(room_proto_funcs), pLevel->pRoom2First);
     if (JS_IsException(jsroom))
       return JS_UNDEFINED;
 
     return jsroom;
   } else {
-    JSValue jsroom = BuildObject(ctx, room_class_id,
+    JSValue jsroom = BuildObject(ctx, room_class_id, FUNCLIST(room_proto_funcs),
                                  D2CLIENT_GetPlayerUnit()->pPath->pRoom1->pRoom2->pLevel->pRoom2First);
     if (JS_IsException(jsroom))
       return JS_UNDEFINED;

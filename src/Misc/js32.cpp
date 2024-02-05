@@ -11,8 +11,7 @@ JSValue JS_NewString(JSContext* ctx, const wchar_t* str) {
   return JS_NewString(ctx, utf8.c_str());
 }
 
-JSValue BuildObject2(JSContext* ctx, JSClassID class_id, JSCFunctionListEntry* funcs, size_t num_funcs, JSCFunctionListEntry* props, size_t num_props, void* opaque,
-                    JSValue new_target) {
+JSValue BuildObject(JSContext* ctx, JSClassID class_id, JSCFunctionListEntry* own_funcs, size_t num_own_funcs, void* opaque, JSValue new_target) {
   JSValue proto;
   if (JS_IsUndefined(new_target)) {
     proto = JS_GetClassProto(ctx, class_id);
@@ -28,17 +27,12 @@ JSValue BuildObject2(JSContext* ctx, JSClassID class_id, JSCFunctionListEntry* f
     return obj;
   }
 
-  JS_SetPropertyFunctionList(ctx, obj, funcs, num_funcs);
-  JS_SetPropertyFunctionList(ctx, obj, props, num_props);
+  JS_SetPropertyFunctionList(ctx, obj, own_funcs, num_own_funcs);
   if (opaque) {
     JS_SetOpaque(obj, opaque);
   }
 
   return obj;
-}
-
-JSValue BuildObject(JSContext* ctx, JSClassID class_id, void* priv, JSValue new_target) {
-  return BuildObject2(ctx, class_id, nullptr, 0, nullptr, 0, priv, new_target);
 }
 
 JSValue JS_CompileFile(JSContext* ctx, JSValue /*globalObject*/, std::string fileName) {

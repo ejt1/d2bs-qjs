@@ -720,7 +720,7 @@ bool Script::Initialize() {
   m_me->dwUnitId = player ? player->dwUnitId : NULL;
   m_me->_dwPrivateType = PRIVATE_UNIT;
 
-  JSValue meObject = BuildObject2(m_context, unit_class_id, nullptr, 0, me_props, _countof(me_props), m_me);
+  JSValue meObject = BuildObject(m_context, unit_class_id, FUNCLIST(me_proto_funcs), m_me);
   if (!meObject) {
     Log(L"failed to build object 'me'");
     return false;
