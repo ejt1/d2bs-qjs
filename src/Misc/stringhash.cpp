@@ -1,6 +1,9 @@
 // code taken from http://www.azillionmonkeys.com/qed/hash.html
 // minor corrections made for compilation issues with MSVC vs. GNU GCC
 #include "stringhash.h"
+
+#include <stddef.h>
+
 #undef get16bits
 #if (defined(__GNUC__) && defined(__i386__)) || defined(__WATCOMC__) || defined(_MSC_VER) || defined(__BORLANDC__) || defined(__TURBOC__)
 #define get16bits(d) (*((const unsigned __int16*)(d)))

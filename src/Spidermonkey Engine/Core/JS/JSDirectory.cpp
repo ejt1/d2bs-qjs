@@ -35,7 +35,7 @@
 EMPTY_CTOR(dir)
 
 CLASS_FINALIZER(dir) {
-  DirData* d = (DirData*)JS_GetOpaque3(val);
+  JSDirectory* d = (JSDirectory*)JS_GetOpaque3(val);
   delete d;
 }
 
@@ -50,7 +50,7 @@ JSAPI_FUNC(my_openDir) {
   }
 
   if (!isValidPath(szName)) {
-    Log(L"The following path was deemed invalid: %S. (%s, %s)", szName, L"JSDirectory.cpp", L"my_openDir");
+    Log("The following path was deemed invalid: %s. (%s, %s)", szName, "JSDirectory.cpp", "my_openDir");
     JS_FreeCString(ctx, szName);
     return JS_EXCEPTION;
   }
@@ -62,9 +62,9 @@ JSAPI_FUNC(my_openDir) {
     JS_FreeCString(ctx, szName);
     return JS_EXCEPTION;
   }
-  DirData* d = new DirData(szName);
+  JSDirectory* d = new JSDirectory(szName);
   JS_FreeCString(ctx, szName);
-  return BuildObject(ctx, folder_class_id, dir_methods, _countof(dir_methods), dir_props, _countof(dir_props), d);
+  return BuildObject(ctx, folder_class_id, FUNCLIST(dir_proto_funcs), d);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -75,7 +75,7 @@ JSAPI_FUNC(my_openDir) {
 ////////////////////////////////////////////////////////////////////////////////
 
 JSAPI_FUNC(dir_getFiles) {
-  DirData* d = (DirData*)JS_GetOpaque3(this_val);
+  JSDirectory* d = (JSDirectory*)JS_GetOpaque3(this_val);
   char search[_MAX_PATH] = "*.*";
 
   if (argc > 1)
@@ -94,11 +94,11 @@ JSAPI_FUNC(dir_getFiles) {
   sprintf_s(path, _MAX_PATH, "%s\\%s", Vars.szScriptPath, d->name);
 
   if (!_getcwd(oldpath, _MAX_PATH)) {
-    Log(L"Error getting current working directory. (%s, %s)", L"JSDirectory.cpp", L"dir_getFiles");
+    Log("Error getting current working directory. (%s, %s)", "JSDirectory.cpp", "dir_getFiles");
     return JS_EXCEPTION;
   }
   if (_chdir(path) == -1) {
-    Log(L"Changing directory to %S. (%s, %s)", path, L"JSDirectory.cpp", L"dir_getFiles");
+    Log("Changing directory to %s. (%s, %s)", path, "JSDirectory.cpp", "dir_getFiles");
     return JS_EXCEPTION;
   }
 
@@ -114,7 +114,7 @@ JSAPI_FUNC(dir_getFiles) {
   }
 
   if (_chdir(oldpath) == -1) {
-    Log(L"Error changing directory back to %S. (%s, %s)", oldpath, L"JSDirectory.cpp", L"dir_getFiles");
+    Log("Error changing directory back to %s. (%s, %s)", oldpath, "JSDirectory.cpp", "dir_getFiles");
     return JS_EXCEPTION;
   }
 
@@ -122,7 +122,7 @@ JSAPI_FUNC(dir_getFiles) {
 }
 
 JSAPI_FUNC(dir_getFolders) {
-  DirData* d = (DirData*)JS_GetOpaque3(this_val);
+  JSDirectory* d = (JSDirectory*)JS_GetOpaque3(this_val);
   char search[_MAX_PATH] = "*.*";
 
   if (argc > 1)
@@ -141,11 +141,11 @@ JSAPI_FUNC(dir_getFolders) {
   sprintf_s(path, _MAX_PATH, "%s\\%s", Vars.szScriptPath, d->name);
 
   if (!_getcwd(oldpath, _MAX_PATH)) {
-    Log(L"Error getting current working directory. (%s, %s)", L"JSDirectory.cpp", L"dir_getFolders");
+    Log("Error getting current working directory. (%s, %s)", "JSDirectory.cpp", "dir_getFolders");
     return JS_EXCEPTION;
   }
   if (_chdir(path) == -1) {
-    Log(L"Changing directory to %S. (%s, %s)", path, L"JSDirectory.cpp", L"dir_getFolders");
+    Log("Changing directory to %s. (%s, %s)", path, "JSDirectory.cpp", "dir_getFolders");
     return JS_EXCEPTION;
   }
 
@@ -162,7 +162,7 @@ JSAPI_FUNC(dir_getFolders) {
   }
 
   if (_chdir(oldpath) == -1) {
-    Log(L"Error changing directory back to %S. (%s, %s)", oldpath, L"JSDirectory.cpp", L"dir_getFolders");
+    Log("Error changing directory back to %s. (%s, %s)", oldpath, "JSDirectory.cpp", "dir_getFolders");
     return JS_EXCEPTION;
   }
 
@@ -170,7 +170,7 @@ JSAPI_FUNC(dir_getFolders) {
 }
 
 JSAPI_FUNC(dir_create) {
-  DirData* d = (DirData*)JS_GetOpaque3(this_val);
+  JSDirectory* d = (JSDirectory*)JS_GetOpaque3(this_val);
   char path[_MAX_PATH];
   if (!JS_IsString(argv[0]))
     THROW_ERROR(ctx, "No path passed to dir.create()");
@@ -192,13 +192,13 @@ JSAPI_FUNC(dir_create) {
     return JS_FALSE;
   }
 
-  DirData* _d = new DirData(szName);
+  JSDirectory* _d = new JSDirectory(szName);
   JS_FreeCString(ctx, szName);
-  return BuildObject(ctx, folder_class_id, dir_methods, _countof(dir_methods), dir_props, _countof(dir_props), _d);
+  return BuildObject(ctx, folder_class_id, FUNCLIST(dir_proto_funcs), _d);
 }
 
 JSAPI_FUNC(dir_delete) {
-  DirData* d = (DirData*)JS_GetOpaque3(this_val);
+  JSDirectory* d = (JSDirectory*)JS_GetOpaque3(this_val);
 
   char path[_MAX_PATH];
   sprintf_s(path, _MAX_PATH, "%s\\%s", Vars.szScriptPath, d->name);
@@ -214,7 +214,7 @@ JSAPI_FUNC(dir_delete) {
 }
 
 JSAPI_PROP(dir_getProperty) {
-  DirData* d = (DirData*)JS_GetOpaque3(this_val);
+  JSDirectory* d = (JSDirectory*)JS_GetOpaque3(this_val);
 
   if (!d)
     return JS_EXCEPTION;

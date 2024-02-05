@@ -6,7 +6,7 @@
 EMPTY_CTOR(control)
 
 CLASS_FINALIZER(control) {
-  ControlData* pData = ((ControlData*)JS_GetOpaque3(val));
+  JSControl* pData = ((JSControl*)JS_GetOpaque3(val));
 
   if (pData) {
     JS_SetOpaque(val, NULL);
@@ -18,18 +18,18 @@ JSAPI_PROP(control_getProperty) {
   if (ClientState() != ClientStateMenu)
     return JS_EXCEPTION;
 
-  ControlData* pData = ((ControlData*)JS_GetOpaque3(this_val));
+  JSControl* pData = ((JSControl*)JS_GetOpaque3(this_val));
   if (!pData)
     return JS_EXCEPTION;
 
-  Control* ctrl = findControl(pData->dwType, (const char*)NULL, -1, pData->dwX, pData->dwY, pData->dwSizeX, pData->dwSizeY);
+  D2WinControlStrc* ctrl = findControl(pData->dwType, (const char*)NULL, -1, pData->dwX, pData->dwY, pData->dwSizeX, pData->dwSizeY);
   if (!ctrl)
     return JS_EXCEPTION;
 
   switch (magic) {
     case CONTROL_TEXT:
-      if (ctrl->dwIsCloaked != 33) {
-        return JS_NewString(ctx, ctrl->dwType == 6 ? ctrl->wText2 : ctrl->wText);
+      if (ctrl->TextBox.dwIsCloaked != 33) {
+        return JS_NewString(ctx, ctrl->dwType == 6 ? ctrl->Button.wText2 : ctrl->TextBox.wText);
       }
       break;
     case CONTROL_X:
@@ -58,7 +58,7 @@ JSAPI_PROP(control_getProperty) {
       // nothing to do yet because we don't know what to do
       break;
     case CONTROL_CURSORPOS:
-      return JS_NewFloat64(ctx, (double)ctrl->dwCursorPos);
+      return JS_NewFloat64(ctx, (double)ctrl->TextBox.dwCursorPos);
       break;
     case CONTROL_SELECTSTART:
       return JS_NewFloat64(ctx, (double)ctrl->dwSelectStart);
@@ -67,7 +67,7 @@ JSAPI_PROP(control_getProperty) {
       return JS_NewFloat64(ctx, (double)ctrl->dwSelectEnd);
       break;
     case CONTROL_PASSWORD:
-      return JS_NewBool(ctx, !!(ctrl->dwIsCloaked == 33));
+      return JS_NewBool(ctx, !!(ctrl->TextBox.dwIsCloaked == 33));
       break;
     case CONTROL_DISABLED:
       return JS_NewFloat64(ctx, (double)ctrl->dwDisabled);
@@ -80,11 +80,11 @@ JSAPI_STRICT_PROP(control_setProperty) {
   if (ClientState() != ClientStateMenu)
     return JS_EXCEPTION;
 
-  ControlData* pData = ((ControlData*)JS_GetOpaque3(this_val));
+  JSControl* pData = ((JSControl*)JS_GetOpaque3(this_val));
   if (!pData)
     return JS_EXCEPTION;
 
-  Control* ctrl = findControl(pData->dwType, (const char*)NULL, -1, pData->dwX, pData->dwY, pData->dwSizeX, pData->dwSizeY);
+  D2WinControlStrc* ctrl = findControl(pData->dwType, (const char*)NULL, -1, pData->dwX, pData->dwY, pData->dwSizeX, pData->dwSizeY);
   if (!ctrl)
     return JS_EXCEPTION;
 
@@ -114,7 +114,7 @@ JSAPI_STRICT_PROP(control_setProperty) {
         if (JS_ToUint32(ctx, &dwPos, val)) {
           THROW_ERROR(ctx, "Invalid cursor position value");
         }
-        memset((void*)&ctrl->dwCursorPos, dwPos, sizeof(DWORD));
+        memset((void*)&ctrl->TextBox.dwCursorPos, dwPos, sizeof(DWORD));
       }
       break;
     case CONTROL_DISABLED:
@@ -135,11 +135,11 @@ JSAPI_FUNC(control_getNext) {
   if (ClientState() != ClientStateMenu)
     return JS_UNDEFINED;
 
-  ControlData* pData = ((ControlData*)JS_GetOpaque3(this_val));
+  JSControl* pData = ((JSControl*)JS_GetOpaque3(this_val));
   if (!pData)
     return JS_UNDEFINED;
 
-  Control* pControl = findControl(pData->dwType, (const char*)NULL, -1, pData->dwX, pData->dwY, pData->dwSizeX, pData->dwSizeY);
+  D2WinControlStrc* pControl = findControl(pData->dwType, (const char*)NULL, -1, pData->dwX, pData->dwY, pData->dwSizeX, pData->dwSizeY);
   if (pControl && pControl->pNext)
     pControl = pControl->pNext;
   else
@@ -163,11 +163,11 @@ JSAPI_FUNC(control_click) {
   if (ClientState() != ClientStateMenu)
     return JS_UNDEFINED;
 
-  ControlData* pData = ((ControlData*)JS_GetOpaque3(this_val));
+  JSControl* pData = ((JSControl*)JS_GetOpaque3(this_val));
   if (!pData)
     return JS_UNDEFINED;
 
-  Control* pControl = findControl(pData->dwType, (const char*)NULL, -1, pData->dwX, pData->dwY, pData->dwSizeX, pData->dwSizeY);
+  D2WinControlStrc* pControl = findControl(pData->dwType, (const char*)NULL, -1, pData->dwX, pData->dwY, pData->dwSizeX, pData->dwSizeY);
   if (!pControl) {
     return JS_NewInt32(ctx, 0);
   }
@@ -188,11 +188,11 @@ JSAPI_FUNC(control_setText) {
   if (ClientState() != ClientStateMenu)
     return JS_UNDEFINED;
 
-  ControlData* pData = ((ControlData*)JS_GetOpaque3(this_val));
+  JSControl* pData = ((JSControl*)JS_GetOpaque3(this_val));
   if (!pData)
     return JS_UNDEFINED;
 
-  Control* pControl = findControl(pData->dwType, (const char*)NULL, -1, pData->dwX, pData->dwY, pData->dwSizeX, pData->dwSizeY);
+  D2WinControlStrc* pControl = findControl(pData->dwType, (const char*)NULL, -1, pData->dwX, pData->dwY, pData->dwSizeX, pData->dwSizeY);
   if (!pControl) {
     return JS_NewInt32(ctx, 0);
   }
@@ -213,11 +213,11 @@ JSAPI_FUNC(control_getText) {
   if (ClientState() != ClientStateMenu)
     return JS_UNDEFINED;
 
-  ControlData* pData = ((ControlData*)JS_GetOpaque3(this_val));
+  JSControl* pData = ((JSControl*)JS_GetOpaque3(this_val));
   if (!pData)
     return JS_UNDEFINED;
 
-  Control* pControl = findControl(pData->dwType, (const char*)NULL, -1, pData->dwX, pData->dwY, pData->dwSizeX, pData->dwSizeY);
+  D2WinControlStrc* pControl = findControl(pData->dwType, (const char*)NULL, -1, pData->dwX, pData->dwY, pData->dwSizeX, pData->dwSizeY);
   if (!pControl) {
     return JS_NewInt32(ctx, 0);
   }
@@ -227,7 +227,7 @@ JSAPI_FUNC(control_getText) {
 
   JSValue pReturnArray = JS_NewArray(ctx);
   int nArrayCount = 0;
-  for (ControlText* pText = pControl->pFirstText; pText; pText = pText->pNext) {
+  for (D2WinTextBoxLineStrc* pText = pControl->pFirstText; pText; pText = pText->pNext) {
     if (!pText->wText[0])
       continue;
 
@@ -263,11 +263,11 @@ JSAPI_FUNC(my_getControl) {
     }
   }
 
-  Control* pControl = findControl(nType, (const char*)NULL, -1, nX, nY, nXSize, nYSize);
+  D2WinControlStrc* pControl = findControl(nType, (const char*)NULL, -1, nX, nY, nXSize, nYSize);
   if (!pControl)
     return JS_UNDEFINED;
 
-  ControlData* data = new ControlData;
+  JSControl* data = new JSControl;
   data->dwType = pControl->dwType;
   data->dwX = pControl->dwPosX;
   data->dwY = pControl->dwPosY;
@@ -275,7 +275,7 @@ JSAPI_FUNC(my_getControl) {
   data->dwSizeY = pControl->dwSizeY;
   data->pControl = pControl;
 
-  JSValue control = BuildObject(ctx, control_class_id, control_funcs, _countof(control_funcs), control_props, _countof(control_props), data);
+  JSValue control = BuildObject(ctx, control_class_id, FUNCLIST(control_proto_funcs), data);
   if (!control)
     THROW_ERROR(ctx, "Failed to build control!");
 
@@ -289,8 +289,8 @@ JSAPI_FUNC(my_getControls) {
   DWORD dwArrayCount = NULL;
 
   JSValue pReturnArray = JS_NewArray(ctx);
-  for (Control* pControl = *p_D2WIN_FirstControl; pControl; pControl = pControl->pNext) {
-    ControlData* data = new ControlData;
+  for (D2WinControlStrc* pControl = *D2WIN_FirstControl; pControl; pControl = pControl->pNext) {
+    JSControl* data = new JSControl;
     data->dwType = pControl->dwType;
     data->dwX = pControl->dwPosX;
     data->dwY = pControl->dwPosY;
@@ -298,7 +298,7 @@ JSAPI_FUNC(my_getControls) {
     data->dwSizeY = pControl->dwSizeY;
     data->pControl = pControl;
 
-    JSValue res = BuildObject(ctx, control_class_id, control_funcs, _countof(control_funcs), control_props, _countof(control_props), data);
+    JSValue res = BuildObject(ctx, control_class_id, FUNCLIST(control_proto_funcs), data);
     JS_SetPropertyUint32(ctx, pReturnArray, dwArrayCount, res);
     dwArrayCount++;
   }

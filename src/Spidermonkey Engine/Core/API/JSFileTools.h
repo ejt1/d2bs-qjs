@@ -29,7 +29,7 @@ JSAPI_FUNC(filetools_readText);
 JSAPI_FUNC(filetools_writeText);
 JSAPI_FUNC(filetools_appendText);
 
-static JSCFunctionListEntry filetools_s_methods[] = {
+static JSCFunctionListEntry filetools_static_funcs[] = {
     JS_FS("remove", filetools_remove, 1, FUNCTION_FLAGS),
     JS_FS("rename", filetools_rename, 2, FUNCTION_FLAGS),
     JS_FS("copy", filetools_copy, 2, FUNCTION_FLAGS),

@@ -7,12 +7,8 @@
 CLASS_CTOR(unit);
 CLASS_FINALIZER(unit);
 
-#define PRIVATE_UNIT 1
-#define PRIVATE_ITEM 3
-
-struct Private {
-  DWORD dwPrivateType;
-};
+JSAPI_PROP(unit_getProperty);
+JSAPI_STRICT_PROP(unit_setProperty);
 
 JSAPI_FUNC(unit_getUnit);
 JSAPI_FUNC(unit_getNext);
@@ -42,11 +38,11 @@ JSAPI_FUNC(unit_getMinionCount);
 JSAPI_FUNC(me_getRepairCost);
 JSAPI_FUNC(item_getItemCost);
 
-JSAPI_PROP(unit_getProperty);
-JSAPI_STRICT_PROP(unit_setProperty);
+#define PRIVATE_UNIT 1
+#define PRIVATE_ITEM 3
 
-struct myUnit {
-  DWORD _dwPrivateType;
+struct JSUnit {
+  DWORD dwPrivateType;
   DWORD dwUnitId;
   DWORD dwClassId;
   DWORD dwType;
@@ -54,13 +50,7 @@ struct myUnit {
   char szName[128];
 };
 
-struct invUnit {
-  DWORD _dwPrivateType;
-  DWORD dwUnitId;
-  DWORD dwClassId;
-  DWORD dwType;
-  DWORD dwMode;
-  char szName[128];
+struct JSItem : JSUnit {
   DWORD dwOwnerId;
   DWORD dwOwnerType;
 };
@@ -161,7 +151,7 @@ enum me_tinyid {
   ME_CHARFLAGS
 };
 
-static JSCFunctionListEntry me_props[] = {
+static JSCFunctionListEntry me_proto_funcs[] = {
     JS_CGETSET_MAGIC_DEF("account", unit_getProperty, nullptr, ME_ACCOUNT),
     JS_CGETSET_MAGIC_DEF("charname", unit_getProperty, nullptr, ME_CHARNAME),
     JS_CGETSET_MAGIC_DEF("diff", unit_getProperty, nullptr, ME_DIFF),
@@ -242,9 +232,35 @@ static JSCFunctionListEntry me_props[] = {
     JS_CGETSET_MAGIC_DEF("description", unit_getProperty, nullptr, ITEM_DESC),
     JS_CGETSET_MAGIC_DEF("bodylocation", unit_getProperty, nullptr, ITEM_BODYLOCATION),
     JS_CGETSET_MAGIC_DEF("ilvl", unit_getProperty, nullptr, ITEM_LEVEL),
+
+    JS_FS("getNext", unit_getNext, 0, FUNCTION_FLAGS),
+    JS_FS("cancel", unit_cancel, 0, FUNCTION_FLAGS),
+    JS_FS("repair", unit_repair, 0, FUNCTION_FLAGS),
+    JS_FS("useMenu", unit_useMenu, 0, FUNCTION_FLAGS),
+    JS_FS("interact", unit_interact, 0, FUNCTION_FLAGS),
+    JS_FS("getItem", unit_getItem, 3, FUNCTION_FLAGS),
+    JS_FS("getItems", unit_getItems, 0, FUNCTION_FLAGS),
+    JS_FS("getMerc", unit_getMerc, 0, FUNCTION_FLAGS),
+    JS_FS("getMercHP", unit_getMercHP, 0, FUNCTION_FLAGS),
+    JS_FS("getSkill", unit_getSkill, 0, FUNCTION_FLAGS),
+    JS_FS("getParent", unit_getParent, 0, FUNCTION_FLAGS),
+    JS_FS("overhead", my_overhead, 0, FUNCTION_FLAGS),
+    JS_FS("revive", my_revive, 0, FUNCTION_FLAGS),
+    JS_FS("getFlags", item_getFlags, 1, FUNCTION_FLAGS),
+    JS_FS("getFlag", item_getFlag, 1, FUNCTION_FLAGS),
+    JS_FS("getStat", unit_getStat, 1, FUNCTION_FLAGS),
+    JS_FS("getState", unit_getState, 1, FUNCTION_FLAGS),
+    JS_FS("getEnchant", unit_getEnchant, 1, FUNCTION_FLAGS),
+    JS_FS("shop", item_shop, 2, FUNCTION_FLAGS),
+    JS_FS("setSkill", unit_setskill, 2, FUNCTION_FLAGS),
+    JS_FS("move", unit_move, 2, FUNCTION_FLAGS),
+    JS_FS("getQuest", unit_getQuest, 2, FUNCTION_FLAGS),
+    JS_FS("getMinionCount", unit_getMinionCount, 1, FUNCTION_FLAGS),
+    JS_FS("getRepairCost", me_getRepairCost, 1, FUNCTION_FLAGS),
+    JS_FS("getItemCost", item_getItemCost, 1, FUNCTION_FLAGS),
 };
 
-static JSCFunctionListEntry unit_props[] = {
+static JSCFunctionListEntry unit_proto_funcs[] = {
     JS_CGETSET_MAGIC_DEF("type", unit_getProperty, nullptr, UNIT_TYPE),
     JS_CGETSET_MAGIC_DEF("classid", unit_getProperty, nullptr, UNIT_CLASSID),
     JS_CGETSET_MAGIC_DEF("mode", unit_getProperty, nullptr, UNIT_MODE),
@@ -294,9 +310,7 @@ static JSCFunctionListEntry unit_props[] = {
     JS_CGETSET_MAGIC_DEF("weaponswitch", unit_getProperty, nullptr, ME_WSWITCH),
     JS_CGETSET_MAGIC_DEF("objtype", unit_getProperty, nullptr, OBJECT_TYPE),
     JS_CGETSET_MAGIC_DEF("islocked", unit_getProperty, nullptr, OBJECT_LOCKED),
-};
 
-static JSCFunctionListEntry unit_methods[] = {
     JS_FS("getNext", unit_getNext, 0, FUNCTION_FLAGS),
     JS_FS("cancel", unit_cancel, 0, FUNCTION_FLAGS),
     JS_FS("repair", unit_repair, 0, FUNCTION_FLAGS),

@@ -4,22 +4,16 @@
 #include <io.h>
 #include <fcntl.h>
 
-#include "Constants.h"
 #include "Offset.h"
 #include "ScriptEngine.h"
 #include "Helpers.h"
 #include "D2Handlers.h"
 #include "Console.h"
-#include "D2Ptrs.h"
 #include "CommandLine.h"
 #include "Core.h"
 #include "Unit.h"
 #include "D2Handlers.h"
 #include "Control.h"
-
-#ifdef _MSVC_DEBUG
-#include "D2Loader.h"
-#endif
 
 #include <MinHook.h>
 #include <mutex>
@@ -112,7 +106,7 @@ bool Engine::Initialize(HMODULE hModule) {
   Vars.bIgnoreMouse = FALSE;
 
   Genhook::Initialize();
-  DefineOffsets();
+  InitOffsets();
   InstallPatches();
   InstallConditional();
 
@@ -144,7 +138,7 @@ void Engine::Shutdown() {
   DeleteCriticalSection(&Vars.cGameLoopSection);
   DeleteCriticalSection(&Vars.cFileSection);
 
-  Log(L"D2BS Shutdown complete.");
+  Log("D2BS Shutdown complete.");
 }
 
 void Engine::OnUpdate() {
@@ -152,15 +146,15 @@ void Engine::OnUpdate() {
   std::call_once(of, []() {
     if (!sScriptEngine->Initialize()) {
       strcpy_s(Vars.szPath, MAX_PATH, "common");
-      Log(L"D2BS Engine startup failed. %s", Vars.szCommandLine);
-      Print(L"\u00FFc2D2BS\u00FFc0 :: Engine startup failed!");
+      Log("D2BS Engine startup failed. %s", Vars.szCommandLine);
+      Print("ÿc2D2BSÿc0 :: Engine startup failed!");
       exit(-1);
     }
 
     if (ClientState() == ClientStateMenu && Vars.bStartAtMenu)
-      clickControl(*p_D2WIN_FirstControl);
+      clickControl(*D2WIN_FirstControl);
 
-    *p_D2CLIENT_Lang = D2CLIENT_GetGameLanguageCode();
+    *D2CLIENT_Lang = D2CLIENT_GetGameLanguageCode();
 
     // TODO(ejt): use these in Initialize?
     CommandLineParser cmdline(Vars.szCommandLine);
@@ -169,14 +163,14 @@ void Engine::OnUpdate() {
         LoadMPQ(value.c_str());
       } else if (arg == "-profile") {
         if (SwitchToProfile(value.c_str()))
-          Print(L"\u00FFc2D2BS\u00FFc0 :: Switched to profile %S", value.c_str());
+          Print("ÿc2D2BSÿc0 :: Switched to profile %s", value.c_str());
         else
-          Print(L"\u00FFc2D2BS\u00FFc0 :: Profile %S not found", value.c_str());
+          Print("ÿc2D2BSÿc0 :: Profile %s not found", value.c_str());
       }
     }
 
-    Log(L"D2BS Engine startup complete. %s", D2BS_VERSION);
-    Print(L"\u00FFc2D2BS\u00FFc0 :: Engine startup complete!");
+    Log("D2BS Engine startup complete. %s", D2BS_VERSION);
+    Print("ÿc2D2BSÿc0 :: Engine startup complete!");
   });
 
   static bool beginStarter = true;
@@ -230,11 +224,11 @@ void Engine::OnGameEntered() {
   if (!Vars.bUseProfileScript) {
     const char* starter = GetStarterScriptName();
     if (starter != NULL) {
-      Print(L"\u00FFc2D2BS\u00FFc0 :: Starting %S", starter);
+      Print("ÿc2D2BSÿc0 :: Starting %s", starter);
       if (StartScript(starter, GetStarterScriptState()))
-        Print(L"\u00FFc2D2BS\u00FFc0 :: %S running.", starter);
+        Print("ÿc2D2BSÿc0 :: %s running.", starter);
       else
-        Print(L"\u00FFc2D2BS\u00FFc0 :: Failed to start %S!", starter);
+        Print("ÿc2D2BSÿc0 :: Failed to start %s!", starter);
     }
   }
 }
@@ -243,11 +237,11 @@ void Engine::OnMenuEntered(bool beginStarter) {
   if (beginStarter && !Vars.bUseProfileScript) {
     const char* starter = GetStarterScriptName();
     if (starter != NULL) {
-      Print(L"\u00FFc2D2BS\u00FFc0 :: Starting %S", starter);
+      Print("ÿc2D2BSÿc0 :: Starting %s", starter);
       if (StartScript(starter, GetStarterScriptState()))
-        Print(L"\u00FFc2D2BS\u00FFc0 :: %S running.", starter);
+        Print("ÿc2D2BSÿc0 :: %s running.", starter);
       else
-        Print(L"\u00FFc2D2BS\u00FFc0 :: Failed to start %S!", starter);
+        Print("ÿc2D2BSÿc0 :: Failed to start %s!", starter);
     }
   }
 }
@@ -261,27 +255,28 @@ void Engine::FlushPrint() {
     return;
   }
 
-  std::queue<std::wstring> clean;
+  std::queue<std::string> clean;
   std::swap(Vars.qPrintBuffer, clean);
   LeaveCriticalSection(&Vars.cPrintSection);
 
   while (!clean.empty()) {
-    std::wstring str = clean.front();
+    std::string str = clean.front();
 
     // Break into lines through \n.
-    std::list<std::wstring> lines;
-    std::wstring temp;
-    std::wstringstream ss(str);
+    std::list<std::string> lines;
+    std::string temp;
+    std::stringstream ss(str);
 
     if (Vars.bUseGamePrint && ClientState() == ClientStateInGame) {
       while (getline(ss, temp)) {
-        SplitLines(temp.c_str(), Console::MaxWidth() - 100, L' ', lines);
+        SplitLines(temp, Console::MaxWidth() - 100, ' ', lines);
         Console::AddLine(temp);
       }
 
       // Convert and send every line.
-      for (std::list<std::wstring>::iterator it = lines.begin(); it != lines.end(); ++it) {
-        D2CLIENT_PrintGameString((wchar_t*)it->c_str(), 0);
+      for (std::list<std::string>::iterator it = lines.begin(); it != lines.end(); ++it) {
+        std::wstring wstr = AnsiToWide(*it);
+        D2CLIENT_PrintGameString(wstr.c_str(), 0);
       }
       /*} else if (Vars.bUseGamePrint && ClientState() == ClientStateMenu && findControl(4, (const wchar_t*)NULL, -1, 28, 410, 354, 298)) {
           while (getline(ss, temp))
@@ -470,9 +465,9 @@ LRESULT __stdcall Engine::HandleWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
           sScriptEngine->RunCommand(lpszData);
         } else if (pCopy->dwData == 0x31337) {  // 0x31337 = Set Profile
           if (SwitchToProfile(lpszData)) {
-            Print(L"\u00FFc2D2BS\u00FFc0 :: Switched to profile %S", lpszData);
+            Print("ÿc2D2BSÿc0 :: Switched to profile %s", lpszData);
           } else {
-            Print(L"\u00FFc2D2BS\u00FFc0 :: Profile %S not found", lpszData);
+            Print("ÿc2D2BSÿc0 :: Profile %s not found", lpszData);
           }
         } else {
           CopyDataEvent(pCopy->dwData, lpszData);

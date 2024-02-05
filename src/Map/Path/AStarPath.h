@@ -3,7 +3,7 @@
 #include "Path.h"
 #include "..\Map.h"
 #include "Reduction\PathReducer.h"
-#include "D2Structs.h"
+#include "Game/Units/Units.h"
 #include <vector>
 #include <set>
 #include <queue>
@@ -94,7 +94,7 @@ class AStarPath : public MapPath {
     std::set<Point> closed;
     PointList newNodes;
     Node* begin = AllocTraits::allocate(alloc, 1);
-    UnitAny* player = D2CLIENT_GetPlayerUnit();
+    D2UnitStrc* player = D2CLIENT_GetPlayerUnit();
     DWORD startLvl = player->pPath->pRoom1->pRoom2->pLevel->dwLevelNo;
 
     // if we don't get a valid node, just return
@@ -122,7 +122,7 @@ class AStarPath : public MapPath {
         ticks = GetTickCount();
       }
       if (!GameReady() || startLvl != player->pPath->pRoom1->pRoom2->pLevel->dwLevelNo) {
-        Log(L"Pather lvl change while pathing");
+        Log("Pather lvl change while pathing");
         return;
       }
       if (Vars.bQuitting)

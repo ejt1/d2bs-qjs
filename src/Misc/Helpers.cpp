@@ -5,13 +5,9 @@
 #include "string.h"
 #include "D2Handlers.h"
 #include "Control.h"
-#include "D2Ptrs.h"
 #include "Helpers.h"
 #include "DbgHelp.h"
 #include "Profile.h"
-#include "StackWalker.h"
-#include <tlhelp32.h>
-#include <wctype.h>
 
 bool SwitchToProfile(const char* profile) {
   if (Vars.bUseProfileScript != TRUE || !Profile::ProfileExists(profile))
@@ -125,11 +121,11 @@ bool StartScript(const char* scriptname, ScriptMode mode) {
 
 void Reload(void) {
   if (sScriptEngine->GetCount() > 0)
-    Print(L"\u00FFc2D2BS\u00FFc0 :: Stopping all scripts");
+    Print("ÿc2D2BSÿc0 :: Stopping all scripts");
   sScriptEngine->StopAll();
 
   if (Vars.bDisableCache != TRUE)
-    Print(L"\u00FFc2D2BS\u00FFc0 :: Flushing the script cache");
+    Print("ÿc2D2BSÿc0 :: Flushing the script cache");
   sScriptEngine->FlushCache();
 
   // wait for things to catch up
@@ -138,47 +134,46 @@ void Reload(void) {
   if (!Vars.bUseProfileScript) {
     const char* script = GetStarterScriptName();
     if (StartScript(script, GetStarterScriptState()))
-      Print(L"\u00FFc2D2BS\u00FFc0 :: Started %s", script);
+      Print("ÿc2D2BSÿc0 :: Started %s", script);
     else
-      Print(L"\u00FFc2D2BS\u00FFc0 :: Failed to start %s", script);
+      Print("ÿc2D2BSÿc0 :: Failed to start %s", script);
   }
 }
 
-bool ProcessCommand(const wchar_t* command, bool unprocessedIsCommand) {
+bool ProcessCommand(const char* command, bool unprocessedIsCommand) {
   bool result = false;
-  wchar_t* buf = _wcsdup(command);
-  wchar_t* next_token1 = NULL;
-  wchar_t* argv = wcstok_s(buf, L" ", &next_token1);
+  char* buf = _strdup(command);
+  char* next_token1 = NULL;
+  char* argv = strtok_s(buf, " ", &next_token1);
 
   // no command?
   if (argv == NULL)
     return false;
 
-  if (_wcsicmp(argv, L"start") == 0) {
+  if (_stricmp(argv, "start") == 0) {
     const char* script = GetStarterScriptName();
     if (StartScript(script, GetStarterScriptState()))
-      Print(L"\u00FFc2D2BS\u00FFc0 :: Started %S", script);
+      Print("ÿc2D2BSÿc0 :: Started %s", script);
     else
-      Print(L"\u00FFc2D2BS\u00FFc0 :: Failed to start %S", script);
+      Print("ÿc2D2BSÿc0 :: Failed to start %s", script);
     result = true;
-  } else if (_wcsicmp(argv, L"stop") == 0) {
+  } else if (_stricmp(argv, "stop") == 0) {
     if (sScriptEngine->GetCount() > 0)
-      Print(L"\u00FFc2D2BS\u00FFc0 :: Stopping all scripts");
+      Print("ÿc2D2BSÿc0 :: Stopping all scripts");
     sScriptEngine->StopAll();
     result = true;
-  } else if (_wcsicmp(argv, L"flush") == 0) {
+  } else if (_stricmp(argv, "flush") == 0) {
     if (Vars.bDisableCache != TRUE)
-      Print(L"\u00FFc2D2BS\u00FFc0 :: Flushing the script cache");
+      Print("ÿc2D2BSÿc0 :: Flushing the script cache");
     sScriptEngine->FlushCache();
     result = true;
-  } else if (_wcsicmp(argv, L"load") == 0) {
-    std::string script = WideToAnsi(command + 5);
-    if (StartScript(script.c_str(), GetStarterScriptState()))
-      Print(L"\u00FFc2D2BS\u00FFc0 :: Started %S", script.c_str());
+  } else if (_stricmp(argv, "load") == 0) {
+    if (StartScript(command + 5, GetStarterScriptState()))
+      Print("ÿc2D2BSÿc0 :: Started %s", command + 5);
     else
-      Print(L"\u00FFc2D2BS\u00FFc0 :: Failed to start %S", script.c_str());
+      Print("ÿc2D2BSÿc0 :: Failed to start %s", command + 5);
     result = true;
-  } else if (_wcsicmp(argv, L"reload") == 0) {
+  } else if (_stricmp(argv, "reload") == 0) {
     Reload();
     result = true;
   }
@@ -196,71 +191,14 @@ bool ProcessCommand(const wchar_t* command, bool unprocessedIsCommand) {
     result = true;
   }
 #endif
-  else if (_wcsicmp(argv, L"exec") == 0 && !unprocessedIsCommand) {
-    std::string cmd = WideToAnsi(command + 5);
-    ExecCommand(cmd.c_str());
+  else if (_stricmp(argv, "exec") == 0 && !unprocessedIsCommand) {
+    ExecCommand(command + 5);
     result = true;
   } else if (unprocessedIsCommand) {
-    std::string cmd = WideToAnsi(command);
-    ExecCommand(cmd.c_str());
+    ExecCommand(command + 5);
     result = true;
   }
   free(buf);
-  return result;
-}
-
-SYMBOL_INFO* GetSymFromAddr(HANDLE hProcess, DWORD64 addr) {
-  char* symbols = new char[sizeof(SYMBOL_INFO) + 512];
-  memset(symbols, 0, sizeof(SYMBOL_INFO) + 512);
-
-  SYMBOL_INFO* sym = (SYMBOL_INFO*)(symbols);
-  sym->SizeOfStruct = sizeof(SYMBOL_INFO);
-  sym->MaxNameLen = 512;
-
-  DWORD64 dummy;
-  bool success = SymFromAddr(hProcess, addr, &dummy, sym) == TRUE ? true : false;
-  if (!success) {
-    delete[] symbols;
-    sym = NULL;
-  }
-
-  return sym;
-}
-
-IMAGEHLP_LINE64* GetLineFromAddr(HANDLE hProcess, DWORD64 addr) {
-  IMAGEHLP_LINE64* line = new IMAGEHLP_LINE64;
-  line->SizeOfStruct = sizeof(IMAGEHLP_LINE64);
-
-  DWORD dummy;
-  bool success = SymGetLineFromAddr64(hProcess, addr, &dummy, line) == TRUE ? true : false;
-  if (!success) {
-    delete line;
-    line = NULL;
-  }
-  return line;
-}
-
-char* DllLoadAddrStrs() {
-  const char* dlls[] = {"D2Client.DLL", "D2Common.DLL", "D2Gfx.DLL",    "D2Lang.DLL", "D2Win.DLL", "D2Net.DLL",  "D2Game.DLL",
-                        "D2Launch.DLL", "Fog.DLL",      "BNClient.DLL", "Storm.DLL",  "D2Cmp.DLL", "D2Multi.DLL"};
-  size_t strMaxLen;
-  char* result;
-  char lineBuf[80];
-  unsigned int i;
-
-  strMaxLen = sizeof(lineBuf) * sizeof(dlls) / sizeof(dlls[0]);
-  result = (char*)malloc(strMaxLen);
-
-  result[0] = '\0';
-
-  for (i = 0; i < sizeof(dlls) / sizeof(dlls[0]); ++i) {
-    sprintf_s(lineBuf, sizeof(lineBuf), "%s loaded at: 0x%08x.", dlls[i], (uint32_t)(GetModuleHandle(dlls[i])));
-    strcat_s(result, strMaxLen, lineBuf);
-    if (i != (sizeof(dlls) / sizeof(dlls[0]) - 1)) {
-      strcat_s(result, strMaxLen, "\n");
-    }
-  }
-
   return result;
 }
 
@@ -292,54 +230,6 @@ LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* ptrs) {
   std::terminate();
 }
 
-int __cdecl _purecall(void) {
-  GetStackWalk();
-  return 0;
-}
-
-class MyStackWalker : public StackWalker {
- public:
-  MyStackWalker() : StackWalker() {
-  }
-
- protected:
-  virtual void OnOutput(LPCSTR szText) {
-    Log(L"%hs", szText);
-  }
-};
-
-std::vector<DWORD> GetThreadIds() {
-  std::vector<DWORD> threadIds;
-
-  HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, GetCurrentProcessId());
-
-  if (hSnapshot != INVALID_HANDLE_VALUE) {
-    THREADENTRY32 threadEntry;
-    threadEntry.dwSize = sizeof(THREADENTRY32);
-
-    if (Thread32First(hSnapshot, &threadEntry)) {
-      do {
-        if (threadEntry.th32OwnerProcessID == GetCurrentProcessId())
-          threadIds.push_back(threadEntry.th32ThreadID);
-
-      } while (Thread32Next(hSnapshot, &threadEntry));
-    }
-  }
-  CloseHandle(hSnapshot);
-
-  return threadIds;
-}
-
-void ResumeProcess() {
-  std::vector<DWORD> threadIds = GetThreadIds();
-
-  for (std::vector<DWORD>::iterator it = threadIds.begin(); it != threadIds.end(); ++it) {
-    HANDLE hThread = OpenThread(THREAD_SUSPEND_RESUME, FALSE, *it);
-    ResumeThread(hThread);
-    CloseHandle(hThread);
-  }
-}
-
 void InitCommandLine() {
   char* line = GetCommandLineA();
   memcpy(Vars.szCommandLine, line, min(sizeof(Vars.szCommandLine), sizeof(char) * strlen(line)));
@@ -347,28 +237,4 @@ void InitCommandLine() {
   wchar_t* wline = GetCommandLineW();
   LPCWSTR cline = L"C:\\Program Files (x86)\\Diablo II\\Game.exe -w";
   memcpy(wline, line, sizeof(LPCWSTR) * wcslen(cline));
-}
-
-bool GetStackWalk() {
-  std::vector<DWORD> threadIds = GetThreadIds();
-  DWORD current = GetCurrentThreadId();
-
-  MyStackWalker sw;
-  for (std::vector<DWORD>::iterator it = threadIds.begin(); it != threadIds.end(); ++it) {
-    if (*it == current)
-      continue;
-
-    HANDLE hThread = OpenThread(THREAD_GET_CONTEXT, false, *it);
-
-    if (hThread == INVALID_HANDLE_VALUE)
-      return false;
-
-    Log(L"Stack Walk Thread: %d", *it);
-    sw.ShowCallstack(hThread);
-  }
-
-  Log(L"Stack Walk Thread: %d", current);
-  sw.ShowCallstack();
-
-  return true;
 }

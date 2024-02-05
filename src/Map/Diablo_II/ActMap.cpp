@@ -1,7 +1,6 @@
 #include <algorithm>
 #include <assert.h>
 #include "ActMap.h"
-#include "D2Structs.h"
 #include "Core.h"
 #include "MPQStats.h"
 #include "CriticalSections.h"
@@ -11,7 +10,7 @@ namespace Mapping {
 ActMapList ActMap::cache = ActMapList();
 DWORD ActMap::previousLevelNo = 0;
 
-ActMap* ActMap::GetMap(Level* level) {
+ActMap* ActMap::GetMap(D2DrlgLevelStrc* level) {
   ActMap* map = NULL;
   /*if (previousLevelNo != level->dwLevelNo)
   {*/
@@ -37,7 +36,7 @@ void ActMap::ClearCache(void) {
   ActMap::previousLevelNo = 0;
 }
 
-ActMap::ActMap(const Level* level) {
+ActMap::ActMap(const D2DrlgLevelStrc* level) {
   lock = new CRITICAL_SECTION;
   InitializeCriticalSection(lock);
   actCrit = new CriticalRoom;
@@ -55,9 +54,9 @@ ActMap::ActMap(const Level* level) {
   posY = level->dwPosY * 5;
 
   if (!level->pRoom2First)
-    D2COMMON_InitLevel(const_cast<Level*>(level));
+    D2COMMON_InitLevel(const_cast<D2DrlgLevelStrc*>(level));
 
-  // Room2* room = level->pRoom2First;	//unused
+  // D2DrlgRoomStrc* room = level->pRoom2First;	//unused
   // cachedLevel = room->pLevel;
 
   posX = (level->dwPosX == -1 ? 0 : level->dwPosX * 5);
@@ -89,7 +88,7 @@ int ActMap::GetMapData(const Point& point, bool abs) const {
     if (isPointInRoom(*cRoom, point))
       return getCollFromRoom(*cRoom, point);
 
-  const Level* currLevel = NULL;
+  const D2DrlgLevelStrc* currLevel = NULL;
   if (isPointInLevel(this->level, point)) {
     currLevel = level;
   }
@@ -100,11 +99,11 @@ int ActMap::GetMapData(const Point& point, bool abs) const {
     }
   }
   if (!this->act || !this->act->pMisc || !this->act->pRoom1) {
-    Print(L"\u00FFc1ActMap Level Not Loaded");
+    Print("ÿc1ActMap Level Not Loaded");
     return ActMap::Avoid;
   }
   if (!currLevel) {
-    for (Level* lvl = this->act->pMisc->pLevelFirst; lvl; lvl = lvl->pNextLevel) {
+    for (D2DrlgLevelStrc* lvl = this->act->pMisc->pLevelFirst; lvl; lvl = lvl->pNextLevel) {
       if (isPointInLevel(lvl, point)) {
         if (!lvl->pRoom2First)
           D2COMMON_InitLevel(lvl);
@@ -120,7 +119,7 @@ int ActMap::GetMapData(const Point& point, bool abs) const {
 
   // EnterCriticalSection(lock); // not sure if this is needed or its correct lock now
 
-  for (Room2* room = currLevel->pRoom2First; room; room = room->pRoom2Next) {
+  for (D2DrlgRoomStrc* room = currLevel->pRoom2First; room; room = room->pRoom2Next) {
     if (isPointInRoom(room, point)) {
       roomCache.push_front(room);
       // this->cachedRoom = room->pRoom1->pRoom2;
@@ -134,25 +133,25 @@ int ActMap::GetMapData(const Point& point, bool abs) const {
   return value;
 }
 
-bool ActMap::isPointInRoom(const Room2* room, const Point& pt) const {
+bool ActMap::isPointInRoom(const D2DrlgRoomStrc* room, const Point& pt) const {
   DWORD nX = pt.first;
   DWORD nY = pt.second;
 
   return (nX >= room->dwPosX * 5 && nY >= room->dwPosY * 5 && nX < (room->dwPosX * 5 + room->dwSizeX * 5) && nY < (room->dwPosY * 5 + room->dwSizeY * 5));
 }
 
-bool ActMap::isPointInLevel(const Level* _level, const Point& pt) const {
+bool ActMap::isPointInLevel(const D2DrlgLevelStrc* _level, const Point& pt) const {
   DWORD x = pt.first;
   DWORD y = pt.second;
   return (x >= _level->dwPosX * 5 && y >= _level->dwPosY * 5 && x < (_level->dwPosX * 5 + _level->dwSizeX * 5) && y < (_level->dwPosY * 5 + _level->dwSizeY * 5));
 }
 
-WORD ActMap::getAvoidLayerPoint(Room2* room, const Point& pt) const {
+WORD ActMap::getAvoidLayerPoint(D2DrlgRoomStrc* room, const Point& pt) const {
   RoomPointSet::iterator it;
   it = avoidRoomPointSet.find(room);
   if (it == avoidRoomPointSet.end()) {
     PointSet pointSet;
-    for (PresetUnit* preset = room->pPreset; preset; preset = preset->pPresetNext) {
+    for (D2PresetUnitStrc* preset = room->pPreset; preset; preset = preset->pPresetNext) {
       Point loc((room->dwPosX * 5) + preset->dwPosX, (room->dwPosY * 5) + preset->dwPosY);
       if (preset->dwTxtFileNo == 435)  // barricade tower
       {
@@ -168,12 +167,12 @@ WORD ActMap::getAvoidLayerPoint(Room2* room, const Point& pt) const {
   return ActMap::Avoid;
 }
 
-WORD ActMap::getCollFromRoom(Room2* room, const Point& pt) const {
+WORD ActMap::getCollFromRoom(D2DrlgRoomStrc* room, const Point& pt) const {
   if (!room->pRoom1) {
     AddRoomData(room);
     RoomsAdded.push_back(room);
   }
-  CollMap* map = room->pRoom1->Coll;
+  D2DrlgCoordsStrc* map = room->pRoom1->Coll;
   WORD val = *(map->pMapStart + (pt.second - map->dwPosGameY) * (map->dwSizeGameX) + (pt.first - map->dwPosGameX));
 
   // todo: avoid layer could be used in every area, we can add unwalkable objects like torches, chests etc
@@ -204,7 +203,7 @@ void ActMap::GetExits(ExitArray& exits) const {
 
   RoomList added;
 
-  for (Room2* room = level->pRoom2First; room; room = room->pRoom2Next) {
+  for (D2DrlgRoomStrc* room = level->pRoom2First; room; room = room->pRoom2Next) {
     if (!room->pRoom1) {
       AddRoomData(room);
       added.push_back(room);
@@ -243,8 +242,8 @@ bool ActMap::ExitExists(DWORD dwLevelNo, ExitArray& exits) const {
   return false;
 }
 
-void ActMap::FindRoomTileExits(Room2* room, ExitArray& exits) const {
-  for (PresetUnit* preset = room->pPreset; preset; preset = preset->pPresetNext) {
+void ActMap::FindRoomTileExits(D2DrlgRoomStrc* room, ExitArray& exits) const {
+  for (D2PresetUnitStrc* preset = room->pPreset; preset; preset = preset->pPresetNext) {
     if (preset->dwType == 5)  // UNIT_TILE
     {
       DWORD levelId = GetLevelNo(room, preset->dwTxtFileNo);
@@ -262,8 +261,8 @@ void ActMap::FindRoomTileExits(Room2* room, ExitArray& exits) const {
 void ActMap::FindRoomLinkageExits(ExitArray& exits) const {
   std::multimap<int, std::pair<Point, std::pair<Point, int>>> exitMap;  // <level, <rooms[i], <middlepoint, size> > >
 
-  for (Room2* room = level->pRoom2First; room; room = room->pRoom2Next) {
-    Room2** rooms = room->pRoom2Near;
+  for (D2DrlgRoomStrc* room = level->pRoom2First; room; room = room->pRoom2Next) {
+    D2DrlgRoomStrc** rooms = room->pRoom2Near;
     for (DWORD i = 0; i < room->dwRoomsNear; i++) {
       if (rooms[i]->pLevel->dwLevelNo == level->dwLevelNo)
         continue;
@@ -627,13 +626,13 @@ void ActMap::DumpLevel(const char* file) const {
   fprintf(f, "Presets:\n");
   RoomList added;
   int i = 1;
-  for (Room2* room = level->pRoom2First; room; room = room->pRoom2Next) {
-    for (PresetUnit* preset = room->pPreset; preset; preset = preset->pPresetNext) {
+  for (D2DrlgRoomStrc* room = level->pRoom2First; room; room = room->pRoom2Next) {
+    for (D2PresetUnitStrc* preset = room->pPreset; preset; preset = preset->pPresetNext) {
       Point loc((room->dwPosX * 5) + preset->dwPosX, (room->dwPosY * 5) + preset->dwPosY);
       Point rel = AbsToRelative(loc);
       const char* wName = "";
       if (preset->dwType == 2 && preset->dwTxtFileNo <= 574) {
-        ObjectTxt* obj = D2COMMON_GetObjectText(preset->dwTxtFileNo);
+        D2ObjectsTxt* obj = D2COMMON_GetObjectText(preset->dwTxtFileNo);
         if (obj != NULL) {
           wName = obj->szName;
         }
@@ -646,13 +645,13 @@ void ActMap::DumpLevel(const char* file) const {
   fprintf(f, "--------------------------\n");
   fprintf(f, "Units:\n");
   i = 1;
-  for (Room2* room = level->pRoom2First; room; room = room->pRoom2Next) {
+  for (D2DrlgRoomStrc* room = level->pRoom2First; room; room = room->pRoom2Next) {
     if (!room->pRoom1) {
       AddRoomData(room);
       added.push_back(room);
     }
 
-    for (UnitAny* pUnit = room->pRoom1->pUnitFirst; pUnit; pUnit = pUnit->pRoomNext) {
+    for (D2UnitStrc* pUnit = room->pRoom1->pUnitFirst; pUnit; pUnit = pUnit->pRoomNext) {
       Point loc(D2CLIENT_GetUnitX(pUnit), D2CLIENT_GetUnitY(pUnit));
       Point rel = AbsToRelative(loc);
       char tmp[128] = "";

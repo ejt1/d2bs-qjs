@@ -6,8 +6,6 @@
 #include <map>
 #include <set>
 
-#include "D2Structs.h"
-#include "D2Ptrs.h"
 #include "D2Helpers.h"
 #include "CriticalSections.h"
 #include "D2Helpers.h"
@@ -30,10 +28,10 @@ class ActMap;
 
 typedef std::vector<Exit> ExitArray;
 typedef std::map<DWORD, ActMap*> ActMapList;
-typedef std::list<Room2*> RoomList;
-typedef std::list<Level*> LevelList;
+typedef std::list<D2DrlgRoomStrc*> RoomList;
+typedef std::list<D2DrlgLevelStrc*> LevelList;
 typedef std::set<Point> PointSet;
-typedef std::map<Room2*, PointSet> RoomPointSet;
+typedef std::map<D2DrlgRoomStrc*, PointSet> RoomPointSet;
 
 static RoomPointSet avoidRoomPointSet;
 static RoomList RoomsAdded;
@@ -69,19 +67,19 @@ class ActMap : public Map {
   static DWORD previousLevelNo;
   static ActMapList cache;
 
-  Act* act;
-  const Level* level;
+  D2DrlgActStrc* act;
+  const D2DrlgLevelStrc* level;
   int width, height;
   int posX, posY;
   Matrix<CollisionFlag> mapPoints;
   RoomList addedRooms;
 
-  // Level* cachedLevel;
+  // D2DrlgLevelStrc* cachedLevel;
   CRITICAL_SECTION* lock;
 
   void Build(void);
 
-  static inline int GetLevelNo(Room2* room, DWORD tile) {
+  static inline int GetLevelNo(D2DrlgRoomStrc* room, DWORD tile) {
     return GetTileLevelNo(room, tile);
   }
 
@@ -89,26 +87,26 @@ class ActMap : public Map {
 
   bool EdgeIsWalkable(const Point& edgePoint, const Point& offsetPoint, bool abs) const;
 
-  void FindRoomTileExits(Room2* room, ExitArray& exits) const;
+  void FindRoomTileExits(D2DrlgRoomStrc* room, ExitArray& exits) const;
   void FindRoomLinkageExits(ExitArray& exits) const;
   Point GetEdgeCenterPoint(const Point& currentPoint, const Point& edgeDirection) const;
   bool ExitExists(Point loc, ExitArray& exits) const;
   bool ExitExists(DWORD dwLevelNo, ExitArray& exits) const;
-  bool isPointInRoom(const Room2* room, const Point& pt) const;
-  bool isPointInLevel(const Level* level, const Point& pt) const;
+  bool isPointInRoom(const D2DrlgRoomStrc* room, const Point& pt) const;
+  bool isPointInLevel(const D2DrlgLevelStrc* level, const Point& pt) const;
 
-  WORD getAvoidLayerPoint(Room2* room, const Point& pt) const;
+  WORD getAvoidLayerPoint(D2DrlgRoomStrc* room, const Point& pt) const;
 
-  WORD getCollFromRoom(Room2* room, const Point& pt) const;
+  WORD getCollFromRoom(D2DrlgRoomStrc* room, const Point& pt) const;
 
-  ActMap(const Level* level);
+  ActMap(const D2DrlgLevelStrc* level);
   ~ActMap(void);
 
  public:
   void CleanUp(void) const;
   void AllowCritSpace(void) const;
   CriticalRoom* actCrit;
-  static ActMap* GetMap(Level* level);
+  static ActMap* GetMap(D2DrlgLevelStrc* level);
   static void ClearCache(void);
   void Dump(const char* file, const PointList& points) const;
   void DumpLevel(const char* file) const;
@@ -116,7 +114,7 @@ class ActMap : public Map {
   Point AbsToRelative(const Point& point) const;
   Point RelativeToAbs(const Point& point) const;
 
-  inline const Level* GetLevel(void) const {
+  inline const D2DrlgLevelStrc* GetLevel(void) const {
     return level;
   }
   inline int GetWidth(void) const {

@@ -1,7 +1,9 @@
 #pragma once
 
 #include <windows.h>
-#include "D2Structs.h"
+
+#include "Game/Units/Units.h"
+#include "Game/Unorganized.h"
 
 DWORD __fastcall GameInput(wchar_t* wMsg);
 DWORD __fastcall ChannelInput(wchar_t* wMsg);
@@ -9,7 +11,7 @@ DWORD __fastcall ChannelInput(wchar_t* wMsg);
 void SetMaxDiff(void);
 void __fastcall WhisperHandler(const char* szAcc, const char* szText);
 DWORD __fastcall GameAttack(UnitInteraction* pAttack);
-void __fastcall GamePlayerAssignment(UnitAny* pPlayer);
+void __fastcall GamePlayerAssignment(D2UnitStrc* pPlayer);
 void GameLeave(void);
 
 DWORD __fastcall GamePacketReceived(BYTE* pPacket, DWORD dwSize);

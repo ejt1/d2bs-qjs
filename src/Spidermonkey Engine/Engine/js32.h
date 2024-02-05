@@ -52,20 +52,19 @@ inline static void js_sab_dup(void* /*opaque*/, void* ptr) {
 JSValue JS_NewString(JSContext* ctx, const wchar_t* str);
 
 struct JSClassSpec {
+  const char* name;
   JSClassID* pclass_id;
-  JSClassDef* classp;
-  JSClass* proto;
   JSValue (*ctor)(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst* argv);
+  JSClassFinalizer* finalizer;
   uint32_t argc;
-  JSCFunctionListEntry* methods;
-  int num_methods;
-  JSCFunctionListEntry* properties;
-  int num_properties;
-  JSCFunctionListEntry* static_methods;
-  int num_s_methods;
-  JSCFunctionListEntry* static_properties;
-  int num_s_properties;
+  JSCFunctionListEntry* proto_funcs;
+  int num_proto_funcs;
+  JSCFunctionListEntry* static_funcs;
+  int num_static_funcs;
 };
+
+#define FUNCLIST(list) list, _countof(list)
+#define EMPTY_FUNCLIST nullptr, 0
 
 #define CLASS_CTOR(name) \
   JSValue name##_ctor([[maybe_unused]] JSContext* ctx, [[maybe_unused]] JSValueConst new_target, [[maybe_unused]] int argc, [[maybe_unused]] JSValueConst* argv)
@@ -77,9 +76,12 @@ struct JSClassSpec {
     return JS_ThrowReferenceError(ctx, "Invalid Operation"); \
   }
 
-JSValue BuildObject(JSContext* ctx, JSClassID class_id, JSCFunctionListEntry* funcs = NULL, size_t num_funcs = 0, JSCFunctionListEntry* props = NULL,
-                    size_t num_props = 0,
-                    void* priv = NULL, JSValue new_target = JS_UNDEFINED);
+// NOTE(ejt): This is a left-over function from old D2BS
+// Eventually this function will be removed in favor of proper object creation but there is a problem with how Kolbot uses bound classes.
+// Kolbot validates certain objects by checking if they have a function/property not inherited from prototype which means relying only on constructing
+// new objects using its prototype is not possible yet.
+// Questions? Ask ejt
+JSValue BuildObject(JSContext* ctx, JSClassID class_id, JSCFunctionListEntry* own_funcs, size_t num_own_funcs, void* opaque = NULL, JSValue new_target = JS_UNDEFINED);
 
 JSValue JS_CompileFile(JSContext* ctx, JSValue globalObject, std::string fileName);
 

@@ -1,11 +1,9 @@
 #include "Control.h"
-#include "D2Ptrs.h"
 #include "D2Helpers.h"
 #include "Helpers.h"
-#include "Constants.h"
 #include <Engine.h>
 
-Control* findControl(int Type, int LocaleID, int Disabled, int PosX, int PosY, int SizeX, int SizeY) {
+D2WinControlStrc* findControl(int Type, int LocaleID, int Disabled, int PosX, int PosY, int SizeX, int SizeY) {
   if (ClientState() != ClientStateMenu)
     return NULL;
 
@@ -15,14 +13,14 @@ Control* findControl(int Type, int LocaleID, int Disabled, int PosX, int PosY, i
       return NULL;
     }
     std::string localeStr = WideToAnsi(wstr);
-    Control* res = findControl(Type, localeStr.c_str(), Disabled, PosX, PosY, SizeX, SizeY);
+    D2WinControlStrc* res = findControl(Type, localeStr.c_str(), Disabled, PosX, PosY, SizeX, SizeY);
     return res;
   }
 
   return NULL;
 }
 
-Control* findControl(int Type, const char* Text, int Disabled, int PosX, int PosY, int SizeX, int SizeY) {
+D2WinControlStrc* findControl(int Type, const char* Text, int Disabled, int PosX, int PosY, int SizeX, int SizeY) {
   std::wstring wstr;
   if (Text) {
     wstr = AnsiToWide(Text);
@@ -31,11 +29,11 @@ Control* findControl(int Type, const char* Text, int Disabled, int PosX, int Pos
     return NULL;
 
   if (Type == -1 && Text == NULL && Disabled == -1 && PosX == -1 && PosY == -1 && SizeX == -1 && SizeY == -1)
-    return *p_D2WIN_FirstControl;
+    return *D2WIN_FirstControl;
 
   BOOL bFound = FALSE;
 
-  for (Control* pControl = *p_D2WIN_FirstControl; pControl; pControl = pControl->pNext) {
+  for (D2WinControlStrc* pControl = *D2WIN_FirstControl; pControl; pControl = pControl->pNext) {
     if (Type >= 0 && static_cast<int>(pControl->dwType) == Type)
       bFound = TRUE;
     else if (Type >= 0 && static_cast<int>(pControl->dwType) != Type) {
@@ -83,9 +81,9 @@ Control* findControl(int Type, const char* Text, int Disabled, int PosX, int Pos
     }
 
     if (Text && pControl->dwType == CONTROL_BUTTON) {
-      if (!pControl->wText2)
+      if (!pControl->Button.wText2)
         return NULL;
-      if (wcscmp(pControl->wText2, wstr.c_str()) == 0) {
+      if (wcscmp(pControl->Button.wText2, wstr.c_str()) == 0) {
         bFound = TRUE;
       } else {
         bFound = FALSE;
@@ -115,7 +113,7 @@ Control* findControl(int Type, const char* Text, int Disabled, int PosX, int Pos
   return NULL;
 }
 
-bool clickControl(Control* pControl, int x, int y) {
+bool clickControl(D2WinControlStrc* pControl, int x, int y) {
   if (ClientState() != ClientStateMenu)
     return false;
 
@@ -138,17 +136,17 @@ bool clickControl(Control* pControl, int x, int y) {
   return false;
 }
 
-void setControlText(Control* pControl, const char* szText) {
+void setControlText(D2WinControlStrc* pControl, const char* szText) {
   std::wstring wText = AnsiToWide(szText);
   D2WIN_SetControlText(pControl, wText.c_str());
 }
 
-BOOL OOG_CreateCharacter(const char* szCharacter, int type, bool /*hardcore*/, bool /*ladder*/) {
+bool OOG_CreateCharacter(const char* szCharacter, int type, bool /*hardcore*/, bool /*ladder*/) {
   if (OOG_GetLocation() != OOG_CHAR_SELECT || strlen(szCharacter) > 15 || type > 6 || type < 0)
     return FALSE;
 
   // click the create character button
-  Control* ctrl = findControl(CONTROL_BUTTON, (const char*)NULL, -1, 33, 528, 168, 60);
+  D2WinControlStrc* ctrl = findControl(CONTROL_BUTTON, (const char*)NULL, -1, 33, 528, 168, 60);
   if (ctrl)
     clickControl(ctrl);
 
@@ -187,14 +185,14 @@ BOOL OOG_CreateCharacter(const char* szCharacter, int type, bool /*hardcore*/, b
   return FALSE;
 }
 
-BOOL OOG_SelectCharacter(const char* szCharacter) {
+bool OOG_SelectCharacter(const char* szCharacter) {
   if (ClientState() != ClientStateMenu)
     return NULL;
 
   // Select the first control on the character selection screen.
 
-  Control* pControl = findControl(CONTROL_TEXTBOX, (const char*)NULL, -1, 237, 178, 72, 93);
-  ControlText* cText;
+  D2WinControlStrc* pControl = findControl(CONTROL_TEXTBOX, (const char*)NULL, -1, 237, 178, 72, 93);
+  D2WinTextBoxLineStrc* cText;
 
   while (pControl != NULL) {
     if (pControl->dwType == CONTROL_TEXTBOX && pControl->pFirstText != NULL && pControl->pFirstText->pNext != NULL)
@@ -228,7 +226,7 @@ BOOL OOG_SelectCharacter(const char* szCharacter) {
   return FALSE;
 }
 
-void SetControlText(Control* pControl, const char* Text) {
+void SetControlText(D2WinControlStrc* pControl, const char* Text) {
   if (ClientState() != ClientStateMenu)
     return;
 
@@ -238,18 +236,18 @@ void SetControlText(Control* pControl, const char* Text) {
   }
 }
 
-BOOL OOG_SelectGateway(const char* szGateway, size_t /*strSize*/) {
+bool OOG_SelectGateway(const char* szGateway, size_t /*strSize*/) {
   if (ClientState() != ClientStateMenu)
     return FALSE;
 
   if (strstr(szGateway, "ERROR"))
     return FALSE;
   // Select the gateway control.
-  Control* pControl = findControl(CONTROL_BUTTON, (const char*)NULL, -1, 264, 391, 272, 25);
+  D2WinControlStrc* pControl = findControl(CONTROL_BUTTON, (const char*)NULL, -1, 264, 391, 272, 25);
 
   // if the control exists and has the text label, check if it matches the selected gateway
-  if (pControl && pControl->wText2) {
-    std::string wzLine = WideToAnsi(pControl->wText2);
+  if (pControl && pControl->Button.wText2) {
+    std::string wzLine = WideToAnsi(pControl->Button.wText2);
     if (_stricmp(wzLine.c_str(), szGateway)) {
       // gateway is correct, do nothing and return true
       return TRUE;
@@ -264,7 +262,7 @@ BOOL OOG_SelectGateway(const char* szGateway, size_t /*strSize*/) {
 
       // loop here till we find the right gateway if we can
       pControl = findControl(CONTROL_TEXTBOX, (const char*)NULL, -1, 257, 500, 292, 160);
-      ControlText* cText;
+      D2WinTextBoxLineStrc* cText;
       if (pControl && pControl->pFirstText) {
         cText = pControl->pFirstText;
         while (cText) {
@@ -344,7 +342,7 @@ OOG_Location OOG_GetLocation(void) {
     {
       if (findControl(CONTROL_BUTTON, 10018, -1, 264, 297, 272, 35))  // NORMAL
         return OOG_DIFFICULTY;                                        // 20 single char Difficulty
-      Control* pControl = findControl(CONTROL_TEXTBOX, (const char*)NULL, -1, 37, 178, 200, 92);
+      D2WinControlStrc* pControl = findControl(CONTROL_TEXTBOX, (const char*)NULL, -1, 37, 178, 200, 92);
       if (pControl && pControl->pFirstText && pControl->pFirstText->pNext)
         return OOG_CHAR_SELECT;  // 12 char select
       else {
@@ -422,7 +420,7 @@ bool OOG_CreateGame(const char* name, const char* pass, int difficulty) {
   if (!name || !pass || strlen(name) > 15 || strlen(pass) > 15)
     return FALSE;
 
-  Control* pControl = NULL;
+  D2WinControlStrc* pControl = NULL;
 
   // Battle.net/open game creation
   OOG_Location loc = OOG_GetLocation();
@@ -431,7 +429,7 @@ bool OOG_CreateGame(const char* name, const char* pass, int difficulty) {
 
   if (loc == OOG_DIFFICULTY) {
     // just click the difficulty button
-    Control *normal = findControl(CONTROL_BUTTON, (const char*)NULL, -1, 264, 297, 272, 35),
+    D2WinControlStrc *normal = findControl(CONTROL_BUTTON, (const char*)NULL, -1, 264, 297, 272, 35),
             *nightmare = findControl(CONTROL_BUTTON, (const char*)NULL, -1, 264, 340, 272, 35),
             *hell = findControl(CONTROL_BUTTON, (const char*)NULL, -1, 264, 383, 272, 35);
 
@@ -485,7 +483,7 @@ bool OOG_CreateGame(const char* name, const char* pass, int difficulty) {
       else
         return FALSE;
       Sleep(100);
-      Control *normal = findControl(CONTROL_BUTTON, (const char*)NULL, -1, 430, 381, 16, 16),
+      D2WinControlStrc *normal = findControl(CONTROL_BUTTON, (const char*)NULL, -1, 430, 381, 16, 16),
               *nightmare = findControl(CONTROL_BUTTON, (const char*)NULL, -1, 555, 381, 16, 16),
               *hell = findControl(CONTROL_BUTTON, (const char*)NULL, -1, 698, 381, 16, 16);
 
@@ -536,7 +534,7 @@ bool OOG_JoinGame(const char* name, const char* pass) {
   if (strlen(name) > 15 || strlen(pass) > 15)
     return FALSE;
 
-  Control* pControl = NULL;
+  D2WinControlStrc* pControl = NULL;
 
   // Battle.net/open lobby/chat area
   if (!(OOG_GetLocation() == OOG_LOBBY || OOG_GetLocation() == OOG_CHAT || OOG_GetLocation() == OOG_JOIN))

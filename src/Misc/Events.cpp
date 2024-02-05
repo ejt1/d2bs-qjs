@@ -155,7 +155,7 @@ bool __fastcall BCastEventCallback(Script* script, void* argv, uint32_t /*argc*/
 
     data = JS_WriteObject2(helper->cx, &data_len, helper->argv[0], JS_WRITE_OBJ_SAB | JS_WRITE_OBJ_REFERENCE, &sab_tab, &sab_tab_len);
     if (!data) {
-      Log(L"could not write SAB");
+      Log("could not write SAB");
       return true;
     }
 

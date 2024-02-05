@@ -12,9 +12,9 @@
 class Console {
  private:
   static bool visible, enabled;
-  static std::deque<std::wstring> lines, commands, history;
+  static std::deque<std::string> lines, commands, history;
   static unsigned int lineCount, lineWidth, commandPos, height, scrollIndex;
-  static std::wstringstream cmd;
+  static std::stringstream cmd;
 
  public:
   static void Toggle(void);
@@ -46,7 +46,7 @@ class Console {
   static void NextCommand(void);
   static void ScrollUp(void);
   static void ScrollDown(void);
-  static void AddLine(std::wstring line);
+  static void AddLine(std::string line);
   static void UpdateLines(void);
   static void Clear(void);
   static void Draw(void);

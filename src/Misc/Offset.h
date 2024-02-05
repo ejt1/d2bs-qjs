@@ -1,6 +1,8 @@
 #ifndef _OFFSET_H
 #define _OFFSET_H
 
+#include <cstdint>
+
 #define INST_INT3 0xCC
 #define INST_CALL 0xE8
 #define INST_NOP 0x90
@@ -8,25 +10,26 @@
 #define INST_RET 0xC3
 
 typedef struct PatchHook_t {
-  void (*pFunc)(DWORD, DWORD, DWORD);
-  DWORD dwAddr;
-  DWORD dwFunc;
-  DWORD dwLen;
-  BOOL* enabled;
-  BYTE* bOldCode;
+  void (*pFunc)(uint32_t, uint32_t, uint32_t);
+  uint32_t dwAddr;
+  uint32_t dwFunc;
+  uint32_t dwLen;
+  int* enabled;
+  uint8_t* bOldCode;
 } PatchHook;
 
-void DefineOffsets();
-DWORD GetDllOffset(int num);
-DWORD GetDllOffset(const char* DllName, int Offset);
+void InitOffsets();
 
-PatchHook* RetrievePatchHooks(PINT pBuffer);
-void PatchBytes(DWORD dwAddr, DWORD dwValue, DWORD dwLen);
-void PatchJmp(DWORD dwAddr, DWORD dwFunc, DWORD dwLen);
-void PatchCall(DWORD dwAddr, DWORD dwFunc, DWORD dwLen);
-void InterceptLocalCode(BYTE bInst, DWORD pAddr, DWORD pFunc, DWORD dwLen);
-void FillBytes(void* pAddr, BYTE bFill, DWORD dwLen);
-BOOL WriteBytes(void* pAddr, void* pData, DWORD dwLen);
+uint32_t GetDllOffset(int num);
+uint32_t GetDllOffset(const char* DllName, int Offset);
+
+PatchHook* RetrievePatchHooks(int* pBuffer);
+void PatchBytes(uint32_t dwAddr, uint32_t dwValue, uint32_t dwLen);
+void PatchJmp(uint32_t dwAddr, uint32_t dwFunc, uint32_t dwLen);
+void PatchCall(uint32_t dwAddr, uint32_t dwFunc, uint32_t dwLen);
+void InterceptLocalCode(uint8_t bInst, uint32_t pAddr, uint32_t pFunc, uint32_t dwLen);
+void FillBytes(void* pAddr, uint8_t bFill, uint32_t dwLen);
+bool WriteBytes(void* pAddr, void* pData, uint32_t dwLen);
 void RemovePatches();
 void InstallPatches();
 void InstallConditional();

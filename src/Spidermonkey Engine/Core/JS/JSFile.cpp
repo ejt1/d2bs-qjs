@@ -229,7 +229,7 @@ JSAPI_FUNC(file_open) {
   }
   JS_FreeCString(ctx, szFile);
 
-  JSValue res = BuildObject(ctx, file_class_id, file_methods, _countof(file_methods), file_props, _countof(file_props), fdata);
+  JSValue res = BuildObject(ctx, file_class_id, FUNCLIST(file_proto_funcs), fdata);
   if (JS_IsException(res)) {
     if (lockFile)
       fclose(fptr);

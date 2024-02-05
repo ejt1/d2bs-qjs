@@ -3,8 +3,6 @@
 
 #include "Script.h"
 #include "Core.h"
-#include "Constants.h"
-#include "D2Ptrs.h"
 #include "JSUnit.h"
 #include "Helpers.h"
 #include "ScriptEngine.h"
@@ -39,7 +37,7 @@ Script::Script(const char* file, ScriptMode mode /*, uint32_t argc, JSAutoStruct
     m_fileName = "Command Line";
   } else {
     if (_access(file, 0) != 0) {
-      Log(L"%S (%s, %d)", file, __FILE__, __LINE__);
+      Log("%s (%s, %d)", file, __FILE__, __LINE__);
 
       throw std::exception("File not found");
     }
@@ -105,7 +103,7 @@ void Script::Stop(bool force) {
   m_isReallyPaused = false;
   if (m_scriptMode != kScriptModeCommand) {
     const char* displayName = m_fileName.c_str() + strlen(Vars.szScriptPath) + 1;
-    Print(L"Script %S ended", displayName);
+    Print("Script %s ended", displayName);
   }
 
   // trigger call back so script ends
@@ -587,7 +585,7 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
     if (!JS_IsException(rval)) {
       if (!JS_IsNull(rval) && !JS_IsUndefined(rval)) {
         const char* text = JS_ToCString(m_context, rval);
-        Print(L"%S", text);
+        Print(text);
         JS_FreeCString(m_context, text);
       }
       JS_FreeValue(m_context, rval);
@@ -649,7 +647,6 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
     return true;
   }
   if (strcmp(evtName, "DisposeMe") == 0) {
-    Log(L"DisposeMe");
     sScriptEngine->DisposeScript(this);
   }
 
@@ -665,7 +662,7 @@ bool Script::Initialize() {
 
   m_context = JS_NewContext(m_runtime);
   if (!m_context) {
-    Log(L"Couldn't create the context");
+    Log("Couldn't create the context");
     return false;
   }
   JS_SetContextOpaque(m_context, this);
@@ -681,55 +678,49 @@ bool Script::Initialize() {
 
   // TODO(ejt): this is a solution to minimize changes during migration to quickjs, refactor this in the future
   JS_SetPropertyFunctionList(m_context, m_globalObject, global_funcs, _countof(global_funcs));
-  for (JSClassSpec* entry = global_classes; entry->classp != NULL; entry++) {
+  for (JSClassSpec* entry = global_classes; entry->name != NULL; entry++) {
+    JSClassDef def{};
+    def.class_name = entry->name;
+    def.finalizer = entry->finalizer;
+
     JS_NewClassID(entry->pclass_id);
-    JS_NewClass(m_runtime, *entry->pclass_id, entry->classp);
+    JS_NewClass(m_runtime, *entry->pclass_id, &def);
     JSValue proto = JS_NewObject(m_context);
     JSValue obj;
 
-    if (entry->methods) {
-      // define methods?
-      JS_SetPropertyFunctionList(m_context, proto, entry->methods, entry->num_methods);
-    }
-    if (entry->properties) {
-      // define properties?
-      JS_SetPropertyFunctionList(m_context, proto, entry->properties, entry->num_properties);
+    if (entry->proto_funcs) {
+      JS_SetPropertyFunctionList(m_context, proto, entry->proto_funcs, entry->num_proto_funcs);
     }
 
     if (entry->ctor) {
-      obj = JS_NewCFunction2(m_context, entry->ctor, entry->classp->class_name, 0, JS_CFUNC_constructor, 0);
+      obj = JS_NewCFunction2(m_context, entry->ctor, entry->name, 0, JS_CFUNC_constructor, 0);
       JS_SetConstructor(m_context, obj, proto);
     } else {
       obj = JS_NewObjectProtoClass(m_context, proto, *entry->pclass_id);
     }
 
-    if (entry->static_methods) {
-      // define static methods?
-      JS_SetPropertyFunctionList(m_context, obj, entry->static_methods, entry->num_s_methods);
-    }
-    if (entry->static_properties) {
-      // define static properties?
-      JS_SetPropertyFunctionList(m_context, obj, entry->static_properties, entry->num_s_properties);
+    if (entry->static_funcs) {
+      JS_SetPropertyFunctionList(m_context, obj, entry->static_funcs, entry->num_static_funcs);
     }
 
     JS_SetClassProto(m_context, *entry->pclass_id, proto);
-    JS_SetPropertyStr(m_context, m_globalObject, entry->classp->class_name, obj);
+    JS_SetPropertyStr(m_context, m_globalObject, entry->name, obj);
   }
 
   // define 'me' property
-  m_me = new myUnit;
-  memset(m_me, NULL, sizeof(myUnit));
+  m_me = new JSUnit;
+  memset(m_me, NULL, sizeof(JSUnit));
 
-  UnitAny* player = D2CLIENT_GetPlayerUnit();
+  D2UnitStrc* player = D2CLIENT_GetPlayerUnit();
   m_me->dwMode = (DWORD)-1;
   m_me->dwClassId = (DWORD)-1;
   m_me->dwType = UNIT_PLAYER;
   m_me->dwUnitId = player ? player->dwUnitId : NULL;
-  m_me->_dwPrivateType = PRIVATE_UNIT;
+  m_me->dwPrivateType = PRIVATE_UNIT;
 
-  JSValue meObject = BuildObject(m_context, unit_class_id, unit_methods, _countof(unit_methods), me_props, _countof(me_props), m_me);
+  JSValue meObject = BuildObject(m_context, unit_class_id, FUNCLIST(me_proto_funcs), m_me);
   if (!meObject) {
-    Log(L"failed to build object 'me'");
+    Log("failed to build object 'me'");
     return false;
   }
 

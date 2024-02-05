@@ -9,7 +9,6 @@
 #include "Unit.h"
 #include "Helpers.h"
 #include "Core.h"
-#include "Constants.h"
 #include "Events.h"
 #include "ScriptEngine.h"
 #include "Console.h"
@@ -25,10 +24,10 @@ DWORD __fastcall GameInput(wchar_t* wMsg) {
   if (Vars.bDontCatchNextMsg)
     Vars.bDontCatchNextMsg = false;
   else {
+    std::string msg = WideToAnsi(wMsg);
     if (wMsg[0] == L'.') {
-      block = ProcessCommand(wMsg + 1, false);
+      block = ProcessCommand(msg.c_str() + 1, false);
     } else {
-      std::string msg = WideToAnsi(wMsg);
       block = ChatInputEvent(msg.c_str());
     }
   }
@@ -42,10 +41,10 @@ DWORD __fastcall ChannelInput(wchar_t* wMsg) {
   if (Vars.bDontCatchNextMsg)
     Vars.bDontCatchNextMsg = false;
   else {
+    std::string msg = WideToAnsi(wMsg);
     if (wMsg[0] == L'.') {
-      block = ProcessCommand(wMsg + 1, false);
+      block = ProcessCommand(msg.c_str() + 1, false);
     } else {
-      std::string msg = WideToAnsi(wMsg);
       block = ChatInputEvent(msg.c_str());
     }
   }
@@ -54,8 +53,8 @@ DWORD __fastcall ChannelInput(wchar_t* wMsg) {
 }
 
 void SetMaxDiff(void) {
-  if (D2CLIENT_GetDifficulty() == 1 && *p_D2CLIENT_ExpCharFlag) {
-    BnetData* pData = *p_D2LAUNCH_BnData;
+  if (D2CLIENT_GetDifficulty() == 1 && *D2CLIENT_ExpCharFlag) {
+    BnetData* pData = *D2LAUNCH_BnData;
     if (pData)
       pData->nMaxDiff = 10;
   }
@@ -81,7 +80,7 @@ DWORD __fastcall GameAttack(UnitInteraction* pAttack) {
   return NULL;
 }
 
-void __fastcall GamePlayerAssignment(UnitAny* pPlayer) {
+void __fastcall GamePlayerAssignment(D2UnitStrc* pPlayer) {
   if (!pPlayer)
     return;
 
@@ -97,7 +96,7 @@ void GameLeave(void) {
 DWORD __fastcall GamePacketReceived(BYTE* pPacket, DWORD dwSize) {
   switch (pPacket[0]) {
     case 0xAE:
-      Log(L"Warden activity detected! Terminating Diablo to ensure your safety :)");
+      Log("Warden activity detected! Terminating Diablo to ensure your safety :)");
       TerminateProcess(GetCurrentProcess(), 0);
       break;
     case 0x15:

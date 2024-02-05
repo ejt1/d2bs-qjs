@@ -6,7 +6,6 @@
 #include <string>
 
 #include "D2Helpers.h"
-#include "Constants.h"
 #include "Helpers.h"
 #include "D2Skills.h"
 #include "D2Intercepts.h"
@@ -14,13 +13,18 @@
 #include "stringhash.h"
 #include "CriticalSections.h"
 
-void Log(const wchar_t* szFormat, ...) {
+#include "Game/UI/NPCMenu.h"
+#include "Game/D2Chat.h"
+#include "Game/D2WinControl.h"
+#include "Game/D2WinUnknown.h"
+
+void Log(const char* szFormat, ...) {
   va_list vaArgs;
 
   va_start(vaArgs, szFormat);
-  int len = _vscwprintf(szFormat, vaArgs);
-  wchar_t* szString = new wchar_t[len + 1];
-  vswprintf_s(szString, len + 1, szFormat, vaArgs);
+  int len = _vscprintf(szFormat, vaArgs);
+  char* szString = new char[len + 1];
+  vsprintf_s(szString, len + 1, szFormat, vaArgs);
   va_end(vaArgs);
 
   if (len > 0 && szString[len - 1] == L'\n')
@@ -30,7 +34,7 @@ void Log(const wchar_t* szFormat, ...) {
   delete[] szString;
 }
 
-void LogNoFormat(const wchar_t* szString) {
+void LogNoFormat(const char* szString) {
   time_t tTime;
   struct tm timestamp;
   char szTime[128] = "";
@@ -46,9 +50,8 @@ void LogNoFormat(const wchar_t* szString) {
 #endif
   static DWORD id = GetProcessId(GetCurrentProcess());
   DWORD tid = GetCurrentThreadId();
-  std::string sString = WideToAnsi(szString);
   strftime(szTime, sizeof(szTime), "%x %X", &timestamp);
-  fprintf(log, "[%s pid %d tid %d] D2BS: %s\n", szTime, id, tid, sString.c_str());
+  fprintf(log, "[%s pid %d tid %d] D2BS: %s\n", szTime, id, tid, szString);
 #ifndef DEBUG
   fflush(log);
   fclose(log);
@@ -58,8 +61,8 @@ void LogNoFormat(const wchar_t* szString) {
 // Do not edit without the express consent of bsdunx or lord2800
 ClientGameState ClientState(void) {
   ClientGameState state = ClientStateNull;
-  UnitAny* player = D2CLIENT_GetPlayerUnit();
-  Control* firstControl = *p_D2WIN_FirstControl;
+  D2UnitStrc* player = D2CLIENT_GetPlayerUnit();
+  D2WinControlStrc* firstControl = *D2WIN_FirstControl;
 
   if (player && !firstControl) {
     if (player && player->pUpdateUnit) {
@@ -104,7 +107,7 @@ DWORD GetPlayerArea(void) {
 }
 
 // NOTE TO CALLERS: szTmp must be a PRE-INITIALIZED string.
-const char* GetUnitName(UnitAny* pUnit, char* szTmp, size_t bufSize) {
+const char* GetUnitName(D2UnitStrc* pUnit, char* szTmp, size_t bufSize) {
   if (!pUnit) {
     strcpy_s(szTmp, bufSize, "Unknown");
     return szTmp;
@@ -140,9 +143,9 @@ const char* GetUnitName(UnitAny* pUnit, char* szTmp, size_t bufSize) {
 }
 
 // szBuf must be a 4-character string
-void GetItemCode(UnitAny* pUnit, char* szBuf) {
+void GetItemCode(D2UnitStrc* pUnit, char* szBuf) {
   if (pUnit->dwType == UNIT_ITEM) {
-    ItemTxt* pTxt = D2COMMON_GetItemText(pUnit->dwTxtFileNo);
+    D2ItemsTxt* pTxt = D2COMMON_GetItemText(pUnit->dwTxtFileNo);
     if (pTxt) {
       memcpy(szBuf, pTxt->szCode, 3);
       szBuf[3] = 0x00;
@@ -154,8 +157,8 @@ bool InArea(int x, int y, int x2, int y2, int sizex, int sizey) {
   return !!(x >= x2 && x < x2 + sizex && y >= y2 && y < y2 + sizey);
 }
 
-/*UnitAny* FindItemByPosition(DWORD x, DWORD y, DWORD Location) {
-for(UnitAny* pItem = D2COMMON_GetItemFromInventory(D2CLIENT_GetPlayerUnit()->pInventory); pItem; pItem = D2COMMON_GetNextItemFromInventory(pItem)) {
+/*D2UnitStrc* FindItemByPosition(DWORD x, DWORD y, DWORD Location) {
+for(D2UnitStrc* pItem = D2COMMON_GetItemFromInventory(D2CLIENT_GetPlayerUnit()->pInventory); pItem; pItem = D2COMMON_GetNextItemFromInventory(pItem)) {
 if((DWORD)GetItemLocation(pItem) == Location &&
 InArea(x,y,pItem->pObjectPath->dwPosX,pItem->pObjectPath->dwPosY,D2COMMON_GetItemText(pItem->dwTxtFileNo)->xSize,D2COMMON_GetItemText(pItem->dwTxtFileNo)->ySize))
 return pItem;
@@ -168,13 +171,13 @@ return NULL;
 *(DWORD*)&p_D2CLIENT_SelectedInvItem = (DWORD)FindItemByPosition(x, y, dwLocation);
 }*/
 
-Level* GetLevel(DWORD dwLevelNo) {
-  AutoCriticalRoom* cRoom = new AutoCriticalRoom;
+D2DrlgLevelStrc* GetLevel(DWORD dwLevelNo) {
+  AutoCriticalRoom cRoom;
 
   if (!GameReady())
     return nullptr;
 
-  Level* pLevel = D2CLIENT_GetPlayerUnit()->pAct->pMisc->pLevelFirst;
+  D2DrlgLevelStrc* pLevel = D2CLIENT_GetPlayerUnit()->pAct->pMisc->pLevelFirst;
 
   while (pLevel) {
     if (pLevel->dwLevelNo == dwLevelNo) {
@@ -183,7 +186,6 @@ Level* GetLevel(DWORD dwLevelNo) {
 
       if (!pLevel->pRoom2First)
         break;
-      delete cRoom;
       return pLevel;
     }
     pLevel = pLevel->pNextLevel;
@@ -191,7 +193,6 @@ Level* GetLevel(DWORD dwLevelNo) {
 
   // this crashes pretty much every time it's called
   // pLevel = D2COMMON_GetLevel(D2CLIENT_GetPlayerUnit()->pAct->pMisc, dwLevelNo);
-  delete cRoom;
   return pLevel;
 }
 
@@ -226,7 +227,7 @@ int GetSkill(WORD wSkillId) {
   if (!D2CLIENT_GetPlayerUnit())
     return 0;
 
-  for (Skill* pSkill = D2CLIENT_GetPlayerUnit()->pInfo->pFirstSkill; pSkill; pSkill = pSkill->pNextSkill)
+  for (D2SkillStrc* pSkill = D2CLIENT_GetPlayerUnit()->pInfo->pFirstSkill; pSkill; pSkill = pSkill->pNextSkill)
     if (pSkill->pSkillInfo->wSkillId == wSkillId)
       return D2COMMON_GetSkillLevel(D2CLIENT_GetPlayerUnit(), pSkill, TRUE);
 
@@ -250,10 +251,10 @@ BOOL SetSkill(JSContext* cx, WORD wSkillId, BOOL bLeft, DWORD dwItemId) {
 
   D2CLIENT_SendGamePacket(9, aPacket);
 
-  UnitAny* Me = D2CLIENT_GetPlayerUnit();
+  D2UnitStrc* Me = D2CLIENT_GetPlayerUnit();
 
   int timeout = 0;
-  Skill* hand = NULL;
+  D2SkillStrc* hand = NULL;
   while (ClientState() == ClientStateInGame) {
     hand = (bLeft ? Me->pInfo->pLeftSkill : Me->pInfo->pRightSkill);
     if (hand->pSkillInfo->wSkillId != wSkillId) {
@@ -327,8 +328,8 @@ DWORD __declspec(naked) __fastcall D2CLIENT_InitAutomapLayer_STUB(DWORD /*nLayer
   }
 }
 
-AutomapLayer* InitAutomapLayer(DWORD levelno) {
-  AutomapLayer2* pLayer = D2COMMON_GetLayer(levelno);
+D2AutomapLayerStrc* InitAutomapLayer(DWORD levelno) {
+  D2LevelDefBin* pLayer = D2COMMON_GetLayer(levelno);
   return D2CLIENT_InitAutomapLayer(pLayer->nLayerNo);
 }
 
@@ -348,8 +349,8 @@ POINT ScreenToAutomap(int x, int y) {
   POINT result = {0, 0};
   x *= 32;
   y *= 32;
-  result.x = ((x - y) / 2 / (*p_D2CLIENT_Divisor)) - (*p_D2CLIENT_Offset).x + 8;
-  result.y = ((x + y) / 4 / (*p_D2CLIENT_Divisor)) - (*p_D2CLIENT_Offset).y - 8;
+  result.x = ((x - y) / 2 / (*D2CLIENT_Divisor)) - (*D2CLIENT_Offset).x + 8;
+  result.y = ((x + y) / 4 / (*D2CLIENT_Divisor)) - (*D2CLIENT_Offset).y - 8;
 
   if (D2CLIENT_GetAutomapSize()) {
     --result.x;
@@ -359,8 +360,13 @@ POINT ScreenToAutomap(int x, int y) {
 }
 
 void AutomapToScreen(POINT* pPos) {
-  pPos->x = 8 - p_D2CLIENT_Offset->x + (pPos->x * (*p_D2CLIENT_AutomapMode));
-  pPos->y = 8 + p_D2CLIENT_Offset->y + (pPos->y * (*p_D2CLIENT_AutomapMode));
+  pPos->x = 8 - D2CLIENT_Offset->x + (pPos->x * (*D2CLIENT_AutomapMode));
+  pPos->y = 8 + D2CLIENT_Offset->y + (pPos->y * (*D2CLIENT_AutomapMode));
+}
+
+void myDrawText(const char* szwText, int x, int y, int color, int font) {
+  std::wstring str = AnsiToWide(szwText);
+  myDrawText(str.c_str(), x, y, color, font);
 }
 
 void myDrawText(const wchar_t* szwText, int x, int y, int color, int font) {
@@ -369,16 +375,21 @@ void myDrawText(const wchar_t* szwText, int x, int y, int color, int font) {
   D2WIN_SetTextSize(dwOld);
 }
 
+void myDrawCenterText(const char* szText, int x, int y, int color, int font, int div) {
+  std::wstring str = AnsiToWide(szText);
+  myDrawCenterText(str.c_str(), x, y, color, font, div);
+}
+
 void myDrawCenterText(const wchar_t* szText, int x, int y, int color, int font, int div) {
   DWORD dwWidth = NULL, dwFileNo = NULL, dwOldSize = NULL;
 
   dwOldSize = D2WIN_SetTextSize(font);
-  D2WIN_GetTextSize((wchar_t*)szText, &dwWidth, &dwFileNo);
+  D2WIN_GetTextSize(szText, &dwWidth, &dwFileNo);
   D2WIN_SetTextSize(dwOldSize);
   myDrawText(szText, x - (dwWidth >> div), y, color, font);
 }
 
-void D2CLIENT_Interact(UnitAny* pUnit, DWORD dwMoveType) {
+void D2CLIENT_Interact(D2UnitStrc* pUnit, DWORD dwMoveType) {
   if (!pUnit)
     return;
 
@@ -394,10 +405,10 @@ void D2CLIENT_Interact(UnitAny* pUnit, DWORD dwMoveType) {
 typedef void (*fnClickEntry)(void);
 
 BOOL ClickNPCMenu(DWORD NPCClassId, DWORD MenuId) {
-  NPCMenu* pMenu = (NPCMenu*)p_D2CLIENT_NPCMenu;
+  NPCMenu* pMenu = (NPCMenu*)D2CLIENT_NPCMenu;
   fnClickEntry pClick = (fnClickEntry)NULL;
 
-  for (UINT i = 0; i < *p_D2CLIENT_NPCMenuAmount; i++) {
+  for (UINT i = 0; i < *D2CLIENT_NPCMenuAmount; i++) {
     if (pMenu->dwNPCClassId == NPCClassId) {
       if (pMenu->wEntryId1 == MenuId) {
         pClick = (fnClickEntry)pMenu->dwEntryFunc1;
@@ -435,7 +446,7 @@ BOOL ClickNPCMenu(DWORD NPCClassId, DWORD MenuId) {
   return FALSE;
 }
 
-int GetItemLocation(UnitAny* pItem) {
+int GetItemLocation(D2UnitStrc* pItem) {
   if (!pItem || !pItem->pItemData)
     return -1;
 
@@ -453,8 +464,8 @@ BYTE CalcPercent(DWORD dwVal, DWORD dwMaxVal, BYTE iMin) {
   return max(iRes, iMin);
 }
 
-DWORD GetTileLevelNo(Room2* lpRoom2, DWORD dwTileNo) {
-  for (RoomTile* pRoomTile = lpRoom2->pRoomTiles; pRoomTile; pRoomTile = pRoomTile->pNext) {
+DWORD GetTileLevelNo(D2DrlgRoomStrc* lpRoom2, DWORD dwTileNo) {
+  for (D2RoomTileStrc* pRoomTile = lpRoom2->pRoomTiles; pRoomTile; pRoomTile = pRoomTile->pNext) {
     if (*(pRoomTile->nNum) == dwTileNo)
       return pRoomTile->pRoom2->pLevel->dwLevelNo;
   }
@@ -462,9 +473,9 @@ DWORD GetTileLevelNo(Room2* lpRoom2, DWORD dwTileNo) {
   return NULL;
 }
 
-UnitAny* GetMercUnit(UnitAny* pUnit) {
-  for (Room1* pRoom = pUnit->pAct->pRoom1; pRoom; pRoom = pRoom->pRoomNext)
-    for (UnitAny* pMerc = pRoom->pUnitFirst; pMerc; pMerc = pMerc->pRoomNext)
+D2UnitStrc* GetMercUnit(D2UnitStrc* pUnit) {
+  for (D2ActiveRoomStrc* pRoom = pUnit->pAct->pRoom1; pRoom; pRoom = pRoom->pRoomNext)
+    for (D2UnitStrc* pMerc = pRoom->pUnitFirst; pMerc; pMerc = pMerc->pRoomNext)
       if (pMerc->dwType == UNIT_MONSTER &&
           (pMerc->dwTxtFileNo == MERC_A1 || pMerc->dwTxtFileNo == MERC_A2 || pMerc->dwTxtFileNo == MERC_A3 || pMerc->dwTxtFileNo == MERC_A5) &&
           D2CLIENT_GetMonsterOwner(pMerc->dwUnitId) == pUnit->dwUnitId)
@@ -473,39 +484,122 @@ UnitAny* GetMercUnit(UnitAny* pUnit) {
 
 #if 0
 	// Wanted way of doing things, but D2CLIENT_GetMercUnit does some wierd internal things (drawing, causing screen flicker)
-	for(UnitAny* pMerc = D2CLIENT_GetMercUnit(); pMerc; pMerc = pMerc->pRoomNext)
+	for(D2UnitStrc* pMerc = D2CLIENT_GetMercUnit(); pMerc; pMerc = pMerc->pRoomNext)
 		if (D2CLIENT_GetMonsterOwner(pMerc->dwUnitId) == pUnit->dwUnitId)
 			return pMerc;
 	return NULL;
 #endif
 }
 
-UnitAny* D2CLIENT_FindUnit(DWORD dwId, DWORD dwType) {
+D2UnitStrc* D2CLIENT_FindUnit(DWORD dwId, DWORD dwType) {
   if (dwId == -1)
     return NULL;
-  UnitAny* pUnit = D2CLIENT_FindServerSideUnit(dwId, dwType);
+  D2UnitStrc* pUnit = D2CLIENT_FindServerSideUnit(dwId, dwType);
   return pUnit ? pUnit : D2CLIENT_FindClientSideUnit(dwId, dwType);
 }
 
+POINT GetScreenSize() {
+  // HACK: p_D2CLIENT_ScreenSize is wrong for out of game, which is hardcoded to 800x600
+  POINT ingame = {static_cast<LONG>(*D2CLIENT_ScreenSizeX), static_cast<LONG>(*D2CLIENT_ScreenSizeY)}, oog = {800, 600}, p = {0};
+  if (ClientState() == ClientStateMenu)
+    p = oog;
+  else
+    p = ingame;
+  return p;
+}
+
+int D2GetScreenSizeX() {
+  return GetScreenSize().x;
+}
+
+int D2GetScreenSizeY() {
+  return GetScreenSize().y;
+}
+
+void myDrawAutomapCell(D2CellFileStrc* cellfile, int xpos, int ypos, BYTE col) {
+  if (!cellfile)
+    return;
+  D2GfxDataStrc ct;
+  memset(&ct, 0, sizeof(ct));
+  ct.pCellFile = cellfile;
+
+  xpos -= (cellfile->cells[0]->width / 2);
+  ypos += (cellfile->cells[0]->height / 2);
+
+  int xpos2 = xpos - cellfile->cells[0]->xoffs, ypos2 = ypos - cellfile->cells[0]->yoffs;
+  if ((xpos2 >= D2GetScreenSizeX()) || ((xpos2 + (int)cellfile->cells[0]->width) <= 0) || (ypos2 >= D2GetScreenSizeY()) ||
+      ((ypos2 + (int)cellfile->cells[0]->height) <= 0))
+    return;
+
+  static BYTE coltab[2][256];  //, tabno = 0, lastcol = 0;
+  if (!coltab[0][1])
+    for (int k = 0; k < 255; k++) coltab[0][k] = coltab[1][k] = (BYTE)k;
+  cellfile->UFlags.mylastcol = coltab[cellfile->UFlags.mytabno ^= (col != cellfile->UFlags.mylastcol)][255] = col;
+
+  D2GFX_DrawAutomapCell2(&ct, xpos, ypos, (DWORD)-1, 5, coltab[cellfile->UFlags.mytabno]);
+}
+
+static HANDLE OpenFileRead(const char* filename) {
+  return CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+}
+
+static HANDLE OpenFileRead(const wchar_t* filename) {
+  return CreateFileW(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+}
+
+static DWORD ReadFile(HANDLE hFile, void* buf, DWORD len)
+// NOTE :- validates len bytes of buf
+{
+  DWORD numdone = 0;
+  return ::ReadFile(hFile, buf, len, &numdone, NULL) != 0 ? numdone : -1;
+}
+
+static BYTE* AllocReadFile(const char* filename) {
+  HANDLE hFile = OpenFileRead(filename);
+  int filesize = GetFileSize(hFile, 0);
+  if (filesize <= 0)
+    return 0;
+  BYTE* buf = new BYTE[filesize];
+  ReadFile(hFile, buf, filesize);
+  CloseHandle(hFile);
+  return buf;
+}
+
+static BYTE* AllocReadFile(const wchar_t* filename) {
+  HANDLE hFile = OpenFileRead(filename);
+  int filesize = GetFileSize(hFile, 0);
+  if (filesize <= 0)
+    return 0;
+  BYTE* buf = new BYTE[filesize];
+  ReadFile(hFile, buf, filesize);
+  CloseHandle(hFile);
+  return buf;
+}
+
+// NOTE: only used by LoadBmpCellFile, lets keep it that way!
+static void* memcpy2(void* dest, const void* src, size_t count) {
+  return (char*)memcpy(dest, src, count) + count;
+}
+
 // TODO: Rewrite this and split it into two functions
-CellFile* LoadCellFile(const char* lpszPath, DWORD bMPQ) {
+D2CellFileStrc* LoadCellFile(const char* lpszPath, DWORD bMPQ) {
   if (bMPQ == TRUE) {
     unsigned __int32 hash = sfh((char*)lpszPath, (int)strlen((char*)lpszPath));
     if (Vars.mCachedCellFiles.count(hash) > 0)
       return Vars.mCachedCellFiles[hash];
-    CellFile* result = (CellFile*)D2WIN_LoadCellFile((char*)lpszPath, 0);
+    D2CellFileStrc* result = (D2CellFileStrc*)D2WIN_LoadCellFile((char*)lpszPath, 0);
     Vars.mCachedCellFiles[hash] = result;
     return result;
   } else {
     std::wstring path = AnsiToWide(lpszPath);
-    CellFile* ret = LoadCellFile(path.c_str(), bMPQ);
+    D2CellFileStrc* ret = LoadCellFile(path.c_str(), bMPQ);
     return ret;
   }
 }
 
-CellFile* LoadCellFile(const wchar_t* lpszPath, DWORD bMPQ) {
+D2CellFileStrc* LoadCellFile(const wchar_t* lpszPath, DWORD bMPQ) {
   if (bMPQ != 0) {
-    Log(L"Cannot specify wide character path for MPQ: %s", lpszPath);
+    Log("Cannot specify wide character path for MPQ: %s", lpszPath);
     return NULL;
   }
 
@@ -531,7 +625,7 @@ CellFile* LoadCellFile(const wchar_t* lpszPath, DWORD bMPQ) {
 
   // see if the file exists first
   if (!(_waccess(lpszPath, 0) != 0 && errno == ENOENT)) {
-    CellFile* result = myInitCellFile((CellFile*)LoadBmpCellFile(lpszPath));
+    D2CellFileStrc* result = myInitCellFile((D2CellFileStrc*)LoadBmpCellFile(lpszPath));
     Vars.mCachedCellFiles[hash] = result;
     return result;
   }
@@ -539,89 +633,7 @@ CellFile* LoadCellFile(const wchar_t* lpszPath, DWORD bMPQ) {
   return NULL;
 }
 
-POINT GetScreenSize() {
-  // HACK: p_D2CLIENT_ScreenSize is wrong for out of game, which is hardcoded to 800x600
-  POINT ingame = {static_cast<LONG>(*p_D2CLIENT_ScreenSizeX), static_cast<LONG>(*p_D2CLIENT_ScreenSizeY)}, oog = {800, 600}, p = {0};
-  if (ClientState() == ClientStateMenu)
-    p = oog;
-  else
-    p = ingame;
-  return p;
-}
-
-int D2GetScreenSizeX() {
-  return GetScreenSize().x;
-}
-
-int D2GetScreenSizeY() {
-  return GetScreenSize().y;
-}
-
-void myDrawAutomapCell(CellFile* cellfile, int xpos, int ypos, BYTE col) {
-  if (!cellfile)
-    return;
-  CellContext ct;
-  memset(&ct, 0, sizeof(ct));
-  ct.pCellFile = cellfile;
-
-  xpos -= (cellfile->cells[0]->width / 2);
-  ypos += (cellfile->cells[0]->height / 2);
-
-  int xpos2 = xpos - cellfile->cells[0]->xoffs, ypos2 = ypos - cellfile->cells[0]->yoffs;
-  if ((xpos2 >= D2GetScreenSizeX()) || ((xpos2 + (int)cellfile->cells[0]->width) <= 0) || (ypos2 >= D2GetScreenSizeY()) ||
-      ((ypos2 + (int)cellfile->cells[0]->height) <= 0))
-    return;
-
-  static BYTE coltab[2][256];  //, tabno = 0, lastcol = 0;
-  if (!coltab[0][1])
-    for (int k = 0; k < 255; k++) coltab[0][k] = coltab[1][k] = (BYTE)k;
-  cellfile->mylastcol = coltab[cellfile->mytabno ^= (col != cellfile->mylastcol)][255] = col;
-
-  D2GFX_DrawAutomapCell2(&ct, xpos, ypos, (DWORD)-1, 5, coltab[cellfile->mytabno]);
-}
-
-DWORD ReadFile(HANDLE hFile, void* buf, DWORD len)
-// NOTE :- validates len bytes of buf
-{
-  DWORD numdone = 0;
-  return ::ReadFile(hFile, buf, len, &numdone, NULL) != 0 ? numdone : -1;
-}
-
-void* memcpy2(void* dest, const void* src, size_t count) {
-  return (char*)memcpy(dest, src, count) + count;
-}
-
-HANDLE OpenFileRead(const char* filename) {
-  return CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-}
-
-HANDLE OpenFileRead(const wchar_t* filename) {
-  return CreateFileW(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-}
-
-BYTE* AllocReadFile(const char* filename) {
-  HANDLE hFile = OpenFileRead(filename);
-  int filesize = GetFileSize(hFile, 0);
-  if (filesize <= 0)
-    return 0;
-  BYTE* buf = new BYTE[filesize];
-  ReadFile(hFile, buf, filesize);
-  CloseHandle(hFile);
-  return buf;
-}
-
-BYTE* AllocReadFile(const wchar_t* filename) {
-  HANDLE hFile = OpenFileRead(filename);
-  int filesize = GetFileSize(hFile, 0);
-  if (filesize <= 0)
-    return 0;
-  BYTE* buf = new BYTE[filesize];
-  ReadFile(hFile, buf, filesize);
-  CloseHandle(hFile);
-  return buf;
-}
-
-CellFile* LoadBmpCellFile(BYTE* buf1, int width, int height) {
+D2CellFileStrc* LoadBmpCellFile(BYTE* buf1, int width, int height) {
   BYTE *buf2 = new BYTE[(width * height * 2) + height], *dest = buf2;
 
   for (int i = 0; i < height; i++) {
@@ -647,10 +659,10 @@ CellFile* LoadBmpCellFile(BYTE* buf1, int width, int height) {
   memset(memcpy2(memcpy2(ret, dc6head, sizeof(dc6head)), buf2, dc6head[14]), 0xee, 3);
   delete[] buf2;
 
-  return (CellFile*)ret;
+  return (D2CellFileStrc*)ret;
 }
 
-CellFile* LoadBmpCellFile(const char* filename) {
+D2CellFileStrc* LoadBmpCellFile(const char* filename) {
   BYTE* ret = 0;
 
   BYTE* buf1 = AllocReadFile(filename);
@@ -661,10 +673,10 @@ CellFile* LoadBmpCellFile(const char* filename) {
   }
   delete[] buf1;
 
-  return (CellFile*)ret;
+  return (D2CellFileStrc*)ret;
 }
 
-CellFile* LoadBmpCellFile(const wchar_t* filename) {
+D2CellFileStrc* LoadBmpCellFile(const wchar_t* filename) {
   BYTE* ret = 0;
 
   BYTE* buf1 = AllocReadFile(filename);
@@ -675,10 +687,10 @@ CellFile* LoadBmpCellFile(const wchar_t* filename) {
   }
   delete[] buf1;
 
-  return (CellFile*)ret;
+  return (D2CellFileStrc*)ret;
 }
 
-CellFile* myInitCellFile(CellFile* cf) {
+D2CellFileStrc* myInitCellFile(D2CellFileStrc* cf) {
   if (cf)
     D2CMP_InitCellFile(cf, &cf, "?", 0, (DWORD)-1, "?");
   return cf;
@@ -711,15 +723,6 @@ void __declspec(naked) __fastcall D2CLIENT_SetSelectedUnit_STUB(DWORD /*UnitAny*
 			jmp D2CLIENT_SetSelectedUnit_I
   }
 }
-// DWORD __declspec(naked) __fastcall D2CLIENT_LoadUIImage_ASM(char* Path)
-//{
-//	__asm {
-//		mov eax, ecx
-//			push 0
-//			call D2CLIENT_LoadUIImage_I
-//			retn
-//	}
-//}
 
 void __declspec(naked) __fastcall D2CLIENT_Interact_ASM(DWORD /*Struct*/) {
   __asm {
@@ -761,14 +764,14 @@ void __declspec(naked) __fastcall D2CLIENT_ShopAction_ASM(DWORD /*pItem*/, DWORD
   }
 }
 
-void __declspec(naked) __fastcall D2CLIENT_ClickBelt(DWORD /*x*/, DWORD /*y*/, Inventory* /*pInventoryData*/) {
+void __declspec(naked) __fastcall D2CLIENT_ClickBelt(DWORD /*x*/, DWORD /*y*/, D2InventoryStrc* /*pInventoryData*/) {
   __asm {
 		mov eax, edx
 			jmp D2CLIENT_ClickBelt_I
   }
 }
 
-void __declspec(naked) __stdcall D2CLIENT_LeftClickItem(DWORD /*Location*/, UnitAny* /*pPlayer*/, Inventory* /*pInventory*/, int /*x*/, int /*y*/, DWORD /*dwClickType*/,
+void __declspec(naked) __stdcall D2CLIENT_LeftClickItem(DWORD /*Location*/, D2UnitStrc* /*pPlayer*/, D2InventoryStrc* /*pInventory*/, int /*x*/, int /*y*/, DWORD /*dwClickType*/,
                                                         InventoryLayout* /*pLayout*/) {
   __asm
   {
@@ -841,7 +844,7 @@ void __declspec(naked) __fastcall D2CLIENT_PlaySound(DWORD /*dwSoundId*/) {
 			PUSH NULL
 			PUSH NULL
 			PUSH NULL
-			MOV EAX, p_D2CLIENT_PlayerUnit
+			MOV EAX, D2CLIENT_PlayerUnit
 			MOV EAX, [EAX]
 		MOV ECX, EAX
 			MOV EDX, EBX
@@ -883,19 +886,6 @@ _TakeWaypoint:
 
   }
 }
-/*DWORD __declspec(naked) __fastcall D2CLIENT_TestPvpFlag_STUB(DWORD planum1, DWORD planum2, DWORD flagmask)
-{
-        __asm
-        {
-                push esi;
-                push [esp+8];
-                mov esi, edx; // p2
-                mov edx, ecx; // p1
-                call D2CLIENT_TestPvpFlag_I;
-                pop esi;
-                ret 4;
-        }
-}*/
 
 void __declspec(naked) __fastcall D2GFX_DrawRectFrame_STUB(RECT* /*rect*/) {
   __asm
@@ -905,7 +895,7 @@ void __declspec(naked) __fastcall D2GFX_DrawRectFrame_STUB(RECT* /*rect*/) {
   }
 }
 
-DWORD __cdecl D2CLIENT_GetMinionCount(UnitAny* pUnit, DWORD dwType) {
+DWORD __cdecl D2CLIENT_GetMinionCount(D2UnitStrc* pUnit, DWORD dwType) {
   DWORD dwResult;
 
   __asm
@@ -925,7 +915,7 @@ DWORD __cdecl D2CLIENT_GetMinionCount(UnitAny* pUnit, DWORD dwType) {
   return dwResult;
 }
 
-__declspec(naked) void __fastcall D2CLIENT_HostilePartyUnit(RosterUnit* /*pUnit*/, DWORD /*dwButton*/) {
+__declspec(naked) void __fastcall D2CLIENT_HostilePartyUnit(D2RosterUnitStrc* /*pUnit*/, DWORD /*dwButton*/) {
   __asm
   {
 		mov eax, edx
@@ -981,7 +971,7 @@ bool IsScrollingText() {
     return false;
 
   HWND d2Hwnd = D2GFX_GetHwnd();
-  WindowHandlerList* whl = p_STORM_WindowHandlers->table[(0x534D5347 ^ (DWORD)d2Hwnd) % p_STORM_WindowHandlers->length];
+  WindowHandlerList* whl = STORM_WindowHandlers->table[(0x534D5347 ^ (DWORD)d2Hwnd) % STORM_WindowHandlers->length];
   MessageHandlerHashTable* mhht;
   MessageHandlerList* mhl;
 

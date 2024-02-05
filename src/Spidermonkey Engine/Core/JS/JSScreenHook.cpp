@@ -56,7 +56,7 @@ JSAPI_FUNC(frame_ctor) {
   if (argc > 7 && JS_IsFunction(ctx, argv[7]))
     hover = argv[7];
 
-  JSValue hook = BuildObject(ctx, frame_class_id, frame_methods, _countof(frame_methods), frame_props, _countof(frame_props));
+  JSValue hook = BuildObject(ctx, frame_class_id, FUNCLIST(frame_proto_funcs));
   if (JS_IsException(hook))
     THROW_ERROR(ctx, "Failed to create frame object");
 
@@ -187,7 +187,7 @@ JSAPI_FUNC(box_ctor) {
   if (argc > 9 && JS_IsFunction(ctx, argv[9]))
     hover = argv[9];
 
-  JSValue hook = BuildObject(ctx, box_class_id, box_methods, _countof(box_methods), box_props, _countof(box_props));
+  JSValue hook = BuildObject(ctx, box_class_id, FUNCLIST(box_proto_funcs));
   if (!hook) {
     THROW_ERROR(ctx, "Failed to create box object");
   }
@@ -326,7 +326,7 @@ JSAPI_FUNC(line_ctor) {
   if (argc > 7 && JS_IsFunction(ctx, argv[7]))
     hover = argv[7];
 
-  JSValue hook = BuildObject(ctx, line_class_id, line_methods, _countof(line_methods), line_props, _countof(line_props));
+  JSValue hook = BuildObject(ctx, line_class_id, FUNCLIST(line_proto_funcs));
   if (!hook) {
     THROW_ERROR(ctx, "Failed to create line object");
   }
@@ -464,7 +464,7 @@ JSAPI_FUNC(text_ctor) {
   if (argc > 8 && JS_IsFunction(ctx, argv[8]))
     hover = argv[8];
 
-  JSValue hook = BuildObject(ctx, text_class_id, text_methods, _countof(text_methods), text_props, _countof(text_props));
+  JSValue hook = BuildObject(ctx, text_class_id, FUNCLIST(text_proto_funcs));
   if (!hook) {
     THROW_ERROR(ctx, "Failed to create text object");
   }
@@ -620,7 +620,7 @@ JSAPI_FUNC(image_ctor) {
     THROW_ERROR(ctx, "Invalid image file path");
   }
 
-  JSValue hook = BuildObject(ctx, image_class_id, image_methods, _countof(image_methods), image_props, _countof(image_props));
+  JSValue hook = BuildObject(ctx, image_class_id, FUNCLIST(image_proto_funcs));
   if (!hook)
     THROW_ERROR(ctx, "Failed to create image object");
 
@@ -719,95 +719,4 @@ JSAPI_STRICT_PROP(image_setProperty) {
       break;
   }
   return JS_UNDEFINED;
-}
-
-JSAPI_FUNC(screenToAutomap) {
-  if (argc == 1) {
-    // the arg must be an object with an x and a y that we can convert
-    if (JS_IsObject(argv[0])) {
-      JSValue x = JS_GetPropertyStr(ctx, argv[0], "x");
-      JSValue y = JS_GetPropertyStr(ctx, argv[0], "y");
-      if (!JS_IsNumber(x) || !JS_IsNumber(y)) {
-        THROW_ERROR(ctx, "Input has an x or y, but they aren't the correct type!");
-      }
-
-      int32_t ix, iy;
-      if (JS_ToInt32(ctx, &ix, x) || JS_ToInt32(ctx, &iy, y)) {
-        THROW_ERROR(ctx, "Failed to convert x and/or y values");
-      }
-
-      // convert the values
-      POINT result = ScreenToAutomap(ix, iy);
-      JSValue rval = JS_NewObject(ctx);
-      JS_SetPropertyStr(ctx, argv[0], "x", JS_NewInt32(ctx, result.x));
-      JS_SetPropertyStr(ctx, argv[0], "y", JS_NewInt32(ctx, result.y));
-      return rval;
-    } else
-      THROW_ERROR(ctx, "Invalid object specified to screenToAutomap");
-  } else if (argc == 2) {
-    // the args must be ints
-    if (JS_IsNumber(argv[0]) && JS_IsNumber(argv[1])) {
-      int32_t ix, iy;
-      if (JS_ToInt32(ctx, &ix, argv[0]) || JS_ToInt32(ctx, &iy, argv[1])) {
-        THROW_ERROR(ctx, "Failed to convert x and/or y values");
-      }
-
-      // convert the values
-      POINT result = ScreenToAutomap(ix, iy);
-      JSValue rval = JS_NewObject(ctx);
-      JS_SetPropertyStr(ctx, argv[0], "x", JS_NewInt32(ctx, result.x));
-      JS_SetPropertyStr(ctx, argv[0], "y", JS_NewInt32(ctx, result.y));
-      return rval;
-    } else
-      THROW_ERROR(ctx, "screenToAutomap expects two arguments to be two integers");
-  }
-  THROW_ERROR(ctx, "Invalid arguments specified for screenToAutomap");
-}
-
-// POINT result = {ix, iy};
-// AutomapToScreen(&result);
-JSAPI_FUNC(automapToScreen) {
-  if (argc == 1) {
-    // the arg must be an object with an x and a y that we can convert
-    if (JS_IsObject(argv[0])) {
-      JSValue x = JS_GetPropertyStr(ctx, argv[0], "x");
-      JSValue y = JS_GetPropertyStr(ctx, argv[0], "y");
-      if (!JS_IsNumber(x) || !JS_IsNumber(y)) {
-        THROW_ERROR(ctx, "Input has an x or y, but they aren't the correct type!");
-      }
-
-      int32_t ix, iy;
-      if (JS_ToInt32(ctx, &ix, x) || JS_ToInt32(ctx, &iy, y)) {
-        THROW_ERROR(ctx, "Failed to convert x and/or y values");
-      }
-
-      // convert the values
-      POINT result = {ix, iy};
-      AutomapToScreen(&result);
-      JSValue rval = JS_NewObject(ctx);
-      JS_SetPropertyStr(ctx, argv[0], "x", JS_NewInt32(ctx, result.x));
-      JS_SetPropertyStr(ctx, argv[0], "y", JS_NewInt32(ctx, result.y));
-      return rval;
-    } else
-      THROW_ERROR(ctx, "Invalid object specified to screenToAutomap");
-  } else if (argc == 2) {
-    // the args must be ints
-    if (JS_IsNumber(argv[0]) && JS_IsNumber(argv[1])) {
-      int32_t ix, iy;
-      if (JS_ToInt32(ctx, &ix, argv[0]) || JS_ToInt32(ctx, &iy, argv[1])) {
-        THROW_ERROR(ctx, "Failed to convert x and/or y values");
-      }
-
-      // convert the values
-      POINT result = {ix, iy};
-      AutomapToScreen(&result);
-      JSValue rval = JS_NewObject(ctx);
-      JS_SetPropertyStr(ctx, argv[0], "x", JS_NewInt32(ctx, result.x));
-      JS_SetPropertyStr(ctx, argv[0], "y", JS_NewInt32(ctx, result.y));
-      return rval;
-    } else {
-      THROW_ERROR(ctx, "automapToScreen expects two arguments to be two integers");
-    }
-  }
-  THROW_ERROR(ctx, "Invalid arguments specified for automapToScreen");
 }

@@ -1,13 +1,14 @@
 #include "JSPresetUnit.h"
 
-#include "D2Ptrs.h"
 #include "CriticalSections.h"
+#include "JSPresetUnit.h"
 #include "D2Helpers.h"
+#include "JSGlobalClasses.h"
 
 EMPTY_CTOR(presetunit)
 
 CLASS_FINALIZER(presetunit) {
-  myPresetUnit* pUnit = (myPresetUnit*)JS_GetOpaque3(val);
+  JSPresetUnit* pUnit = (JSPresetUnit*)JS_GetOpaque3(val);
 
   if (pUnit) {
     JS_SetOpaque(val, NULL);
@@ -16,7 +17,7 @@ CLASS_FINALIZER(presetunit) {
 }
 
 JSAPI_PROP(presetunit_getProperty) {
-  myPresetUnit* pUnit = (myPresetUnit*)JS_GetOpaque3(this_val);
+  JSPresetUnit* pUnit = (JSPresetUnit*)JS_GetOpaque3(this_val);
 
   if (!pUnit)
     return JS_UNDEFINED;
@@ -59,7 +60,7 @@ JSAPI_FUNC(my_getPresetUnits) {
 
   uint32_t levelId;
   JS_ToUint32(ctx, &levelId, argv[0]);
-  Level* pLevel = GetLevel(levelId);
+  D2DrlgLevelStrc* pLevel = GetLevel(levelId);
 
   if (!pLevel)
     THROW_ERROR(ctx, "getPresetUnits failed, couldn't access the level!");
@@ -72,13 +73,13 @@ JSAPI_FUNC(my_getPresetUnits) {
   if (argc >= 3)
     JS_ToUint32(ctx, &nClassId, argv[2]);
 
-  AutoCriticalRoom* cRoom = new AutoCriticalRoom;
+  AutoCriticalRoom cRoom;
 
   bool bAddedRoom = FALSE;
   DWORD dwArrayCount = NULL;
 
   JSValue pReturnArray = JS_NewArray(ctx);
-  for (Room2* pRoom = pLevel->pRoom2First; pRoom; pRoom = pRoom->pRoom2Next) {
+  for (D2DrlgRoomStrc* pRoom = pLevel->pRoom2First; pRoom; pRoom = pRoom->pRoom2Next) {
     bAddedRoom = FALSE;
 
     if (!pRoom->pPreset) {
@@ -86,10 +87,10 @@ JSAPI_FUNC(my_getPresetUnits) {
       bAddedRoom = TRUE;
     }
 
-    for (PresetUnit* pUnit = pRoom->pPreset; pUnit; pUnit = pUnit->pPresetNext) {
+    for (D2PresetUnitStrc* pUnit = pRoom->pPreset; pUnit; pUnit = pUnit->pPresetNext) {
       // Does it fit?
       if ((nType == NULL || pUnit->dwType == nType) && (nClassId == NULL || pUnit->dwTxtFileNo == nClassId)) {
-        myPresetUnit* mypUnit = new myPresetUnit;
+        JSPresetUnit* mypUnit = new JSPresetUnit;
 
         mypUnit->dwPosX = pUnit->dwPosX;
         mypUnit->dwPosY = pUnit->dwPosY;
@@ -99,10 +100,9 @@ JSAPI_FUNC(my_getPresetUnits) {
         mypUnit->dwId = pUnit->dwTxtFileNo;
         mypUnit->dwLevel = levelId;
 
-        JSValue unit = BuildObject(ctx, presetunit_class_id, NULL, 0, presetunit_props, _countof(presetunit_props), mypUnit);
+        JSValue unit = BuildObject(ctx, presetunit_class_id, FUNCLIST(presetunit_proto_funcs), mypUnit);
         if (JS_IsException(unit)) {
           delete mypUnit;
-          delete cRoom;
           JS_FreeValue(ctx, pReturnArray);
           THROW_ERROR(ctx, "Failed to build object?");
         }
@@ -119,7 +119,6 @@ JSAPI_FUNC(my_getPresetUnits) {
     }
   }
 
-  delete cRoom;
   return pReturnArray;
 }
 
@@ -133,7 +132,7 @@ JSAPI_FUNC(my_getPresetUnit) {
 
   uint32_t levelId;
   JS_ToUint32(ctx, &levelId, argv[0]);
-  Level* pLevel = GetLevel(levelId);
+  D2DrlgLevelStrc* pLevel = GetLevel(levelId);
 
   if (!pLevel)
     THROW_ERROR(ctx, "getPresetUnits failed, couldn't access the level!");
@@ -146,11 +145,11 @@ JSAPI_FUNC(my_getPresetUnit) {
   if (argc >= 3)
     JS_ToUint32(ctx, &nClassId, argv[2]);
 
-  AutoCriticalRoom* cRoom = new AutoCriticalRoom;
+  AutoCriticalRoom cRoom;
 
   bool bAddedRoom = FALSE;
 
-  for (Room2* pRoom = pLevel->pRoom2First; pRoom; pRoom = pRoom->pRoom2Next) {
+  for (D2DrlgRoomStrc* pRoom = pLevel->pRoom2First; pRoom; pRoom = pRoom->pRoom2Next) {
     bAddedRoom = FALSE;
 
     if (!pRoom->pRoom1) {
@@ -158,11 +157,11 @@ JSAPI_FUNC(my_getPresetUnit) {
       bAddedRoom = TRUE;
     }
 
-    for (PresetUnit* pUnit = pRoom->pPreset; pUnit; pUnit = pUnit->pPresetNext) {
+    for (D2PresetUnitStrc* pUnit = pRoom->pPreset; pUnit; pUnit = pUnit->pPresetNext) {
       // Does it fit?
       if ((nType == NULL || pUnit->dwType == nType) && (nClassId == NULL || pUnit->dwTxtFileNo == nClassId)) {
         // Yes it fits! Return it
-        myPresetUnit* mypUnit = new myPresetUnit;
+        JSPresetUnit* mypUnit = new JSPresetUnit;
 
         mypUnit->dwPosX = pUnit->dwPosX;
         mypUnit->dwPosY = pUnit->dwPosY;
@@ -172,13 +171,11 @@ JSAPI_FUNC(my_getPresetUnit) {
         mypUnit->dwId = pUnit->dwTxtFileNo;
         mypUnit->dwLevel = levelId;
 
-        JSValue obj = BuildObject(ctx, presetunit_class_id, NULL, 0, presetunit_props, _countof(presetunit_props), mypUnit);
+        JSValue obj = BuildObject(ctx, presetunit_class_id, FUNCLIST(presetunit_proto_funcs), mypUnit);
         if (JS_IsException(obj)) {
-          delete cRoom;
           delete mypUnit;
           THROW_ERROR(ctx, "Failed to create presetunit object");
         }
-        delete cRoom;
         return obj;
       }
     }
@@ -189,6 +186,5 @@ JSAPI_FUNC(my_getPresetUnit) {
     }
   }
 
-  delete cRoom;
   return JS_FALSE;
 }

@@ -1,7 +1,4 @@
-#ifndef ROOM_H
-#define ROOM_H
-
-#include "Room.h"
+#pragma once
 
 #include "js32.h"
 
@@ -33,7 +30,7 @@ enum room_tinyid {
   ROOM_CORRECTTOMB,
 };
 
-static JSCFunctionListEntry room_props[] = {
+static JSCFunctionListEntry room_proto_funcs[] = {
     JS_CGETSET_MAGIC_DEF("number", room_getProperty, nullptr, ROOM_NUM),
     JS_CGETSET_MAGIC_DEF("x", room_getProperty, nullptr, ROOM_XPOS),
     JS_CGETSET_MAGIC_DEF("y", room_getProperty, nullptr, ROOM_YPOS),
@@ -43,9 +40,7 @@ static JSCFunctionListEntry room_props[] = {
     JS_CGETSET_MAGIC_DEF("area", room_getProperty, nullptr, ROOM_AREA),
     JS_CGETSET_MAGIC_DEF("level", room_getProperty, nullptr, ROOM_LEVEL),
     JS_CGETSET_MAGIC_DEF("correcttomb", room_getProperty, nullptr, ROOM_CORRECTTOMB),
-};
 
-static JSCFunctionListEntry room_methods[] = {
     JS_FS("getNext", room_getNext, 0, FUNCTION_FLAGS),
     JS_FS("reveal", room_reveal, 1, FUNCTION_FLAGS),
     JS_FS("getPresetUnits", room_getPresetUnits, 0, FUNCTION_FLAGS),
@@ -56,5 +51,3 @@ static JSCFunctionListEntry room_methods[] = {
     JS_FS("getFirst", room_getFirst, 0, FUNCTION_FLAGS),
     JS_FS("unitInRoom", room_unitInRoom, 1, FUNCTION_FLAGS),
 };
-
-#endif

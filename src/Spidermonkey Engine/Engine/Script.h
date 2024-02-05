@@ -117,7 +117,7 @@ class Script {
   JSContext* m_context;
   JSValue m_globalObject;
   JSValue m_script;
-  myUnit* m_me;
+  JSUnit* m_me;
   uint32_t m_argc;
   //JSAutoStructuredCloneBuffer** m_argv;
   DWORD m_LastGC;

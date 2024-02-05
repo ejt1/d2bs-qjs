@@ -1,13 +1,15 @@
 #include "JSArea.h"
-#include "D2Ptrs.h"
 #include "JSExits.h"
 #include "CriticalSections.h"
 #include "MapHeader.h"
+#include "JSGlobalClasses.h"
+
+#include "Game/D2DataTbls.h"
 
 EMPTY_CTOR(area)
 
 CLASS_FINALIZER(area) {
-  myArea* pArea = (myArea*)JS_GetOpaque3(val);
+  JSArea* pArea = (JSArea*)JS_GetOpaque3(val);
 
   if (pArea) {
     JS_SetOpaque(val, NULL);
@@ -17,12 +19,12 @@ CLASS_FINALIZER(area) {
 }
 
 JSAPI_PROP(area_getProperty) {
-  myArea* pArea = (myArea*)JS_GetOpaque3(this_val);
+  JSArea* pArea = (JSArea*)JS_GetOpaque3(this_val);
 
   if (!pArea)
     return JS_EXCEPTION;
 
-  Level* pLevel = GetLevel(pArea->AreaId);
+  D2DrlgLevelStrc* pLevel = GetLevel(pArea->AreaId);
   if (!pLevel)
     return JS_EXCEPTION;
 
@@ -38,7 +40,7 @@ JSAPI_PROP(area_getProperty) {
         map->CleanUp();
         int count = exits.size();
         for (int i = 0; i < count; i++) {
-          myExit* exit = new myExit;
+          JSExit* exit = new JSExit;
           exit->id = exits[i].Target;
           exit->x = exits[i].Position.first;
           exit->y = exits[i].Position.second;
@@ -46,7 +48,7 @@ JSAPI_PROP(area_getProperty) {
           exit->tileid = exits[i].TileId;
           exit->level = pArea->AreaId;
 
-          JSValue pExit = BuildObject(ctx, exit_class_id, NULL, 0, exit_props, _countof(exit_props), exit);
+          JSValue pExit = BuildObject(ctx, exit_class_id, FUNCLIST(exit_proto_funcs), exit);
           if (JS_IsException(pExit)) {
             delete exit;
             THROW_ERROR(ctx, "Failed to create exit object!");
@@ -57,7 +59,7 @@ JSAPI_PROP(area_getProperty) {
       return JS_DupValue(ctx, pArea->ExitArray);
     } break;
     case AUNIT_NAME: {
-      LevelTxt* pTxt = D2COMMON_GetLevelText(pArea->AreaId);
+      D2LevelsTxt* pTxt = D2COMMON_GetLevelText(pArea->AreaId);
       if (pTxt) {
         return JS_NewString(ctx, pTxt->szName);
       }
@@ -93,13 +95,13 @@ JSAPI_FUNC(my_getArea) {
     THROW_ERROR(ctx, "Invalid parameter passed to getArea!");
   }
 
-  Level* pLevel = GetLevel(nArea);
+  D2DrlgLevelStrc* pLevel = GetLevel(nArea);
 
   if (!pLevel) {
     return JS_FALSE;
   }
 
-  myArea* pArea = new myArea;
+  JSArea* pArea = new JSArea;
   if (!pArea) {
     return JS_FALSE;
   }
@@ -107,7 +109,7 @@ JSAPI_FUNC(my_getArea) {
   pArea->AreaId = nArea;
   pArea->ExitArray = JS_UNDEFINED;
 
-  JSValue unit = BuildObject(ctx, area_class_id, NULL, 0, area_props, _countof(area_props), pArea);
+  JSValue unit = BuildObject(ctx, area_class_id, FUNCLIST(area_proto_funcs), pArea);
   if (JS_IsException(unit)) {
     delete pArea;
     pArea = NULL;

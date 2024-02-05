@@ -4,12 +4,13 @@
 #include "Unit.h"
 #include "Helpers.h"
 #include "Core.h"
-#include "Constants.h"
 #include "Events.h"
 #include "ScriptEngine.h"
 #include "Console.h"
 #include "Engine.h"
 #include "MPQStats.h"
+
+#include "Game/D2Roster.h"
 
 DWORD ReassignPlayerHandler(BYTE* pPacket, DWORD /*dwSize*/) {
   if (*(LPDWORD)&pPacket[2] == D2CLIENT_GetPlayerUnit()->dwUnitId)
@@ -93,7 +94,7 @@ DWORD EventMessagesHandler(BYTE* pPacket, DWORD /*dwSize*/) {
       break;
     case 0x07:  // player relation
     {
-      for (RosterUnit* player = *p_D2CLIENT_PlayerUnitList; player != NULL; player = player->pNext)
+      for (D2RosterUnitStrc* player = *D2CLIENT_PlayerUnitList; player != NULL; player = player->pNext)
         if (player->dwUnitId == param1)
           strcpy_s(name1, 16, player->szName);
       switch (param2) {

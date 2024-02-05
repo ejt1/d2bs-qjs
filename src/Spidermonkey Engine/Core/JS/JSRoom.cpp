@@ -1,13 +1,15 @@
 #include "JSRoom.h"
 #include "CriticalSections.h"
 #include "JSPresetUnit.h"
-#include "D2Structs.h"
-#include "D2Ptrs.h"
+#include "Room.h"
+#include "D2Helpers.h"
+#include "JSGlobalClasses.h"
+#include "JSUnit.h"
 
 EMPTY_CTOR(room)
 
 JSAPI_PROP(room_getProperty) {
-  Room2* pRoom2 = (Room2*)JS_GetOpaque3(this_val);
+  D2DrlgRoomStrc* pRoom2 = (D2DrlgRoomStrc*)JS_GetOpaque3(this_val);
 
   if (!pRoom2)
     return JS_UNDEFINED;
@@ -52,7 +54,7 @@ JSAPI_PROP(room_getProperty) {
 JSAPI_FUNC(room_getNext) {
   (argc);
 
-  Room2* pRoom2 = (Room2*)JS_GetOpaque3(this_val);
+  D2DrlgRoomStrc* pRoom2 = (D2DrlgRoomStrc*)JS_GetOpaque3(this_val);
   if (!pRoom2) {
     return JS_FALSE;
   }
@@ -67,7 +69,7 @@ JSAPI_FUNC(room_getNext) {
 }
 
 JSAPI_FUNC(room_getPresetUnits) {
-  Room2* pRoom2 = (Room2*)JS_GetOpaque3(this_val);
+  D2DrlgRoomStrc* pRoom2 = (D2DrlgRoomStrc*)JS_GetOpaque3(this_val);
 
   uint32_t nType = NULL;
   uint32_t nClass = NULL;
@@ -80,9 +82,8 @@ JSAPI_FUNC(room_getPresetUnits) {
   bool bAdded = FALSE;
   DWORD dwArrayCount = NULL;
 
-  AutoCriticalRoom* cRoom = new AutoCriticalRoom;
+  AutoCriticalRoom cRoom;
   if (!pRoom2 || !GameReady()) {
-    delete cRoom;
     return JS_UNDEFINED;
   }
 
@@ -92,9 +93,9 @@ JSAPI_FUNC(room_getPresetUnits) {
   }
 
   JSValue pReturnArray = JS_NewArray(ctx);
-  for (PresetUnit* pUnit = pRoom2->pPreset; pUnit; pUnit = pUnit->pPresetNext) {
+  for (D2PresetUnitStrc* pUnit = pRoom2->pPreset; pUnit; pUnit = pUnit->pPresetNext) {
     if ((pUnit->dwType == nType || nType == NULL) && (pUnit->dwTxtFileNo == nClass || nClass == NULL)) {
-      myPresetUnit* mypUnit = new myPresetUnit;
+      JSPresetUnit* mypUnit = new JSPresetUnit;
 
       mypUnit->dwPosX = pUnit->dwPosX;
       mypUnit->dwPosY = pUnit->dwPosY;
@@ -103,9 +104,8 @@ JSAPI_FUNC(room_getPresetUnits) {
       mypUnit->dwType = pUnit->dwType;
       mypUnit->dwId = pUnit->dwTxtFileNo;
 
-      JSValue jsUnit = BuildObject(ctx, presetunit_class_id, NULL, 0, presetunit_props, _countof(presetunit_props), mypUnit);
+      JSValue jsUnit = BuildObject(ctx, presetunit_class_id, FUNCLIST(presetunit_proto_funcs), mypUnit);
       if (JS_IsException(jsUnit)) {
-        delete cRoom;
         JS_FreeValue(ctx, pReturnArray);
         return JS_FALSE;
       }
@@ -118,19 +118,17 @@ JSAPI_FUNC(room_getPresetUnits) {
   if (bAdded)
     D2COMMON_RemoveRoomData(D2CLIENT_GetPlayerUnit()->pAct, pRoom2->pLevel->dwLevelNo, pRoom2->dwPosX, pRoom2->dwPosY, D2CLIENT_GetPlayerUnit()->pPath->pRoom1);
 
-  delete cRoom;
   return pReturnArray;
 }
 
 JSAPI_FUNC(room_getCollisionTypeArray) {
-  Room2* pRoom2 = (Room2*)JS_GetOpaque3(this_val);
+  D2DrlgRoomStrc* pRoom2 = (D2DrlgRoomStrc*)JS_GetOpaque3(this_val);
 
   bool bAdded = FALSE;
-  CollMap* pCol = NULL;
+  D2DrlgCoordsStrc* pCol = NULL;
 
-  AutoCriticalRoom* cRoom = new AutoCriticalRoom;
+  AutoCriticalRoom cRoom;
   if (!pRoom2 || !GameReady()) {
-    delete cRoom;
     return JS_UNDEFINED;
   }
 
@@ -149,7 +147,6 @@ JSAPI_FUNC(room_getCollisionTypeArray) {
   if (!pCol) {
     if (bAdded)
       D2COMMON_RemoveRoomData(D2CLIENT_GetPlayerUnit()->pAct, pRoom2->pLevel->dwLevelNo, pRoom2->dwPosX, pRoom2->dwPosY, D2CLIENT_GetPlayerUnit()->pPath->pRoom1);
-    delete cRoom;
     JS_FreeValue(ctx, jsobjy);
     return JS_UNDEFINED;
   }
@@ -179,19 +176,17 @@ JSAPI_FUNC(room_getCollisionTypeArray) {
   if (bAdded)
     D2COMMON_RemoveRoomData(D2CLIENT_GetPlayerUnit()->pAct, pRoom2->pLevel->dwLevelNo, pRoom2->dwPosX, pRoom2->dwPosY, D2CLIENT_GetPlayerUnit()->pPath->pRoom1);
 
-  delete cRoom;
   return jsobjy;
 }
 
 JSAPI_FUNC(room_getCollision) {
-  Room2* pRoom2 = (Room2*)JS_GetOpaque3(this_val);
+  D2DrlgRoomStrc* pRoom2 = (D2DrlgRoomStrc*)JS_GetOpaque3(this_val);
 
   bool bAdded = FALSE;
-  CollMap* pCol = NULL;
+  D2DrlgCoordsStrc* pCol = NULL;
 
-  AutoCriticalRoom* cRoom = new AutoCriticalRoom;
+  AutoCriticalRoom cRoom;
   if (!pRoom2 || !GameReady()) {
-    delete cRoom;
     return JS_UNDEFINED;
   }
 
@@ -210,7 +205,6 @@ JSAPI_FUNC(room_getCollision) {
   if (!pCol) {
     if (bAdded)
       D2COMMON_RemoveRoomData(D2CLIENT_GetPlayerUnit()->pAct, pRoom2->pLevel->dwLevelNo, pRoom2->dwPosX, pRoom2->dwPosY, D2CLIENT_GetPlayerUnit()->pPath->pRoom1);
-    delete cRoom;
     JS_FreeValue(ctx, jsobjy);
     return JS_UNDEFINED;
   }
@@ -244,21 +238,20 @@ JSAPI_FUNC(room_getCollision) {
   if (bAdded)
     D2COMMON_RemoveRoomData(D2CLIENT_GetPlayerUnit()->pAct, pRoom2->pLevel->dwLevelNo, pRoom2->dwPosX, pRoom2->dwPosY, D2CLIENT_GetPlayerUnit()->pPath->pRoom1);
 
-  delete cRoom;
   return jsobjy;
 }
 
 JSAPI_FUNC(room_getNearby) {
   (argc);
 
-  Room2* pRoom2 = (Room2*)JS_GetOpaque3(this_val);
+  D2DrlgRoomStrc* pRoom2 = (D2DrlgRoomStrc*)JS_GetOpaque3(this_val);
 
   JSValue jsobj = JS_NewArray(ctx);
   if (!jsobj)
     return JS_UNDEFINED;
 
   for (DWORD i = 0; i < pRoom2->dwRoomsNear; ++i) {
-    JSValue jsroom = BuildObject(ctx, room_class_id, room_methods, _countof(room_methods), room_props, _countof(room_methods), pRoom2->pRoom2Near[i]);
+    JSValue jsroom = BuildObject(ctx, room_class_id, FUNCLIST(room_proto_funcs), pRoom2->pRoom2Near[i]);
     if (JS_IsException(jsroom)) {
       JS_FreeValue(ctx, jsobj);
       return JS_UNDEFINED;
@@ -272,7 +265,7 @@ JSAPI_FUNC(room_getNearby) {
 // Don't know whether it works or not
 JSAPI_FUNC(room_getStat) {
   JSValue rval = JS_NULL;
-  Room2* pRoom2 = (Room2*)JS_GetOpaque3(this_val);
+  D2DrlgRoomStrc* pRoom2 = (D2DrlgRoomStrc*)JS_GetOpaque3(this_val);
 
   if (argc < 1 || !JS_IsNumber(argv[0]))
     return rval;
@@ -282,9 +275,8 @@ JSAPI_FUNC(room_getStat) {
 
   bool bAdded = false;
 
-  AutoCriticalRoom* cRoom = new AutoCriticalRoom;
+  AutoCriticalRoom cRoom;
   if (!pRoom2 || !GameReady()) {
-    delete cRoom;
     return rval;
   }
   if (!pRoom2->pRoom1) {
@@ -293,7 +285,6 @@ JSAPI_FUNC(room_getStat) {
   }
 
   if (!pRoom2->pRoom1) {
-    delete cRoom;
     return rval;
   }
 
@@ -334,34 +325,33 @@ JSAPI_FUNC(room_getStat) {
 
   if (bAdded)
     D2COMMON_RemoveRoomData(D2CLIENT_GetPlayerUnit()->pAct, pRoom2->pLevel->dwLevelNo, pRoom2->dwPosX, pRoom2->dwPosY, D2CLIENT_GetPlayerUnit()->pPath->pRoom1);
-  delete cRoom;
 
   return rval;
 }
 
 JSAPI_FUNC(room_getFirst) {
-  Room2* pRoom2 = (Room2*)JS_GetOpaque3(this_val);
+  D2DrlgRoomStrc* pRoom2 = (D2DrlgRoomStrc*)JS_GetOpaque3(this_val);
   if (!pRoom2 || !pRoom2->pLevel || !pRoom2->pLevel->pRoom2First)
     return JS_UNDEFINED;
 
-  return BuildObject(ctx, room_class_id, room_methods, _countof(room_methods), room_props, _countof(room_props), pRoom2->pLevel->pRoom2First);
+  return BuildObject(ctx, room_class_id, FUNCLIST(room_proto_funcs), pRoom2->pLevel->pRoom2First);
 }
 
 JSAPI_FUNC(room_unitInRoom) {
-  Room2* pRoom2 = (Room2*)JS_GetOpaque3(this_val);
+  D2DrlgRoomStrc* pRoom2 = (D2DrlgRoomStrc*)JS_GetOpaque3(this_val);
   if (!pRoom2 || argc < 1 || !JS_IsObject(argv[0]))
     return JS_UNDEFINED;
 
-  myUnit* pmyUnit = (myUnit*)JS_GetOpaque3(argv[0]);
-  if (!pmyUnit || (pmyUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
+  JSUnit* pmyUnit = (JSUnit*)JS_GetOpaque3(argv[0]);
+  if (!pmyUnit || (pmyUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_UNDEFINED;
 
-  UnitAny* pUnit = D2CLIENT_FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
+  D2UnitStrc* pUnit = D2CLIENT_FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
 
   if (!pUnit)
     return JS_UNDEFINED;
 
-  Room1* pRoom1 = D2COMMON_GetRoomFromUnit(pUnit);
+  D2ActiveRoomStrc* pRoom1 = D2COMMON_GetRoomFromUnit(pUnit);
 
   if (!pRoom1 || !pRoom1->pRoom2)
     return JS_UNDEFINED;
@@ -370,19 +360,17 @@ JSAPI_FUNC(room_unitInRoom) {
 }
 
 JSAPI_FUNC(room_reveal) {
-  Room2* pRoom2 = (Room2*)JS_GetOpaque3(this_val);
+  D2DrlgRoomStrc* pRoom2 = (D2DrlgRoomStrc*)JS_GetOpaque3(this_val);
 
   BOOL bDrawPresets = false;
   if (argc == 1 && JS_IsBool(argv[0]))
     bDrawPresets = !!JS_ToBool(ctx, argv[0]);
 
-  AutoCriticalRoom* cRoom = new AutoCriticalRoom;
+  AutoCriticalRoom cRoom;
   if (!pRoom2 || !GameReady()) {
-    delete cRoom;
     return JS_UNDEFINED;
   }
 
-  delete cRoom;
   return JS_NewBool(ctx, RevealRoom(pRoom2, bDrawPresets));
 }
 
@@ -390,45 +378,40 @@ JSAPI_FUNC(my_getRoom) {
   if (!WaitForGameReady())
     THROW_ERROR(ctx, "Get Room Game not ready");
 
-  AutoCriticalRoom* cRoom = new AutoCriticalRoom;
+  AutoCriticalRoom cRoom;
 
   if (argc == 1 && JS_IsNumber(argv[0])) {
     uint32_t levelId;
     JS_ToUint32(ctx, &levelId, argv[0]);
     if (levelId != 0)  // 1 Parameter, AreaId
     {
-      Level* pLevel = GetLevel(levelId);
+      D2DrlgLevelStrc* pLevel = GetLevel(levelId);
 
       if (!pLevel || !pLevel->pRoom2First) {
-        delete cRoom;
         return JS_UNDEFINED;
       }
 
-      JSValue jsroom = BuildObject(ctx, room_class_id, room_methods, _countof(room_methods), room_props, _countof(room_props), pLevel->pRoom2First);
+      JSValue jsroom = BuildObject(ctx, room_class_id, FUNCLIST(room_proto_funcs), pLevel->pRoom2First);
       if (!jsroom) {
-        delete cRoom;
         return JS_UNDEFINED;
       }
-      delete cRoom;
       return jsroom;
     } else if (levelId == 0) {
-      Room1* pRoom1 = D2COMMON_GetRoomFromUnit(D2CLIENT_GetPlayerUnit());
+      D2ActiveRoomStrc* pRoom1 = D2COMMON_GetRoomFromUnit(D2CLIENT_GetPlayerUnit());
 
       if (!pRoom1 || !pRoom1->pRoom2) {
-        delete cRoom;
         return JS_UNDEFINED;
       }
 
-      JSValue jsroom = BuildObject(ctx, room_class_id, room_methods, _countof(room_methods), room_props, _countof(room_props), pRoom1->pRoom2);
-      delete cRoom;
-      if (!jsroom)
+      JSValue jsroom = BuildObject(ctx, room_class_id, FUNCLIST(room_proto_funcs), pRoom1->pRoom2);
+      if (JS_IsException(jsroom))
         return JS_UNDEFINED;
 
       return jsroom;
     }
   } else if (argc == 3 || argc == 2)  // area ,x and y
   {
-    Level* pLevel = NULL;
+    D2DrlgLevelStrc* pLevel = NULL;
 
     uint32_t levelId;
     JS_ToUint32(ctx, &levelId, argv[0]);
@@ -438,7 +421,6 @@ JSAPI_FUNC(my_getRoom) {
       pLevel = D2CLIENT_GetPlayerUnit()->pPath->pRoom1->pRoom2->pLevel;
 
     if (!pLevel || !pLevel->pRoom2First) {
-      delete cRoom;
       return JS_UNDEFINED;
     }
 
@@ -452,26 +434,24 @@ JSAPI_FUNC(my_getRoom) {
       JS_ToUint32(ctx, &nY, argv[2]);
     }
     if (!nX || !nY) {
-      delete cRoom;
       return JS_UNDEFINED;
     }
 
     // Scan for the room with the matching x,y coordinates.
-    for (Room2* pRoom = pLevel->pRoom2First; pRoom; pRoom = pRoom->pRoom2Next) {
+    for (D2DrlgRoomStrc* pRoom = pLevel->pRoom2First; pRoom; pRoom = pRoom->pRoom2Next) {
       bool bAdded = FALSE;
       if (!pRoom->pRoom1) {
         D2COMMON_AddRoomData(D2CLIENT_GetPlayerUnit()->pAct, pLevel->dwLevelNo, pRoom->dwPosX, pRoom->dwPosY, D2CLIENT_GetPlayerUnit()->pPath->pRoom1);
         bAdded = TRUE;
       }
 
-      CollMap* map = pRoom->pRoom1->Coll;
+      D2DrlgCoordsStrc* map = pRoom->pRoom1->Coll;
       if (nX >= map->dwPosGameX && nY >= map->dwPosGameY && nX < (map->dwPosGameX + map->dwSizeGameX) && nY < (map->dwPosGameY + map->dwSizeGameY)) {
         if (bAdded)
           D2COMMON_RemoveRoomData(D2CLIENT_GetPlayerUnit()->pAct, pLevel->dwLevelNo, pRoom->dwPosX, pRoom->dwPosY, D2CLIENT_GetPlayerUnit()->pPath->pRoom1);
 
-        JSValue jsroom = BuildObject(ctx, room_class_id, room_methods, _countof(room_methods), room_props, _countof(room_props), pRoom);
-        delete cRoom;
-        if (!jsroom)
+        JSValue jsroom = BuildObject(ctx, room_class_id, FUNCLIST(room_proto_funcs), pRoom);
+        if (JS_IsException(jsroom))
           return JS_UNDEFINED;
 
         return jsroom;
@@ -481,21 +461,18 @@ JSAPI_FUNC(my_getRoom) {
         D2COMMON_RemoveRoomData(D2CLIENT_GetPlayerUnit()->pAct, pLevel->dwLevelNo, pRoom->dwPosX, pRoom->dwPosY, D2CLIENT_GetPlayerUnit()->pPath->pRoom1);
     }
 
-    JSValue jsroom = BuildObject(ctx, room_class_id, room_methods, _countof(room_methods), room_props, _countof(room_props), pLevel->pRoom2First);
-    delete cRoom;
-    if (!jsroom)
+    JSValue jsroom = BuildObject(ctx, room_class_id, FUNCLIST(room_proto_funcs), pLevel->pRoom2First);
+    if (JS_IsException(jsroom))
       return JS_UNDEFINED;
 
     return jsroom;
   } else {
-    JSValue jsroom = BuildObject(ctx, room_class_id, room_methods, _countof(room_methods), room_props, _countof(room_props),
+    JSValue jsroom = BuildObject(ctx, room_class_id, FUNCLIST(room_proto_funcs),
                                  D2CLIENT_GetPlayerUnit()->pPath->pRoom1->pRoom2->pLevel->pRoom2First);
-    delete cRoom;
-    if (!jsroom)
+    if (JS_IsException(jsroom))
       return JS_UNDEFINED;
 
     return jsroom;
   }
-  delete cRoom;
   return JS_UNDEFINED;
 }

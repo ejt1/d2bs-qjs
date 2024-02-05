@@ -1,14 +1,14 @@
 #include "JSParty.h"
-#include "D2Structs.h"
 #include "D2Helpers.h"
-#include "D2Ptrs.h"
 #include "JSUnit.h"
 #include "JSGlobalClasses.h"
+
+#include "Game/D2Roster.h"
 
 EMPTY_CTOR(party)
 
 JSAPI_PROP(party_getProperty) {
-  RosterUnit* pUnit = (RosterUnit*)JS_GetOpaque3(this_val);
+  D2RosterUnitStrc* pUnit = (D2RosterUnitStrc*)JS_GetOpaque3(this_val);
 
   if (!pUnit)
     return JS_UNDEFINED;
@@ -55,7 +55,7 @@ JSAPI_FUNC(party_getNext) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  RosterUnit* pUnit = (RosterUnit*)JS_GetOpaque3(this_val);
+  D2RosterUnitStrc* pUnit = (D2RosterUnitStrc*)JS_GetOpaque3(this_val);
 
   if (!pUnit) {
     return JS_FALSE;
@@ -76,13 +76,13 @@ JSAPI_FUNC(my_getParty) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  RosterUnit* pUnit = *p_D2CLIENT_PlayerUnitList;
+  D2RosterUnitStrc* pUnit = *D2CLIENT_PlayerUnitList;
 
   if (!pUnit)
     return JS_UNDEFINED;
 
   if (argc == 1) {
-    UnitAny* inUnit = NULL;
+    D2UnitStrc* inUnit = NULL;
     const char* nPlayerName = nullptr;
     uint32_t nPlayerId = NULL;
 
@@ -91,7 +91,7 @@ JSAPI_FUNC(my_getParty) {
     } else if (JS_IsNumber(argv[0]) && JS_ToUint32(ctx, &nPlayerId, argv[0])) {
       THROW_ERROR(ctx, "Unable to get ID");
     } else if (JS_IsObject(argv[0])) {
-      myUnit* lpUnit = (myUnit*)JS_GetOpaque3(argv[0]);
+      JSUnit* lpUnit = (JSUnit*)JS_GetOpaque3(argv[0]);
 
       if (!lpUnit)
         return JS_UNDEFINED;
@@ -108,7 +108,7 @@ JSAPI_FUNC(my_getParty) {
 
     BOOL bFound = FALSE;
 
-    for (RosterUnit* pScan = pUnit; pScan; pScan = pScan->pNext) {
+    for (D2RosterUnitStrc* pScan = pUnit; pScan; pScan = pScan->pNext) {
       if (nPlayerId && pScan->dwUnitId == nPlayerId) {
         bFound = TRUE;
         pUnit = pScan;
@@ -129,5 +129,5 @@ JSAPI_FUNC(my_getParty) {
       return JS_UNDEFINED;
   }
 
-  return BuildObject(ctx, party_class_id, party_methods, _countof(party_methods), party_props, _countof(party_props), pUnit);
+  return BuildObject(ctx, party_class_id, FUNCLIST(party_proto_funcs), pUnit);
 }

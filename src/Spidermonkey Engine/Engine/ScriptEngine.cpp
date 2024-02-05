@@ -6,9 +6,7 @@
 #include "Core.h"
 #include "JSGlobalClasses.h"
 #include "JSUnit.h"
-#include "Constants.h"
 #include "Engine.h"
-#include "D2Ptrs.h"
 #include "Events.h"
 #include "Helpers.h"
 
@@ -82,7 +80,7 @@ Script* ScriptEngine::NewScript(const char* file, ScriptMode mode/*, uint32_t ar
     return script;
   } catch (std::exception e) {
     LeaveCriticalSection(&m_lock);
-    Print(L"%S", e.what());
+    Print(e.what());
     free(fileName);
     return NULL;
   }
@@ -111,7 +109,7 @@ void ScriptEngine::RunCommand(const char* command) {
   try {
     m_console->RunCommand(command);
   } catch (std::exception e) {
-    Print(L"%S", e.what());
+    Print(e.what());
   }
 }
 

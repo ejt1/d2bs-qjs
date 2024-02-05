@@ -35,120 +35,171 @@ JSClassID profile_class_id;
 JSClassID profileType_class_id;
 JSClassID dialogLine_class_id;
 
-JSClassDef script_class = {
-    .class_name = "D2BSScript",
-};
-
-JSClassDef frame_class = {
-    .class_name = "Frame",
-    .finalizer = hook_finalizer,
-};
-
-JSClassDef box_class = {
-    .class_name = "Box",
-    .finalizer = hook_finalizer,
-};
-
-JSClassDef line_class = {
-    .class_name = "Line",
-    .finalizer = hook_finalizer,
-};
-
-JSClassDef text_class = {
-    .class_name = "Text",
-    .finalizer = hook_finalizer,
-};
-
-JSClassDef image_class = {
-    .class_name = "Image",
-    .finalizer = hook_finalizer,
-};
-
-JSClassDef room_class = {
-    .class_name = "Room",
-};
-
-JSClassDef presetunit_class = {
-    .class_name = "PresetUnit",
-    .finalizer = presetunit_finalizer,
-};
-
-JSClassDef party_class = {
-    .class_name = "Party",
-};
-
-JSClassDef filetools_class = {
-    .class_name = "FileTools",
-};
-
-JSClassDef file_class = {
-    .class_name = "File",
-    .finalizer = file_finalizer,
-};
-
-JSClassDef socket_class = {
-    .class_name = "Socket",
-    .finalizer = socket_finalizer,
-};
-
-JSClassDef exit_class = {.class_name = "Exit", .finalizer = exit_finalizer};
-
-JSClassDef folder_class = {
-    .class_name = "Folder",
-    .finalizer = dir_finalizer,
-};
-
-JSClassDef control_class = {
-    .class_name = "Control",
-    .finalizer = control_finalizer,
-};
-
-JSClassDef area_class = {
-    .class_name = "Area",
-    .finalizer = area_finalizer,
-};
-
-JSClassDef unit_class = {
-    .class_name = "Unit",
-    .finalizer = unit_finalizer,
-};
-
-JSClassDef profile_class = {
-    .class_name = "Profile",
-    .finalizer = profile_finalizer,
-};
-
-JSClassDef profileType_class = {
-    .class_name = "ProfileType",
-};
-
-JSClassDef dialogLine_class = {
-    .class_name = "DailogLine",
-};
-
 JSClassSpec global_classes[] = {
-    {&unit_class_id, &unit_class, 0, unit_ctor, 0, unit_methods, _countof(unit_methods), unit_props, _countof(unit_props), NULL, 0, NULL, 0},
-    {&presetunit_class_id, &presetunit_class, 0, presetunit_ctor, 0, NULL, 0, presetunit_props, _countof(presetunit_props), NULL, 0, NULL, 0},
-    {&area_class_id, &area_class, 0, area_ctor, 0, NULL, 0, area_props, _countof(area_props), NULL, 0, NULL, 0},
-    {&control_class_id, &control_class, 0, control_ctor, 0, control_funcs, _countof(control_funcs), control_props, _countof(control_props), NULL, 0, NULL, 0},
-    {&folder_class_id, &folder_class, 0, dir_ctor, 0, dir_methods, _countof(dir_methods), dir_props, _countof(dir_props), NULL, 0, NULL, 0},
-    {&exit_class_id, &exit_class, 0, exit_ctor, 0, NULL, 0, exit_props, _countof(exit_props), NULL, 0, NULL, 0},
-    {&party_class_id, &party_class, 0, party_ctor, 0, party_methods, _countof(party_methods), party_props, _countof(party_props), NULL, 0, NULL, 0},
-    {&room_class_id, &room_class, 0, room_ctor, 0, room_methods, _countof(room_methods), room_props, _countof(room_props), NULL, 0, NULL, 0},
+    {
+        "Unit",
+        &unit_class_id,
+        unit_ctor,
+        unit_finalizer,
+        0,
+        FUNCLIST(unit_proto_funcs),
+        EMPTY_FUNCLIST,
+    },
+    {
+        "PresetUnit",
+        &presetunit_class_id,
+        presetunit_ctor,
+        presetunit_finalizer,
+        0,
+        FUNCLIST(presetunit_proto_funcs),
+        EMPTY_FUNCLIST,
+    },
+    {
+        "Area",
+        &area_class_id,
+        area_ctor,
+        area_finalizer,
+        0,
+        FUNCLIST(area_proto_funcs),
+        EMPTY_FUNCLIST,
+    },
+    {
+        "Control",
+        &control_class_id,
+        control_ctor,
+        control_finalizer,
+        0,
+        FUNCLIST(control_proto_funcs),
+        EMPTY_FUNCLIST,
+    },
+    {
+        "Folder",
+        &folder_class_id,
+        dir_ctor,
+        dir_finalizer,
+        0,
+        FUNCLIST(dir_proto_funcs),
+        EMPTY_FUNCLIST,
+    },
+    {
+        "Exit",
+        &exit_class_id,
+        exit_ctor,
+        exit_finalizer,
+        0,
+        FUNCLIST(exit_proto_funcs),
+        EMPTY_FUNCLIST,
+    },
+    {
+        "Party",
+        &party_class_id,
+        party_ctor,
+        nullptr,
+        0,
+        FUNCLIST(party_proto_funcs),
+        EMPTY_FUNCLIST,
+    },
+    {
+        "Room",
+        &room_class_id,
+        room_ctor,
+        nullptr,
+        0,
+        FUNCLIST(room_proto_funcs),
+        EMPTY_FUNCLIST,
+    },
 
-    {&file_class_id, &file_class, 0, file_ctor, 0, file_methods, _countof(file_methods), file_props, _countof(file_props), file_s_methods, _countof(file_s_methods), NULL,
-     0},
-    {&socket_class_id, &socket_class, 0, socket_ctor, 0, socket_methods, _countof(socket_methods), socket_props, _countof(socket_props), socket_s_methods,
-     _countof(socket_s_methods), NULL, 0},
-    {&filetools_class_id, &filetools_class, 0, filetools_ctor, 0, NULL, 0, NULL, 0, filetools_s_methods, _countof(filetools_s_methods), NULL, 0},
-    {&script_class_id, &script_class, 0, script_ctor, 0, script_methods, _countof(script_methods), script_props, _countof(script_props), NULL, 0, NULL, 0},
+    {
+        "File",
+        &file_class_id,
+        file_ctor,
+        file_finalizer,
+        0,
+        FUNCLIST(file_proto_funcs),
+        FUNCLIST(file_static_funcs),
+    },
+    {
+        "Socket",
+        &socket_class_id,
+        socket_ctor,
+        socket_finalizer,
+        0,
+        FUNCLIST(socket_proto_funcs),
+        FUNCLIST(socket_static_funcs),
+    },
+    {
+        "FileTools",
+        &filetools_class_id,
+        filetools_ctor,
+        nullptr,
+        0,
+        EMPTY_FUNCLIST,
+        FUNCLIST(filetools_static_funcs),
+    },
+    {
+        "D2BSScript",
+        &script_class_id,
+        script_ctor,
+        nullptr,
+        0,
+        FUNCLIST(script_proto_funcs),
+        EMPTY_FUNCLIST,
+    },
 
-    {&frame_class_id, &frame_class, 0, frame_ctor, 0, frame_methods, _countof(frame_methods), frame_props, _countof(frame_props), NULL, 0, NULL, 0},
-    {&box_class_id, &box_class, 0, box_ctor, 0, box_methods, _countof(box_methods), box_props, _countof(box_props), NULL, 0, NULL, 0},
-    {&line_class_id, &line_class, 0, line_ctor, 0, line_methods, _countof(line_methods), line_props, _countof(line_props), NULL, 0, NULL, 0},
-    {&text_class_id, &text_class, 0, text_ctor, 0, text_methods, _countof(text_methods), text_props, _countof(text_props), NULL, 0, NULL, 0},
-    {&image_class_id, &image_class, 0, image_ctor, 0, image_methods, _countof(image_methods), image_props, _countof(image_props), NULL, 0, NULL, 0},
-    {&profile_class_id, &profile_class, 0, profile_ctor, 0, profile_methods, _countof(profile_methods), profile_props, _countof(profile_props), NULL, 0, NULL, 0},
+    {
+        "Frame",
+        &frame_class_id,
+        frame_ctor,
+        hook_finalizer,
+        0,
+        FUNCLIST(frame_proto_funcs),
+        EMPTY_FUNCLIST,
+    },
+    {
+        "Box",
+        &box_class_id,
+        box_ctor,
+        hook_finalizer,
+        0,
+        FUNCLIST(box_proto_funcs),
+        EMPTY_FUNCLIST,
+    },
+    {
+        "Line",
+        &line_class_id,
+        line_ctor,
+        hook_finalizer,
+        0,
+        FUNCLIST(line_proto_funcs),
+        EMPTY_FUNCLIST,
+    },
+    {
+        "Text",
+        &text_class_id,
+        text_ctor,
+        hook_finalizer,
+        0,
+        FUNCLIST(text_proto_funcs),
+        EMPTY_FUNCLIST,
+    },
+    {
+        "Image",
+        &image_class_id,
+        image_ctor,
+        hook_finalizer,
+        0,
+        FUNCLIST(image_proto_funcs),
+        EMPTY_FUNCLIST,
+    },
+    {
+        "Profile",
+        &profile_class_id,
+        profile_ctor,
+        profile_finalizer,
+        0,
+        FUNCLIST(profile_proto_funcs),
+        EMPTY_FUNCLIST,
+    },
+
     {0},
-
 };

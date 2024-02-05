@@ -4,15 +4,14 @@
 #include <list>
 
 #include "Core.h"
-#include "D2Ptrs.h"
-// #include "D2Helpers.h"
 #include "Helpers.h"
 #include "Control.h"
 #include "CriticalSections.h"
 #include "Console.h"
+#include "Game/Unorganized.h"
 
-bool SplitLines(const std::wstring& str, size_t maxWidth, const wchar_t delim, std::list<std::wstring>& lst) {
-  std::wstring tmp(str);
+bool SplitLines(const std::string& str, size_t maxWidth, const char delim, std::list<std::string>& lst) {
+  std::string tmp(str);
 
   if (str.length() < 1 || maxWidth < 40)
     return false;
@@ -34,12 +33,12 @@ bool SplitLines(const std::wstring& str, size_t maxWidth, const wchar_t delim, s
   int pos = tmp.find_last_of(delim, byteIdx - 1);
   if (!pos || pos == std::string::npos) {
     // Target delimiter was not found, breaking at byteIdx
-    std::wstring _ts = tmp.substr(0, byteIdx);
+    std::string _ts = tmp.substr(0, byteIdx);
     lst.push_back(_ts);
     tmp.erase(0, byteIdx);
   } else {
     // We found the last delimiter before byteIdx
-    std::wstring _ts = tmp.substr(0, pos);
+    std::string _ts = tmp.substr(0, pos);
     lst.push_back(_ts);
     tmp.erase(0, pos);
   }
@@ -47,17 +46,17 @@ bool SplitLines(const std::wstring& str, size_t maxWidth, const wchar_t delim, s
   return SplitLines(tmp, maxWidth, delim, lst);
 }
 
-void Print(const wchar_t* szFormat, ...) {
+void Print(const char* szFormat, ...) {
   va_list vaArgs;
   va_start(vaArgs, szFormat);
 
-  int len = _vscwprintf(szFormat, vaArgs);
-  wchar_t* str = new wchar_t[len + 1];
-  vswprintf_s(str, len + 1, szFormat, vaArgs);
+  int len = _vscprintf(szFormat, vaArgs);
+  char* str = new char[len + 1];
+  vsprintf_s(str, len + 1, szFormat, vaArgs);
   va_end(vaArgs);
 
   EnterCriticalSection(&Vars.cPrintSection);
-  Vars.qPrintBuffer.push(std::wstring(str));
+  Vars.qPrintBuffer.push(str);
   LeaveCriticalSection(&Vars.cPrintSection);
 
   delete[] str;
@@ -91,8 +90,8 @@ void __fastcall Say(const wchar_t* szFormat, ...) {
 
   Vars.bDontCatchNextMsg = TRUE;
 
-  if (*p_D2CLIENT_PlayerUnit) {
-    memcpy((wchar_t*)p_D2CLIENT_ChatMsg, szBuffer, (len + 1) * sizeof(wchar_t));
+  if (*D2CLIENT_PlayerUnit) {
+    memcpy((wchar_t*)D2CLIENT_ChatMsg, szBuffer, (len + 1) * sizeof(wchar_t));
 
     MSG* aMsg = new MSG;
     aMsg->hwnd = D2GFX_GetHwnd();
@@ -122,14 +121,14 @@ void __fastcall Say(const wchar_t* szFormat, ...) {
   // help button and ! ok msg for disconnected
   else if (findControl(CONTROL_BUTTON, 5308, -1, 187, 470, 80, 20) && (!findControl(CONTROL_BUTTON, 5102, -1, 351, 337, 96, 32))) {
     std::string lBuffer = WideToAnsi(szBuffer, CP_ACP);
-    memcpy((char*)p_D2MULTI_ChatBoxMsg, lBuffer.c_str(), strlen(lBuffer.c_str()) + 1);
+    memcpy((char*)D2MULTI_ChatBoxMsg, lBuffer.c_str(), strlen(lBuffer.c_str()) + 1);
     D2MULTI_DoChat();
   }
 
   delete[] szBuffer;
 }
 
-bool ClickMap(DWORD dwClickType, int wX, int wY, BOOL bShift, UnitAny* pUnit) {
+bool ClickMap(DWORD dwClickType, int wX, int wY, BOOL bShift, D2UnitStrc* pUnit) {
   if (ClientState() != ClientStateInGame)
     return false;
 
@@ -141,14 +140,14 @@ bool ClickMap(DWORD dwClickType, int wX, int wY, BOOL bShift, UnitAny* pUnit) {
 
   D2COMMON_MapToAbsScreen(&Click.x, &Click.y);
 
-  Click.x -= *p_D2CLIENT_ViewportX;
-  Click.y -= *p_D2CLIENT_ViewportY;
+  Click.x -= *D2CLIENT_ViewportX;
+  Click.y -= *D2CLIENT_ViewportY;
 
   POINT OldMouse = {0, 0};
-  OldMouse.x = *p_D2CLIENT_MouseX;
-  OldMouse.y = *p_D2CLIENT_MouseY;
-  *p_D2CLIENT_MouseX = 0;
-  *p_D2CLIENT_MouseY = 0;
+  OldMouse.x = *D2CLIENT_MouseX;
+  OldMouse.y = *D2CLIENT_MouseY;
+  *D2CLIENT_MouseX = 0;
+  *D2CLIENT_MouseY = 0;
 
   if (pUnit && pUnit != D2CLIENT_GetPlayerUnit() /* && D2CLIENT_FindUnit(pUnit->dwUnitId, pUnit->dwType) && D2CLIENT_UnitTestSelect(pUnit, 0, 0, 0)*/) {
     Vars.dwSelectedUnitId = pUnit->dwUnitId;
@@ -156,7 +155,7 @@ bool ClickMap(DWORD dwClickType, int wX, int wY, BOOL bShift, UnitAny* pUnit) {
 
     Vars.bClickAction = TRUE;
 
-    D2CLIENT_ClickMap(dwClickType, Click.x, Click.y, bShift ? 0x0C : (*p_D2CLIENT_AlwaysRun ? 0x08 : 0));
+    D2CLIENT_ClickMap(dwClickType, Click.x, Click.y, bShift ? 0x0C : (*D2CLIENT_AlwaysRun ? 0x08 : 0));
     D2CLIENT_SetSelectedUnit(NULL);
 
     Vars.bClickAction = FALSE;
@@ -167,18 +166,18 @@ bool ClickMap(DWORD dwClickType, int wX, int wY, BOOL bShift, UnitAny* pUnit) {
     Vars.dwSelectedUnitType = NULL;
 
     Vars.bClickAction = TRUE;
-    D2CLIENT_ClickMap(dwClickType, Click.x, Click.y, bShift ? 0x0C : (*p_D2CLIENT_AlwaysRun ? 0x08 : 0));
+    D2CLIENT_ClickMap(dwClickType, Click.x, Click.y, bShift ? 0x0C : (*D2CLIENT_AlwaysRun ? 0x08 : 0));
     Vars.bClickAction = FALSE;
   }
 
-  *p_D2CLIENT_MouseX = OldMouse.x;
-  *p_D2CLIENT_MouseY = OldMouse.y;
+  *D2CLIENT_MouseX = OldMouse.x;
+  *D2CLIENT_MouseY = OldMouse.y;
   return TRUE;
 }
 
 void LoadMPQ(const char* mpq) {
   D2WIN_InitMPQ(mpq, 0, 0, 3000);
-  *p_BNCLIENT_XPacKey = *p_BNCLIENT_ClassicKey = *p_BNCLIENT_KeyOwner = NULL;
+  *BNCLIENT_XPacKey = *BNCLIENT_ClassicKey = *BNCLIENT_KeyOwner = NULL;
 }
 
 int UTF8FindByteIndex(std::string str, int maxutf8len) {
@@ -205,11 +204,11 @@ int UTF8Length(std::string str) {
   return len;
 }
 
-int MeasureText(const std::wstring& str, int index) {
+int MeasureText(const std::string& str, int index) {
   return CalculateTextLen(str.substr(0, index).c_str(), Vars.dwConsoleFont).x;
 }
 
-int MaxLineFit(const std::wstring& str, int start_idx, int end_idx, int maxWidth) {
+int MaxLineFit(const std::string& str, int start_idx, int end_idx, int maxWidth) {
   if (start_idx == end_idx) {
     return MeasureText(str, start_idx) <= maxWidth ? start_idx : -1;
   }

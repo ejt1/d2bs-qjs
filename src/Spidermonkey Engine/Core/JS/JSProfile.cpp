@@ -97,7 +97,7 @@ CLASS_CTOR(profile) {
     THROW_ERROR(ctx, ex);
   }
 
-  return BuildObject(ctx, profile_class_id, profile_methods, _countof(profile_methods), profile_props, _countof(profile_props), prof);
+  return BuildObject(ctx, profile_class_id, FUNCLIST(profile_proto_funcs), prof);
 }
 
 CLASS_FINALIZER(profile) {
@@ -154,11 +154,5 @@ JSAPI_PROP(profile_getProperty) {
        break;
    }
 
-  return JS_UNDEFINED;
-}
-
-EMPTY_CTOR(profileType);
-
-JSAPI_PROP(profileType_getProperty) {
   return JS_UNDEFINED;
 }

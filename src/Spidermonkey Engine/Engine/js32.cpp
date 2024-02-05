@@ -11,8 +11,7 @@ JSValue JS_NewString(JSContext* ctx, const wchar_t* str) {
   return JS_NewString(ctx, utf8.c_str());
 }
 
-JSValue BuildObject(JSContext* ctx, JSClassID class_id, JSCFunctionListEntry* funcs, size_t num_funcs, JSCFunctionListEntry* props, size_t num_props, void* opaque,
-                    JSValue new_target) {
+JSValue BuildObject(JSContext* ctx, JSClassID class_id, JSCFunctionListEntry* own_funcs, size_t num_own_funcs, void* opaque, JSValue new_target) {
   JSValue proto;
   if (JS_IsUndefined(new_target)) {
     proto = JS_GetClassProto(ctx, class_id);
@@ -28,8 +27,7 @@ JSValue BuildObject(JSContext* ctx, JSClassID class_id, JSCFunctionListEntry* fu
     return obj;
   }
 
-  JS_SetPropertyFunctionList(ctx, obj, funcs, num_funcs);
-  JS_SetPropertyFunctionList(ctx, obj, props, num_props);
+  JS_SetPropertyFunctionList(ctx, obj, own_funcs, num_own_funcs);
   if (opaque) {
     JS_SetOpaque(obj, opaque);
   }
@@ -119,16 +117,13 @@ void JS_ReportPendingException(JSContext* ctx) {
   // if (_wcsicmp(L"Command Line", filename) != 0 && _wcsicmp(L"<unknown>", filename) != 0)
   //   displayName = filename + wcslen(Vars.szPath);
 
-  // Log(L"[%hs%hs] Code(%d) File(%s:%d) %hs\nLine: %hs", strict, type, report->errorNumber, filename, report->lineno, message, report->linebuf);
-  // Print(L"[\u00FFc%d%hs%hs\u00FFc0 (%d)] File(%s:%d) %hs", (warn ? 9 : 1), strict, type, report->errorNumber, displayName, report->lineno, message);
-
   if (what) {
     if (stackframe) {
-      Log(L"[%hs%hs] %S\n%S", strict, type, what->c_str(), stackframe->c_str());
-      Print(L"[\u00FFc%d%hs%hs\u00FFc0] %S\n%S", (warn ? 9 : 1), strict, type, what->c_str(), stackframe->c_str());
+      Log("[%hs%hs] %s\n%s", strict, type, what->c_str(), stackframe->c_str());
+      Print("[ÿc%d%hs%hsÿc0] %s\n%s", (warn ? 9 : 1), strict, type, what->c_str(), stackframe->c_str());
     } else {
-      Log(L"[%hs%hs] %S", strict, type, what->c_str());
-      Print(L"[\u00FFc%d%hs%hs\u00FFc0] %S", (warn ? 9 : 1), strict, type, what->c_str());
+      Log("[%hs%hs] %s", strict, type, what->c_str());
+      Print("[ÿc%d%hs%hs\ÿc0] %s", (warn ? 9 : 1), strict, type, what->c_str());
     }
   }
 

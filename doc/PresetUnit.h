@@ -3,7 +3,7 @@
  *
  * \todo Determine how location is determine based off roomx, roomy, x, and y.
  */
-class PresetUnit
+class D2PresetUnitStrc
 {
 public:
 	/** The type ID. See Unit::type.

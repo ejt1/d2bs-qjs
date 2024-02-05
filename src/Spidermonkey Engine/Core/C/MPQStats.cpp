@@ -1,6 +1,7 @@
 #include "MPQStats.h"
-#include "D2Ptrs.h"
 #include "Core.h"
+#include "Game/Unorganized.h"
+
 MPQTable BaseStatTable[] = {
     // DWORD dwEntry, DWORD dwMaxEntriesOffset, BinField* pTable, char szTableName, WORD wTableSize, WORD wUnknown
     {0x8426F0, 0x8426EC, itemTable, "items", ARRAYSIZE(itemTable), 0xFFFF},
@@ -39,7 +40,7 @@ DWORD GetBaseTable(int table, int row) {
     DWORD dwTableOffset = BaseStatTable[table].dwEntry;
 
     if (dwTableOffset <= 0xFFFF)
-      dwD2MPQTable = (*p_D2COMMON_sgptDataTable);
+      dwD2MPQTable = (*D2COMMON_sgptDataTable);
     else {
       dwD2MPQTable = NULL;  // d2common loading at a diffrent address crash fix
       dwTableOffset = DWORD((dwTableOffset - 0x400000) + d2CommonOff);

@@ -1,13 +1,14 @@
 #pragma once
 
-#include "D2Structs.h"
-
 #include <Windows.h>
 #include <vector>
 #include <queue>
 #include <string>
 #include <map>
 
+#include "Game/D2Gfx.h"
+
+// globals are bad // ejt
 struct Variables {
   int nChickenHP;
   int nChickenMP;
@@ -60,8 +61,8 @@ struct Variables {
 
   long SectionCount;
 
-  std::queue<std::wstring> qPrintBuffer;
-  std::map<unsigned __int32, CellFile*> mCachedCellFiles;
+  std::queue<std::string> qPrintBuffer;
+  std::map<unsigned __int32, D2CellFileStrc*> mCachedCellFiles;
   std::vector<std::pair<DWORD, DWORD>> vUnitList;
   // std::list<Event*> EventList;
   CRITICAL_SECTION cEventSection;
