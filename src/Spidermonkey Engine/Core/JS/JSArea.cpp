@@ -1,5 +1,4 @@
 #include "JSArea.h"
-#include "D2Ptrs.h"
 #include "JSExits.h"
 #include "CriticalSections.h"
 #include "MapHeader.h"

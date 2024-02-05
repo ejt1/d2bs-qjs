@@ -1,7 +1,6 @@
 #ifndef D2HELPERS_H
 #define D2HELPERS_H
 
-#include "D2Ptrs.h"
 #include "js32.h"
 
 #include "Game/D2Inventory.h"

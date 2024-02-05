@@ -1,5 +1,4 @@
 #include "MPQStats.h"
-#include "D2Ptrs.h"
 #include "Core.h"
 #include "Game/Unorganized.h"
 

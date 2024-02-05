@@ -1,9 +1,3 @@
-#define _DEFINE_VARS
-#define __D2PTRS_ONCE_
-#include "D2Ptrs.h"
-#undef __D2PTRS_H__
-#define __D2PTRS_LIST_
-#include "D2Ptrs.h"
 #include "Patch.h"
 #include "Engine.h"
 

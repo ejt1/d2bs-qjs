@@ -1,6 +1,5 @@
 #include "JSPresetUnit.h"
 
-#include "D2Ptrs.h"
 #include "CriticalSections.h"
 #include "JSPresetUnit.h"
 #include "D2Helpers.h"

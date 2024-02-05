@@ -3,8 +3,8 @@
 #include "Control.h"
 
 #include "js32.h"
+
 #include <windows.h>
-#include "D2Ptrs.h"
 
 CLASS_CTOR(control);
 CLASS_FINALIZER(control);

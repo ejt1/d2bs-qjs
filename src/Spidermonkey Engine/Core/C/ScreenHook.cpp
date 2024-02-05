@@ -2,7 +2,6 @@
 #include "JSScreenHook.h"
 #include "Engine.h"
 #include "Console.h"
-#include "D2Ptrs.h"
 
 #include <vector>
 

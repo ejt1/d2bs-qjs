@@ -1,5 +1,4 @@
 #include "D2Handlers.h"
-#include "D2Ptrs.h"
 #include "Engine.h"
 #include "Helpers.h"
 

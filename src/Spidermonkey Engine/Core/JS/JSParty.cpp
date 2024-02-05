@@ -1,6 +1,5 @@
 #include "JSParty.h"
 #include "D2Helpers.h"
-#include "D2Ptrs.h"
 #include "JSUnit.h"
 #include "JSGlobalClasses.h"
 

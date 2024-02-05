@@ -9,7 +9,6 @@
 #include "Helpers.h"
 #include "D2Handlers.h"
 #include "Console.h"
-#include "D2Ptrs.h"
 #include "CommandLine.h"
 #include "Core.h"
 #include "Unit.h"

@@ -1,5 +1,4 @@
 #include "Control.h"
-#include "D2Ptrs.h"
 #include "D2Helpers.h"
 #include "Helpers.h"
 #include <Engine.h>

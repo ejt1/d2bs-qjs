@@ -1,6 +1,5 @@
 #include "Room.h"
 #include "CriticalSections.h"
-#include "D2Ptrs.h"
 #include "D2Helpers.h"
 #include "Game/D2DataTbls.h"
 #include "Game/Units/Units.h"

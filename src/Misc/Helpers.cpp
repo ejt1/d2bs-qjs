@@ -5,7 +5,6 @@
 #include "string.h"
 #include "D2Handlers.h"
 #include "Control.h"
-#include "D2Ptrs.h"
 #include "Helpers.h"
 #include "DbgHelp.h"
 #include "Profile.h"

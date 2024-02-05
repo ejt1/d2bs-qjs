@@ -4,7 +4,6 @@
 #include "Console.h"
 #include "ScriptEngine.h"
 #include "Helpers.h"
-#include "D2Ptrs.h"
 #include "Core.h"
 
 bool Console::visible = false;

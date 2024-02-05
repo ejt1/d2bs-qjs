@@ -7,7 +7,6 @@
 #include "JSGlobalClasses.h"
 #include "JSUnit.h"
 #include "Engine.h"
-#include "D2Ptrs.h"
 #include "Events.h"
 #include "Helpers.h"
 

@@ -9,16 +9,11 @@
 #include <wininet.h>
 #include <iostream>
 
-// #include "js32.h"
-// #include "Script.h"
 #include "JSCore.h"
 #include "Core.h"
 #include "Helpers.h"
-// #include "ScriptEngine.h"
-// #include "Engine.h"
 #include "Events.h"
 #include "Console.h"
-#include "D2Ptrs.h"
 #include "File.h"
 
 #include "JSScript.h"

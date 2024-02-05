@@ -5,7 +5,6 @@
 #include <list>
 #include <map>
 
-#include "D2Ptrs.h"
 #include "D2Helpers.h"
 
 namespace Mapping {
