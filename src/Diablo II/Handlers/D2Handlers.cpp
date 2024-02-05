@@ -9,7 +9,6 @@
 #include "Unit.h"
 #include "Helpers.h"
 #include "Core.h"
-#include "Constants.h"
 #include "Events.h"
 #include "ScriptEngine.h"
 #include "Console.h"

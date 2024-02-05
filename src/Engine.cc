@@ -4,7 +4,6 @@
 #include <io.h>
 #include <fcntl.h>
 
-#include "Constants.h"
 #include "Offset.h"
 #include "ScriptEngine.h"
 #include "Helpers.h"

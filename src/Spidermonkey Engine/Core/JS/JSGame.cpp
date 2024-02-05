@@ -1,4 +1,3 @@
-#include "Constants.h"
 #include "JSGame.h"
 #include "D2Helpers.h"
 #include "CriticalSections.h"
@@ -12,6 +11,8 @@
 #include "TimedAlloc.h"
 #include "MapHeader.h"
 #include "JSRoom.h"
+
+#include "Game/D2Roster.h"
 
 #include <cassert>
 #include <cmath>

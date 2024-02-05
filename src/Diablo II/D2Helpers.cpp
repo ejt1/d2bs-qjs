@@ -6,7 +6,6 @@
 #include <string>
 
 #include "D2Helpers.h"
-#include "Constants.h"
 #include "Helpers.h"
 #include "D2Skills.h"
 #include "D2Intercepts.h"
@@ -575,9 +574,9 @@ void myDrawAutomapCell(CellFile* cellfile, int xpos, int ypos, BYTE col) {
   static BYTE coltab[2][256];  //, tabno = 0, lastcol = 0;
   if (!coltab[0][1])
     for (int k = 0; k < 255; k++) coltab[0][k] = coltab[1][k] = (BYTE)k;
-  cellfile->mylastcol = coltab[cellfile->mytabno ^= (col != cellfile->mylastcol)][255] = col;
+  cellfile->UFlags.mylastcol = coltab[cellfile->UFlags.mytabno ^= (col != cellfile->UFlags.mylastcol)][255] = col;
 
-  D2GFX_DrawAutomapCell2(&ct, xpos, ypos, (DWORD)-1, 5, coltab[cellfile->mytabno]);
+  D2GFX_DrawAutomapCell2(&ct, xpos, ypos, (DWORD)-1, 5, coltab[cellfile->UFlags.mytabno]);
 }
 
 DWORD ReadFile(HANDLE hFile, void* buf, DWORD len)
@@ -711,15 +710,6 @@ void __declspec(naked) __fastcall D2CLIENT_SetSelectedUnit_STUB(DWORD /*UnitAny*
 			jmp D2CLIENT_SetSelectedUnit_I
   }
 }
-// DWORD __declspec(naked) __fastcall D2CLIENT_LoadUIImage_ASM(char* Path)
-//{
-//	__asm {
-//		mov eax, ecx
-//			push 0
-//			call D2CLIENT_LoadUIImage_I
-//			retn
-//	}
-//}
 
 void __declspec(naked) __fastcall D2CLIENT_Interact_ASM(DWORD /*Struct*/) {
   __asm {
@@ -883,19 +873,6 @@ _TakeWaypoint:
 
   }
 }
-/*DWORD __declspec(naked) __fastcall D2CLIENT_TestPvpFlag_STUB(DWORD planum1, DWORD planum2, DWORD flagmask)
-{
-        __asm
-        {
-                push esi;
-                push [esp+8];
-                mov esi, edx; // p2
-                mov edx, ecx; // p1
-                call D2CLIENT_TestPvpFlag_I;
-                pop esi;
-                ret 4;
-        }
-}*/
 
 void __declspec(naked) __fastcall D2GFX_DrawRectFrame_STUB(RECT* /*rect*/) {
   __asm

@@ -1,9 +1,10 @@
 #include "JSParty.h"
-#include "D2Structs.h"
 #include "D2Helpers.h"
 #include "D2Ptrs.h"
 #include "JSUnit.h"
 #include "JSGlobalClasses.h"
+
+#include "Game/D2Roster.h"
 
 EMPTY_CTOR(party)
 

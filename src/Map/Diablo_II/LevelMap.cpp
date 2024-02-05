@@ -1,7 +1,6 @@
 #include <algorithm>
 #include <assert.h>
 #include "LevelMap.h"
-#include "D2Structs.h"
 
 namespace Mapping {
 

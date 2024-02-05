@@ -3,7 +3,6 @@
 #include "Path.h"
 #include "..\Map.h"
 #include "Reduction\PathReducer.h"
-#include "D2Structs.h"
 #include <vector>
 #include <set>
 #include <queue>

@@ -1,7 +1,6 @@
 #include "JSRoom.h"
 #include "CriticalSections.h"
 #include "JSPresetUnit.h"
-#include "D2Structs.h"
 #include "D2Ptrs.h"
 
 EMPTY_CTOR(room)

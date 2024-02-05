@@ -1,7 +1,6 @@
 #pragma once
 
-#include "D2Structs.h"
-#include "Constants.h"
+#include "Game/Unorganized.h"
 
 Control* findControl(int Type, int LocaleID, int Disabled, int PosX, int PosY, int SizeX, int SizeY);
 Control* findControl(int Type, const char* Text, int Disabled, int PosX, int PosY, int SizeX, int SizeY);

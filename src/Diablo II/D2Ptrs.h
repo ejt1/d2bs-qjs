@@ -4,7 +4,11 @@
 #ifndef __D2PTRS_H__
 #define __D2PTRS_H__
 
-#include "D2Structs.h"
+#include "Game/D2DataTbls.h"
+#include "Game/GAME/Game.h"
+#include "Game/Units/Units.h"
+#include "Game/Unorganized.h"
+#include "Game/D2Inventory.h"
 
 #pragma warning(push)
 #pragma warning(disable : 4245)
@@ -488,14 +492,12 @@ enum {
 };
 #else
 
-// #define D2CLIENT_TestPvpFlag(dwId1, dwId2, dwFlag)		(D2CLIENT_TestPvpFlag_STUB(dwId1, dwId2, dwFlag))
 #define D2MULTI_PrintChannelText(text, color) (D2MULTI_PrintChannelText_(0, text, color))
 #define D2CLIENT_GetUIState(dwVarNo) (D2CLIENT_GetUIVar_STUB(dwVarNo))
 #define D2CLIENT_SetUIState(dwVarNo, value) (D2CLIENT_SetUIVar(dwVarNo, value, 0))
 #define D2CLIENT_InitAutomapLayer(layerlvl) ((AutomapLayer*)D2CLIENT_InitAutomapLayer_STUB(layerlvl))
 #define D2CLIENT_GetUnitName(x) (wchar_t*)D2CLIENT_GetUnitName_STUB((DWORD)x)
 #define D2CLIENT_SetSelectedUnit(x) (D2CLIENT_SetSelectedUnit_STUB((DWORD)x))
-// #define D2CLIENT_LoadUIImage(x)							((CellFile*)D2CLIENT_LoadUIImage_ASM(x))
 #define D2CLIENT_Interact_STUB(x) (D2CLIENT_Interact_ASM((DWORD)x))
 #define D2CLIENT_ClickParty(x, y) (D2CLIENT_ClickParty_ASM((DWORD)x, (DWORD)y))
 #define D2CLIENT_RightClickItem(x, y, loc, player, invdata) D2CLIENT_ClickItemRight_ASM(x, y, loc, (DWORD)player, (DWORD)invdata)

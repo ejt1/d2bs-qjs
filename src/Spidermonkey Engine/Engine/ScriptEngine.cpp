@@ -6,7 +6,6 @@
 #include "Core.h"
 #include "JSGlobalClasses.h"
 #include "JSUnit.h"
-#include "Constants.h"
 #include "Engine.h"
 #include "D2Ptrs.h"
 #include "Events.h"

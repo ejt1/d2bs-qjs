@@ -1,12 +1,12 @@
 #pragma once
 
-#include "D2Structs.h"
-
 #include <Windows.h>
 #include <vector>
 #include <queue>
 #include <string>
 #include <map>
+
+#include "Game/D2Gfx.h"
 
 struct Variables {
   int nChickenHP;

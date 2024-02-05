@@ -1,5 +1,4 @@
-#ifndef _CONSTANTS_H
-#define _CONSTANTS_H
+#pragma once
 
 //////////////////////////////////////////////////////////////////////
 // Attack Types
@@ -869,5 +868,3 @@ enum { CLASS_AMA = 0, CLASS_SOR, CLASS_NEC, CLASS_PAL, CLASS_BAR, CLASS_DRU, CLA
 ///////////////////////////////////////////////////
 #define ITEMSTAT_SOCKETS 0xC2
 #define AFFECT_JUST_PORTALED 102
-
-#endif

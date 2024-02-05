@@ -4,12 +4,13 @@
 #include "Unit.h"
 #include "Helpers.h"
 #include "Core.h"
-#include "Constants.h"
 #include "Events.h"
 #include "ScriptEngine.h"
 #include "Console.h"
 #include "Engine.h"
 #include "MPQStats.h"
+
+#include "Game/D2Roster.h"
 
 DWORD ReassignPlayerHandler(BYTE* pPacket, DWORD /*dwSize*/) {
   if (*(LPDWORD)&pPacket[2] == D2CLIENT_GetPlayerUnit()->dwUnitId)

@@ -1,9 +1,12 @@
 #ifndef D2HELPERS_H
 #define D2HELPERS_H
 
-#include "D2Structs.h"
 #include "D2Ptrs.h"
 #include "js32.h"
+
+#include "Game/D2Inventory.h"
+#include "Game/D2Gfx.h"
+#include "Game/Drlg/D2DrlgDrlg.h"
 
 void Log(const wchar_t* szFormat, ...);
 void LogNoFormat(const wchar_t* szString);
@@ -43,7 +46,6 @@ WORD GetSkillByName(const char* szSkillName);
 const char* GetUnitName(UnitAny* pUnit, char* szBuf, size_t bufSize);
 void GetItemCode(UnitAny* pUnit, char* szBuf);
 
-InventoryLayout* GetLayoutFromTable(DWORD dwTable);
 UnitAny* D2CLIENT_FindUnit(DWORD dwId, DWORD dwType);
 
 POINT GetScreenSize();
@@ -85,7 +87,6 @@ static inline char* __stdcall GetLevelIdName(DWORD level) {
 
 DWORD __fastcall D2CLIENT_GetUnitName_STUB(DWORD UnitAny);
 DWORD __fastcall D2CLIENT_GetUIVar_STUB(DWORD varno);
-DWORD __fastcall D2CLIENT_LoadUIImage_ASM(char* Path);
 void __fastcall D2CLIENT_SetSelectedUnit_STUB(DWORD UnitAny);
 void __fastcall D2CLIENT_Interact_ASM(DWORD Struct);
 DWORD __fastcall D2CLIENT_ClickParty_ASM(DWORD RosterUnit, DWORD Mode);
@@ -98,9 +99,7 @@ void __fastcall D2CLIENT_ClickBeltRight_ASM(DWORD pInventory, DWORD pPlayer, DWO
 void __fastcall D2CLIENT_GetItemDesc_ASM(DWORD pUnit, wchar_t* pBuffer);
 void __fastcall D2COMMON_DisplayOverheadMsg_ASM(DWORD pUnit);
 void __fastcall D2CLIENT_MercItemAction_ASM(DWORD bPacketType, DWORD dwSlot);
-DWORD __fastcall D2CLIENT_LoadUIImage_ASM(char* lpszPath);
 void __fastcall D2CLIENT_PlaySound(DWORD dwSoundId);
-// DWORD __fastcall D2CLIENT_TestPvpFlag_STUB(DWORD planum1, DWORD planum2, DWORD flagmask);
 void __fastcall D2GFX_DrawRectFrame_STUB(RECT* rect);
 DWORD __cdecl D2CLIENT_GetMinionCount(UnitAny* pUnit, DWORD dwType);
 void __fastcall D2CLIENT_HostilePartyUnit(RosterUnit* pUnit, DWORD dwButton);

@@ -2,7 +2,6 @@
 #include "D2Ptrs.h"
 #include "D2Helpers.h"
 #include "Helpers.h"
-#include "Constants.h"
 #include <Engine.h>
 
 Control* findControl(int Type, int LocaleID, int Disabled, int PosX, int PosY, int SizeX, int SizeY) {

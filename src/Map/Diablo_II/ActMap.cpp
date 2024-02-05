@@ -1,7 +1,6 @@
 #include <algorithm>
 #include <assert.h>
 #include "ActMap.h"
-#include "D2Structs.h"
 #include "Core.h"
 #include "MPQStats.h"
 #include "CriticalSections.h"

@@ -1,8 +1,6 @@
 #ifndef D2INTERCEPTS_H
 #define D2INTERCEPTS_H
 
-#include "D2Structs.h"
-
 void GameInput_Intercept();
 void RealmPacketRecv_Interception();
 void GamePacketReceived_Intercept();

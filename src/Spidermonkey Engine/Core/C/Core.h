@@ -4,7 +4,7 @@
 #include <string>
 #include <list>
 
-#include "D2Structs.h"
+#include "Game/Units/Units.h"
 
 bool SplitLines(const std::wstring& str, size_t maxlen, const wchar_t delim, std::list<std::wstring>& lst);
 void Print(const wchar_t* szFormat, ...);

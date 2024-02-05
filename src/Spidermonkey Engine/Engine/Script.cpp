@@ -3,7 +3,6 @@
 
 #include "Script.h"
 #include "Core.h"
-#include "Constants.h"
 #include "D2Ptrs.h"
 #include "JSUnit.h"
 #include "Helpers.h"

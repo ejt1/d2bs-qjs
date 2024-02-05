@@ -1,6 +1,5 @@
 #include "JSUnit.h"
 #include "D2Helpers.h"
-#include "Constants.h"
 #include "Helpers.h"
 #include "Unit.h"
 #include "Core.h"
@@ -211,21 +210,21 @@ JSAPI_PROP(unit_getProperty) {
       DWORD SpecType;
       SpecType = NULL;
       if (pUnit->dwType == UNIT_MONSTER && pUnit->pMonsterData) {
-        if (pUnit->pMonsterData->fMinion & 1)
+        if (pUnit->pMonsterData->UFlags.fMinion & 1)
           SpecType |= 0x08;
-        if (pUnit->pMonsterData->fBoss & 1)
+        if (pUnit->pMonsterData->UFlags.fBoss & 1)
           SpecType |= 0x04;
-        if (pUnit->pMonsterData->fChamp & 1)
+        if (pUnit->pMonsterData->UFlags.fChamp & 1)
           SpecType |= 0x02;
-        if ((pUnit->pMonsterData->fBoss & 1) && (pUnit->pMonsterData->fNormal & 1))
+        if ((pUnit->pMonsterData->UFlags.fBoss & 1) && (pUnit->pMonsterData->UFlags.fNormal & 1))
           SpecType |= 0x01;
-        if (pUnit->pMonsterData->fNormal & 1)
+        if (pUnit->pMonsterData->UFlags.fNormal & 1)
           SpecType |= 0x00;
         return JS_NewInt32(ctx, SpecType);
       }
       break;
     case UNIT_UNIQUEID:
-      if (pUnit->dwType == UNIT_MONSTER && pUnit->pMonsterData->fBoss && pUnit->pMonsterData->fNormal) {
+      if (pUnit->dwType == UNIT_MONSTER && pUnit->pMonsterData->UFlags.fBoss && pUnit->pMonsterData->UFlags.fNormal) {
         return JS_NewInt32(ctx, pUnit->pMonsterData->wUniqueNo);
       } else {
         return JS_NewInt32(ctx, -1);
@@ -425,15 +424,15 @@ JSAPI_PROP(unit_getProperty) {
       if (pUnit->dwType == UNIT_OBJECT && pUnit->pObjectData) {
         pRoom = D2COMMON_GetRoomFromUnit(pUnit);
         if (pRoom && D2COMMON_GetLevelNoFromRoom(pRoom)) {
-          return JS_NewInt32(ctx, pUnit->pObjectData->Type & 255);
+          return JS_NewInt32(ctx, pUnit->pObjectData->UData.Type & 255);
         } else {
-          return JS_NewInt32(ctx, pUnit->pObjectData->Type);
+          return JS_NewInt32(ctx, pUnit->pObjectData->UData.Type);
         }
       }
       break;
     case OBJECT_LOCKED:
       if (pUnit->dwType == UNIT_OBJECT && pUnit->pObjectData) {
-        return JS_NewInt32(ctx, pUnit->pObjectData->ChestLocked);
+        return JS_NewInt32(ctx, pUnit->pObjectData->UData.UFlags.ChestLocked);
       }
       break;
     case ME_WSWITCH:

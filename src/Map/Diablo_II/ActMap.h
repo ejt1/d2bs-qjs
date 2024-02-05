@@ -6,7 +6,6 @@
 #include <map>
 #include <set>
 
-#include "D2Structs.h"
 #include "D2Ptrs.h"
 #include "D2Helpers.h"
 #include "CriticalSections.h"

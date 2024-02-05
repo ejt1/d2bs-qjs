@@ -1,7 +1,9 @@
 #pragma once
 
 #include <windows.h>
-#include "D2Structs.h"
+
+#include "Game/Units/Units.h"
+#include "Game/Unorganized.h"
 
 DWORD __fastcall GameInput(wchar_t* wMsg);
 DWORD __fastcall ChannelInput(wchar_t* wMsg);
