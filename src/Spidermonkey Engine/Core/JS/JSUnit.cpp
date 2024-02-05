@@ -791,37 +791,39 @@ JSAPI_FUNC(unit_getStat) {
     THROW_WARNING(ctx, "Game not ready");
 
   myUnit* lpUnit = (myUnit*)JS_GetOpaque3(this_val);
-
   if (!lpUnit || (lpUnit->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_FALSE;
 
   UnitAny* pUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
-
   if (!pUnit)
     return JS_FALSE;
 
   int32_t nStat = 0;
   int32_t nSubIndex = 0;
-  JS_ToInt32(ctx, &nStat, argv[0]);
-  if (JS_IsNumber(argv[1])) {
-    JS_ToInt32(ctx, &nSubIndex, argv[1]);
+  if (argc == 0) {
+    THROW_ERROR(ctx, "not enough arguments");
+  }
+  if (JS_ToInt32(ctx, &nStat, argv[0])) {
+    return JS_EXCEPTION;
+  }
+  if (argc > 1 && (!JS_IsNumber(argv[1]) || JS_ToInt32(ctx, &nSubIndex, argv[1]))) {
+    return JS_EXCEPTION;
   }
 
-  JSValue rval = JS_FALSE;
-  if (nStat >= STAT_HP && nStat <= STAT_MAXSTAMINA)
-    rval = JS_NewInt32(ctx, D2COMMON_GetUnitStat(pUnit, nStat, nSubIndex) >> 8);
-  else if (nStat == STAT_EXP || nStat == STAT_LASTEXP || nStat == STAT_NEXTEXP) {
-    rval = JS_NewFloat64(ctx, (unsigned int)D2COMMON_GetUnitStat(pUnit, nStat, nSubIndex));
-  } else if (nStat == STAT_ITEMLEVELREQ)
-    rval = JS_NewInt32(ctx, D2COMMON_GetItemLevelRequirement(pUnit, D2CLIENT_GetPlayerUnit()));
-  else if (nStat == -1) {
+  if (nStat >= STAT_HP && nStat <= STAT_MAXSTAMINA) {
+    return JS_NewInt32(ctx, D2COMMON_GetUnitStat(pUnit, nStat, nSubIndex) >> 8);
+  } else if (nStat == STAT_EXP || nStat == STAT_LASTEXP || nStat == STAT_NEXTEXP) {
+    return JS_NewFloat64(ctx, (unsigned int)D2COMMON_GetUnitStat(pUnit, nStat, nSubIndex));
+  } else if (nStat == STAT_ITEMLEVELREQ) {
+    return JS_NewInt32(ctx, D2COMMON_GetItemLevelRequirement(pUnit, D2CLIENT_GetPlayerUnit()));
+  } else if (nStat == -1) {
     Stat aStatList[256] = {NULL};
     StatList* pStatList = D2COMMON_GetStatList(pUnit, NULL, 0x40);
 
     if (pStatList) {
       DWORD dwStats = D2COMMON_CopyStatList(pStatList, (Stat*)aStatList, 256);
 
-      rval = JS_NewArray(ctx);
+      JSValue statArray = JS_NewArray(ctx);
       for (int j = 0; j < pUnit->pStats->StatVec.wCount; j++) {
         bool inListAlready = false;
         for (DWORD k = 0; k < dwStats; k++) {
@@ -838,26 +840,29 @@ JSAPI_FUNC(unit_getStat) {
       }
       for (UINT i = 0; i < dwStats; i++) {
         JSValue pArrayInsert = JS_NewArray(ctx);
-        if (!pArrayInsert)
+        if (JS_IsException(pArrayInsert))
           continue;
 
-        JSValue nIndex = JS_NewInt32(ctx, aStatList[i].wStatIndex);
-        JSValue _nSubIndex = JS_NewInt32(ctx, aStatList[i].wSubIndex);
-        JSValue nValue = JS_NewInt32(ctx, aStatList[i].dwStatValue);
+        JS_SetPropertyUint32(ctx, pArrayInsert, 0, JS_NewInt32(ctx, aStatList[i].wStatIndex));
+        JS_SetPropertyUint32(ctx, pArrayInsert, 1, JS_NewInt32(ctx, aStatList[i].wSubIndex));
+        JS_SetPropertyUint32(ctx, pArrayInsert, 2, JS_NewInt32(ctx, aStatList[i].dwStatValue));
 
-        JS_SetPropertyUint32(ctx, pArrayInsert, 0, nIndex);
-        JS_SetPropertyUint32(ctx, pArrayInsert, 1, _nSubIndex);
-        JS_SetPropertyUint32(ctx, pArrayInsert, 2, nValue);
-
-        JS_SetPropertyUint32(ctx, rval, i, pArrayInsert);
+        JS_SetPropertyUint32(ctx, statArray, i, pArrayInsert);
       }
+      return statArray;
     }
-  } else if (nStat == -2) {
-    rval = JS_NewArray(ctx);
 
-    InsertStatsToGenericObject(pUnit, pUnit->pStats, ctx, rval);
-    InsertStatsToGenericObject(pUnit, D2COMMON_GetStatList(pUnit, NULL, 0x40), ctx, rval);
-  } else {
+    // TODO(ejt): does this ever occur?
+    return JS_FALSE;
+  } else if (nStat == -2) {
+    JSValue statArray = JS_NewArray(ctx);
+
+    InsertStatsToGenericObject(pUnit, pUnit->pStats, ctx, statArray);
+    InsertStatsToGenericObject(pUnit, D2COMMON_GetStatList(pUnit, NULL, 0x40), ctx, statArray);
+
+    return statArray;
+  }
+
     long result = D2COMMON_GetUnitStat(pUnit, nStat, nSubIndex);
     if (result == 0)  // if stat isnt found look up preset list
     {
@@ -871,10 +876,8 @@ JSAPI_FUNC(unit_getStat) {
         }
       }
     }
-    rval = JS_NewFloat64(ctx, result);
+  return JS_NewFloat64(ctx, result);
   }
-  return rval;
-}
 
 void InsertStatsToGenericObject(UnitAny* pUnit, StatList* pStatList, JSContext* cx, JSValue pArray) {
   Stat* pStat = NULL;
@@ -904,17 +907,18 @@ void InsertStatsNow(Stat* pStat, int nStat, JSContext* cx, JSValue pArray) {
       charges = pStat[nStat].dwStatValue & 0xFF;
       maxcharges = pStat[nStat].dwStatValue >> 8;
     }
-    JSValue val = JS_NewObject(cx);
-    JSValue jsskill = JS_NewInt32(cx, skill), jslevel = JS_NewInt32(cx, level), jscharges = JS_NewInt32(cx, charges), jsmaxcharges = JS_NewInt32(cx, maxcharges);
+    JSValue obj = JS_NewObject(cx);
     // val is an anonymous object that holds properties
-    JS_SetPropertyStr(cx, val, "skill", jsskill);
-    JS_SetPropertyStr(cx, val, "level", jslevel);
+    JS_SetPropertyStr(cx, obj, "skill", JS_NewInt32(cx, skill));
+    JS_SetPropertyStr(cx, obj, "level", JS_NewInt32(cx, level));
     if (maxcharges > 0) {
-      JS_SetPropertyStr(cx, val, "charges", jscharges);
-      JS_SetPropertyStr(cx, val, "maxcharges", jsmaxcharges);
+      JS_SetPropertyStr(cx, obj, "charges", JS_NewInt32(cx, charges));
+      JS_SetPropertyStr(cx, obj, "maxcharges", JS_NewInt32(cx, maxcharges));
     }
+
     // find where we should put it
-    JSValue index = JS_UNDEFINED, obj = val;
+    // TODO(ejt): FIX THIS!
+    JSValue index = JS_UNDEFINED;
     index = JS_GetPropertyUint32(cx, pArray, pStat[nStat].wStatIndex);
     if (!JS_IsUndefined(index)) {
       // modify the existing object by stuffing it into an array
@@ -932,7 +936,7 @@ void InsertStatsNow(Stat* pStat, int nStat, JSContext* cx, JSValue pArray) {
           return;
         }
         len++;
-        JS_SetPropertyUint32(cx, index, len, val);
+        JS_SetPropertyUint32(cx, index, len, obj);
         JS_FreeValue(cx, index);
       }
     } else {

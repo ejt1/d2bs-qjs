@@ -46,7 +46,7 @@ JSAPI_FUNC(filetools_remove) {
   JS_FreeCString(ctx, szFile);
 
   remove(fullpath);
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(filetools_rename) {
@@ -80,9 +80,9 @@ JSAPI_FUNC(filetools_rename) {
 
   // hehe, get rid of "ignoring return value" warning
   if (rename(porig, pnewName)) {
-    return JS_TRUE;
+    return JS_UNDEFINED;
   }
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(filetools_copy) {
@@ -112,7 +112,7 @@ JSAPI_FUNC(filetools_copy) {
   if (overwrite && _access(pnewName, 0) == 0) {
     JS_FreeCString(ctx, szOrig);
     JS_FreeCString(ctx, szNewName);
-    return JS_TRUE;
+    return JS_UNDEFINED;
   }
 
   FILE* fptr1 = fileOpenRelScript(szOrig, "r", ctx);
@@ -151,7 +151,7 @@ JSAPI_FUNC(filetools_copy) {
   fflush(fptr2);
   fclose(fptr2);
   fclose(fptr1);
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(filetools_exists) {

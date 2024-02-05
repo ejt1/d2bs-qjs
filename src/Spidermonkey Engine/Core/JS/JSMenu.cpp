@@ -183,7 +183,7 @@ JSAPI_FUNC(my_getOOGLocation) {
 
 JSAPI_FUNC(my_createCharacter) {
   if (ClientState() != ClientStateMenu)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
   std::string name;
   int32_t type = -1;

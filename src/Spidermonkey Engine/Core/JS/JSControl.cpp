@@ -73,7 +73,7 @@ JSAPI_PROP(control_getProperty) {
       return JS_NewFloat64(ctx, (double)ctrl->dwDisabled);
       break;
   }
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_STRICT_PROP(control_setProperty) {
@@ -93,7 +93,7 @@ JSAPI_STRICT_PROP(control_setProperty) {
       if (ctrl->dwType == 1 && JS_IsString(val)) {
         const char* szText = JS_ToCString(ctx, val);
         if (!szText) {
-          return JS_EXCEPTION;
+          return JS_UNDEFINED;
         }
         setControlText(ctrl, szText);
         JS_FreeCString(ctx, szText);
@@ -128,7 +128,7 @@ JSAPI_STRICT_PROP(control_setProperty) {
       break;
   }
 
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(control_getNext) {
@@ -152,19 +152,20 @@ JSAPI_FUNC(control_getNext) {
     pData->dwY = pData->pControl->dwPosY;
     pData->dwSizeX = pData->pControl->dwSizeX;
     pData->dwSizeY = pData->pControl->dwSizeY;
+    // BUG(ejt): possible value leak
     JS_SetOpaque(this_val, pData);
     return JS_DupValue(ctx, this_val);
   }
-  return JS_UNDEFINED;
+  return JS_FALSE;
 }
 
 JSAPI_FUNC(control_click) {
   if (ClientState() != ClientStateMenu)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
   ControlData* pData = ((ControlData*)JS_GetOpaque3(this_val));
   if (!pData)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
   Control* pControl = findControl(pData->dwType, (const char*)NULL, -1, pData->dwX, pData->dwY, pData->dwSizeX, pData->dwSizeY);
   if (!pControl) {
@@ -185,11 +186,11 @@ JSAPI_FUNC(control_click) {
 
 JSAPI_FUNC(control_setText) {
   if (ClientState() != ClientStateMenu)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
   ControlData* pData = ((ControlData*)JS_GetOpaque3(this_val));
   if (!pData)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
   Control* pControl = findControl(pData->dwType, (const char*)NULL, -1, pData->dwX, pData->dwY, pData->dwSizeX, pData->dwSizeY);
   if (!pControl) {
@@ -197,15 +198,15 @@ JSAPI_FUNC(control_setText) {
   }
 
   if (argc < 0 || !JS_IsString(argv[0]))
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
   const char* szText = JS_ToCString(ctx, argv[0]);
   if (!szText) {
-    return JS_EXCEPTION;
+    return JS_UNDEFINED;
   }
   setControlText(pControl, szText);
   JS_FreeCString(ctx, szText);
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(control_getText) {

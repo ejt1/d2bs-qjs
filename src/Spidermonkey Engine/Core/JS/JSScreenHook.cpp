@@ -16,8 +16,6 @@ CLASS_FINALIZER(hook) {
 }
 
 JSAPI_FUNC(hook_remove) {
-  (argc);
-
   Genhook::EnterGlobalSection();
   Genhook* hook = (Genhook*)JS_GetOpaque3(this_val);
   if (hook) {
@@ -28,7 +26,7 @@ JSAPI_FUNC(hook_remove) {
   // JS_ValueToObject(cx, JSVAL_VOID, &obj);
   Genhook::LeaveGlobalSection();
 
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 // Function to create a frame which gets called on a "new Frame ()"
@@ -77,7 +75,7 @@ JSAPI_FUNC(frame_ctor) {
 JSAPI_PROP(frame_getProperty) {
   FrameHook* pFramehook = (FrameHook*)JS_GetOpaque3(this_val);
   if (!pFramehook)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
   switch (magic) {
     case FRAME_X:
@@ -108,7 +106,7 @@ JSAPI_PROP(frame_getProperty) {
       return JS_DupValue(ctx, pFramehook->GetHoverHandler());
       break;
   }
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_STRICT_PROP(frame_setProperty) {
@@ -154,7 +152,7 @@ JSAPI_STRICT_PROP(frame_setProperty) {
       pFramehook->SetHoverHandler(val);
       break;
   }
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 // Box functions
@@ -208,7 +206,7 @@ JSAPI_FUNC(box_ctor) {
 JSAPI_PROP(box_getProperty) {
   BoxHook* pBoxHook = (BoxHook*)JS_GetOpaque3(this_val);
   if (!pBoxHook)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
   switch (magic) {
     case BOX_X:
@@ -245,13 +243,13 @@ JSAPI_PROP(box_getProperty) {
       return JS_DupValue(ctx, pBoxHook->GetHoverHandler());
       break;
   }
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_STRICT_PROP(box_setProperty) {
   BoxHook* pBoxHook = (BoxHook*)JS_GetOpaque3(this_val);
   if (!pBoxHook)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
   uint32_t ival = 0;
   bool bval = 0;
@@ -297,7 +295,7 @@ JSAPI_STRICT_PROP(box_setProperty) {
       pBoxHook->SetHoverHandler(val);
       break;
   }
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 // Line functions
@@ -349,7 +347,7 @@ JSAPI_FUNC(line_ctor) {
 JSAPI_PROP(line_getProperty) {
   LineHook* pLineHook = (LineHook*)JS_GetOpaque3(this_val);
   if (!pLineHook)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
   switch (magic) {
     case LINE_X:
@@ -380,13 +378,13 @@ JSAPI_PROP(line_getProperty) {
       return JS_DupValue(ctx, pLineHook->GetHoverHandler());
       break;
   }
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_STRICT_PROP(line_setProperty) {
   LineHook* pLineHook = (LineHook*)JS_GetOpaque3(this_val);
   if (!pLineHook)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
   uint32_t ival = 0;
   bool bval = 0;
@@ -426,7 +424,7 @@ JSAPI_STRICT_PROP(line_setProperty) {
       pLineHook->SetHoverHandler(val);
       break;
   }
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 // Function to create a text which gets called on a "new text ()"
@@ -486,7 +484,7 @@ JSAPI_FUNC(text_ctor) {
 JSAPI_PROP(text_getProperty) {
   TextHook* pTextHook = (TextHook*)JS_GetOpaque3(this_val);
   if (!pTextHook)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
   switch (magic) {
     case TEXT_X:
@@ -520,13 +518,13 @@ JSAPI_PROP(text_getProperty) {
       return JS_DupValue(ctx, pTextHook->GetHoverHandler());
       break;
   }
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_STRICT_PROP(text_setProperty) {
   TextHook* pTextHook = (TextHook*)JS_GetOpaque3(this_val);
   if (!pTextHook)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
   uint32_t ival = 0;
   bool bval = 0;
@@ -577,7 +575,7 @@ JSAPI_STRICT_PROP(text_setProperty) {
       pTextHook->SetHoverHandler(val);
       break;
   }
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 // Function to create a image which gets called on a "new Image ()"
@@ -641,7 +639,7 @@ JSAPI_FUNC(image_ctor) {
 JSAPI_PROP(image_getProperty) {
   ImageHook* pImageHook = (ImageHook*)JS_GetOpaque3(this_val);
   if (!pImageHook)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
   switch (magic) {
     case IMAGE_X:
@@ -669,13 +667,13 @@ JSAPI_PROP(image_getProperty) {
       return JS_DupValue(ctx, pImageHook->GetHoverHandler());
       break;
   }
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_STRICT_PROP(image_setProperty) {
   ImageHook* pImageHook = (ImageHook*)JS_GetOpaque3(this_val);
   if (!pImageHook)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
   uint32_t ival = 0;
   bool bval = 0;
@@ -720,7 +718,7 @@ JSAPI_STRICT_PROP(image_setProperty) {
       pImageHook->SetHoverHandler(val);
       break;
   }
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(screenToAutomap) {

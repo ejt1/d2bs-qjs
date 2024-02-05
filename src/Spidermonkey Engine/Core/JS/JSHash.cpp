@@ -5,7 +5,7 @@
 #include "Helpers.h"
 
 JSValue js_hash(JSContext* ctx, int argc, JSValue* argv, char* (*hashfn)(const char*)) {
-  JSValue rval = JS_NULL;
+  JSValue rval = JS_UNDEFINED;
   if (argc != 1)
     THROW_ERROR(ctx, "Invalid arguments");
 
@@ -19,7 +19,7 @@ JSValue js_hash(JSContext* ctx, int argc, JSValue* argv, char* (*hashfn)(const c
 }
 
 JSValue js_hash_file(JSContext* ctx, int argc, JSValue* argv, char*(hashfn)(const char*)) {
-  JSValue rval = JS_NULL;
+  JSValue rval = JS_UNDEFINED;
 
   if (argc != 1)
     THROW_ERROR(ctx, "Invalid arguments");

@@ -222,7 +222,7 @@ JSAPI_FUNC(my_getPath) {
   Level* level = GetLevel(lvl);
 
   if (!level)
-    return JS_FALSE;
+    return JS_EXCEPTION;
 
   ActMap* map = ActMap::GetMap(level);
 
@@ -626,7 +626,7 @@ JSAPI_FUNC(my_clickItem) {
 
 JSAPI_FUNC(my_getLocaleString) {
   if (argc < 1 || !JS_IsNumber(argv[0]))
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
   uint32_t localeId;
   JS_ToUint32(ctx, &localeId, argv[0]);
@@ -707,12 +707,12 @@ JSAPI_FUNC(my_getDistance) {
       myUnit* pUnit1 = (myUnit*)JS_GetOpaque3(argv[0]);
 
       if (!pUnit1 || (pUnit1->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
-        return JS_TRUE;
+        return JS_UNDEFINED;
 
       UnitAny* pUnitA = D2CLIENT_FindUnit(pUnit1->dwUnitId, pUnit1->dwType);
 
       if (!pUnitA)
-        return JS_TRUE;
+        return JS_UNDEFINED;
 
       nX1 = D2CLIENT_GetUnitX(pUnitA);
       nY1 = D2CLIENT_GetUnitY(pUnitA);
@@ -722,12 +722,12 @@ JSAPI_FUNC(my_getDistance) {
       myUnit* pUnit1 = (myUnit*)JS_GetOpaque3(argv[2]);
 
       if (!pUnit1 || (pUnit1->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
-        return JS_TRUE;
+        return JS_UNDEFINED;
 
       UnitAny* pUnitA = D2CLIENT_FindUnit(pUnit1->dwUnitId, pUnit1->dwType);
 
       if (!pUnitA)
-        return JS_TRUE;
+        return JS_UNDEFINED;
 
       nX1 = D2CLIENT_GetUnitX(pUnitA);
       nY1 = D2CLIENT_GetUnitY(pUnitA);
@@ -759,7 +759,7 @@ JSAPI_FUNC(my_gold) {
     JS_ToInt32(ctx, &nMode, argv[1]);
 
   SendGold(nGold, nMode);
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(my_checkCollision) {
@@ -773,18 +773,18 @@ JSAPI_FUNC(my_checkCollision) {
     JS_ToInt32(ctx, &nBitMask, argv[2]);
 
     if (!pUnitA || (pUnitA->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT || !pUnitB || (pUnitB->_dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
-      return JS_TRUE;
+      return JS_UNDEFINED;
 
     UnitAny* pUnit1 = D2CLIENT_FindUnit(pUnitA->dwUnitId, pUnitA->dwType);
     UnitAny* pUnit2 = D2CLIENT_FindUnit(pUnitB->dwUnitId, pUnitB->dwType);
 
     if (!pUnit1 || !pUnit2)
-      return JS_TRUE;
+      return JS_UNDEFINED;
 
     return JS_NewInt32(ctx, D2COMMON_CheckUnitCollision(pUnit1, pUnit2, (WORD)nBitMask));
   }
 
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(my_getCursorType) {
@@ -798,7 +798,7 @@ JSAPI_FUNC(my_getCursorType) {
 
 JSAPI_FUNC(my_getSkillByName) {
   if (argc < 1 || !JS_IsString(argv[0]))
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
   const char* lpszText = JS_ToCString(ctx, argv[0]);
   if (!lpszText || lpszText[0])
@@ -817,7 +817,7 @@ JSAPI_FUNC(my_getSkillByName) {
 
 JSAPI_FUNC(my_getSkillById) {
   if (argc < 1 || !JS_IsNumber(argv[0]))
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
   int32_t nId;
   JS_ToInt32(ctx, &nId, argv[0]);
@@ -1047,7 +1047,7 @@ JSAPI_FUNC(my_useStatPoint) {
   }
 
   UseStatPoint(static_cast<WORD>(stat), count);
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(my_useSkillPoint) {
@@ -1062,7 +1062,7 @@ JSAPI_FUNC(my_useSkillPoint) {
   }
 
   UseSkillPoint(static_cast<WORD>(skill), count);
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(my_getBaseStat) {
@@ -1270,7 +1270,7 @@ JSAPI_FUNC(my_getInteractedNPC) {
 
 JSAPI_FUNC(my_takeScreenshot) {
   Vars.bTakeScreenshot = true;
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(my_moveNPC) {

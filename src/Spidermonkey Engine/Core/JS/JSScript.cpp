@@ -20,7 +20,7 @@ JSAPI_PROP(script_getProperty) {
 
   // TODO: make this check stronger
   if (!script)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
   switch (magic) {
     case SCRIPT_FILENAME: {
@@ -45,7 +45,7 @@ JSAPI_PROP(script_getProperty) {
       break;
   }
 
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(script_getNext) {
@@ -95,6 +95,10 @@ JSAPI_FUNC(script_resume) {
 }
 
 JSAPI_FUNC(script_send) {
+  if (argc > 1) {
+    THROW_ERROR(ctx, "too many arguments");
+  }
+
   Script* script = (Script*)JS_GetOpaque3(this_val);
   Event* evt = new Event;
   if (!script || !script->IsRunning())

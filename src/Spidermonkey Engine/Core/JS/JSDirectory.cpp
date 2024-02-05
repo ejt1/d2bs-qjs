@@ -41,7 +41,7 @@ CLASS_FINALIZER(dir) {
 
 JSAPI_FUNC(my_openDir) {
   if (argc != 1)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
   char path[_MAX_PATH];
   const char* szName = JS_ToCString(ctx, argv[0]);
@@ -224,5 +224,5 @@ JSAPI_PROP(dir_getProperty) {
       return JS_NewString(ctx, d->name);
       break;
   }
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }

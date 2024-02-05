@@ -54,14 +54,14 @@ JSAPI_FUNC(my_print) {
   }
   std::string finalstr = ss.str();
   Log(L"%S", finalstr.c_str());
-  return JS_UNDEFINED;
+  return JS_NULL;
 }
 
 // TODO(ejt): setTimeout, setInterval and clearInterval is not currently used by kolbot (it overrides it).
 // The plan is to use libuv timers once we get to adding libuv, for now just throw an error.
 JSAPI_FUNC(my_setTimeout) {
   JS_ThrowInternalError(ctx, "setTimeout temporarily disabled during development");
-  return JS_FALSE;
+  return JS_EXCEPTION;
 
   // JS_SET_RVAL(cx, vp, JSVAL_NULL);
 
@@ -84,7 +84,7 @@ JSAPI_FUNC(my_setTimeout) {
 
 JSAPI_FUNC(my_setInterval) {
   JS_ThrowInternalError(ctx, "setInterval temporarily disabled during development");
-  return JS_FALSE;
+  return JS_EXCEPTION;
 
   // JS_SET_RVAL(cx, vp, JSVAL_NULL);
 
@@ -106,7 +106,7 @@ JSAPI_FUNC(my_setInterval) {
 }
 JSAPI_FUNC(my_clearInterval) {
   JS_ThrowInternalError(ctx, "clearInterval temporarily disabled during development");
-  return JS_FALSE;
+  return JS_EXCEPTION;
 
   // JS_SET_RVAL(cx, vp, JSVAL_NULL);
   // if (argc != 1 || !JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[0]))
@@ -127,9 +127,9 @@ JSAPI_FUNC(my_delay) {
   if (nDelay) {  // loop so we can exec events while in delay
     script->BlockThread(nDelay);
   } else {
-    JS_ReportError(ctx, "delay(0) called, argument must be >= 1");
+    THROW_ERROR(ctx, "delay(0) called, argument must be >= 1");
   }
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(my_load) {
@@ -305,7 +305,7 @@ JSAPI_FUNC(my_copy) {
   SetClipboardData(CF_TEXT, hText);
   CloseClipboard();
   JS_FreeCString(ctx, data);
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(my_paste) {
@@ -391,7 +391,7 @@ JSAPI_FUNC(my_addEventListener) {
     }
     JS_FreeCString(ctx, evtName);
   }
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(my_removeEventListener) {
@@ -405,7 +405,7 @@ JSAPI_FUNC(my_removeEventListener) {
     }
     JS_FreeCString(ctx, evtName);
   }
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(my_clearEvent) {
@@ -415,13 +415,13 @@ JSAPI_FUNC(my_clearEvent) {
     self->ClearEvent(evt);
     JS_FreeCString(ctx, evt);
   }
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(my_clearAllEvents) {
   Script* self = (Script*)JS_GetContextOpaque(ctx);
   self->ClearAllEvents();
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(my_js_strict) {
@@ -442,7 +442,7 @@ JSAPI_FUNC(my_js_strict) {
     //}
   }
 
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(my_scriptBroadcast) {

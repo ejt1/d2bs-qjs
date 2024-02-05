@@ -20,11 +20,11 @@ JSAPI_PROP(area_getProperty) {
   myArea* pArea = (myArea*)JS_GetOpaque3(this_val);
 
   if (!pArea)
-    return JS_FALSE;
+    return JS_EXCEPTION;
 
   Level* pLevel = GetLevel(pArea->AreaId);
   if (!pLevel)
-    return JS_FALSE;
+    return JS_EXCEPTION;
 
   switch (magic) {
     case AUNIT_EXITS: {
@@ -74,12 +74,10 @@ JSAPI_PROP(area_getProperty) {
       return JS_NewInt32(ctx, pLevel->dwLevelNo);
   }
 
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(my_getArea) {
-  // JS_SET_RVAL(cx, vp, JSVAL_VOID);
-
   if (!WaitForGameReady())
     THROW_ERROR(ctx, "Get Area: Game not ready");
 

@@ -129,7 +129,7 @@ JSAPI_PROP(file_getProperty) {
   } else
     THROW_ERROR(ctx, "Couldn't get file object");
 
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_STRICT_PROP(file_setProperty) {
@@ -144,7 +144,7 @@ JSAPI_STRICT_PROP(file_setProperty) {
   } else
     THROW_ERROR(ctx, "Couldn't get file object");
 
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(file_open) {
@@ -205,7 +205,7 @@ JSAPI_FUNC(file_open) {
   // If fileOpenRelScript failed, it already reported the error
   if (fptr == NULL) {
     JS_FreeCString(ctx, szFile);
-    return JS_FALSE;
+    return JS_EXCEPTION;
   }
 
   FileData* fdata = new FileData;
@@ -262,12 +262,11 @@ JSAPI_FUNC(file_close) {
     } else
       THROW_ERROR(ctx, "File is not open");
   }
+  // BUG(ejt): possible value leak
   return JS_DupValue(ctx, this_val);
 }
 
 JSAPI_FUNC(file_reopen) {
-  (argc);
-
   FileData* fdata = (FileData*)JS_GetOpaque3(this_val);
   if (fdata)
     if (!fdata->fptr) {
@@ -287,6 +286,7 @@ JSAPI_FUNC(file_reopen) {
       }
     } else
       THROW_ERROR(ctx, "File is not closed");
+  // BUG(ejt): possible value leak
   return JS_DupValue(ctx, this_val);
 }
 
@@ -360,7 +360,7 @@ JSAPI_FUNC(file_read) {
       return rval;
     }
   }
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(file_readLine) {
@@ -390,7 +390,7 @@ JSAPI_FUNC(file_readLine) {
     free(line);
     return rval;
   }
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(file_readAllLines) {
@@ -424,7 +424,7 @@ JSAPI_FUNC(file_readAllLines) {
     }
     return arr;
   }
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(file_readAll) {
@@ -478,7 +478,7 @@ JSAPI_FUNC(file_readAll) {
     delete[] contents;
     return rval;
   }
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(file_write) {
@@ -493,6 +493,7 @@ JSAPI_FUNC(file_write) {
         _fflush_nolock(fdata->fptr);
     }
   }
+  // BUG(ejt): possible value leak
   return JS_DupValue(ctx, this_val);
 }
 
@@ -526,6 +527,7 @@ JSAPI_FUNC(file_seek) {
     } else
       THROW_ERROR(ctx, "Not enough parameters");
   }
+  // BUG(ejt): possible value leak
   return JS_DupValue(ctx, this_val);
 }
 
@@ -537,6 +539,7 @@ JSAPI_FUNC(file_flush) {
     else
       _fflush_nolock(fdata->fptr);
 
+  // BUG(ejt): possible value leak
   return JS_DupValue(ctx, this_val);
 }
 
@@ -550,6 +553,7 @@ JSAPI_FUNC(file_reset) {
     } else if (_fseek_nolock(fdata->fptr, 0L, SEEK_SET))
       THROW_ERROR(ctx, "Seek failed");
   }
+  // BUG(ejt): possible value leak
   return JS_DupValue(ctx, this_val);
 }
 
@@ -563,5 +567,6 @@ JSAPI_FUNC(file_end) {
     } else if (_fseek_nolock(fdata->fptr, 0L, SEEK_END))
       THROW_ERROR(ctx, "Seek failed");
   }
+  // BUG(ejt): possible value leak
   return JS_DupValue(ctx, this_val);
 }

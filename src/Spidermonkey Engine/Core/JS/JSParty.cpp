@@ -64,13 +64,11 @@ JSAPI_FUNC(party_getNext) {
   pUnit = pUnit->pNext;
 
   if (pUnit) {
+    // BUG(ejt): possible value leak
     JS_SetOpaque(this_val, pUnit);
     return JS_DupValue(ctx, this_val);
   }
 
-  // JSObject* obj = JS_THIS_OBJECT(cx, vp);
-  //		JS_ClearScope(cx, obj);
-  // if(JS_ValueToObject(cx, JSVAL_NULL, &obj))
   return JS_FALSE;
 }
 

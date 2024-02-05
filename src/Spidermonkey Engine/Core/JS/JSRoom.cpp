@@ -83,7 +83,7 @@ JSAPI_FUNC(room_getPresetUnits) {
   AutoCriticalRoom* cRoom = new AutoCriticalRoom;
   if (!pRoom2 || !GameReady()) {
     delete cRoom;
-    return JS_TRUE;
+    return JS_UNDEFINED;
   }
 
   if (!pRoom2->pRoom1) {
