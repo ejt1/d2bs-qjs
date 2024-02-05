@@ -7,7 +7,8 @@
 typedef std::list<JSValue> FunctionList;
 
 struct Event {
-  Event() : argv(nullptr), argc(0), arg1(nullptr), arg2(nullptr), arg3(nullptr), arg4(nullptr), arg5(nullptr){};
+  Event()
+      : argv(nullptr), argc(0), arg1(nullptr), arg2(nullptr), arg3(nullptr), arg4(nullptr), arg5(nullptr), data(nullptr), data_len(0), sab_tab(nullptr), sab_tab_len(0){};
   FunctionList functions;
   JSValue* argv;
   uint32_t argc;
@@ -17,6 +18,13 @@ struct Event {
   void* arg3;
   void* arg4;
   void* arg5;
+
+  // new
+  uint8_t* data;
+  size_t data_len;
+
+  uint8_t** sab_tab;
+  size_t sab_tab_len;
 };
 
 bool ChatEvent(const char* lpszNick, const char* lpszMsg);

@@ -8,12 +8,46 @@
 #include <quickjs.h>
 #pragma warning(pop)
 
+#include <atomic>
 #include <vector>
 #include <io.h>
 #include <string>
 #include <fstream>
 #include <optional>
 #include <streambuf>
+#include <cassert>
+
+typedef struct {
+  std::atomic<int> ref_count;
+  uint64_t buf[1];
+} JSSABHeader;
+
+/* shared array buffer allocator */
+inline static void* js_sab_alloc(void* /*opaque*/, size_t size) {
+  JSSABHeader* sab;
+  sab = static_cast<JSSABHeader*>(malloc(sizeof(JSSABHeader) + size));
+  if (!sab)
+    return NULL;
+  sab->ref_count = 1;
+  return sab->buf;
+}
+
+inline static void js_sab_free(void* /*opaque*/, void* ptr) {
+  JSSABHeader* sab;
+  int ref_count;
+  sab = (JSSABHeader*)((uint8_t*)ptr - sizeof(JSSABHeader));
+  ref_count = std::atomic_fetch_add(&sab->ref_count, -1);
+  assert(ref_count >= 0);
+  if (ref_count == 0) {
+    free(sab);
+  }
+}
+
+inline static void js_sab_dup(void* /*opaque*/, void* ptr) {
+  JSSABHeader* sab;
+  sab = (JSSABHeader*)((uint8_t*)ptr - sizeof(JSSABHeader));
+  std::atomic_fetch_add(&sab->ref_count, 1);
+}
 
 JSValue JS_NewString(JSContext* ctx, const wchar_t* str);
 

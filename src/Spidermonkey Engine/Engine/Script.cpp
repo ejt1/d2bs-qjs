@@ -598,22 +598,18 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
     delete evt;
   }
   if (strcmp(evtName, "scriptmsg") == 0) {
-    DWORD* argc = (DWORD*)evt->arg1;
     if (!clearList) {
-      std::vector<JSValue> args;
-      for (uint32_t i = 0; i < *argc; ++i) {
-        args.push_back(evt->argv[i]);
-      }
-
-      ExecuteEvent(evtName, args.size(), args.data());
+      JSValue data_obj = JS_ReadObject(m_context, evt->data, evt->data_len, JS_READ_OBJ_SAB | JS_READ_OBJ_REFERENCE);
+      ExecuteEvent(evtName, 1, &data_obj);
+      JS_FreeValue(m_context, data_obj);
     }
 
-    for (size_t i = 0; i < *argc; ++i) {
-      JS_FreeValue(m_context, evt->argv[i]);
+    // decrease SAB reference count
+    for (size_t i = 0; i < evt->sab_tab_len; ++i) {
+      js_sab_free(NULL, evt->sab_tab[i]);
     }
-
-    delete evt->arg1;
-    delete[] evt->argv;
+    free(evt->data);
+    free(evt->sab_tab);
     delete evt;
     return true;
   }
