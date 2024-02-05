@@ -484,6 +484,89 @@ UnitAny* D2CLIENT_FindUnit(DWORD dwId, DWORD dwType) {
   return pUnit ? pUnit : D2CLIENT_FindClientSideUnit(dwId, dwType);
 }
 
+POINT GetScreenSize() {
+  // HACK: p_D2CLIENT_ScreenSize is wrong for out of game, which is hardcoded to 800x600
+  POINT ingame = {static_cast<LONG>(*p_D2CLIENT_ScreenSizeX), static_cast<LONG>(*p_D2CLIENT_ScreenSizeY)}, oog = {800, 600}, p = {0};
+  if (ClientState() == ClientStateMenu)
+    p = oog;
+  else
+    p = ingame;
+  return p;
+}
+
+int D2GetScreenSizeX() {
+  return GetScreenSize().x;
+}
+
+int D2GetScreenSizeY() {
+  return GetScreenSize().y;
+}
+
+void myDrawAutomapCell(CellFile* cellfile, int xpos, int ypos, BYTE col) {
+  if (!cellfile)
+    return;
+  CellContext ct;
+  memset(&ct, 0, sizeof(ct));
+  ct.pCellFile = cellfile;
+
+  xpos -= (cellfile->cells[0]->width / 2);
+  ypos += (cellfile->cells[0]->height / 2);
+
+  int xpos2 = xpos - cellfile->cells[0]->xoffs, ypos2 = ypos - cellfile->cells[0]->yoffs;
+  if ((xpos2 >= D2GetScreenSizeX()) || ((xpos2 + (int)cellfile->cells[0]->width) <= 0) || (ypos2 >= D2GetScreenSizeY()) ||
+      ((ypos2 + (int)cellfile->cells[0]->height) <= 0))
+    return;
+
+  static BYTE coltab[2][256];  //, tabno = 0, lastcol = 0;
+  if (!coltab[0][1])
+    for (int k = 0; k < 255; k++) coltab[0][k] = coltab[1][k] = (BYTE)k;
+  cellfile->UFlags.mylastcol = coltab[cellfile->UFlags.mytabno ^= (col != cellfile->UFlags.mylastcol)][255] = col;
+
+  D2GFX_DrawAutomapCell2(&ct, xpos, ypos, (DWORD)-1, 5, coltab[cellfile->UFlags.mytabno]);
+}
+
+static HANDLE OpenFileRead(const char* filename) {
+  return CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+}
+
+static HANDLE OpenFileRead(const wchar_t* filename) {
+  return CreateFileW(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+}
+
+static DWORD ReadFile(HANDLE hFile, void* buf, DWORD len)
+// NOTE :- validates len bytes of buf
+{
+  DWORD numdone = 0;
+  return ::ReadFile(hFile, buf, len, &numdone, NULL) != 0 ? numdone : -1;
+}
+
+static BYTE* AllocReadFile(const char* filename) {
+  HANDLE hFile = OpenFileRead(filename);
+  int filesize = GetFileSize(hFile, 0);
+  if (filesize <= 0)
+    return 0;
+  BYTE* buf = new BYTE[filesize];
+  ReadFile(hFile, buf, filesize);
+  CloseHandle(hFile);
+  return buf;
+}
+
+static BYTE* AllocReadFile(const wchar_t* filename) {
+  HANDLE hFile = OpenFileRead(filename);
+  int filesize = GetFileSize(hFile, 0);
+  if (filesize <= 0)
+    return 0;
+  BYTE* buf = new BYTE[filesize];
+  ReadFile(hFile, buf, filesize);
+  CloseHandle(hFile);
+  return buf;
+}
+
+// NOTE: only used by LoadBmpCellFile, lets keep it that way!
+static void* memcpy2(void* dest, const void* src, size_t count) {
+  return (char*)memcpy(dest, src, count) + count;
+}
+
 // TODO: Rewrite this and split it into two functions
 CellFile* LoadCellFile(const char* lpszPath, DWORD bMPQ) {
   if (bMPQ == TRUE) {
@@ -534,88 +617,6 @@ CellFile* LoadCellFile(const wchar_t* lpszPath, DWORD bMPQ) {
   }
 
   return NULL;
-}
-
-POINT GetScreenSize() {
-  // HACK: p_D2CLIENT_ScreenSize is wrong for out of game, which is hardcoded to 800x600
-  POINT ingame = {static_cast<LONG>(*p_D2CLIENT_ScreenSizeX), static_cast<LONG>(*p_D2CLIENT_ScreenSizeY)}, oog = {800, 600}, p = {0};
-  if (ClientState() == ClientStateMenu)
-    p = oog;
-  else
-    p = ingame;
-  return p;
-}
-
-int D2GetScreenSizeX() {
-  return GetScreenSize().x;
-}
-
-int D2GetScreenSizeY() {
-  return GetScreenSize().y;
-}
-
-void myDrawAutomapCell(CellFile* cellfile, int xpos, int ypos, BYTE col) {
-  if (!cellfile)
-    return;
-  CellContext ct;
-  memset(&ct, 0, sizeof(ct));
-  ct.pCellFile = cellfile;
-
-  xpos -= (cellfile->cells[0]->width / 2);
-  ypos += (cellfile->cells[0]->height / 2);
-
-  int xpos2 = xpos - cellfile->cells[0]->xoffs, ypos2 = ypos - cellfile->cells[0]->yoffs;
-  if ((xpos2 >= D2GetScreenSizeX()) || ((xpos2 + (int)cellfile->cells[0]->width) <= 0) || (ypos2 >= D2GetScreenSizeY()) ||
-      ((ypos2 + (int)cellfile->cells[0]->height) <= 0))
-    return;
-
-  static BYTE coltab[2][256];  //, tabno = 0, lastcol = 0;
-  if (!coltab[0][1])
-    for (int k = 0; k < 255; k++) coltab[0][k] = coltab[1][k] = (BYTE)k;
-  cellfile->UFlags.mylastcol = coltab[cellfile->UFlags.mytabno ^= (col != cellfile->UFlags.mylastcol)][255] = col;
-
-  D2GFX_DrawAutomapCell2(&ct, xpos, ypos, (DWORD)-1, 5, coltab[cellfile->UFlags.mytabno]);
-}
-
-DWORD ReadFile(HANDLE hFile, void* buf, DWORD len)
-// NOTE :- validates len bytes of buf
-{
-  DWORD numdone = 0;
-  return ::ReadFile(hFile, buf, len, &numdone, NULL) != 0 ? numdone : -1;
-}
-
-void* memcpy2(void* dest, const void* src, size_t count) {
-  return (char*)memcpy(dest, src, count) + count;
-}
-
-HANDLE OpenFileRead(const char* filename) {
-  return CreateFile(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-}
-
-HANDLE OpenFileRead(const wchar_t* filename) {
-  return CreateFileW(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-}
-
-BYTE* AllocReadFile(const char* filename) {
-  HANDLE hFile = OpenFileRead(filename);
-  int filesize = GetFileSize(hFile, 0);
-  if (filesize <= 0)
-    return 0;
-  BYTE* buf = new BYTE[filesize];
-  ReadFile(hFile, buf, filesize);
-  CloseHandle(hFile);
-  return buf;
-}
-
-BYTE* AllocReadFile(const wchar_t* filename) {
-  HANDLE hFile = OpenFileRead(filename);
-  int filesize = GetFileSize(hFile, 0);
-  if (filesize <= 0)
-    return 0;
-  BYTE* buf = new BYTE[filesize];
-  ReadFile(hFile, buf, filesize);
-  CloseHandle(hFile);
-  return buf;
 }
 
 CellFile* LoadBmpCellFile(BYTE* buf1, int width, int height) {

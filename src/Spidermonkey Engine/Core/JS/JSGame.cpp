@@ -8,7 +8,6 @@
 #include "Game.h"
 #include "JSArea.h"
 #include "JSGlobalClasses.h"
-#include "TimedAlloc.h"
 #include "MapHeader.h"
 #include "JSRoom.h"
 
@@ -244,25 +243,13 @@ JSAPI_FUNC(my_getPath) {
   }
 
   PointList list;
-#if defined(_TIME)
-  AStarPath<TimedAlloc<Node, std::allocator<Node>>> path(map, reducer);
-#else
   AStarPath<> path(map, reducer);
-#endif
 
   // box18jsrefcount depth = JS_SuspendRequest(cx);
 
   path.GetPath(start, end, list, true);
   map->CleanUp();
   // box18JS_ResumeRequest(cx, depth);
-#if defined(_TIME)
-  char p[510];
-  sprintf_s(p, 510, "%s\\stats.txt", Vars.szPath);
-  FILE* f;
-  fopen_s(&f, p, "a+");
-  path.GetAllocator().DumpStats(f);
-  fclose(f);
-#endif
 
   int count = list.size();
 

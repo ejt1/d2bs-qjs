@@ -52,18 +52,12 @@ POINT GetScreenSize();
 int D2GetScreenSizeX();
 int D2GetScreenSizeY();
 
-CellFile* LoadCellFile(const char* lpszPath, DWORD bMPQ = TRUE);
-CellFile* LoadCellFile(const wchar_t* lpszPath, DWORD bMPQ = 3);
-
 AutomapLayer* InitAutomapLayer(DWORD levelno);
 DWORD __fastcall D2CLIENT_InitAutomapLayer_STUB(DWORD nLayerNo);
 void myDrawAutomapCell(CellFile* cellfile, int xpos, int ypos, BYTE col);
-DWORD ReadFile(HANDLE hFile, void* buf, DWORD len);
-void* memcpy2(void* dest, const void* src, size_t count);
-HANDLE OpenFileRead(const char* filename);
-HANDLE OpenFileRead(const wchar_t* filename);
-BYTE* AllocReadFile(const char* filename);
-BYTE* AllocReadFile(const wchar_t* filename);
+
+CellFile* LoadCellFile(const char* lpszPath, DWORD bMPQ = TRUE);
+CellFile* LoadCellFile(const wchar_t* lpszPath, DWORD bMPQ = 3);
 CellFile* LoadBmpCellFile(BYTE* buf1, int width, int height);
 CellFile* LoadBmpCellFile(const char* filename);
 CellFile* LoadBmpCellFile(const wchar_t* filename);
@@ -110,5 +104,8 @@ void __stdcall D2CLIENT_LeftClickItem(DWORD Location, UnitAny* pPlayer, Inventor
 enum DistanceType { Euclidean, Chebyshev, Manhattan };
 double GetDistance(long x1, long y1, long x2, long y2, DistanceType type = Euclidean);
 bool IsScrollingText();
+
+// TODO(ejt): used in JSUnit.cpp to read a string, rewrite so it's an offset loaded at start instead
 void ReadProcessBYTES(HANDLE hProcess, DWORD lpAddress, void* buf, int len);
+
 #endif
