@@ -795,7 +795,6 @@ void Script::RunMain() {
     JS_ReportPendingException(m_context);
     return;
   }
-  Log(L"main returned for %S", m_fileName.c_str());
   JS_FreeValue(m_context, rval);
 }
 
@@ -841,8 +840,6 @@ bool Script::ProcessAllEvents() {
 }
 
 void Script::Cleanup() {
-  Log(L"Cleanup %S", m_fileName.c_str());
-
   ClearEventList();
   Genhook::Clean(this);
 
