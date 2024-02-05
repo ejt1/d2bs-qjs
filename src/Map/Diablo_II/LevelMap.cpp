@@ -66,7 +66,7 @@ void LevelMap::Build(void) {
 mapPoints = Matrix<CollisionFlag>(height, width, LevelMap::Avoid);
 
 RoomList addedRooms;
-D2UnitStrc* player = GetPlayerUnit();
+D2UnitStrc* player = D2CLIENT_GetPlayerUnit();
 AddRoom(level->pRoom2First, addedRooms, player);
 
 FillGaps();
@@ -341,7 +341,7 @@ bool LevelMap::ExitExists(DWORD dwLevelNo, ExitArray& exits) const {
 void LevelMap::FindRoomLinkageExits(ExitArray& exits, RoomList& added) const {
   static const Point empty(0, 0);
 
-  D2UnitStrc* player = GetPlayerUnit();
+  D2UnitStrc* player = D2CLIENT_GetPlayerUnit();
   const Point playerOrigin(player->pPath->xPos - posX, player->pPath->yPos - posY);
 
   std::multimap<int, std::pair<Point, std::pair<Point, int>>> exitMap;  // <level, <rooms[i], <middlepoint, size> > >

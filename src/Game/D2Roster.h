@@ -15,7 +15,7 @@ struct D2RosterUnitStrc {
   uint32_t Xpos;            // 0x28
   uint32_t Ypos;            // 0x2C
   uint32_t dwPartyFlags;    // 0x30
-  BYTE* _5;                 // 0x34
+  uint8_t* _5;              // 0x34
   uint32_t _6[11];          // 0x38
   uint16_t _7;              // 0x64
   char szName2[16];         // 0x66

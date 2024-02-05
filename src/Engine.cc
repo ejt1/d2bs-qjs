@@ -106,7 +106,6 @@ bool Engine::Initialize(HMODULE hModule) {
   Vars.bIgnoreMouse = FALSE;
 
   Genhook::Initialize();
-  DefineOffsets(); // deprecated
   InitOffsets();
   InstallPatches();
   InstallConditional();

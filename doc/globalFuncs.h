@@ -726,7 +726,7 @@ double getBaseStat(int32_t nBaseStat, int32_t nClassId, int32_t nStat);
  *
  * \return A Control object representing the Control found.
  */
-Control getControl(int32_t nType = -1, int32_t nX = -1, int32_t nY = -1,
+D2WinControlStrc getControl(int32_t nType = -1, int32_t nX = -1, int32_t nY = -1,
 	int32_t nXSize = -1, int32_t nYSize = -1);
 
 /** Get the relation between two units.

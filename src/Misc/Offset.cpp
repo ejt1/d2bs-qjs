@@ -1,22 +1,18 @@
 #include "Patch.h"
 #include "Engine.h"
 
+#include "Game/UI/NPCMenu.h"
+#include "Game/D2Chat.h"
 #include "Game/D2Game.h"
 #include "Game/D2Quests.h"
 #include "Game/D2Roster.h"
+#include "Game/D2WinControl.h"
+#include "Game/D2WinUnknown.h"
 #include "Game/Unorganized.h"
 
 #ifndef ArraySize
 #define ArraySize(x) (sizeof((x)) / sizeof((x)[0]))
 #endif
-
-// deprecated, replaced by InitOffsets
-void DefineOffsets() {
-  //uint32_t** p = (uint32_t**)d2ptrs_list;
-  //do {
-  //  **p = GetDllOffset(**p);
-  //} while (ptrdiff_t(++p) < ((ptrdiff_t)d2ptrs_list) + sizeof(d2ptrs_list));
-}
 
 template <typename T>
 static void InitOffset(T* ptr, size_t new_ptr) {
@@ -191,7 +187,6 @@ void InitOffsets() {
   InitOffset(&D2CLIENT_ClickParty_I, base + 0x79EB0);
   InitOffset(&D2CLIENT_ClickParty_II, base + 0x9B990);
   InitOffset(&D2CLIENT_ShopAction_I, base + 0x7D030);
-  InitOffset(&D2CLIENT_GetUnitName_I, base + 0x64A60);
   InitOffset(&D2CLIENT_GetItemDesc_I, base + 0x2E380);
   InitOffset(&D2CLIENT_AssignPlayer_I, base + 0x66200);
   InitOffset(&D2CLIENT_InputCall_I, base + 0x787B0);

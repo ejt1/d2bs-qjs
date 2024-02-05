@@ -12,6 +12,7 @@
 #include "JSRoom.h"
 #include "Room.h"
 
+#include "Game/D2Quests.h"
 #include "Game/D2Roster.h"
 
 #include <cassert>
@@ -140,7 +141,7 @@ JSAPI_FUNC(my_tradeOk) {
     THROW_WARNING(ctx, "Game not ready");
 
   AutoCriticalRoom cRoom;
-  TransactionDialogsInfo_t* pTdi = *D2CLIENT_pTransactionDialogsInfo;
+  D2NPCMessageTableStrc* pTdi = *D2CLIENT_pTransactionDialogsInfo;
   unsigned int i;
 
   if (pTdi != NULL) {
@@ -158,7 +159,7 @@ JSAPI_FUNC(my_tradeOk) {
 
 JSAPI_FUNC(my_getDialogLines) {
   JSValue rval = JS_UNDEFINED;
-  TransactionDialogsInfo_t* pTdi = *D2CLIENT_pTransactionDialogsInfo;
+  D2NPCMessageTableStrc* pTdi = *D2CLIENT_pTransactionDialogsInfo;
   unsigned int i;
   JSValue pReturnArray;
   JSValue line;
@@ -182,9 +183,9 @@ JSAPI_FUNC(my_getDialogLines) {
 }
 
 JSAPI_FUNC(my_clickDialog) {
-  TransactionDialogsLine_t* tdl;
+  D2NPCMessageStrc* tdl;
 
-  tdl = (TransactionDialogsLine_t*)JS_GetOpaque2(ctx, this_val, dialogLine_class_id);
+  tdl = (D2NPCMessageStrc*)JS_GetOpaque2(ctx, this_val, dialogLine_class_id);
 
   if (tdl != NULL && tdl->bMaybeSelectable)
     tdl->handler();

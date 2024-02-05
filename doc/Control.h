@@ -1,12 +1,12 @@
 /** This class represents out of game (OOG) Control s.
  */
-class Control
+class D2WinControlStrc
 {
 public:
 	/** Gets the next Control from the linked list. This is done by finding the
 	 * old Control based on type, location and size.
 	 */
-	Control getNext();
+	D2WinControlStrc getNext();
 
 	/** Click Control in the center of the Control.
 	 */

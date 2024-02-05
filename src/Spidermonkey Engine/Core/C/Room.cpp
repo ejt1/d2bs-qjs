@@ -98,7 +98,7 @@ void DrawPresets(D2DrlgRoomStrc* pRoom2) {
 
     // Draw the cell if wanted.
     if ((mCell > 0) && (mCell < 1258)) {
-      AutomapCell* pCell = D2CLIENT_NewAutomapCell();
+      D2AutomapCellStrc* pCell = D2CLIENT_NewAutomapCell();
       pCell->nCellNo = (WORD)mCell;
       int pX = (pUnit->dwPosX + (pRoom2->dwPosX * 5));
       int pY = (pUnit->dwPosY + (pRoom2->dwPosY * 5));

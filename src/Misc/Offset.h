@@ -18,8 +18,6 @@ typedef struct PatchHook_t {
   uint8_t* bOldCode;
 } PatchHook;
 
-// deprecated, replaced by InitOffsets
-void DefineOffsets();
 void InitOffsets();
 
 uint32_t GetDllOffset(int num);

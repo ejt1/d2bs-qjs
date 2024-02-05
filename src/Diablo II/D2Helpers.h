@@ -3,12 +3,16 @@
 
 #include "js32.h"
 
+#include "Game/D2Automap.h"
 #include "Game/D2Inventory.h"
 #include "Game/D2Gfx.h"
 #include "Game/Drlg/D2DrlgDrlg.h"
 #include "Game/Units/Units.h"
-#include "Game/Unorganized.h"
 #include "Game/D2DataTbls.h"
+#include "Game/D2Roster.h"
+#include "Game/Unorganized.h"
+
+#include <Windows.h> // POINT
 
 void Log(const wchar_t* szFormat, ...);
 void LogNoFormat(const wchar_t* szString);
@@ -54,7 +58,7 @@ POINT GetScreenSize();
 int D2GetScreenSizeX();
 int D2GetScreenSizeY();
 
-AutomapLayer* InitAutomapLayer(DWORD levelno);
+D2AutomapLayerStrc* InitAutomapLayer(DWORD levelno);
 DWORD __fastcall D2CLIENT_InitAutomapLayer_STUB(DWORD nLayerNo);
 void myDrawAutomapCell(D2CellFileStrc* cellfile, int xpos, int ypos, BYTE col);
 
@@ -65,9 +69,6 @@ D2CellFileStrc* LoadBmpCellFile(const char* filename);
 D2CellFileStrc* LoadBmpCellFile(const wchar_t* filename);
 D2CellFileStrc* myInitCellFile(D2CellFileStrc* cf);
 
-static inline D2UnitStrc* GetPlayerUnit() {
-  return D2CLIENT_GetPlayerUnit();
-}
 static inline void AddRoomData(D2DrlgRoomStrc* room) {
   D2COMMON_AddRoomData(room->pLevel->pMisc->pAct, room->pLevel->dwLevelNo, room->dwPosX, room->dwPosY, room->pRoom1);
 }

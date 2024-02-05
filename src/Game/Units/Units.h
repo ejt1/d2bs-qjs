@@ -8,12 +8,11 @@
 #include "Game/Path/Path.h"
 #include "Game/D2Skills.h"
 #include "Game/Drlg/D2DrlgDrlg.h"
+#include "Game/D2Chat.h"
 #include "Game/D2Gfx.h"
 #include "Game/D2Inventory.h"
 
 #include <cstdint>
-
-struct OverheadMsg;
 
 struct D2UnitStrc {
   uint32_t dwType;       // 0x00
@@ -62,7 +61,7 @@ struct D2UnitStrc {
   uint32_t dwOwnerType;         // 0x94
   uint32_t dwOwnerId;           // 0x98
   uint32_t _8[2];               // 0x9C
-  OverheadMsg* pOMsg;           // 0xA4
+  D2HoverTextStrc* pOMsg;           // 0xA4
   D2SkillListStrc* pInfo;       // 0xA8
   uint32_t _9[6];               // 0xAC
   uint32_t dwFlags;             // 0xC4

@@ -100,7 +100,7 @@ DWORD Profile::login(const char** error) {
   bool loginComplete = FALSE, skippedToBnet = TRUE;
   int location = 0;
   const char* errorMsg = "";
-  Control* pControl = NULL;
+  D2WinControlStrc* pControl = NULL;
   unsigned int timeout = 0;
 
   /*
@@ -165,7 +165,7 @@ DWORD Profile::login(const char** error) {
         timeout++;
         break;
       case OOG_DIFFICULTY: {
-        Control *normal = findControl(CONTROL_BUTTON, (const char*)NULL, -1, 264, 297, 272, 35),
+        D2WinControlStrc *normal = findControl(CONTROL_BUTTON, (const char*)NULL, -1, 264, 297, 272, 35),
                 *nightmare = findControl(CONTROL_BUTTON, (const char*)NULL, -1, 264, 340, 272, 35),
                 *hell = findControl(CONTROL_BUTTON, (const char*)NULL, -1, 264, 383, 272, 35);
 

@@ -19,7 +19,7 @@ JSAPI_FUNC(control_getText);
 
 struct ControlData {
   DWORD _dwPrivate;
-  Control* pControl;
+  D2WinControlStrc* pControl;
 
   DWORD dwType;
   DWORD dwX;

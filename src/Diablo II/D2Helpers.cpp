@@ -13,6 +13,11 @@
 #include "stringhash.h"
 #include "CriticalSections.h"
 
+#include "Game/UI/NPCMenu.h"
+#include "Game/D2Chat.h"
+#include "Game/D2WinControl.h"
+#include "Game/D2WinUnknown.h"
+
 void Log(const wchar_t* szFormat, ...) {
   va_list vaArgs;
 
@@ -58,7 +63,7 @@ void LogNoFormat(const wchar_t* szString) {
 ClientGameState ClientState(void) {
   ClientGameState state = ClientStateNull;
   D2UnitStrc* player = D2CLIENT_GetPlayerUnit();
-  Control* firstControl = *D2WIN_FirstControl;
+  D2WinControlStrc* firstControl = *D2WIN_FirstControl;
 
   if (player && !firstControl) {
     if (player && player->pUpdateUnit) {
@@ -324,8 +329,8 @@ DWORD __declspec(naked) __fastcall D2CLIENT_InitAutomapLayer_STUB(DWORD /*nLayer
   }
 }
 
-AutomapLayer* InitAutomapLayer(DWORD levelno) {
-  AutomapLayer2* pLayer = D2COMMON_GetLayer(levelno);
+D2AutomapLayerStrc* InitAutomapLayer(DWORD levelno) {
+  D2LevelDefBin* pLayer = D2COMMON_GetLayer(levelno);
   return D2CLIENT_InitAutomapLayer(pLayer->nLayerNo);
 }
 
