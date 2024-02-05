@@ -365,9 +365,14 @@ void Script::ExecuteEvent(char* evtName, int argc, const JSValue* argv, bool* bl
   for (const auto& root : m_functions[evtName]) {
     JSValue rval;
     rval = JS_Call(m_context, root, JS_UNDEFINED, argc, const_cast<JSValue*>(argv));
+    if (JS_IsException(rval)) {
+      JS_ReportPendingException(m_context);
+      return;
+    }
     if (block) {
       *block |= static_cast<bool>(JS_IsBool(rval) && JS_ToBool(m_context, rval));
     }
+    JS_FreeValue(m_context, rval);
   }
 }
 
