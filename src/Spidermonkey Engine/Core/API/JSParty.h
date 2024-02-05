@@ -10,20 +10,34 @@ JSAPI_FUNC(party_getNext);
 
 JSAPI_FUNC(my_getParty);
 
-enum party_tinyid { PARTY_AREA, PARTY_X, PARTY_Y, PARTY_GID, PARTY_LIFE, PARTY_NAME, PARTY_FLAG, PARTY_ID, PARTY_CLASSID, PARTY_LEVEL };
+enum party_tinyid {
+  PARTY_AREA,
+  PARTY_X,
+  PARTY_Y,
+  PARTY_GID,
+  PARTY_LIFE,
+  PARTY_NAME,
+  PARTY_FLAG,
+  PARTY_ID,
+  PARTY_CLASSID,
+  PARTY_LEVEL,
+};
 
-static JSPropertySpec party_props[] = {{"x", PARTY_X, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(party_getProperty), JSOP_NULLWRAPPER},
-                                       {"y", PARTY_Y, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(party_getProperty), JSOP_NULLWRAPPER},
-                                       {"area", PARTY_AREA, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(party_getProperty), JSOP_NULLWRAPPER},
-                                       {"gid", PARTY_GID, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(party_getProperty), JSOP_NULLWRAPPER},
-                                       {"life", PARTY_LIFE, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(party_getProperty), JSOP_NULLWRAPPER},
-                                       {"partyflag", PARTY_FLAG, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(party_getProperty), JSOP_NULLWRAPPER},
-                                       {"partyid", PARTY_ID, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(party_getProperty), JSOP_NULLWRAPPER},
-                                       {"name", PARTY_NAME, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(party_getProperty), JSOP_NULLWRAPPER},
-                                       {"classid", PARTY_CLASSID, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(party_getProperty), JSOP_NULLWRAPPER},
-                                       {"level", PARTY_LEVEL, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(party_getProperty), JSOP_NULLWRAPPER},
-                                       {0, 0, 0, JSOP_NULLWRAPPER, JSOP_NULLWRAPPER}};
+static JSCFunctionListEntry party_props[] = {
+    JS_CGETSET_MAGIC_DEF("x", party_getProperty, nullptr, PARTY_X),
+    JS_CGETSET_MAGIC_DEF("y", party_getProperty, nullptr, PARTY_Y),
+    JS_CGETSET_MAGIC_DEF("area", party_getProperty, nullptr, PARTY_AREA),
+    JS_CGETSET_MAGIC_DEF("gid", party_getProperty, nullptr, PARTY_GID),
+    JS_CGETSET_MAGIC_DEF("life", party_getProperty, nullptr, PARTY_LIFE),
+    JS_CGETSET_MAGIC_DEF("partyflag", party_getProperty, nullptr, PARTY_FLAG),
+    JS_CGETSET_MAGIC_DEF("partyid", party_getProperty, nullptr, PARTY_ID),
+    JS_CGETSET_MAGIC_DEF("name", party_getProperty, nullptr, PARTY_NAME),
+    JS_CGETSET_MAGIC_DEF("classid", party_getProperty, nullptr, PARTY_CLASSID),
+    JS_CGETSET_MAGIC_DEF("level", party_getProperty, nullptr, PARTY_LEVEL),
+};
 
-static JSFunctionSpec party_methods[] = {JS_FS("getNext", party_getNext, 0, FUNCTION_FLAGS), JS_FS_END};
+static JSCFunctionListEntry party_methods[] = {
+    JS_FS("getNext", party_getNext, 0, FUNCTION_FLAGS),
+};
 
 #endif

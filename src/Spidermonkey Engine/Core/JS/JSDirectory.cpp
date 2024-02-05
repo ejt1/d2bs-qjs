@@ -34,34 +34,37 @@
 
 EMPTY_CTOR(dir)
 
+CLASS_FINALIZER(dir) {
+  DirData* d = (DirData*)JS_GetOpaque3(val);
+  delete d;
+}
+
 JSAPI_FUNC(my_openDir) {
   if (argc != 1)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
-  wchar_t path[_MAX_PATH];
-  const wchar_t* name = JS_GetStringCharsZ(cx, JSVAL_TO_STRING(JS_ARGV(cx, vp)[0]));
-
-  if (!isValidPath(name)) {
-    Log(L"The following path was deemed invalid: %s. (%s, %s)", name, L"JSDirectory.cpp", L"my_openDir");
-    return JS_FALSE;
+  char path[_MAX_PATH];
+  const char* szName = JS_ToCString(ctx, argv[0]);
+  if (!szName) {
+    return JS_EXCEPTION;
   }
 
-  swprintf_s(path, _MAX_PATH, L"%s\\%s", Vars.szScriptPath, name);
-
-  if ((_wmkdir(path) == -1) && (errno == ENOENT)) {
-    char* n = UnicodeToAnsi(name);
-    char* p = UnicodeToAnsi(path);
-    JS_ReportError(cx, "Couldn't get directory %s, path '%s' not found", n, p);
-    delete[] n;
-    delete[] p;
-    return JS_FALSE;
-  } else {
-    DirData* d = new DirData(name);
-    JSObject* jsdir = BuildObject(cx, &folder_class, dir_methods, dir_props, d);
-    JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(jsdir));
+  if (!isValidPath(szName)) {
+    Log(L"The following path was deemed invalid: %S. (%s, %s)", szName, L"JSDirectory.cpp", L"my_openDir");
+    JS_FreeCString(ctx, szName);
+    return JS_EXCEPTION;
   }
 
-  return JS_TRUE;
+  sprintf_s(path, _MAX_PATH, "%s\\%s", Vars.szScriptPath, szName);
+
+  if ((_mkdir(path) == -1) && (errno == ENOENT)) {
+    JS_ReportError(ctx, "Couldn't get directory %s, path '%s' not found", szName, path);
+    JS_FreeCString(ctx, szName);
+    return JS_EXCEPTION;
+  }
+  DirData* d = new DirData(szName);
+  JS_FreeCString(ctx, szName);
+  return BuildObject(ctx, folder_class_id, dir_methods, _countof(dir_methods), dir_props, _countof(dir_props), d);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -72,163 +75,154 @@ JSAPI_FUNC(my_openDir) {
 ////////////////////////////////////////////////////////////////////////////////
 
 JSAPI_FUNC(dir_getFiles) {
-  if (argc > 1)
-    return JS_FALSE;
-  if (argc < 1)
-    JS_ARGV(cx, vp)[0] = STRING_TO_JSVAL(JS_NewUCStringCopyZ(cx, L"*.*"));
+  DirData* d = (DirData*)JS_GetOpaque3(this_val);
+  char search[_MAX_PATH] = "*.*";
 
-  DirData* d = (DirData*)JS_GetPrivate(cx, JS_THIS_OBJECT(cx, vp));
-  const wchar_t* search = JS_GetStringCharsZ(cx, JS_ValueToString(cx, JS_ARGV(cx, vp)[0]));
-  if (!search)
-    THROW_ERROR(cx, "Failed to get search string");
+  if (argc > 1)
+    return JS_EXCEPTION;
+  if (argc == 1) {
+    const char* szSearch = JS_ToCString(ctx, argv[0]);
+    if (!szSearch) {
+      return JS_EXCEPTION;
+    }
+    strcpy_s(search, szSearch);
+    JS_FreeCString(ctx, szSearch);
+  }
 
   long hFile;
-  wchar_t path[_MAX_PATH], oldpath[_MAX_PATH];
-  swprintf_s(path, _MAX_PATH, L"%s\\%s", Vars.szScriptPath, d->name);
+  char path[_MAX_PATH], oldpath[_MAX_PATH];
+  sprintf_s(path, _MAX_PATH, "%s\\%s", Vars.szScriptPath, d->name);
 
-  if (!_wgetcwd(oldpath, _MAX_PATH)) {
+  if (!_getcwd(oldpath, _MAX_PATH)) {
     Log(L"Error getting current working directory. (%s, %s)", L"JSDirectory.cpp", L"dir_getFiles");
-    return JS_FALSE;
+    return JS_EXCEPTION;
   }
-  if (_wchdir(path) == -1) {
-    Log(L"Changing directory to %s. (%s, %s)", path, L"JSDirectory.cpp", L"dir_getFiles");
-    return JS_FALSE;
+  if (_chdir(path) == -1) {
+    Log(L"Changing directory to %S. (%s, %s)", path, L"JSDirectory.cpp", L"dir_getFiles");
+    return JS_EXCEPTION;
   }
 
-  _wfinddata_t found;
-  JSObject* jsarray = JS_NewArrayObject(cx, 0, NULL);
-  JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(jsarray));
-
-  if ((hFile = _wfindfirst(search, &found)) != -1L) {
-    JS_BeginRequest(cx);
-    jsint element = 0;
+  _finddata_t found;
+  JSValue jsarray = JS_NewArray(ctx);
+  if ((hFile = _findfirst(search, &found)) != -1L) {
+    int32_t element = 0;
     do {
       if ((found.attrib & _A_SUBDIR))
         continue;
-      jsval file = STRING_TO_JSVAL(JS_NewUCStringCopyZ(cx, found.name));
-      JS_SetElement(cx, jsarray, element++, &file);
-    } while (_wfindnext(hFile, &found) == 0);
-    JS_EndRequest(cx);
+      JS_SetPropertyUint32(ctx, jsarray, element++, JS_NewString(ctx, found.name));
+    } while (_findnext(hFile, &found) == 0);
   }
 
-  if (_wchdir(oldpath) == -1) {
-    Log(L"Error changing directory back to %s. (%s, %s)", oldpath, L"JSDirectory.cpp", L"dir_getFiles");
-    return JS_FALSE;
+  if (_chdir(oldpath) == -1) {
+    Log(L"Error changing directory back to %S. (%s, %s)", oldpath, L"JSDirectory.cpp", L"dir_getFiles");
+    return JS_EXCEPTION;
   }
 
-  return JS_TRUE;
+  return jsarray;
 }
 
 JSAPI_FUNC(dir_getFolders) {
-  if (argc > 1)
-    return JS_FALSE;
-  if (argc < 1)
-    JS_ARGV(cx, vp)[0] = STRING_TO_JSVAL(JS_NewUCStringCopyZ(cx, L"*.*"));
+  DirData* d = (DirData*)JS_GetOpaque3(this_val);
+  char search[_MAX_PATH] = "*.*";
 
-  DirData* d = (DirData*)JS_GetPrivate(cx, JS_THIS_OBJECT(cx, vp));
-  const wchar_t* search = JS_GetStringCharsZ(cx, JS_ValueToString(cx, JS_ARGV(cx, vp)[0]));
-  if (!search)
-    THROW_ERROR(cx, "Failed to get search string");
+  if (argc > 1)
+    return JS_EXCEPTION;
+  if (argc == 1) {
+    const char* szSearch = JS_ToCString(ctx, argv[0]);
+    if (!szSearch) {
+      return JS_EXCEPTION;
+    }
+    strcpy_s(search, szSearch);
+    JS_FreeCString(ctx, szSearch);
+  }
 
   long hFile;
-  wchar_t path[_MAX_PATH], oldpath[_MAX_PATH];
-  swprintf_s(path, _MAX_PATH, L"%s\\%s", Vars.szScriptPath, d->name);
+  char path[_MAX_PATH], oldpath[_MAX_PATH];
+  sprintf_s(path, _MAX_PATH, "%s\\%s", Vars.szScriptPath, d->name);
 
-  if (!_wgetcwd(oldpath, _MAX_PATH)) {
+  if (!_getcwd(oldpath, _MAX_PATH)) {
     Log(L"Error getting current working directory. (%s, %s)", L"JSDirectory.cpp", L"dir_getFolders");
-    return JS_FALSE;
+    return JS_EXCEPTION;
   }
-  if (_wchdir(path) == -1) {
-    Log(L"Changing directory to %s. (%s, %s)", path, L"JSDirectory.cpp", L"dir_getFolders");
-    return JS_FALSE;
+  if (_chdir(path) == -1) {
+    Log(L"Changing directory to %S. (%s, %s)", path, L"JSDirectory.cpp", L"dir_getFolders");
+    return JS_EXCEPTION;
   }
 
-  _wfinddata_t found;
-  JSObject* jsarray = JS_NewArrayObject(cx, 0, NULL);
-  JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(jsarray));
+  _finddata_t found;
+  JSValue jsarray = JS_NewArray(ctx);
 
-  if ((hFile = _wfindfirst(search, &found)) != -1L) {
-    jsint element = 0;
-    JS_BeginRequest(cx);
+  if ((hFile = _findfirst(search, &found)) != -1L) {
+    int32_t element = 0;
     do {
-      if (!wcscmp(found.name, L"..") || !wcscmp(found.name, L".") || !(found.attrib & _A_SUBDIR))
+      if (!strcmp(found.name, "..") || !strcmp(found.name, ".") || !(found.attrib & _A_SUBDIR))
         continue;
-      jsval file = STRING_TO_JSVAL(JS_NewUCStringCopyZ(cx, found.name));
-      JS_SetElement(cx, jsarray, element++, &file);
-    } while (_wfindnext(hFile, &found) == 0);
-    JS_EndRequest(cx);
+      JS_SetPropertyUint32(ctx, jsarray, element++, JS_NewString(ctx, found.name));
+    } while (_findnext(hFile, &found) == 0);
   }
 
-  if (_wchdir(oldpath) == -1) {
-    Log(L"Error changing directory back to %s. (%s, %s)", oldpath, L"JSDirectory.cpp", L"dir_getFolders");
-    return JS_FALSE;
+  if (_chdir(oldpath) == -1) {
+    Log(L"Error changing directory back to %S. (%s, %s)", oldpath, L"JSDirectory.cpp", L"dir_getFolders");
+    return JS_EXCEPTION;
   }
 
-  return JS_TRUE;
+  return jsarray;
 }
 
 JSAPI_FUNC(dir_create) {
-  (argc);
+  DirData* d = (DirData*)JS_GetOpaque3(this_val);
+  char path[_MAX_PATH];
+  if (!JS_IsString(argv[0]))
+    THROW_ERROR(ctx, "No path passed to dir.create()");
 
-  DirData* d = (DirData*)JS_GetPrivate(cx, JS_THIS_OBJECT(cx, vp));
-  wchar_t path[_MAX_PATH];
-  if (!JSVAL_IS_STRING(JS_ARGV(cx, vp)[0]))
-    THROW_ERROR(cx, "No path passed to dir.create()");
-  const wchar_t* name = JS_GetStringCharsZ(cx, JSVAL_TO_STRING(JS_ARGV(cx, vp)[0]));
+  const char* szName = JS_ToCString(ctx, argv[0]);
+  if (!szName) {
+    return JS_EXCEPTION;
+  }
 
-  if (!isValidPath(name)) {
+  if (!isValidPath(szName)) {
+    JS_FreeCString(ctx, szName);
+    return JS_EXCEPTION;
+  }
+
+  sprintf_s(path, _MAX_PATH, "%s\\%s\\%s", Vars.szScriptPath, d->name, szName);
+  if (_mkdir(path) == -1 && (errno == ENOENT)) {
+    JS_ReportError(ctx, "Couldn't create directory %s, path %s not found", szName, path);
+    JS_FreeCString(ctx, szName);
     return JS_FALSE;
   }
 
-  swprintf_s(path, _MAX_PATH, L"%s\\%s\\%s", Vars.szScriptPath, d->name, name);
-  if (_wmkdir(path) == -1 && (errno == ENOENT)) {
-    JS_ReportError(cx, "Couldn't create directory %s, path %s not found", name, path);
-    return JS_FALSE;
-  } else {
-    DirData* _d = new DirData(name);
-    JSObject* jsdir = BuildObject(cx, &folder_class, dir_methods, dir_props, _d);
-    JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(jsdir));
-  }
-  return JS_TRUE;
+  DirData* _d = new DirData(szName);
+  JS_FreeCString(ctx, szName);
+  return BuildObject(ctx, folder_class_id, dir_methods, _countof(dir_methods), dir_props, _countof(dir_props), _d);
 }
 
 JSAPI_FUNC(dir_delete) {
-  (argc);
+  DirData* d = (DirData*)JS_GetOpaque3(this_val);
 
-  DirData* d = (DirData*)JS_GetPrivate(cx, JS_THIS_OBJECT(cx, vp));
+  char path[_MAX_PATH];
+  sprintf_s(path, _MAX_PATH, "%s\\%s", Vars.szScriptPath, d->name);
 
-  wchar_t path[_MAX_PATH];
-  swprintf_s(path, _MAX_PATH, L"%s\\%s", Vars.szScriptPath, d->name);
-
-  if (_wrmdir(path) == -1) {
+  if (_rmdir(path) == -1) {
     // TODO: Make an optional param that specifies recursive delete
     if (errno == ENOTEMPTY)
-      THROW_ERROR(cx, "Tried to delete directory, but it is not empty or is the current working directory");
+      THROW_ERROR(ctx, "Tried to delete directory, but it is not empty or is the current working directory");
     if (errno == ENOENT)
-      THROW_ERROR(cx, "Path not found");
+      THROW_ERROR(ctx, "Path not found");
   }
-  JS_SET_RVAL(cx, vp, JSVAL_TRUE);
-
   return JS_TRUE;
 }
 
 JSAPI_PROP(dir_getProperty) {
-  DirData* d = (DirData*)JS_GetPrivate(cx, obj);
+  DirData* d = (DirData*)JS_GetOpaque3(this_val);
 
   if (!d)
-    return JS_FALSE;
+    return JS_EXCEPTION;
 
-  jsval ID;
-  JS_IdToValue(cx, id, &ID);
-  switch (JSVAL_TO_INT(ID)) {
+  switch (magic) {
     case DIR_NAME:
-      vp.setString(JS_InternUCString(cx, d->name));
+      return JS_NewString(ctx, d->name);
       break;
   }
-  return JS_TRUE;
-}
-
-void dir_finalize(JSFreeOp* /*fop*/, JSObject* obj) {
-  DirData* d = (DirData*)JS_GetPrivate(obj);
-  delete d;
+  return JS_UNDEFINED;
 }

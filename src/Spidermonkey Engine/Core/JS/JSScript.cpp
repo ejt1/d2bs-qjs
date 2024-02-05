@@ -8,52 +8,49 @@ EMPTY_CTOR(script)
 
 struct FindHelper {
   DWORD tid;
-  wchar_t* name;
+  char* name;
   Script* script;
 };
 
-bool __fastcall FindScriptByTid(Script* script, void* argv, uint argc);
-bool __fastcall FindScriptByName(Script* script, void* argv, uint argc);
+bool __fastcall FindScriptByTid(Script* script, void* argv, uint32_t argc);
+bool __fastcall FindScriptByName(Script* script, void* argv, uint32_t argc);
 
 JSAPI_PROP(script_getProperty) {
-  Script* script = (Script*)JS_GetInstancePrivate(cx, obj, &script_class, NULL);
+  Script* script = (Script*)JS_GetOpaque3(this_val);
 
   // TODO: make this check stronger
   if (!script)
-    return JS_TRUE;
-  jsval ID;
-  JS_IdToValue(cx, id, &ID);
-  // char* nShortFilename = NULL;
+    return JS_UNDEFINED;
 
-  switch (JSVAL_TO_INT(ID)) {
-    case SCRIPT_FILENAME:
-      vp.setString(JS_InternUCString(cx, script->GetShortFilename()));
-      break;
+  switch (magic) {
+    case SCRIPT_FILENAME: {
+      return JS_NewString(ctx, script->GetShortFilename());
+    } break;
     case SCRIPT_GAMETYPE:
-      vp.setBoolean(script->GetMode() == kScriptModeGame ? false : true);
+      return JS_NewBool(ctx, script->GetMode() == kScriptModeGame ? false : true);
       break;
     case SCRIPT_RUNNING:
-      vp.setBoolean(script->IsRunning());
+      return JS_NewBool(ctx, script->IsRunning());
       break;
     case SCRIPT_THREADID:
-      vp.setInt32(script->GetThreadId());
+      return JS_NewInt32(ctx, script->GetThreadId());
       break;
-    case SCRIPT_MEMORY:
-      vp.setInt32(JS_GetGCParameter(script->GetRuntime(), JSGC_BYTES));
-      break;
+    case SCRIPT_MEMORY: {
+      JSMemoryUsage mem;
+      JS_ComputeMemoryUsage(script->GetRuntime(), &mem);
+      // TODO(ejt): not sure what best represent mozjs GC_BYTES but lets go with this for now
+      return JS_NewInt64(ctx, mem.memory_used_size);
+    } break;
     default:
       break;
   }
 
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(script_getNext) {
-  (argc);
-
-  Script* iterp = (Script*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &script_class, NULL);
+  Script* iterp = (Script*)JS_GetOpaque3(this_val);
   sScriptEngine->LockScriptList("scrip.getNext");
-  // EnterCriticalSection(&sScriptEngine->lock);
 
   for (ScriptMap::iterator it = sScriptEngine->scripts().begin(); it != sScriptEngine->scripts().end(); it++) {
     if (it->second == iterp) {
@@ -61,114 +58,163 @@ JSAPI_FUNC(script_getNext) {
       if (it == sScriptEngine->scripts().end())
         break;
       iterp = it->second;
-      JS_SetPrivate(cx, JS_THIS_OBJECT(cx, vp), iterp);
-      JS_SET_RVAL(cx, vp, JSVAL_TRUE);
+      JS_SetOpaque(this_val, iterp);
       sScriptEngine->UnLockScriptList("scrip.getNext");
-      // LeaveCriticalSection(&sScriptEngine->lock);
       return JS_TRUE;
     }
   }
 
-  // LeaveCriticalSection(&sScriptEngine->lock);
   sScriptEngine->UnLockScriptList("scrip.getNext");
 
-  JS_SET_RVAL(cx, vp, JSVAL_VOID);
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(script_stop) {
-  (argc);
-
-  JS_SET_RVAL(cx, vp, JSVAL_NULL);
-  Script* script = (Script*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &script_class, NULL);
+  Script* script = (Script*)JS_GetOpaque3(this_val);
   if (script->IsRunning())
     script->Stop();
 
-  return JS_TRUE;
+  return JS_NULL;
 }
 
 JSAPI_FUNC(script_pause) {
-  (argc);
-
-  JS_SET_RVAL(cx, vp, JSVAL_NULL);
-  Script* script = (Script*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &script_class, NULL);
+  Script* script = (Script*)JS_GetOpaque3(this_val);
 
   if (script->IsRunning())
     script->Pause();
 
-  return JS_TRUE;
+  return JS_NULL;
 }
 
 JSAPI_FUNC(script_resume) {
-  (argc);
-
-  JS_SET_RVAL(cx, vp, JSVAL_NULL);
-  Script* script = (Script*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &script_class, NULL);
+  Script* script = (Script*)JS_GetOpaque3(this_val);
 
   script->Resume();
 
-  return JS_TRUE;
+  return JS_NULL;
 }
 
 JSAPI_FUNC(script_send) {
-  JS_SET_RVAL(cx, vp, JSVAL_NULL);
-  Script* script = (Script*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &script_class, NULL);
-  Event* evt = new Event;
-  if (!script || !script->IsRunning())
-    return JS_TRUE;
-  sScriptEngine->LockScriptList("script.send");
-  //evt->owner = script;
-  evt->argc = argc;
-  evt->name = "scriptmsg";
-  evt->arg1 = new DWORD(argc);
-  evt->argv = new JSAutoStructuredCloneBuffer*[argc];
-  for (uint i = 0; i < argc; i++) {
-    evt->argv[i] = new JSAutoStructuredCloneBuffer;
-    evt->argv[i]->write(cx, JS_ARGV(cx, vp)[i]);
+  if (argc > 1) {
+    THROW_ERROR(ctx, "too many arguments");
   }
+
+  Script* script = (Script*)JS_GetOpaque3(this_val);
+  if (!script || !script->IsRunning())
+    return JS_NULL;
+  sScriptEngine->LockScriptList("script.send");
+
+  uint8_t* data;
+  size_t data_len;
+  uint8_t** sab_tab;
+  size_t sab_tab_len;
+
+  data = JS_WriteObject2(ctx, &data_len, argv[0], JS_WRITE_OBJ_SAB | JS_WRITE_OBJ_REFERENCE, &sab_tab, &sab_tab_len);
+  if (!data) {
+    return JS_EXCEPTION;
+  }
+
+  // !! TESTING SHARED ARRAY BUFFER !!
+  Event* evt = new Event;
+  // arg1 = data
+  // arg2 = data length
+  // arg3 = sab
+  // arg4 = sab length
+  evt->name = "scriptmsg";
+
+  // write data
+  evt->arg1 = malloc(data_len);
+  if (!evt->arg1) {
+    js_free(ctx, data);
+    js_free(ctx, sab_tab);
+    return JS_EXCEPTION;
+  }
+  memcpy(evt->arg1, data, data_len);
+
+  evt->arg2 = malloc(sizeof(size_t));
+  if (!evt->arg2) {
+    free(evt->arg1);
+    js_free(ctx, data);
+    js_free(ctx, sab_tab);
+    return JS_EXCEPTION;
+  }
+  *(size_t*)evt->arg2 = data_len;
+
+  // write sab
+  evt->arg3 = malloc(sizeof(uint8_t*) * sab_tab_len);
+  if (!evt->arg3) {
+    free(evt->arg1);
+    free(evt->arg2);
+    js_free(ctx, data);
+    js_free(ctx, sab_tab);
+    return JS_EXCEPTION;
+  }
+  memcpy(evt->arg3, sab_tab, sizeof(uint8_t*) * sab_tab_len);
+
+  evt->arg4 = malloc(sizeof(size_t));
+  if (!evt->arg4) {
+    free(evt->arg1);
+    free(evt->arg2);
+    free(evt->arg3);
+    js_free(ctx, data);
+    js_free(ctx, sab_tab);
+    return JS_EXCEPTION;
+  }
+  *(size_t*)evt->arg4 = sab_tab_len;
+
+  // increase SAB reference counts
+  for (size_t i = 0; i < sab_tab_len; ++i) {
+    js_sab_dup(NULL, ((uint8_t**)evt->arg3)[i]);
+  }
+
+  js_free(ctx, data);
+  js_free(ctx, sab_tab);
 
   script->FireEvent(evt);
   sScriptEngine->UnLockScriptList("script.send");
 
-  return JS_TRUE;
+  return JS_NULL;
 }
 
 JSAPI_FUNC(script_join) {
-  (argc);
-
-  JS_SET_RVAL(cx, vp, JSVAL_NULL);
-  Script* script = (Script*)JS_GetInstancePrivate(cx, JS_THIS_OBJECT(cx, vp), &script_class, NULL);
+  Script* script = (Script*)JS_GetOpaque3(this_val);
 
   script->Join();
 
-  return JS_TRUE;
+  return JS_NULL;
 }
 
 JSAPI_FUNC(my_getScript) {
-  JS_SET_RVAL(cx, vp, JSVAL_NULL);
   Script* iterp = NULL;
-  if (argc == 1 && JSVAL_IS_BOOLEAN(JS_ARGV(cx, vp)[0]) && JSVAL_TO_BOOLEAN(JS_ARGV(cx, vp)[0]) == JS_TRUE)
-    iterp = (Script*)JS_GetContextPrivate(cx);
-  else if (argc == 1 && JSVAL_IS_INT(JS_ARGV(cx, vp)[0])) {
+  if (argc == 1 && JS_IsBool(argv[0]) && JS_ToBool(ctx, argv[0]) == TRUE)
+    iterp = (Script*)JS_GetContextOpaque(ctx);
+  else if (argc == 1 && JS_IsNumber(argv[0])) {
     // loop over the Scripts in ScriptEngine and find the one with the right threadid
-    DWORD tid = (DWORD)JSVAL_TO_INT(JS_ARGV(cx, vp)[0]);
+    uint32_t tid;
+    if (JS_ToUint32(ctx, &tid, argv[0])) {
+      return JS_EXCEPTION;
+    }
     FindHelper args = {tid, NULL, NULL};
     sScriptEngine->ForEachScript(FindScriptByTid, &args, 1);
     if (args.script != NULL)
       iterp = args.script;
     else
-      return JS_TRUE;
-  } else if (argc == 1 && JSVAL_IS_STRING(JS_ARGV(cx, vp)[0])) {
-    wchar_t* name = _wcsdup(JS_GetStringCharsZ(cx, JSVAL_TO_STRING(JS_ARGV(cx, vp)[0])));
-    if (name)
-      StringReplace(name, L'/', L'\\', wcslen(name));
-    FindHelper args = {0, name, NULL};
+      return JS_NULL;
+  } else if (argc == 1 && JS_IsString(argv[0])) {
+    const char* name = JS_ToCString(ctx, argv[0]);
+    if (!name) {
+      return JS_EXCEPTION;
+    }
+    char* fname = _strdup(name);
+    JS_FreeCString(ctx, name);
+    StringReplace(fname, '/', '\\', strlen(fname));
+    FindHelper args = {0, fname, NULL};
     sScriptEngine->ForEachScript(FindScriptByName, &args, 1);
-    free(name);
+    free(fname);
     if (args.script != NULL)
       iterp = args.script;
     else
-      return JS_TRUE;
+      return JS_NULL;
   } else {
     if (sScriptEngine->scripts().size() > 0) {
       //	EnterCriticalSection(&sScriptEngine->lock);
@@ -179,52 +225,45 @@ JSAPI_FUNC(my_getScript) {
     }
 
     if (iterp == NULL)
-      return JS_TRUE;
+      return JS_NULL;
   }
 
-  JSObject* res = BuildObject(cx, &script_class, script_methods, script_props, iterp);
+  JSValue res = BuildObject(ctx, script_class_id, script_methods, _countof(script_methods), script_props, _countof(script_props), iterp);
 
-  if (!res)
-    THROW_ERROR(cx, "Failed to build the script object");
-  JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(res));
-
-  return JS_TRUE;
+  if (JS_IsException(res)) {
+    THROW_ERROR(ctx, "Failed to build the script object");
+  }
+  return res;
 }
-JSAPI_FUNC(my_getScripts) {
-  (argc);
 
+JSAPI_FUNC(my_getScripts) {
   DWORD dwArrayCount = NULL;
 
-  JSObject* pReturnArray = JS_NewArrayObject(cx, 0, NULL);
-  JS_BeginRequest(cx);
-  JS_AddRoot(cx, &pReturnArray);
+  JSValue pReturnArray = JS_NewArray(ctx);
   sScriptEngine->LockScriptList("getScripts");
 
   for (ScriptMap::iterator it = sScriptEngine->scripts().begin(); it != sScriptEngine->scripts().end(); it++) {
-    JSObject* res = BuildObject(cx, &script_class, script_methods, script_props, it->second);
-    jsval a = OBJECT_TO_JSVAL(res);
-    JS_SetElement(cx, pReturnArray, dwArrayCount, &a);
+    JSValue res = BuildObject(ctx, script_class_id, script_methods, _countof(script_methods), script_props, _countof(script_props), it->second);
+    JS_SetPropertyUint32(ctx, pReturnArray, dwArrayCount, res);
     dwArrayCount++;
   }
 
   sScriptEngine->UnLockScriptList("getScripts");
-  JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(pReturnArray));
-  JS_RemoveRoot(cx, &pReturnArray);
-  JS_EndRequest(cx);
-  return JS_TRUE;
+  return pReturnArray;
 }
-bool __fastcall FindScriptByName(Script* script, void* argv, uint /*argc*/) {
+
+bool __fastcall FindScriptByName(Script* script, void* argv, uint32_t /*argc*/) {
   FindHelper* helper = (FindHelper*)argv;
-  // static uint pathlen = wcslen(Vars.szScriptPath) + 1;
-  const wchar_t* fname = script->GetShortFilename();
-  if (_wcsicmp(fname, helper->name) == 0) {
+  // static uint32_t pathlen = wcslen(Vars.szScriptPath) + 1;
+  const char* fname = script->GetShortFilename();
+  if (_stricmp(fname, helper->name) == 0) {
     helper->script = script;
     return false;
   }
   return true;
 }
 
-bool __fastcall FindScriptByTid(Script* script, void* argv, uint /*argc*/) {
+bool __fastcall FindScriptByTid(Script* script, void* argv, uint32_t /*argc*/) {
   FindHelper* helper = (FindHelper*)argv;
   if (script->GetThreadId() == helper->tid) {
     helper->script = script;

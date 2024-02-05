@@ -5,8 +5,8 @@
 #include "js32.h"
 
 CLASS_CTOR(presetunit);
+CLASS_FINALIZER(presetunit);
 
-void presetunit_finalize(JSFreeOp* fop, JSObject* obj);
 JSAPI_PROP(presetunit_getProperty);
 
 JSAPI_FUNC(my_getPresetUnit);
@@ -22,14 +22,12 @@ enum presetunit_tinyid {
   PUINT_LEVEL   // 6
 };
 
-static JSPropertySpec presetunit_props[] = {{"type", PUNIT_TYPE, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(presetunit_getProperty), JSOP_NULLWRAPPER},
-                                            {"roomx", PUNIT_ROOMX, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(presetunit_getProperty), JSOP_NULLWRAPPER},
-                                            {"roomy", PUNIT_ROOMY, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(presetunit_getProperty), JSOP_NULLWRAPPER},
-                                            {"x", PUNIT_X, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(presetunit_getProperty), JSOP_NULLWRAPPER},
-                                            {"y", PUNIT_Y, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(presetunit_getProperty), JSOP_NULLWRAPPER},
-                                            {"id", PUNIT_ID, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(presetunit_getProperty), JSOP_NULLWRAPPER},
-                                            {"level", PUINT_LEVEL, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(presetunit_getProperty), JSOP_NULLWRAPPER},
-                                            {0, 0, 0, JSOP_NULLWRAPPER, JSOP_NULLWRAPPER}};
+static JSCFunctionListEntry presetunit_props[] = {
+    JS_CGETSET_MAGIC_DEF("type", presetunit_getProperty, nullptr, PUNIT_TYPE),   JS_CGETSET_MAGIC_DEF("roomx", presetunit_getProperty, nullptr, PUNIT_ROOMX),
+    JS_CGETSET_MAGIC_DEF("roomy", presetunit_getProperty, nullptr, PUNIT_ROOMY), JS_CGETSET_MAGIC_DEF("x", presetunit_getProperty, nullptr, PUNIT_X),
+    JS_CGETSET_MAGIC_DEF("y", presetunit_getProperty, nullptr, PUNIT_Y),         JS_CGETSET_MAGIC_DEF("id", presetunit_getProperty, nullptr, PUNIT_ID),
+    JS_CGETSET_MAGIC_DEF("level", presetunit_getProperty, nullptr, PUINT_LEVEL),
+};
 
 struct myPresetUnit {
   DWORD dwType;

@@ -34,21 +34,21 @@ void LogNoFormat(const wchar_t* szString) {
   time_t tTime;
   struct tm timestamp;
   char szTime[128] = "";
-  wchar_t path[_MAX_PATH + _MAX_FNAME] = L"";
+  char path[_MAX_PATH + _MAX_FNAME] = "";
   time(&tTime);
   localtime_s(&timestamp, &tTime);
   strftime(szTime, sizeof(szTime), "%Y%m%d", &timestamp);
-  swprintf_s(path, _countof(path), L"%sd2bs-%s-%S.log", Vars.szLogPath, Vars.szProfile, szTime);
+  sprintf_s(path, _countof(path), "%sd2bs-%s-%s.log", Vars.szLogPath, Vars.szProfile, szTime);
 #ifdef DEBUG
   FILE* log = stderr;
 #else
-  FILE* log = _wfsopen(path, L"a+", _SH_DENYNO);
+  FILE* log = _fsopen(path, "a+", _SH_DENYNO);
 #endif
   static DWORD id = GetProcessId(GetCurrentProcess());
-  char* sString = UnicodeToAnsi(szString);
+  DWORD tid = GetCurrentThreadId();
+  std::string sString = WideToAnsi(szString);
   strftime(szTime, sizeof(szTime), "%x %X", &timestamp);
-  fprintf(log, "[%s] D2BS %d: %s\n", szTime, id, sString);
-  delete[] sString;
+  fprintf(log, "[%s pid %d tid %d] D2BS: %s\n", szTime, id, tid, sString.c_str());
 #ifndef DEBUG
   fflush(log);
   fclose(log);
@@ -122,12 +122,11 @@ const char* GetUnitName(UnitAny* pUnit, char* szTmp, size_t bufSize) {
   if (pUnit->dwType == UNIT_ITEM) {
     wchar_t wBuffer[256] = L"";
     D2CLIENT_GetItemName(pUnit, wBuffer, _countof(wBuffer));
-    char* szBuffer = UnicodeToAnsi(wBuffer);
-    if (strchr(szBuffer, '\n'))
-      *strchr(szBuffer, '\n') = 0x00;
+    std::string szBuffer = WideToAnsi(wBuffer);
+    if (strchr(szBuffer.c_str(), '\n'))
+      *strchr(&szBuffer[0], '\n') = 0x00;
 
-    strcpy_s(szTmp, bufSize, szBuffer);
-    delete[] szBuffer;
+    strcpy_s(szTmp, bufSize, szBuffer.c_str());
     return szTmp;
   }
   if (pUnit->dwType == UNIT_OBJECT || pUnit->dwType == UNIT_TILE) {
@@ -203,9 +202,8 @@ POINT CalculateTextLen(const char* szwText, int Font) {
   if (!szwText)
     return ret;
 
-  wchar_t* buf = AnsiToUnicode(szwText);
-  ret = CalculateTextLen(buf, Font);
-  delete[] buf;
+  std::wstring buf = AnsiToWide(szwText);
+  ret = CalculateTextLen(buf.c_str(), Font);
   return ret;
 }
 
@@ -265,7 +263,7 @@ BOOL SetSkill(JSContext* cx, WORD wSkillId, BOOL bLeft, DWORD dwItemId) {
     } else
       return TRUE;
 
-    Script* script = (Script*)JS_GetContextPrivate(cx);  // run events to avoid packet block deadlock
+    Script* script = (Script*)JS_GetContextOpaque(cx);  // run events to avoid packet block deadlock
     script->BlockThread(100);
   }
 
@@ -273,7 +271,7 @@ BOOL SetSkill(JSContext* cx, WORD wSkillId, BOOL bLeft, DWORD dwItemId) {
 }
 
 // Compare the skillname to the Game_Skills struct to find the right skill ID to return
-WORD GetSkillByName(char* skillname) {
+WORD GetSkillByName(const char* skillname) {
   for (int i = 0; i < 216; i++)
     if (_stricmp(Game_Skills[i].name, skillname) == 0)
       return Game_Skills[i].skillID;
@@ -306,7 +304,7 @@ void SendMouseClick(int x, int y, int clicktype) {
   }
 }
 
-void SendKeyPress(uint type, uint key, uint ext) {
+void SendKeyPress(uint32_t type, uint32_t key, uint32_t ext) {
   LPARAM lp = 1;
   lp |= ext << 24;
   lp |= (MapVirtualKey(key, MAPVK_VK_TO_VSC) << 16);
@@ -499,9 +497,8 @@ CellFile* LoadCellFile(const char* lpszPath, DWORD bMPQ) {
     Vars.mCachedCellFiles[hash] = result;
     return result;
   } else {
-    wchar_t* path = AnsiToUnicode(lpszPath);
-    CellFile* ret = LoadCellFile(path, bMPQ);
-    delete[] path;
+    std::wstring path = AnsiToWide(lpszPath);
+    CellFile* ret = LoadCellFile(path.c_str(), bMPQ);
     return ret;
   }
 }
@@ -516,7 +513,7 @@ CellFile* LoadCellFile(const wchar_t* lpszPath, DWORD bMPQ) {
   if (bMPQ == 3) {
     // Check in our directory first
     wchar_t path[_MAX_FNAME + _MAX_PATH];
-    swprintf_s(path, _countof(path), L"%s\\%s", Vars.szScriptPath, lpszPath);
+    swprintf_s(path, _countof(path), L"%S\\%s", Vars.szScriptPath, lpszPath);
 
     HANDLE hFile = OpenFileRead(path);
 

@@ -5,8 +5,7 @@
 #include "js32.h"
 
 CLASS_CTOR(area);
-
-void area_finalize(JSFreeOp* fop, JSObject* obj);
+CLASS_FINALIZER(area);
 
 JSAPI_PROP(area_getProperty);
 
@@ -14,19 +13,17 @@ JSAPI_FUNC(my_getArea);
 
 enum area_tinyid { AUNIT_EXITS, AUNIT_NAME, AUNIT_X, AUNIT_XSIZE, AUNIT_Y, AUNIT_YSIZE, AUNIT_ID };
 
-static JSPropertySpec area_props[] = {{"exits", AUNIT_EXITS, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(area_getProperty), JSOP_NULLWRAPPER},
-                                      {"name", AUNIT_NAME, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(area_getProperty), JSOP_NULLWRAPPER},
-                                      {"x", AUNIT_X, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(area_getProperty), JSOP_NULLWRAPPER},
-                                      {"xsize", AUNIT_XSIZE, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(area_getProperty), JSOP_NULLWRAPPER},
-                                      {"y", AUNIT_Y, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(area_getProperty), JSOP_NULLWRAPPER},
-                                      {"ysize", AUNIT_YSIZE, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(area_getProperty), JSOP_NULLWRAPPER},
-                                      {"id", AUNIT_ID, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(area_getProperty), JSOP_NULLWRAPPER},
-                                      {0, 0, 0, JSOP_NULLWRAPPER, JSOP_NULLWRAPPER}};
+static JSCFunctionListEntry area_props[] = {
+    JS_CGETSET_MAGIC_DEF("exits", area_getProperty, nullptr, AUNIT_EXITS), JS_CGETSET_MAGIC_DEF("name", area_getProperty, nullptr, AUNIT_NAME),
+    JS_CGETSET_MAGIC_DEF("x", area_getProperty, nullptr, AUNIT_X),         JS_CGETSET_MAGIC_DEF("xsize", area_getProperty, nullptr, AUNIT_XSIZE),
+    JS_CGETSET_MAGIC_DEF("y", area_getProperty, nullptr, AUNIT_Y),         JS_CGETSET_MAGIC_DEF("ysize", area_getProperty, nullptr, AUNIT_YSIZE),
+    JS_CGETSET_MAGIC_DEF("id", area_getProperty, nullptr, AUNIT_ID),
+};
 
 struct myArea {
   DWORD AreaId;
   DWORD Exits;
-  JSObject* ExitArray;
+  JSValue ExitArray;
 };
 
 #endif

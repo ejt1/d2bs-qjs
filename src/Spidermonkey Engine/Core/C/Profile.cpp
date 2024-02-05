@@ -3,8 +3,8 @@
 #include "Control.h"
 #include "Helpers.h"
 
-void Profile::init(const wchar_t* profileName) {
-  wchar_t file[_MAX_FNAME + MAX_PATH], difficulty[10], _maxLoginTime[10], _maxCharTime[10], mode[256];
+void Profile::init(const char* profileName) {
+  char file[_MAX_FNAME + MAX_PATH], difficulty[10], _maxLoginTime[10], _maxCharTime[10], mode[256];
   int tmp;
 
   if (profileName == NULL)
@@ -13,22 +13,22 @@ void Profile::init(const wchar_t* profileName) {
   if (profileName[0] == L'\0')
     throw "Can't open empty profile name.";
 
-  swprintf_s(file, _countof(file), L"%sd2bs.ini", Vars.szPath);
+  sprintf_s(file, _countof(file), "%sd2bs.ini", Vars.szPath);
 
-  GetPrivateProfileStringW(profileName, L"mode", L"single", mode, _countof(mode), file);
-  GetPrivateProfileStringW(profileName, L"character", L"ERROR", charname, _countof(charname), file);
-  GetPrivateProfileStringW(profileName, L"spdifficulty", L"0", difficulty, _countof(difficulty), file);
-  GetPrivateProfileStringW(profileName, L"username", L"ERROR", username, _countof(username), file);
-  GetPrivateProfileStringW(profileName, L"password", L"ERROR", password, _countof(password), file);
-  GetPrivateProfileStringW(profileName, L"gateway", L"ERROR", gateway, _countof(gateway), file);
+  GetPrivateProfileStringA(profileName, "mode", "single", mode, _countof(mode), file);
+  GetPrivateProfileStringA(profileName, "character", "ERROR", charname, _countof(charname), file);
+  GetPrivateProfileStringA(profileName, "spdifficulty", "0", difficulty, _countof(difficulty), file);
+  GetPrivateProfileStringA(profileName, "username", "ERROR", username, _countof(username), file);
+  GetPrivateProfileStringA(profileName, "password", "ERROR", password, _countof(password), file);
+  GetPrivateProfileStringA(profileName, "gateway", "ERROR", gateway, _countof(gateway), file);
 
-  GetPrivateProfileStringW(L"settings", L"MaxLoginTime", L"5", _maxLoginTime, _countof(_maxLoginTime), file);
-  GetPrivateProfileStringW(L"settings", L"MaxCharSelectTime", L"5", _maxCharTime, _countof(_maxCharTime), file);
+  GetPrivateProfileStringA("settings", "MaxLoginTime", "5", _maxLoginTime, _countof(_maxLoginTime), file);
+  GetPrivateProfileStringA("settings", "MaxCharSelectTime", "5", _maxCharTime, _countof(_maxCharTime), file);
 
-  maxLoginTime = abs(_wtoi(_maxLoginTime) * 1000);
-  maxCharTime = abs(_wtoi(_maxCharTime) * 1000);
+  maxLoginTime = abs(atoi(_maxLoginTime) * 1000);
+  maxCharTime = abs(atoi(_maxCharTime) * 1000);
 
-  tmp = _wtoi(difficulty);
+  tmp = atoi(difficulty);
 
   if (tmp < 0 || tmp > 3)
     throw "Invalid difficulty.";
@@ -56,18 +56,18 @@ void Profile::init(const wchar_t* profileName) {
   }
 }
 
-bool Profile::ProfileExists(const wchar_t* profile) {
-  wchar_t file[_MAX_FNAME + _MAX_PATH], profiles[65535] = L"";
-  swprintf_s(file, _countof(file), L"%sd2bs.ini", Vars.szPath);
+bool Profile::ProfileExists(const char* profile) {
+  char file[_MAX_FNAME + _MAX_PATH], profiles[65535] = "";
+  sprintf_s(file, _countof(file), "%sd2bs.ini", Vars.szPath);
 
-  int count = GetPrivateProfileStringW(NULL, NULL, NULL, profiles, 65535, file);
+  int count = GetPrivateProfileStringA(NULL, NULL, NULL, profiles, 65535, file);
   if (count > 0) {
     int i = 0;
     while (i < count) {
-      if (_wcsicmp(profiles + i, profile) == 0)
+      if (_stricmp(profiles + i, profile) == 0)
         return true;
 
-      i += wcslen(profiles + i) + 1;
+      i += strlen(profiles + i) + 1;
     }
   }
   return false;
@@ -95,6 +95,7 @@ static BOOL isTcpIp(ProfileType pt) {
 }
 
 DWORD Profile::login(const char** error) {
+  Log(L"login");
   // Sleep(10000);
   bool loginComplete = FALSE, skippedToBnet = TRUE;
   int location = 0;
@@ -125,15 +126,15 @@ DWORD Profile::login(const char** error) {
         break;
       case OOG_MAIN_MENU:
         if (type == PROFILETYPE_SINGLEPLAYER)
-          if (!clickControl(findControl(6, (const wchar_t*)NULL, -1, 264, 324, 272, 35)))
+          if (!clickControl(findControl(6, (const char*)NULL, -1, 264, 324, 272, 35)))
             errorMsg = "Failed to click the Single button?";
         if (type == PROFILETYPE_BATTLENET) {
           OOG_SelectGateway(gateway, 256);
-          if (!clickControl(findControl(6, (const wchar_t*)NULL, -1, 264, 366, 272, 35)))
+          if (!clickControl(findControl(6, (const char*)NULL, -1, 264, 366, 272, 35)))
             errorMsg = "Failed to click the 'Battle.net' button?";
         }
         if (isOtherMP(type)) {
-          if (!clickControl(findControl(6, (const wchar_t*)NULL, -1, 264, 433, 272, 35)))
+          if (!clickControl(findControl(6, (const char*)NULL, -1, 264, 433, 272, 35)))
             errorMsg = "Failed to click the 'Other Multiplayer' button?";
           else
             skippedToBnet = FALSE;
@@ -141,32 +142,32 @@ DWORD Profile::login(const char** error) {
         break;
       case OOG_LOGIN:
         if ((type == PROFILETYPE_SINGLEPLAYER || isOtherMP(type)) && skippedToBnet) {
-          if (!clickControl(findControl(6, L"EXIT", -1, 33, 572, 128, 35)))
+          if (!clickControl(findControl(6, "EXIT", -1, 33, 572, 128, 35)))
             errorMsg = "Failed to click the exit button?";
           break;
         }
-        pControl = findControl(1, (const wchar_t*)NULL, -1, 322, 342, 162, 19);
+        pControl = findControl(1, (const char*)NULL, -1, 322, 342, 162, 19);
         if (pControl) {
           SetControlText(pControl, username);
         } else
           errorMsg = "Failed to set the 'Username' text-edit box.";
         // Password text-edit box
-        pControl = findControl(1, (const wchar_t*)NULL, -1, 322, 396, 162, 19);
+        pControl = findControl(1, (const char*)NULL, -1, 322, 396, 162, 19);
         if (pControl) {
           SetControlText(pControl, password);
         } else
           errorMsg = "Failed to set the 'Password' text-edit box.";
 
-        pControl = findControl(6, (const wchar_t*)NULL, -1, 264, 484, 272, 35);
+        pControl = findControl(6, (const char*)NULL, -1, 264, 484, 272, 35);
         if (pControl)
           if (!clickControl(pControl))
             errorMsg = "Failed to click the 'Log in' button?";
         timeout++;
         break;
       case OOG_DIFFICULTY: {
-        Control *normal = findControl(CONTROL_BUTTON, (const wchar_t*)NULL, -1, 264, 297, 272, 35),
-                *nightmare = findControl(CONTROL_BUTTON, (const wchar_t*)NULL, -1, 264, 340, 272, 35),
-                *hell = findControl(CONTROL_BUTTON, (const wchar_t*)NULL, -1, 264, 383, 272, 35);
+        Control *normal = findControl(CONTROL_BUTTON, (const char*)NULL, -1, 264, 297, 272, 35),
+                *nightmare = findControl(CONTROL_BUTTON, (const char*)NULL, -1, 264, 340, 272, 35),
+                *hell = findControl(CONTROL_BUTTON, (const char*)NULL, -1, 264, 383, 272, 35);
 
         switch (diff) {
           case 0:  // normal button
@@ -196,11 +197,11 @@ DWORD Profile::login(const char** error) {
       case OOG_OTHER_MULTIPLAYER:
         // Open Battle.net
         if (type == PROFILETYPE_OPEN_BATTLENET)
-          if (!clickControl(findControl(6, (const wchar_t*)NULL, -1, 264, 310, 272, 35)))
+          if (!clickControl(findControl(6, (const char*)NULL, -1, 264, 310, 272, 35)))
             errorMsg = "Failed to click the 'Open Battle.net' button?";
         // TCP/IP Game
         if (isTcpIp(type))
-          if (!clickControl(findControl(6, (const wchar_t*)NULL, -1, 264, 350, 272, 35)) && !clickedOnce)
+          if (!clickControl(findControl(6, (const char*)NULL, -1, 264, 350, 272, 35)) && !clickedOnce)
             errorMsg = "Failed to click the 'TCP/IP Game' button?";
           else
             clickedOnce = true;
@@ -208,21 +209,21 @@ DWORD Profile::login(const char** error) {
         break;
       case OOG_TCP_IP:
         if (type == PROFILETYPE_TCPIP_HOST)
-          if (!clickControl(findControl(6, (const wchar_t*)NULL, -1, 265, 206, 272, 35)))
+          if (!clickControl(findControl(6, (const char*)NULL, -1, 265, 206, 272, 35)))
             errorMsg = "Failed to click the 'Host Game' button?";
         if (type == PROFILETYPE_TCPIP_JOIN)
-          if (!clickControl(findControl(6, (const wchar_t*)NULL, -1, 265, 264, 272, 35)))
+          if (!clickControl(findControl(6, (const char*)NULL, -1, 265, 264, 272, 35)))
             errorMsg = "Failed to click the 'Join Game' button?";
         break;
       case OOG_ENTER_IP_ADDRESS:
-        if (_wcsicmp(ip, L"")) {
-          pControl = findControl(1, (const wchar_t*)NULL, -1, 300, 268, -1, -1);
+        if (_stricmp(ip, "")) {
+          pControl = findControl(1, (const char*)NULL, -1, 300, 268, -1, -1);
           if (pControl) {
             SetControlText(pControl, ip);
 
             // Click the OK button
             // Sleep(5000);
-            if (!clickControl(findControl(6, (const wchar_t*)NULL, -1, 421, 337, 96, 32))) {
+            if (!clickControl(findControl(6, (const char*)NULL, -1, 421, 337, 96, 32))) {
               errorMsg = "Failed to click the OK button";
             }
           } else

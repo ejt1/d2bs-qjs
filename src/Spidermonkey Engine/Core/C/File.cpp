@@ -44,129 +44,91 @@ char* readLine(FILE* fptr, bool locking) {
   return _strdup(buffer.c_str());
 }
 
-bool writeValue(FILE* fptr, JSContext* cx, jsval value, bool isBinary, bool locking) {
+bool writeValue(FILE* fptr, JSContext* cx, JSValue value, bool isBinary, bool locking) {
   int len = 0, result;
-  int32 ival = 0;
-  jsdouble dval = 0;
+  int32_t ival = 0;
+  double dval = 0;
   bool bval;
 
-  switch (JS_TypeOfValue(cx, value)) {
-    case JSTYPE_VOID:
-    case JSTYPE_NULL:
-      if (locking)
-        result = fwrite(&ival, sizeof(int), 1, fptr);
-      else
-        result = _fwrite_nolock(&ival, sizeof(int), 1, fptr);
-      if (result == 1)
-        return true;
-      break;
-    case JSTYPE_STRING: {
-      char* str = JS_EncodeStringToUTF8(cx, JSVAL_TO_STRING(value));
+  // TODO(ejt): better method to detect int or double
+  if (JS_IsNull(value) || JS_IsUndefined(value)) {
+    if (locking)
+      result = fwrite(&ival, sizeof(int), 1, fptr);
+    else
+      result = _fwrite_nolock(&ival, sizeof(int), 1, fptr);
+    if (result == 1)
+      return true;
+  } else if (JS_IsString(value)) {
+    size_t len2;
+    const char* str = JS_ToCStringLen(cx, &len2, value);
+    if (locking)
+      result = fwrite(str, sizeof(char), len2, fptr);
+    else
+      result = _fwrite_nolock(str, sizeof(char), len2, fptr);
+    JS_FreeCString(cx, str);
+    return len2 == static_cast<size_t>(result);
+  } else if (JS_IsNumber(value)) {
+    if (isBinary) {
+      if (!JS_ToInt32(cx, &ival, value)) {
+        if (locking)
+          result = fwrite(&ival, sizeof(int32_t), 1, fptr);
+        else
+          result = _fwrite_nolock(&dval, sizeof(int32_t), 1, fptr);
+        return result == 1;
+      } else if (!JS_ToFloat64(cx, &dval, value)) {
+        if (locking)
+          result = fwrite(&dval, sizeof(double), 1, fptr);
+        else
+          result = _fwrite_nolock(&dval, sizeof(double), 1, fptr);
+        return result == 1;
+      }
+      return false;
+    } else {
+      if (!JS_ToInt32(cx, &ival, value)) {
+        char* str = new char[16];
+        _itoa_s(ival, str, 16, 10);
+        len = strlen(str);
+        if (locking)
+          result = fwrite(str, sizeof(char), len, fptr);
+        else
+          result = _fwrite_nolock(str, sizeof(char), len, fptr);
+        delete[] str;
+        if (result == len)
+          return true;
+      } else if (!JS_ToFloat64(cx, &dval, value)) {
+        // double will never be a 64-char string, but I'd rather be safe than sorry
+        char* str = new char[64];
+        sprintf_s(str, 64, "%.16f", dval);
+        len = strlen(str);
+        if (locking)
+          result = fwrite(str, sizeof(char), len, fptr);
+        else
+          result = _fwrite_nolock(str, sizeof(char), len, fptr);
+        delete[] str;
+        if (result == len)
+          return true;
+      }
+      return false;
+    }
+  } else if (JS_IsBool(value)) {
+    if (!isBinary) {
+      bval = !!JS_ToBool(cx, value);
+      const char* str = bval ? "true" : "false";
       if (locking)
         result = fwrite(str, sizeof(char), strlen(str), fptr);
       else
         result = _fwrite_nolock(str, sizeof(char), strlen(str), fptr);
-
-      JS_free(cx, str);
       return (int)strlen(str) == result;
+    } else {
+      bval = !!JS_ToBool(cx, value);
+      if (locking)
+        result = fwrite(&bval, sizeof(bool), 1, fptr);
+      else
+        result = _fwrite_nolock(&bval, sizeof(bool), 1, fptr);
+      return result == 1;
     }
-      break;
-    case JSTYPE_NUMBER:
-      if (isBinary) {
-        if (JSVAL_IS_DOUBLE(value)) {
-          if (JS_ValueToNumber(cx, value, &dval)) {
-            if (locking)
-              result = fwrite(&dval, sizeof(jsdouble), 1, fptr);
-            else
-              result = _fwrite_nolock(&dval, sizeof(jsdouble), 1, fptr);
-            return result == 1;
-          } else
-            return false;
-        } else if (JSVAL_IS_INT(value)) {
-          if (JS_ValueToInt32(cx, value, &ival)) {
-            if (locking)
-              result = fwrite(&ival, sizeof(int32), 1, fptr);
-            else
-              result = _fwrite_nolock(&dval, sizeof(int32), 1, fptr);
-            return result == 1;
-          } else
-            return false;
-        }
-      } else {
-        if (JSVAL_IS_DOUBLE(value)) {
-          if (JS_ValueToNumber(cx, value, &dval) == JS_FALSE)
-            return false;
-          // jsdouble will never be a 64-char string, but I'd rather be safe than sorry
-          char* str = new char[64];
-          sprintf_s(str, 64, "%.16f", dval);
-          len = strlen(str);
-          if (locking)
-            result = fwrite(str, sizeof(char), len, fptr);
-          else
-            result = _fwrite_nolock(str, sizeof(char), len, fptr);
-          delete[] str;
-          if (result == len)
-            return true;
-        } else if (JSVAL_IS_INT(value)) {
-          if (JS_ValueToInt32(cx, value, &ival) == JS_FALSE)
-            return false;
-          char* str = new char[16];
-          _itoa_s(ival, str, 16, 10);
-          len = strlen(str);
-          if (locking)
-            result = fwrite(str, sizeof(char), len, fptr);
-          else
-            result = _fwrite_nolock(str, sizeof(char), len, fptr);
-          delete[] str;
-          if (result == len)
-            return true;
-        }
-      }
-      break;
-    case JSTYPE_BOOLEAN:
-      if (!isBinary) {
-        bval = !!JSVAL_TO_BOOLEAN(value);
-        const char* str = bval ? "true" : "false";
-        if (locking)
-          result = fwrite(str, sizeof(char), strlen(str), fptr);
-        else
-          result = _fwrite_nolock(str, sizeof(char), strlen(str), fptr);
-        return (int)strlen(str) == result;
-      } else {
-        bval = !!JSVAL_TO_BOOLEAN(value);
-        if (locking)
-          result = fwrite(&bval, sizeof(bool), 1, fptr);
-        else
-          result = _fwrite_nolock(&bval, sizeof(bool), 1, fptr);
-        return result == 1;
-      }
-      break;
-      /*		case JSTYPE_OBJECT:
-                              JSObject *arr = JSVAL_TO_OBJECT(value);
-                              if(JS_IsArrayObject(cx, arr)) {
-                                      JS_GetArrayLength(cx, arr, &uival);
-                                      for(jsuint i = 0; i < uival; i++)
-                                      {
-                                              jsval val;
-                                              JS_GetElement(cx, arr, i, &val);
-                                              if(!writeValue(fptr, cx, val, isBinary))
-                                                      return false;
-                                      }
-                                      return true;
-                              }
-                              else
-                              {
-                                      JSString* jsstr = JS_ValueToString(cx, value);
-                                      str = JS_EncodeString(cx,jsstr);
-                                      if(locking)
-                                              result = fwrite(str, sizeof(char), strlen(str), fptr);
-                                      else
-                                              result = _fwrite_nolock(str, sizeof(char), strlen(str), fptr);
-                                      return strlen(str) == result;
-                              }
-                              break;
-      */
   }
+
   return false;
 }
 
@@ -183,9 +145,9 @@ bool writeValue(FILE* fptr, JSContext* cx, jsval value, bool isBinary, bool lock
  *
  * \return The file pointer.
  */
-FILE* fileOpenRelScript(const wchar_t* filename, const wchar_t* mode, JSContext* cx) {
+FILE* fileOpenRelScript(const char* filename, const char* mode, JSContext* cx) {
   FILE* f;
-  wchar_t fullPath[_MAX_PATH + _MAX_FNAME];
+  char fullPath[_MAX_PATH + _MAX_FNAME];
 
   // Get the relative path
   if (getPathRelScript(filename, _MAX_PATH + _MAX_FNAME, fullPath) == NULL) {
@@ -194,7 +156,7 @@ FILE* fileOpenRelScript(const wchar_t* filename, const wchar_t* mode, JSContext*
   }
 
   // Open the file
-  if (_wfopen_s(&f, fullPath, mode) != 0 || f == NULL) {
+  if (fopen_s(&f, fullPath, mode) != 0 || f == NULL) {
     char message[128];
     _strerror_s(message, 128, NULL);
     JS_ReportError(cx, "Couldn't open file %ls: %s", filename, message);
@@ -215,30 +177,31 @@ FILE* fileOpenRelScript(const wchar_t* filename, const wchar_t* mode, JSContext*
  *
  * \return fullPath on success or NULL on failure.
  */
-wchar_t* getPathRelScript(const wchar_t* filename, int bufLen, wchar_t* fullPath) {
-  wchar_t fullScriptPath[_MAX_PATH + _MAX_FNAME];
-  wchar_t* relPath;
+char* getPathRelScript(const char* filename, int bufLen, char* fullPath) {
+  char fullScriptPath[_MAX_PATH + _MAX_FNAME];
+  char* relPath = NULL;
   int strLenScript;
   DWORD scrPathLen;
 
-  strLenScript = wcslen(Vars.szScriptPath);
+  strLenScript = strlen(Vars.szScriptPath);
 
   // Make the filename relative to the script path
-  relPath = (wchar_t*)_alloca((strLenScript + wcslen(filename) + 2) * 2);  // *2 for wide chars
-  wcscpy_s(relPath, strLenScript + wcslen(filename) + 2, Vars.szScriptPath);
-  relPath[strLenScript] = L'\\';
-  wcscpy_s(relPath + strLenScript + 1, wcslen(filename) + 1, filename);
+  relPath = (char*)_malloca(strLenScript + strlen(filename) + 2);
+  if (relPath == NULL) {
+    return NULL;
+  }
+  sprintf_s(relPath, strLenScript + strlen(filename) + 2, "%s\\%s", Vars.szScriptPath, filename);
 
   // Transform to the full pathname
-  GetFullPathNameW(relPath, bufLen, fullPath, NULL);
+  GetFullPathNameA(relPath, bufLen, fullPath, NULL);
 
   // Get the full path of the script path, check it is the prefix of fullPath
-  scrPathLen = GetFullPathNameW(Vars.szScriptPath, _MAX_PATH + _MAX_FNAME, fullScriptPath, NULL);
+  scrPathLen = GetFullPathNameA(Vars.szScriptPath, _MAX_PATH + _MAX_FNAME, fullScriptPath, NULL);
 
   // Check that fullScriptPath is the prefix of fullPath
   // As GetFullPathName seems to not add a trailing \, if there is not a
   // trailing \ in fullScriptPath check for it in fullPath
-  if (wcsncmp(fullPath, fullScriptPath, scrPathLen) != 0 || (fullScriptPath[scrPathLen - 1] != '\\' && fullPath[scrPathLen] != '\\')) {
+  if (strncmp(fullPath, fullScriptPath, scrPathLen) != 0 || (fullScriptPath[scrPathLen - 1] != '\\' && fullPath[scrPathLen] != '\\')) {
     fullPath[0] = '\0';
     return NULL;
   }
@@ -253,12 +216,12 @@ wchar_t* getPathRelScript(const wchar_t* filename, int bufLen, wchar_t* fullPath
  *
  * \return true if path is valid, false otherwise.
  */
-bool isValidPath(const wchar_t* name) {
-  wchar_t fullPath[_MAX_PATH + _MAX_FNAME];
+bool isValidPath(const char* name) {
+  char fullPath[_MAX_PATH + _MAX_FNAME];
 
   // Use getPathRelScript to validate based on full paths
   if (getPathRelScript(name, _MAX_PATH + _MAX_FNAME, fullPath) == NULL)
     return false;
 
-  return (!wcsstr(name, L"..\\") && !wcsstr(name, L"../") && (wcscspn(name, L"\":?*<>|") == wcslen(name)));
+  return (!strstr(name, "..\\") && !strstr(name, "../") && (strcspn(name, "\":?*<>|") == strlen(name)));
 }

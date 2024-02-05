@@ -2,43 +2,39 @@
 
 EMPTY_CTOR(exit)
 
-void exit_finalize(JSFreeOp* /*fop*/, JSObject* obj) {
-  myExit* pExit = (myExit*)JS_GetPrivate(obj);
+CLASS_FINALIZER(exit) {
+  myExit* pExit = (myExit*)JS_GetOpaque3(val);
   delete pExit;
 }
 
 JSAPI_PROP(exit_getProperty) {
-  myExit* pExit = (myExit*)JS_GetPrivate(cx, obj);
-
-  vp.set(JSVAL_VOID);
+  myExit* pExit = (myExit*)JS_GetOpaque3(this_val);
 
   if (!pExit)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
-  jsval ID;
-  JS_IdToValue(cx, id, &ID);
-  switch (JSVAL_TO_INT(ID)) {
+  switch (magic) {
     case EXIT_X:
-      vp.setInt32(pExit->x);
+      return JS_NewUint32(ctx, pExit->x);
       break;
     case EXIT_Y:
-      vp.setInt32(pExit->y);
+      return JS_NewUint32(ctx, pExit->y);
       break;
     case EXIT_TARGET:
-      vp.setInt32(pExit->id);
+      return JS_NewUint32(ctx, pExit->id);
       break;
     case EXIT_TYPE:
-      vp.setInt32(pExit->type);
+      return JS_NewUint32(ctx, pExit->type);
       break;
     case EXIT_TILEID:
-      vp.setInt32(pExit->tileid);
+      return JS_NewUint32(ctx, pExit->tileid);
       break;
     case EXIT_LEVELID:
-      vp.setInt32(pExit->level);
+      return JS_NewUint32(ctx, pExit->level);
       break;
     default:
       break;
   }
 
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }

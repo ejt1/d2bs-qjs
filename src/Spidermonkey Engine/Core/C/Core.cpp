@@ -25,7 +25,7 @@ bool SplitLines(const std::wstring& str, size_t maxWidth, const wchar_t delim, s
 
   int byteIdx = MaxLineFit(str, 0, str.length() + 1, maxWidth);
   //std::wstring ts = str.substr(0, byteIdx);
-  //uint cmdsize = CalculateTextLen(ts.c_str(), Vars.dwConsoleFont).x;
+  //uint32_t cmdsize = CalculateTextLen(ts.c_str(), Vars.dwConsoleFont).x;
   //int numchars = ts.length();
   //int sizechar = (cmdsize + numchars - 1) / numchars;
   //int maxLength = (maxWidth + sizechar - 1) / sizechar - 1;
@@ -121,10 +121,9 @@ void __fastcall Say(const wchar_t* szFormat, ...) {
   }
   // help button and ! ok msg for disconnected
   else if (findControl(CONTROL_BUTTON, 5308, -1, 187, 470, 80, 20) && (!findControl(CONTROL_BUTTON, 5102, -1, 351, 337, 96, 32))) {
-    char* lBuffer = UnicodeToAnsi(szBuffer, CP_ACP);
-    memcpy((char*)p_D2MULTI_ChatBoxMsg, lBuffer, strlen(lBuffer) + 1);
+    std::string lBuffer = WideToAnsi(szBuffer, CP_ACP);
+    memcpy((char*)p_D2MULTI_ChatBoxMsg, lBuffer.c_str(), strlen(lBuffer.c_str()) + 1);
     D2MULTI_DoChat();
-    delete[] lBuffer;
   }
 
   delete[] szBuffer;
@@ -180,14 +179,6 @@ bool ClickMap(DWORD dwClickType, int wX, int wY, BOOL bShift, UnitAny* pUnit) {
 void LoadMPQ(const char* mpq) {
   D2WIN_InitMPQ(mpq, 0, 0, 3000);
   *p_BNCLIENT_XPacKey = *p_BNCLIENT_ClassicKey = *p_BNCLIENT_KeyOwner = NULL;
-  // BNCLIENT_DecodeAndLoadKeys();
-}
-
-void LoadMPQ(const wchar_t* mpq) {
-  char* path = UnicodeToAnsi(mpq);
-  LoadMPQ(path);
-  delete[] path;
-  // BNCLIENT_DecodeAndLoadKeys();
 }
 
 int UTF8FindByteIndex(std::string str, int maxutf8len) {

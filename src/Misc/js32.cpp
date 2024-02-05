@@ -1,32 +1,43 @@
-#include "ScriptEngine.h"
 #include "js32.h"
-#include "D2Helpers.h"
+
 #include "Helpers.h"
-#include "File.h"
-// #include <cstdarg>
+#include "D2Helpers.h"
+#include "Core.h"
+#include "Globals.h"
+#include "Console.h"
 
-JSObject* BuildObject(JSContext* cx, JSClass* classp, JSFunctionSpec* funcs, JSPropertySpec* props, void* priv, JSObject* proto, JSObject* parent) {
-  JS_BeginRequest(cx);
+JSValue JS_NewString(JSContext* ctx, const wchar_t* str) {
+  std::string utf8 = WideToAnsi(str);
+  return JS_NewString(ctx, utf8.c_str());
+}
 
-  JSObject* obj = JS_NewObject(cx, classp, proto, parent);
-
-  if (obj) {
-    // add root to avoid newborn root problem
-    JS_AddObjectRoot(cx, &obj);
-    // if(JS_AddRoot(&obj) == JS_FALSE)
-    // return NULL;
-    if (obj && funcs && !JS_DefineFunctions(cx, obj, funcs))
-      obj = NULL;
-    if (obj && props && !JS_DefineProperties(cx, obj, props))
-      obj = NULL;
-    if (obj && priv)
-      JS_SetPrivate(cx, obj, priv);
-    JS_RemoveObjectRoot(cx, &obj);
+JSValue BuildObject(JSContext* ctx, JSClassID class_id, JSCFunctionListEntry* funcs, size_t num_funcs, JSCFunctionListEntry* props, size_t num_props, void* opaque,
+                    JSValue new_target) {
+  JSValue proto;
+  if (JS_IsUndefined(new_target)) {
+    proto = JS_GetClassProto(ctx, class_id);
+  } else {
+    proto = JS_GetPropertyStr(ctx, new_target, "prototype");
+    if (JS_IsException(proto)) {
+      return JS_EXCEPTION;
+    }
   }
-  JS_EndRequest(cx);
+  JSValue obj = JS_NewObjectProtoClass(ctx, proto, class_id);
+  JS_FreeValue(ctx, proto);
+  if (JS_IsException(obj)) {
+    return obj;
+  }
+
+  JS_SetPropertyFunctionList(ctx, obj, funcs, num_funcs);
+  JS_SetPropertyFunctionList(ctx, obj, props, num_props);
+  if (opaque) {
+    JS_SetOpaque(obj, opaque);
+  }
+
   return obj;
 }
-JSScript* JS_CompileFile(JSContext* cx, JSObject* globalObject, std::wstring fileName) {
+
+JSValue JS_CompileFile(JSContext* ctx, JSValue /*globalObject*/, std::string fileName) {
   std::ifstream t(fileName.c_str(), std::ios::binary);
   std::string str;
 
@@ -46,25 +57,92 @@ JSScript* JS_CompileFile(JSContext* cx, JSObject* globalObject, std::wstring fil
     str[2] = ' ';
   }
 
-  char* nFileName = UnicodeToAnsi(fileName.c_str());
-
-  JS::RootedObject obj(cx, globalObject);
-  JS::CompileOptions opts(cx);
-  opts.setUTF8(true).setFileAndLine(nFileName, 1);
-  JSScript* rval = JS::Compile(cx, obj, opts, str.c_str(), str.size());
-  JS_AddNamedScriptRoot(cx, &rval, nFileName);
-  JS_RemoveScriptRoot(cx, &rval);
+  JSValue rval = JS_Eval(ctx, str.c_str(), str.size(), fileName.c_str(), JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
   t.close();
-  delete[] nFileName;
 
   return rval;
 }
-JSBool JSVAL_IS_OBJECT(jsval v) {
-  return !JSVAL_IS_PRIMITIVE(v);
+
+std::optional<std::string> JS_CStringToStd(JSContext* ctx, JSValue val) {
+  size_t len;
+  const char* ptr = JS_ToCStringLen(ctx, &len, val);
+  if (!ptr) {
+    return std::nullopt;
+  }
+  std::string s(ptr, len);
+  JS_FreeCString(ctx, ptr);
+  return s;
 }
-void* JS_GetPrivate(JSContext* /*cx*/, JSObject* obj) {
-  return JS_GetPrivate(obj);
+
+std::optional<std::wstring> JS_ToWString(JSContext* ctx, JSValue val) {
+  const char* str = JS_ToCString(ctx, val);
+  if (!str) {
+    return std::nullopt;
+  }
+  std::wstring ret = AnsiToWide(str);
+  JS_FreeCString(ctx, str);
+  return ret;
 }
-void JS_SetPrivate(JSContext* /*cx*/, JSObject* obj, void* data) {
-  return JS_SetPrivate(obj, data);
+
+// TODO(ejt): this function is a mess after throwing the old 'reportError' in here
+void JS_ReportPendingException(JSContext* ctx) {
+  std::optional<std::string> what;
+  std::optional<std::string> stackframe;
+  JSValue ex;
+  bool isError;
+
+
+  ex = JS_GetException(ctx);
+  // skip uncatchable errors to avoid logging "interrupted" exceptions
+  if (JS_IsUncatchableError(ctx, ex)) {
+    JS_FreeValue(ctx, ex);
+    return;
+  }
+
+  isError = JS_IsError(ctx, ex);
+  if (isError) {
+    what = JS_CStringToStd(ctx, ex);
+    JSValue stack = JS_GetPropertyStr(ctx, ex, "stack");
+    if (!JS_IsNull(stack) && !JS_IsUndefined(stack)) {
+      stackframe = JS_CStringToStd(ctx, stack);
+    }
+    JS_FreeValue(ctx, stack);
+  }
+  JS_FreeValue(ctx, ex);
+
+  bool warn = false;      // JSREPORT_IS_WARNING(report->flags);
+  bool isStrict = false;  // JSREPORT_IS_STRICT(report->flags);
+  const char* type = (warn ? "Warning" : "Error");
+  const char* strict = (isStrict ? "Strict " : "");
+  // wchar_t* filename = report->filename ? AnsiToUnicode(report->filename) : _wcsdup(L"<unknown>");
+  // wchar_t* displayName = filename;
+  // if (_wcsicmp(L"Command Line", filename) != 0 && _wcsicmp(L"<unknown>", filename) != 0)
+  //   displayName = filename + wcslen(Vars.szPath);
+
+  // Log(L"[%hs%hs] Code(%d) File(%s:%d) %hs\nLine: %hs", strict, type, report->errorNumber, filename, report->lineno, message, report->linebuf);
+  // Print(L"[\u00FFc%d%hs%hs\u00FFc0 (%d)] File(%s:%d) %hs", (warn ? 9 : 1), strict, type, report->errorNumber, displayName, report->lineno, message);
+
+  if (what) {
+    if (stackframe) {
+      Log(L"[%hs%hs] %S\n%S", strict, type, what->c_str(), stackframe->c_str());
+      Print(L"[\u00FFc%d%hs%hs\u00FFc0] %S\n%S", (warn ? 9 : 1), strict, type, what->c_str(), stackframe->c_str());
+    } else {
+      Log(L"[%hs%hs] %S", strict, type, what->c_str());
+      Print(L"[\u00FFc%d%hs%hs\u00FFc0] %S", (warn ? 9 : 1), strict, type, what->c_str());
+    }
+  }
+
+  // if (filename[0] == L'<')
+  //   free(filename);
+  // else
+  //   delete[] filename;
+
+  if (Vars.bQuitOnError && /*!JSREPORT_IS_WARNING(report->flags) && */ ClientState() == ClientStateInGame)
+    D2CLIENT_ExitGame();
+  else
+    Console::ShowBuffer();
 }
+
+// JSBool JSVAL_IS_OBJECT(JSValue v) {
+//   return !JSVAL_IS_PRIMITIVE(v);
+// }

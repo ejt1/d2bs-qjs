@@ -8,120 +8,103 @@
 EMPTY_CTOR(party)
 
 JSAPI_PROP(party_getProperty) {
-  RosterUnit* pUnit = (RosterUnit*)JS_GetPrivate(cx, obj);
+  RosterUnit* pUnit = (RosterUnit*)JS_GetOpaque3(this_val);
 
   if (!pUnit)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
-  jsval ID;
-  JS_IdToValue(cx, id, &ID);
-  JS_BeginRequest(cx);
-  switch (JSVAL_TO_INT(ID)) {
+  switch (magic) {
     case PARTY_NAME:
-      vp.setString(JS_NewStringCopyZ(cx, pUnit->szName));
+      return JS_NewString(ctx, pUnit->szName);
       break;
     case PARTY_X:
-      vp.setInt32(pUnit->Xpos);
+      return JS_NewUint32(ctx, pUnit->Xpos);
       break;
     case PARTY_Y:
-      vp.setInt32(pUnit->Ypos);
+      return JS_NewUint32(ctx, pUnit->Ypos);
       break;
     case PARTY_AREA:
-      vp.setInt32(pUnit->dwLevelId);
+      return JS_NewUint32(ctx, pUnit->dwLevelId);
       break;
     case PARTY_GID:
-      vp.setNumber((jsdouble)pUnit->dwUnitId);
+      return JS_NewUint32(ctx, pUnit->dwUnitId);
       break;
     case PARTY_LIFE:
-      vp.setInt32(pUnit->dwPartyLife);
+      return JS_NewUint32(ctx, pUnit->dwPartyLife);
       break;
     case PARTY_CLASSID:
-      vp.setInt32(pUnit->dwClassId);
+      return JS_NewUint32(ctx, pUnit->dwClassId);
       break;
     case PARTY_LEVEL:
-      vp.setInt32(pUnit->wLevel);
+      return JS_NewUint32(ctx, pUnit->wLevel);
       break;
     case PARTY_FLAG:
-      vp.setInt32(pUnit->dwPartyFlags);
+      return JS_NewUint32(ctx, pUnit->dwPartyFlags);
       break;
     case PARTY_ID:
-      vp.setInt32(pUnit->wPartyId);
+      return JS_NewUint32(ctx, pUnit->wPartyId);
       break;
     default:
       break;
   }
-  JS_EndRequest(cx);
-  return JS_TRUE;
+
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(party_getNext) {
-  (argc);
-
   if (!WaitForGameReady())
-    THROW_WARNING(cx, vp, "Game not ready");
+    THROW_WARNING(ctx, "Game not ready");
 
-  RosterUnit* pUnit = (RosterUnit*)JS_GetPrivate(cx, JS_THIS_OBJECT(cx, vp));
+  RosterUnit* pUnit = (RosterUnit*)JS_GetOpaque3(this_val);
 
   if (!pUnit) {
-    JS_SET_RVAL(cx, vp, JSVAL_FALSE);
-    return JS_TRUE;
+    return JS_FALSE;
   }
 
   pUnit = pUnit->pNext;
 
   if (pUnit) {
-    JS_SetPrivate(cx, JS_THIS_OBJECT(cx, vp), pUnit);
-    JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(JS_THIS_OBJECT(cx, vp)));
-  } else {
-    // JSObject* obj = JS_THIS_OBJECT(cx, vp);
-    //		JS_ClearScope(cx, obj);
-    // if(JS_ValueToObject(cx, JSVAL_NULL, &obj))
-    JS_SET_RVAL(cx, vp, JSVAL_FALSE);
+    // BUG(ejt): possible value leak
+    JS_SetOpaque(this_val, pUnit);
+    return JS_DupValue(ctx, this_val);
   }
 
-  return JS_TRUE;
+  return JS_FALSE;
 }
 
 JSAPI_FUNC(my_getParty) {
   if (!WaitForGameReady())
-    THROW_WARNING(cx, vp, "Game not ready");
-
-  JS_SET_RVAL(cx, vp, JSVAL_VOID);
+    THROW_WARNING(ctx, "Game not ready");
 
   RosterUnit* pUnit = *p_D2CLIENT_PlayerUnitList;
 
   if (!pUnit)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
   if (argc == 1) {
     UnitAny* inUnit = NULL;
-    char* nPlayerName = nullptr;
-    uint32 nPlayerId = NULL;
+    const char* nPlayerName = nullptr;
+    uint32_t nPlayerId = NULL;
 
-    if (JSVAL_IS_STRING(JS_ARGV(cx, vp)[0])) {
-      nPlayerName = JS_EncodeStringToUTF8(cx, JSVAL_TO_STRING(JS_ARGV(cx, vp)[0]));
-    } else if (JSVAL_IS_INT(JS_ARGV(cx, vp)[0])) {
-      JS_BeginRequest(cx);
-      if (!JS_ConvertArguments(cx, argc, JS_ARGV(cx, vp), "u", &nPlayerId)) {
-        JS_EndRequest(cx);
-        THROW_ERROR(cx, "Unable to get ID");
-      }
-      JS_EndRequest(cx);
-    } else if (JSVAL_IS_OBJECT(JS_ARGV(cx, vp)[0])) {
-      myUnit* lpUnit = (myUnit*)JS_GetPrivate(cx, JSVAL_TO_OBJECT(JS_ARGV(cx, vp)[0]));
+    if (JS_IsString(argv[0])) {
+      nPlayerName = JS_ToCString(ctx, argv[0]);
+    } else if (JS_IsNumber(argv[0]) && JS_ToUint32(ctx, &nPlayerId, argv[0])) {
+      THROW_ERROR(ctx, "Unable to get ID");
+    } else if (JS_IsObject(argv[0])) {
+      myUnit* lpUnit = (myUnit*)JS_GetOpaque3(argv[0]);
 
       if (!lpUnit)
-        return JS_TRUE;
+        return JS_UNDEFINED;
 
       inUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
       if (!inUnit)
-        THROW_ERROR(cx, "Unable to get Unit");
+        THROW_ERROR(ctx, "Unable to get Unit");
 
       nPlayerId = inUnit->dwUnitId;
     }
 
     if (!nPlayerName && !nPlayerId)
-      return JS_TRUE;
+      return JS_UNDEFINED;
 
     BOOL bFound = FALSE;
 
@@ -139,18 +122,12 @@ JSAPI_FUNC(my_getParty) {
     }
 
     if (nPlayerName) {
-      JS_free(cx, nPlayerName);
+      JS_FreeCString(ctx, nPlayerName);
     }
 
     if (!bFound)
-      return JS_TRUE;
+      return JS_UNDEFINED;
   }
 
-  JSObject* jsUnit = BuildObject(cx, &party_class, party_methods, party_props, pUnit);
-  if (!jsUnit)
-    return JS_TRUE;
-
-  JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(jsUnit));
-
-  return JS_TRUE;
+  return BuildObject(ctx, party_class_id, party_methods, _countof(party_methods), party_props, _countof(party_props), pUnit);
 }

@@ -49,19 +49,13 @@ DWORD HPMPUpdateHandler(BYTE* pPacket, DWORD /*dwSize*/) {
 }
 
 DWORD ChatEventHandler(BYTE* pPacket, DWORD /*dwSize*/) {
-  char* pName = (char*)pPacket + 10;
-  char* pMessage = (char*)pPacket + strlen(pName) + 11;
-  wchar_t* uc = AnsiToUnicode(pMessage, CP_ACP);
-  //   char* enc = UnicodeToAnsi(uc); // convert d2 string to unicode to utf-8 for js compatibility
+  const char* pName = (char*)pPacket + 10;
+  const char* pMessage = (char*)pPacket + strlen(pName) + 11;
 
   if (Vars.bDontCatchNextMsg)
     Vars.bDontCatchNextMsg = FALSE;
 
-  DWORD result = !(ChatEvent(pName, uc));
-  //    delete[] enc;
-  delete[] uc;
-
-  return result;
+  return !(ChatEvent(pName, pMessage));
 }
 
 DWORD NPCTransactionHandler(BYTE* pPacket, DWORD /*dwSize*/) {
@@ -80,8 +74,8 @@ DWORD EventMessagesHandler(BYTE* pPacket, DWORD /*dwSize*/) {
   DWORD param1 = *(DWORD*)(pPacket + 3);
   BYTE param2 = pPacket[7];
   char name1[16] = "", name2[28] = "";
-  strcpy_s(name1, 16, (char*)pPacket + 8);
-  strcpy_s(name2, 16, (char*)pPacket + 24);
+  strcpy_s(name1, 16, (const char*)pPacket + 8);
+  strcpy_s(name2, 16, (const char*)pPacket + 24);
   wchar_t* wname2 = NULL;
 
   const char* tables[3] = {"", "monstats", "objects"};
@@ -116,11 +110,11 @@ DWORD EventMessagesHandler(BYTE* pPacket, DWORD /*dwSize*/) {
   }
 
   if (!wname2) {
-    wname2 = AnsiToUnicode(name2, CP_ACP);
-    GameActionEvent(mode, param1, param2, name1, wname2);
-    delete[] wname2;
-  } else
-    GameActionEvent(mode, param1, param2, name1, wname2);
+    GameActionEvent(mode, param1, param2, name1, nullptr);
+  } else {
+    std::string str = WideToAnsi(wname2);
+    GameActionEvent(mode, param1, param2, name1, str.c_str());
+  }
 
   return TRUE;
 }

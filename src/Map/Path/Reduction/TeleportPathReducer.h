@@ -72,7 +72,7 @@ class TeleportPathReducer : public PathReducer {
     Point best(0, 0);
     int x, y;
     if (Euclidean(bestPtSoFar, center) < 500) {
-      for (uint j = 0; j < distanceList.size(); j++) {
+      for (uint32_t j = 0; j < distanceList.size(); j++) {
         x = distanceList[j].first + center.first;
         y = distanceList[j].second + center.second;
         if (!Reject(Point(x, y), true)) {

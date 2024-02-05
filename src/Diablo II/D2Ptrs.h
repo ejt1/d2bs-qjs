@@ -322,7 +322,7 @@ enum {
     FUNCPTR(D2COMMON, GetItemFromInventory, UnitAny* __stdcall, (Inventory * inv), 0x23B2C0)      // Updated 1.14d //0063B2C0-BASE
     FUNCPTR(D2COMMON, GetNextItemFromInventory, UnitAny* __stdcall, (UnitAny * pItem), 0x23DFA0)  // Updated 1.14d //0063DFA0-BASE
 
-    FUNCPTR(D2COMMON, GenerateOverheadMsg, OverheadMsg* __stdcall, (DWORD dwUnk, CHAR* szMsg, DWORD dwTrigger), 0x261110)  // Updated 1.14d //00661110-BASE
+    FUNCPTR(D2COMMON, GenerateOverheadMsg, OverheadMsg* __stdcall, (DWORD dwUnk, const char* szMsg, DWORD dwTrigger), 0x261110)  // Updated 1.14d //00661110-BASE
     FUNCPTR(D2COMMON, FixOverheadMsg, VOID __stdcall, (OverheadMsg * pMsg, DWORD dwUnk), 0x261230)                         // Updated 1.14d //00661230-BASE
 
     FUNCPTR(D2COMMON, AddRoomData, void __stdcall, (Act * ptAct, int LevelId, int Xpos, int Ypos, Room1* pRoom), 0x21A070)     // Updated 1.14d //0061A070-BASE

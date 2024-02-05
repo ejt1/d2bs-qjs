@@ -45,18 +45,18 @@ struct Variables {
   HANDLE eventSignal;
   HWND hHandle;
 
-  wchar_t szPath[_MAX_PATH];
-  wchar_t szLogPath[_MAX_PATH];
-  wchar_t szScriptPath[_MAX_PATH];
-  wchar_t szProfile[256];
-  wchar_t szStarter[_MAX_FNAME];
-  wchar_t szConsole[_MAX_FNAME];
-  wchar_t szDefault[_MAX_FNAME];
+  char szPath[_MAX_PATH];
+  char szLogPath[_MAX_PATH];
+  char szScriptPath[_MAX_PATH];
+  char szProfile[256];
+  char szStarter[_MAX_FNAME];
+  char szConsole[_MAX_FNAME];
+  char szDefault[_MAX_FNAME];
   char szHosts[256];
   char szClassic[30];
   char szLod[30];
-  wchar_t szTitle[256];
-  wchar_t szCommandLine[256];
+  char szTitle[256];
+  char szCommandLine[256];
 
   long SectionCount;
 

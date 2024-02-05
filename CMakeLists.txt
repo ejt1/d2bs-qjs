@@ -36,13 +36,12 @@ set(D2BS_SRCS
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Misc/Events.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Misc/Helpers.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Misc/js32.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/Misc/Localization.cc"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Misc/Offset.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/Misc/sqlite3.c"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Misc/stringhash.cpp"
 
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/C/Control.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/C/Core.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/C/dde.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/C/File.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/C/Game.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/C/Hash.cpp"
@@ -67,14 +66,12 @@ set(D2BS_SRCS
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSPresetUnit.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSProfile.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSRoom.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSSandbox.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSScreenHook.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSScript.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSSocket.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSSQLite.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSUnit.cpp"
   
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Engine/AutoRoot.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Engine/CallArgs.cc"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Engine/Script.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Engine/ScriptEngine.cpp"
 
@@ -119,7 +116,7 @@ target_link_libraries(D2BS PRIVATE
   shlwapi
 
   # vendor dependencies
-  minhook
-  js)
+  libquickjs
+  minhook)
 
 install(TARGETS D2BS RUNTIME DESTINATION bin/d2bs)

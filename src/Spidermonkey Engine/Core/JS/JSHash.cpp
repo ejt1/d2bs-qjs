@@ -4,157 +4,81 @@
 #include "Engine.h"
 #include "Helpers.h"
 
-JSAPI_FUNC(my_md5) {
+JSValue js_hash(JSContext* ctx, int argc, JSValue* argv, char* (*hashfn)(const char*)) {
+  JSValue rval = JS_UNDEFINED;
   if (argc != 1)
-    THROW_ERROR(cx, "Invalid arguments");
+    THROW_ERROR(ctx, "Invalid arguments");
 
-  char* input = JS_EncodeStringToUTF8(cx, JS_ValueToString(cx, JS_ARGV(cx, vp)[0]));
-  char* result = md5(input);
+  const char* input = JS_ToCString(ctx, argv[0]);
+  char* result = hashfn(input);
   if (result && result[0])
-    JS_SET_RVAL(cx, vp, STRING_TO_JSVAL(JS_InternString(cx, result)));
+    rval = JS_NewString(ctx, result);
   delete[] result;
-  JS_free(cx, input);
-  return JS_TRUE;
+  JS_FreeCString(ctx, input);
+  return rval;
+}
+
+JSValue js_hash_file(JSContext* ctx, int argc, JSValue* argv, char*(hashfn)(const char*)) {
+  JSValue rval = JS_UNDEFINED;
+
+  if (argc != 1)
+    THROW_ERROR(ctx, "Invalid arguments");
+
+  const char* szFile = JS_ToCString(ctx, argv[0]);
+  if (!szFile) {
+    return JS_EXCEPTION;
+  }
+  if (!(szFile && szFile[0] && isValidPath(szFile))) {
+    JS_FreeCString(ctx, szFile);
+    THROW_ERROR(ctx, "Invalid file path!");
+  }
+
+  char path[_MAX_FNAME + _MAX_PATH];
+  sprintf_s(path, _countof(path), "%s\\%s", Vars.szScriptPath, szFile);
+
+  char* result = hashfn(path);
+  if (result && result[0])
+    rval = JS_NewString(ctx, result);
+  delete[] result;
+  return rval;
+}
+
+JSAPI_FUNC(my_md5) {
+  return js_hash(ctx, argc, argv, md5);
 }
 
 JSAPI_FUNC(my_sha1) {
-  if (argc != 1)
-    THROW_ERROR(cx, "Invalid arguments");
-
-  char* input = JS_EncodeStringToUTF8(cx, JS_ValueToString(cx, JS_ARGV(cx, vp)[0]));
-  char* result = sha1(input);
-  if (result && result[0])
-    JS_SET_RVAL(cx, vp, STRING_TO_JSVAL(JS_InternString(cx, result)));
-  delete[] result;
-  JS_free(cx, input);
-  return JS_TRUE;
+  return js_hash(ctx, argc, argv, sha1);
 }
 
 JSAPI_FUNC(my_sha256) {
-  if (argc != 1)
-    THROW_ERROR(cx, "Invalid arguments");
-
-  char* input = JS_EncodeStringToUTF8(cx, JS_ValueToString(cx, JS_ARGV(cx, vp)[0]));
-  char* result = sha256(input);
-  if (result && result[0])
-    JS_SET_RVAL(cx, vp, STRING_TO_JSVAL(JS_InternString(cx, result)));
-  delete[] result;
-  JS_free(cx, input);
-  return JS_TRUE;
+  return js_hash(ctx, argc, argv, sha256);
 }
 
 JSAPI_FUNC(my_sha384) {
-  if (argc != 1)
-    THROW_ERROR(cx, "Invalid arguments");
-
-  char* input = JS_EncodeStringToUTF8(cx, JS_ValueToString(cx, JS_ARGV(cx, vp)[0]));
-  char* result = sha384(input);
-  if (result && result[0])
-    JS_SET_RVAL(cx, vp, STRING_TO_JSVAL(JS_InternString(cx, result)));
-  delete[] result;
-  JS_free(cx, input);
-  return JS_TRUE;
+  return js_hash(ctx, argc, argv, sha384);
 }
 
 JSAPI_FUNC(my_sha512) {
-  if (argc != 1)
-    THROW_ERROR(cx, "Invalid arguments");
-
-  char* input = JS_EncodeStringToUTF8(cx, JS_ValueToString(cx, JS_ARGV(cx, vp)[0]));
-  char* result = sha512(input);
-  if (result && result[0])
-    JS_SET_RVAL(cx, vp, STRING_TO_JSVAL(JS_InternString(cx, result)));
-  delete[] result;
-  JS_free(cx, input);
-  return JS_TRUE;
+  return js_hash(ctx, argc, argv, sha512);
 }
 
 JSAPI_FUNC(my_md5_file) {
-  if (argc != 1)
-    THROW_ERROR(cx, "Invalid arguments");
-
-  const wchar_t* file = JS_GetStringCharsZ(cx, JS_ValueToString(cx, JS_ARGV(cx, vp)[0]));
-  if (!(file && file[0] && isValidPath(file)))
-    THROW_ERROR(cx, "Invalid file path!");
-
-  wchar_t path[_MAX_FNAME + _MAX_PATH];
-  swprintf_s(path, _countof(path), L"%s\\%s", Vars.szScriptPath, file);
-
-  char* result = md5_file(path);
-  if (result && result[0])
-    JS_SET_RVAL(cx, vp, STRING_TO_JSVAL(JS_NewStringCopyZ(cx, result)));
-  delete[] result;
-  return JS_TRUE;
+  return js_hash_file(ctx, argc, argv, md5_file);
 }
 
 JSAPI_FUNC(my_sha1_file) {
-  if (argc != 1)
-    THROW_ERROR(cx, "Invalid arguments");
-
-  const wchar_t* file = JS_GetStringCharsZ(cx, JS_ValueToString(cx, JS_ARGV(cx, vp)[0]));
-  if (!(file && file[0] && isValidPath(file)))
-    THROW_ERROR(cx, "Invalid file path!");
-
-  wchar_t path[_MAX_FNAME + _MAX_PATH];
-  swprintf_s(path, _countof(path), L"%s\\%s", Vars.szScriptPath, file);
-
-  char* result = sha1_file(path);
-  if (result && result[0])
-    JS_SET_RVAL(cx, vp, STRING_TO_JSVAL(JS_NewStringCopyZ(cx, result)));
-  delete[] result;
-  return JS_TRUE;
+  return js_hash_file(ctx, argc, argv, sha1_file);
 }
 
 JSAPI_FUNC(my_sha256_file) {
-  if (argc != 1)
-    THROW_ERROR(cx, "Invalid arguments");
-
-  const wchar_t* file = JS_GetStringCharsZ(cx, JS_ValueToString(cx, JS_ARGV(cx, vp)[0]));
-  if (!(file && file[0] && isValidPath(file)))
-    THROW_ERROR(cx, "Invalid file path!");
-
-  wchar_t path[_MAX_FNAME + _MAX_PATH];
-  swprintf_s(path, _countof(path), L"%s\\%s", Vars.szScriptPath, file);
-
-  char* result = sha256_file(path);
-  if (result && result[0])
-    JS_SET_RVAL(cx, vp, STRING_TO_JSVAL(JS_NewStringCopyZ(cx, result)));
-  delete[] result;
-  return JS_TRUE;
+  return js_hash_file(ctx, argc, argv, sha256_file);
 }
 
 JSAPI_FUNC(my_sha384_file) {
-  if (argc != 1)
-    THROW_ERROR(cx, "Invalid arguments");
-
-  const wchar_t* file = JS_GetStringCharsZ(cx, JS_ValueToString(cx, JS_ARGV(cx, vp)[0]));
-  if (!(file && file[0] && isValidPath(file)))
-    THROW_ERROR(cx, "Invalid file path!");
-
-  wchar_t path[_MAX_FNAME + _MAX_PATH];
-  swprintf_s(path, _countof(path), L"%s\\%s", Vars.szScriptPath, file);
-
-  char* result = sha384_file(path);
-  if (result && result[0])
-    JS_SET_RVAL(cx, vp, STRING_TO_JSVAL(JS_NewStringCopyZ(cx, result)));
-  delete[] result;
-  return JS_TRUE;
+  return js_hash_file(ctx, argc, argv, sha384_file);
 }
 
 JSAPI_FUNC(my_sha512_file) {
-  if (argc != 1)
-    THROW_ERROR(cx, "Invalid arguments");
-
-  const wchar_t* file = JS_GetStringCharsZ(cx, JS_ValueToString(cx, JS_ARGV(cx, vp)[0]));
-  if (!(file && file[0] && isValidPath(file)))
-    THROW_ERROR(cx, "Invalid file path!");
-
-  wchar_t path[_MAX_FNAME + _MAX_PATH];
-  swprintf_s(path, _countof(path), L"%s\\%s", Vars.szScriptPath, file);
-
-  char* result = sha512_file(path);
-  if (result && result[0])
-    JS_SET_RVAL(cx, vp, STRING_TO_JSVAL(JS_NewStringCopyZ(cx, result)));
-  delete[] result;
-  return JS_TRUE;
+  return js_hash_file(ctx, argc, argv, sha512_file);
 }

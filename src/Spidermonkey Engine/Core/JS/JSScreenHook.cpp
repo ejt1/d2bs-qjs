@@ -3,849 +3,811 @@
 #include "ScreenHook.h"
 #include "Script.h"
 #include "File.h"
+#include <Helpers.h>
 
-void hook_finalize(JSFreeOp* /*fop*/, JSObject* obj) {
-  Genhook* hook = (Genhook*)JS_GetPrivate(obj);
+CLASS_FINALIZER(hook) {
+  Genhook* hook = (Genhook*)JS_GetOpaque3(val);
   Genhook::EnterGlobalSection();
   if (hook) {
-    JS_SetPrivate(obj, NULL);
+    JS_SetOpaque(val, NULL);
     delete hook;
   }
   Genhook::LeaveGlobalSection();
 }
 
 JSAPI_FUNC(hook_remove) {
-  (argc);
-
-  JSObject* obj = JS_THIS_OBJECT(cx, vp);
   Genhook::EnterGlobalSection();
-  Genhook* hook = (Genhook*)JS_GetPrivate(cx, obj);
+  Genhook* hook = (Genhook*)JS_GetOpaque3(this_val);
   if (hook) {
-    // hook->SetIsVisible(false);
     delete hook;
   }
 
-  JS_SetPrivate(cx, obj, NULL);
-  // JS_ClearScope(cx, obj);
-  JS_ValueToObject(cx, JSVAL_VOID, &obj);
+  JS_SetOpaque(this_val, NULL);
+  // JS_ValueToObject(cx, JSVAL_VOID, &obj);
   Genhook::LeaveGlobalSection();
 
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 // Function to create a frame which gets called on a "new Frame ()"
 // Parameters: x, y, xsize, ysize, alignment, automap, onClick, onHover
 JSAPI_FUNC(frame_ctor) {
-  Script* script = (Script*)JS_GetContextPrivate(cx);
+  Script* script = (Script*)JS_GetContextOpaque(ctx);
 
-  uint x = 0, y = 0, x2 = 0, y2 = 0;
+  uint32_t x = 0, y = 0, x2 = 0, y2 = 0;
   Align align = Left;
   bool automap = false;
-  jsval click = JSVAL_VOID, hover = JSVAL_VOID;
+  JSValue click = JS_UNDEFINED, hover = JS_UNDEFINED;
 
-  if (argc > 0 && JSVAL_IS_INT(JS_ARGV(cx, vp)[0]))
-    x = JSVAL_TO_INT(JS_ARGV(cx, vp)[0]);
-  if (argc > 1 && JSVAL_IS_INT(JS_ARGV(cx, vp)[1]))
-    y = JSVAL_TO_INT(JS_ARGV(cx, vp)[1]);
-  if (argc > 2 && JSVAL_IS_INT(JS_ARGV(cx, vp)[2]))
-    x2 = JSVAL_TO_INT(JS_ARGV(cx, vp)[2]);
-  if (argc > 3 && JSVAL_IS_INT(JS_ARGV(cx, vp)[3]))
-    y2 = JSVAL_TO_INT(JS_ARGV(cx, vp)[3]);
-  if (argc > 4 && JSVAL_IS_INT(JS_ARGV(cx, vp)[4]))
-    align = (Align)JSVAL_TO_INT(JS_ARGV(cx, vp)[4]);
-  if (argc > 5 && JSVAL_IS_BOOLEAN(JS_ARGV(cx, vp)[5]))
-    automap = !!JSVAL_TO_BOOLEAN(JS_ARGV(cx, vp)[5]);
-  if (argc > 6 && JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[6]))
-    click = JS_ARGV(cx, vp)[6];
-  if (argc > 7 && JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[7]))
-    hover = JS_ARGV(cx, vp)[7];
+  if (argc > 0 && JS_IsNumber(argv[0]))
+    JS_ToUint32(ctx, &x, argv[0]);
+  if (argc > 1 && JS_IsNumber(argv[1]))
+    JS_ToUint32(ctx, &y, argv[1]);
+  if (argc > 2 && JS_IsNumber(argv[2]))
+    JS_ToUint32(ctx, &x2, argv[2]);
+  if (argc > 3 && JS_IsNumber(argv[3]))
+    JS_ToUint32(ctx, &y2, argv[3]);
+  if (argc > 4 && JS_IsNumber(argv[4]))
+    JS_ToUint32(ctx, (uint32_t*)(&align), argv[4]);
+  if (argc > 5 && JS_IsBool(argv[5]))
+    automap = !!JS_ToBool(ctx, argv[5]);
+  if (argc > 6 && JS_IsFunction(ctx, argv[6]))
+    click = argv[6];
+  if (argc > 7 && JS_IsFunction(ctx, argv[7]))
+    hover = argv[7];
 
-  JSObject* hook = BuildObject(cx, &frame_class, frame_methods, frame_props);
-  if (!hook)
-    THROW_ERROR(cx, "Failed to create frame object");
+  JSValue hook = BuildObject(ctx, frame_class_id, frame_methods, _countof(frame_methods), frame_props, _countof(frame_props));
+  if (JS_IsException(hook))
+    THROW_ERROR(ctx, "Failed to create frame object");
 
   // framehooks don't work out of game -- they just crash
   FrameHook* pFrameHook = new FrameHook(script, hook, x, y, x2, y2, automap, align, IG);
-
   if (!pFrameHook)
-    THROW_ERROR(cx, "Failed to create framehook");
+    THROW_ERROR(ctx, "Failed to create framehook");
 
-  JS_SetPrivate(cx, hook, pFrameHook);
+  JS_SetOpaque(hook, pFrameHook);
   pFrameHook->SetClickHandler(click);
   pFrameHook->SetHoverHandler(hover);
 
-  JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(hook));
-
-  return JS_TRUE;
+  return hook;
 }
 
 JSAPI_PROP(frame_getProperty) {
-  FrameHook* pFramehook = (FrameHook*)JS_GetPrivate(cx, obj);
+  FrameHook* pFramehook = (FrameHook*)JS_GetOpaque3(this_val);
   if (!pFramehook)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
-  jsval ID;
-  JS_IdToValue(cx, id, &ID);
-  switch (JSVAL_TO_INT(ID)) {
+  switch (magic) {
     case FRAME_X:
-      vp.setInt32(pFramehook->GetX());
+      return JS_NewUint32(ctx, pFramehook->GetX());
       break;
     case FRAME_Y:
-      vp.setInt32(pFramehook->GetY());
+      return JS_NewUint32(ctx, pFramehook->GetY());
       break;
     case FRAME_XSIZE:
-      vp.setInt32(pFramehook->GetXSize());
+      return JS_NewUint32(ctx, pFramehook->GetXSize());
       break;
     case FRAME_YSIZE:
-      vp.setInt32(pFramehook->GetYSize());
+      return JS_NewUint32(ctx, pFramehook->GetYSize());
       break;
     case FRAME_ALIGN:
-      vp.setInt32(pFramehook->GetAlign());
+      return JS_NewUint32(ctx, pFramehook->GetAlign());
       break;
     case FRAME_VISIBLE:
-      vp.setBoolean(pFramehook->GetIsVisible());
+      return JS_NewBool(ctx, pFramehook->GetIsVisible());
       break;
     case FRAME_ZORDER:
-      vp.setInt32(pFramehook->GetZOrder());
+      return JS_NewUint32(ctx, pFramehook->GetZOrder());
       break;
     case FRAME_ONCLICK:
-      vp.set(pFramehook->GetClickHandler());
+      return JS_DupValue(ctx, pFramehook->GetClickHandler());
       break;
     case FRAME_ONHOVER:
-      vp.set(pFramehook->GetHoverHandler());
+      return JS_DupValue(ctx, pFramehook->GetHoverHandler());
       break;
   }
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_STRICT_PROP(frame_setProperty) {
-  (strict);
-
-  FrameHook* pFramehook = (FrameHook*)JS_GetPrivate(cx, obj);
+  FrameHook* pFramehook = (FrameHook*)JS_GetOpaque3(this_val);
   if (!pFramehook)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
-  jsval ID;
-  JS_IdToValue(cx, id, &ID);
-  switch (JSVAL_TO_INT(ID)) {
+  uint32_t ival = 0;
+  bool bval = 0;
+  if (JS_IsBool(val)) {
+    bval = JS_ToBool(ctx, val);
+  }
+  if (JS_IsNumber(val) && JS_ToUint32(ctx, &ival, val)) {
+    return JS_EXCEPTION;
+  }
+
+  switch (magic) {
     case FRAME_X:
-      if (vp.isInt32())
-        pFramehook->SetX(vp.toInt32());
+      pFramehook->SetX(ival);
       break;
     case FRAME_Y:
-      if (vp.isInt32())
-        pFramehook->SetY(vp.toInt32());
+      pFramehook->SetY(ival);
       break;
     case FRAME_XSIZE:
-      if (vp.isInt32())
-        pFramehook->SetXSize(vp.toInt32());
+      pFramehook->SetXSize(ival);
       break;
     case FRAME_YSIZE:
-      if (vp.isInt32())
-        pFramehook->SetYSize(vp.toInt32());
+      pFramehook->SetYSize(ival);
       break;
     case FRAME_ALIGN:
-      if (vp.isInt32())
-        pFramehook->SetAlign((Align)vp.toInt32());
+      pFramehook->SetAlign((Align)ival);
       break;
     case FRAME_VISIBLE:
-      if (vp.isBoolean())
-        pFramehook->SetIsVisible(!!vp.toBoolean());
+      pFramehook->SetIsVisible(bval);
       break;
     case FRAME_ZORDER:
-      if (vp.isInt32())
-        pFramehook->SetZOrder((ushort)vp.toInt32());
+      pFramehook->SetZOrder((ushort)ival);
       break;
     case FRAME_ONCLICK:
-      pFramehook->SetClickHandler(vp.get());
+      pFramehook->SetClickHandler(val);
       break;
     case FRAME_ONHOVER:
-      pFramehook->SetHoverHandler(vp.get());
+      pFramehook->SetHoverHandler(val);
       break;
   }
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 // Box functions
 
 // Parameters: x, y, xsize, ysize, color, opacity, alignment, automap, onClick, onHover
 JSAPI_FUNC(box_ctor) {
-  Script* script = (Script*)JS_GetContextPrivate(cx);
+  Script* script = (Script*)JS_GetContextOpaque(ctx);
 
   ScreenhookState state = (script->GetMode() == kScriptModeMenu) ? OOG : IG;
-  uint x = 0, y = 0, x2 = 0, y2 = 0;
-  ushort color = 0, opacity = 0;
-  Align align = Left;
+  uint32_t x = 0, y = 0, x2 = 0, y2 = 0, color = 0, opacity = 0, align = Left;
   bool automap = false;
-  jsval click = JSVAL_VOID, hover = JSVAL_VOID;
+  JSValue click = JS_UNDEFINED, hover = JS_UNDEFINED;
 
-  if (argc > 0 && JSVAL_IS_INT(JS_ARGV(cx, vp)[0]))
-    x = JSVAL_TO_INT(JS_ARGV(cx, vp)[0]);
-  if (argc > 1 && JSVAL_IS_INT(JS_ARGV(cx, vp)[1]))
-    y = JSVAL_TO_INT(JS_ARGV(cx, vp)[1]);
-  if (argc > 2 && JSVAL_IS_INT(JS_ARGV(cx, vp)[2]))
-    x2 = JSVAL_TO_INT(JS_ARGV(cx, vp)[2]);
-  if (argc > 3 && JSVAL_IS_INT(JS_ARGV(cx, vp)[3]))
-    y2 = JSVAL_TO_INT(JS_ARGV(cx, vp)[3]);
-  if (argc > 4 && JSVAL_IS_INT(JS_ARGV(cx, vp)[4]))
-    color = (ushort)JSVAL_TO_INT(JS_ARGV(cx, vp)[4]);
-  if (argc > 5 && JSVAL_IS_INT(JS_ARGV(cx, vp)[5]))
-    opacity = (ushort)JSVAL_TO_INT(JS_ARGV(cx, vp)[5]);
-  if (argc > 6 && JSVAL_IS_INT(JS_ARGV(cx, vp)[6]))
-    align = (Align)JSVAL_TO_INT(JS_ARGV(cx, vp)[6]);
-  if (argc > 7 && JSVAL_IS_BOOLEAN(JS_ARGV(cx, vp)[7]))
-    automap = !!JSVAL_TO_BOOLEAN(JS_ARGV(cx, vp)[7]);
-  if (argc > 8 && JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[8]))
-    click = JS_ARGV(cx, vp)[8];
-  if (argc > 9 && JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[9]))
-    hover = JS_ARGV(cx, vp)[9];
+  if (argc > 0 && JS_IsNumber(argv[0]))
+    JS_ToUint32(ctx, &x, argv[0]);
+  if (argc > 1 && JS_IsNumber(argv[1]))
+    JS_ToUint32(ctx, &y, argv[1]);
+  if (argc > 2 && JS_IsNumber(argv[2]))
+    JS_ToUint32(ctx, &x2, argv[2]);
+  if (argc > 3 && JS_IsNumber(argv[3]))
+    JS_ToUint32(ctx, &y2, argv[3]);
+  if (argc > 4 && JS_IsNumber(argv[4]))
+    JS_ToUint32(ctx, &color, argv[4]);
+  if (argc > 5 && JS_IsNumber(argv[5]))
+    JS_ToUint32(ctx, &opacity, argv[5]);
+  if (argc > 6 && JS_IsNumber(argv[6]))
+    JS_ToUint32(ctx, &align, argv[6]);
+  if (argc > 7 && JS_IsBool(argv[7]))
+    automap = !!JS_ToBool(ctx, argv[7]);
+  if (argc > 8 && JS_IsFunction(ctx, argv[8]))
+    click = argv[8];
+  if (argc > 9 && JS_IsFunction(ctx, argv[9]))
+    hover = argv[9];
 
-  JSObject* hook = BuildObject(cx, &box_class, box_methods, box_props);
-  if (!hook)
-    THROW_ERROR(cx, "Failed to create box object");
+  JSValue hook = BuildObject(ctx, box_class_id, box_methods, _countof(box_methods), box_props, _countof(box_props));
+  if (!hook) {
+    THROW_ERROR(ctx, "Failed to create box object");
+  }
 
-  BoxHook* pBoxHook = new BoxHook(script, hook, x, y, x2, y2, color, opacity, automap, align, state);
+  BoxHook* pBoxHook = new BoxHook(script, hook, x, y, x2, y2, (ushort)color, (ushort)opacity, automap, (Align)align, state);
 
   if (!pBoxHook)
-    THROW_ERROR(cx, "Unable to initalize a box class.");
+    THROW_ERROR(ctx, "Unable to initalize a box class.");
 
-  JS_SetPrivate(cx, hook, pBoxHook);
+  JS_SetOpaque(hook, pBoxHook);
   pBoxHook->SetClickHandler(click);
   pBoxHook->SetHoverHandler(hover);
 
-  JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(hook));
-
-  return JS_TRUE;
+  return hook;
 }
 JSAPI_PROP(box_getProperty) {
-  BoxHook* pBoxHook = (BoxHook*)JS_GetPrivate(cx, obj);
+  BoxHook* pBoxHook = (BoxHook*)JS_GetOpaque3(this_val);
   if (!pBoxHook)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
-  jsval ID;
-  JS_IdToValue(cx, id, &ID);
-  switch (JSVAL_TO_INT(ID)) {
+  switch (magic) {
     case BOX_X:
-      vp.setInt32(pBoxHook->GetX());
+      return JS_NewUint32(ctx, pBoxHook->GetX());
       break;
     case BOX_Y:
-      vp.setInt32(pBoxHook->GetY());
+      return JS_NewUint32(ctx, pBoxHook->GetY());
       break;
     case BOX_XSIZE:
-      vp.setInt32(pBoxHook->GetXSize());
+      return JS_NewUint32(ctx, pBoxHook->GetXSize());
       break;
     case BOX_YSIZE:
-      vp.setInt32(pBoxHook->GetYSize());
+      return JS_NewUint32(ctx, pBoxHook->GetYSize());
       break;
     case BOX_ALIGN:
-      vp.setInt32(pBoxHook->GetAlign());
+      return JS_NewUint32(ctx, pBoxHook->GetAlign());
       break;
     case BOX_COLOR:
-      vp.setInt32(pBoxHook->GetColor());
+      return JS_NewUint32(ctx, pBoxHook->GetColor());
       break;
     case BOX_OPACITY:
-      vp.setInt32(pBoxHook->GetOpacity());
+      return JS_NewUint32(ctx, pBoxHook->GetOpacity());
       break;
     case BOX_VISIBLE:
-      vp.setBoolean(pBoxHook->GetIsVisible());
+      return JS_NewBool(ctx, pBoxHook->GetIsVisible());
       break;
     case BOX_ZORDER:
-      vp.setInt32(pBoxHook->GetZOrder());
+      return JS_NewUint32(ctx, pBoxHook->GetZOrder());
       break;
     case BOX_ONCLICK:
-      vp.set(pBoxHook->GetClickHandler());
+      return JS_DupValue(ctx, pBoxHook->GetClickHandler());
       break;
     case BOX_ONHOVER:
-      vp.set(pBoxHook->GetHoverHandler());
+      return JS_DupValue(ctx, pBoxHook->GetHoverHandler());
       break;
   }
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_STRICT_PROP(box_setProperty) {
-  (strict);
-
-  BoxHook* pBoxHook = (BoxHook*)JS_GetPrivate(cx, obj);
+  BoxHook* pBoxHook = (BoxHook*)JS_GetOpaque3(this_val);
   if (!pBoxHook)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
-  jsval ID;
-  JS_IdToValue(cx, id, &ID);
-  switch (JSVAL_TO_INT(ID)) {
+  uint32_t ival = 0;
+  bool bval = 0;
+  if (JS_IsBool(val)) {
+    bval = JS_ToBool(ctx, val);
+  }
+  if (JS_IsNumber(val) && JS_ToUint32(ctx, &ival, val)) {
+    return JS_EXCEPTION;
+  }
+
+  switch (magic) {
     case BOX_X:
-      if (vp.isInt32())
-        pBoxHook->SetX(vp.toInt32());
+      pBoxHook->SetX(ival);
       break;
     case BOX_Y:
-      if (vp.isInt32())
-        pBoxHook->SetY(vp.toInt32());
+      pBoxHook->SetY(ival);
       break;
     case BOX_XSIZE:
-      if (vp.isInt32())
-        pBoxHook->SetXSize(vp.toInt32());
+      pBoxHook->SetXSize(ival);
       break;
     case BOX_YSIZE:
-      if (vp.isInt32())
-        pBoxHook->SetYSize(vp.toInt32());
+      pBoxHook->SetYSize(ival);
       break;
     case BOX_OPACITY:
-      if (vp.isInt32())
-        pBoxHook->SetOpacity((ushort)vp.toInt32());
+      pBoxHook->SetOpacity((ushort)ival);
       break;
     case BOX_COLOR:
-      if (vp.isInt32())
-        pBoxHook->SetColor((ushort)vp.toInt32());
+      pBoxHook->SetColor((ushort)ival);
       break;
     case BOX_ALIGN:
-      if (vp.isInt32())
-        pBoxHook->SetAlign((Align)vp.toInt32());
+      pBoxHook->SetAlign((Align)ival);
       break;
     case BOX_VISIBLE:
-      if (vp.isBoolean())
-        pBoxHook->SetIsVisible(!!vp.toBoolean());
+      pBoxHook->SetIsVisible(!!bval);
       break;
     case BOX_ZORDER:
-      if (vp.isInt32())
-        pBoxHook->SetZOrder((ushort)vp.toInt32());
+      pBoxHook->SetZOrder((ushort)ival);
       break;
     case BOX_ONCLICK:
-      pBoxHook->SetClickHandler(vp.get());
+      pBoxHook->SetClickHandler(val);
       break;
     case BOX_ONHOVER:
-      pBoxHook->SetHoverHandler(vp.get());
+      pBoxHook->SetHoverHandler(val);
       break;
   }
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 // Line functions
 
 // Parameters: x, y, x2, y2, color, automap, click, hover
 JSAPI_FUNC(line_ctor) {
-  Script* script = (Script*)JS_GetContextPrivate(cx);
+  Script* script = (Script*)JS_GetContextOpaque(ctx);
 
   ScreenhookState state = (script->GetMode() == kScriptModeMenu) ? OOG : IG;
-  int x = 0, y = 0, x2 = 0, y2 = 0;
-  ushort color = 0;
+  uint32_t x = 0, y = 0, x2 = 0, y2 = 0, color = 0;
   bool automap = false;
-  jsval click = JSVAL_VOID, hover = JSVAL_VOID;
+  JSValue click = JS_UNDEFINED, hover = JS_UNDEFINED;
 
-  if (argc > 0 && JSVAL_IS_INT(JS_ARGV(cx, vp)[0]))
-    x = JSVAL_TO_INT(JS_ARGV(cx, vp)[0]);
-  if (argc > 1 && JSVAL_IS_INT(JS_ARGV(cx, vp)[1]))
-    y = JSVAL_TO_INT(JS_ARGV(cx, vp)[1]);
-  if (argc > 2 && JSVAL_IS_INT(JS_ARGV(cx, vp)[2]))
-    x2 = JSVAL_TO_INT(JS_ARGV(cx, vp)[2]);
-  if (argc > 3 && JSVAL_IS_INT(JS_ARGV(cx, vp)[3]))
-    y2 = JSVAL_TO_INT(JS_ARGV(cx, vp)[3]);
-  if (argc > 4 && JSVAL_IS_INT(JS_ARGV(cx, vp)[4]))
-    color = (ushort)JSVAL_TO_INT(JS_ARGV(cx, vp)[4]);
-  if (argc > 5 && JSVAL_IS_BOOLEAN(JS_ARGV(cx, vp)[5]))
-    automap = !!JSVAL_TO_BOOLEAN(JS_ARGV(cx, vp)[5]);
-  if (argc > 6 && JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[6]))
-    click = JS_ARGV(cx, vp)[6];
-  if (argc > 7 && JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[7]))
-    hover = JS_ARGV(cx, vp)[7];
+  if (argc > 0 && JS_IsNumber(argv[0]))
+    JS_ToUint32(ctx, &x, argv[0]);
+  if (argc > 1 && JS_IsNumber(argv[1]))
+    JS_ToUint32(ctx, &y, argv[1]);
+  if (argc > 2 && JS_IsNumber(argv[2]))
+    JS_ToUint32(ctx, &x2, argv[2]);
+  if (argc > 3 && JS_IsNumber(argv[3]))
+    JS_ToUint32(ctx, &y2, argv[3]);
+  if (argc > 4 && JS_IsNumber(argv[4]))
+    JS_ToUint32(ctx, &color, argv[4]);
+  if (argc > 5 && JS_IsBool(argv[5]))
+    automap = !!JS_ToBool(ctx, argv[5]);
+  if (argc > 6 && JS_IsFunction(ctx, argv[6]))
+    click = argv[6];
+  if (argc > 7 && JS_IsFunction(ctx, argv[7]))
+    hover = argv[7];
 
-  JSObject* hook = BuildObject(cx, &line_class, line_methods, line_props);
-  if (!hook)
-    THROW_ERROR(cx, "Failed to create line object");
+  JSValue hook = BuildObject(ctx, line_class_id, line_methods, _countof(line_methods), line_props, _countof(line_props));
+  if (!hook) {
+    THROW_ERROR(ctx, "Failed to create line object");
+  }
 
-  LineHook* pLineHook = new LineHook(script, hook, x, y, x2, y2, color, automap, Left, state);
+  LineHook* pLineHook = new LineHook(script, hook, x, y, x2, y2, static_cast<ushort>(color), automap, Left, state);
 
-  if (!pLineHook)
-    THROW_ERROR(cx, "Unable to initalize a line class.");
+  if (!pLineHook) {
+    THROW_ERROR(ctx, "Unable to initalize a line class.");
+  }
 
-  JS_SetPrivate(cx, hook, pLineHook);
+  JS_SetOpaque(hook, pLineHook);
   pLineHook->SetClickHandler(click);
   pLineHook->SetHoverHandler(hover);
 
-  JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(hook));
-
-  return JS_TRUE;
+  return hook;
 }
 
 JSAPI_PROP(line_getProperty) {
-  LineHook* pLineHook = (LineHook*)JS_GetPrivate(cx, obj);
+  LineHook* pLineHook = (LineHook*)JS_GetOpaque3(this_val);
   if (!pLineHook)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
-  jsval ID;
-  JS_IdToValue(cx, id, &ID);
-  switch (JSVAL_TO_INT(ID)) {
+  switch (magic) {
     case LINE_X:
-      vp.setInt32(pLineHook->GetX());
+      return JS_NewUint32(ctx, pLineHook->GetX());
       break;
     case LINE_Y:
-      vp.setInt32(pLineHook->GetY());
+      return JS_NewUint32(ctx, pLineHook->GetY());
       break;
     case LINE_XSIZE:
-      vp.setInt32(pLineHook->GetX2());
+      return JS_NewUint32(ctx, pLineHook->GetX2());
       break;
     case LINE_YSIZE:
-      vp.setInt32(pLineHook->GetY2());
+      return JS_NewUint32(ctx, pLineHook->GetY2());
       break;
     case LINE_COLOR:
-      vp.setInt32(pLineHook->GetColor());
+      return JS_NewUint32(ctx, pLineHook->GetColor());
       break;
     case LINE_VISIBLE:
-      vp.setBoolean(pLineHook->GetIsVisible());
+      return JS_NewBool(ctx, pLineHook->GetIsVisible());
       break;
     case LINE_ZORDER:
-      vp.setInt32(pLineHook->GetZOrder());
+      return JS_NewUint32(ctx, pLineHook->GetZOrder());
       break;
     case LINE_ONCLICK:
-      vp.set(pLineHook->GetClickHandler());
+      return JS_DupValue(ctx, pLineHook->GetClickHandler());
       break;
     case LINE_ONHOVER:
-      vp.set(pLineHook->GetHoverHandler());
+      return JS_DupValue(ctx, pLineHook->GetHoverHandler());
       break;
   }
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_STRICT_PROP(line_setProperty) {
-  (strict);
-
-  LineHook* pLineHook = (LineHook*)JS_GetPrivate(cx, obj);
+  LineHook* pLineHook = (LineHook*)JS_GetOpaque3(this_val);
   if (!pLineHook)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
-  jsval ID;
-  JS_IdToValue(cx, id, &ID);
-  switch (JSVAL_TO_INT(ID)) {
+  uint32_t ival = 0;
+  bool bval = 0;
+  if (JS_IsBool(val)) {
+    bval = JS_ToBool(ctx, val);
+  }
+  if (JS_IsNumber(val) && JS_ToUint32(ctx, &ival, val)) {
+    return JS_EXCEPTION;
+  }
+
+  switch (magic) {
     case LINE_X:
-      if (vp.isInt32())
-        pLineHook->SetX(vp.toInt32());
+      pLineHook->SetX(ival);
       break;
     case LINE_Y:
-      if (vp.isInt32())
-        pLineHook->SetY(vp.toInt32());
+      pLineHook->SetY(ival);
       break;
     case LINE_XSIZE:
-      if (vp.isInt32())
-        pLineHook->SetX2(vp.toInt32());
+      pLineHook->SetX2(ival);
       break;
     case LINE_YSIZE:
-      if (vp.isInt32())
-        pLineHook->SetY2(vp.toInt32());
+      pLineHook->SetY2(ival);
       break;
     case LINE_COLOR:
-      if (vp.isInt32())
-        pLineHook->SetColor((ushort)vp.toInt32());
+      pLineHook->SetColor((ushort)ival);
       break;
     case LINE_VISIBLE:
-      if (vp.isBoolean())
-        pLineHook->SetIsVisible(!!vp.toBoolean());
+      pLineHook->SetIsVisible(!!bval);
       break;
     case LINE_ZORDER:
-      if (vp.isInt32())
-        pLineHook->SetZOrder((ushort)vp.toInt32());
+      pLineHook->SetZOrder((ushort)ival);
       break;
     case LINE_ONCLICK:
-      pLineHook->SetClickHandler(vp.get());
+      pLineHook->SetClickHandler(val);
       break;
     case LINE_ONHOVER:
-      pLineHook->SetHoverHandler(vp.get());
+      pLineHook->SetHoverHandler(val);
       break;
   }
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 // Function to create a text which gets called on a "new text ()"
 
 // Parameters: text, x, y, color, font, align, automap, onHover, onText
 JSAPI_FUNC(text_ctor) {
-  Script* script = (Script*)JS_GetContextPrivate(cx);
+  Script* script = (Script*)JS_GetContextOpaque(ctx);
 
   ScreenhookState state = (script->GetMode() == kScriptModeMenu) ? OOG : IG;
-  uint x = 0, y = 0;
-  ushort color = 0, font = 0;
-  Align align = Left;
+  uint32_t x = 0, y = 0, color = 0, font = 0, align = Left;
   bool automap = false;
-  jsval click = JSVAL_VOID, hover = JSVAL_VOID;
-  const wchar_t* szText = L"";
+  JSValue click = JS_UNDEFINED, hover = JS_UNDEFINED;
+  std::wstring szText;
 
-  if (argc > 0 && JSVAL_IS_STRING(JS_ARGV(cx, vp)[0]))
-    szText = JS_GetStringCharsZ(cx, JS_ValueToString(cx, JS_ARGV(cx, vp)[0]));
-  if (!szText)
-    return JS_TRUE;
-  if (argc > 1 && JSVAL_IS_INT(JS_ARGV(cx, vp)[1]))
-    x = JSVAL_TO_INT(JS_ARGV(cx, vp)[1]);
-  if (argc > 2 && JSVAL_IS_INT(JS_ARGV(cx, vp)[2]))
-    y = JSVAL_TO_INT(JS_ARGV(cx, vp)[2]);
-  if (argc > 3 && JSVAL_IS_INT(JS_ARGV(cx, vp)[3]))
-    color = (ushort)JSVAL_TO_INT(JS_ARGV(cx, vp)[3]);
-  if (argc > 4 && JSVAL_IS_INT(JS_ARGV(cx, vp)[4]))
-    font = (ushort)JSVAL_TO_INT(JS_ARGV(cx, vp)[4]);
-  if (argc > 5 && JSVAL_IS_INT(JS_ARGV(cx, vp)[5]))
-    align = (Align)JSVAL_TO_INT(JS_ARGV(cx, vp)[5]);
-  if (argc > 6 && JSVAL_IS_BOOLEAN(JS_ARGV(cx, vp)[6]))
-    automap = !!JSVAL_TO_BOOLEAN(JS_ARGV(cx, vp)[6]);
-  if (argc > 7 && JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[7]))
-    click = JS_ARGV(cx, vp)[7];
-  if (argc > 8 && JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[8]))
-    hover = JS_ARGV(cx, vp)[8];
+  if (argc > 0 && JS_IsString(argv[0])) {
+    const char* str = JS_ToCString(ctx, argv[0]);
+    if (!str) {
+      return JS_EXCEPTION;
+    }
+    szText = AnsiToWide(str);
+    JS_FreeCString(ctx, str);
+  }
+  if (argc > 1 && JS_IsNumber(argv[1]))
+    JS_ToUint32(ctx, &x, argv[1]);
+  if (argc > 2 && JS_IsNumber(argv[2]))
+    JS_ToUint32(ctx, &y, argv[2]);
+  if (argc > 3 && JS_IsNumber(argv[3]))
+    JS_ToUint32(ctx, &color, argv[3]);
+  if (argc > 4 && JS_IsNumber(argv[4]))
+    JS_ToUint32(ctx, &font, argv[4]);
+  if (argc > 5 && JS_IsNumber(argv[5]))
+    JS_ToUint32(ctx, &align, argv[5]);
+  if (argc > 6 && JS_IsBool(argv[6]))
+    automap = !!JS_ToBool(ctx, argv[6]);
+  if (argc > 7 && JS_IsFunction(ctx, argv[7]))
+    click = argv[7];
+  if (argc > 8 && JS_IsFunction(ctx, argv[8]))
+    hover = argv[8];
 
-  JSObject* hook = BuildObject(cx, &text_class, text_methods, text_props);
-  if (!hook)
-    THROW_ERROR(cx, "Failed to create text object");
+  JSValue hook = BuildObject(ctx, text_class_id, text_methods, _countof(text_methods), text_props, _countof(text_props));
+  if (!hook) {
+    THROW_ERROR(ctx, "Failed to create text object");
+  }
 
-  TextHook* pTextHook = new TextHook(script, hook, szText, x, y, font, color, automap, align, state);
+  TextHook* pTextHook = new TextHook(script, hook, szText.c_str(), x, y, static_cast<ushort>(font), static_cast<ushort>(color), automap, (Align)align, state);
 
-  if (!pTextHook)
-    THROW_ERROR(cx, "Failed to create texthook");
+  if (!pTextHook) {
+    THROW_ERROR(ctx, "Failed to create texthook");
+  }
 
-  JS_SetPrivate(cx, hook, pTextHook);
+  JS_SetOpaque(hook, pTextHook);
   pTextHook->SetClickHandler(click);
   pTextHook->SetHoverHandler(hover);
-
-  JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(hook));
-
-  return JS_TRUE;
+  return hook;
 }
 
 JSAPI_PROP(text_getProperty) {
-  TextHook* pTextHook = (TextHook*)JS_GetPrivate(cx, obj);
+  TextHook* pTextHook = (TextHook*)JS_GetOpaque3(this_val);
   if (!pTextHook)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
-  jsval ID;
-  JS_IdToValue(cx, id, &ID);
-  switch (JSVAL_TO_INT(ID)) {
+  switch (magic) {
     case TEXT_X:
-      vp.setInt32(pTextHook->GetX());
+      return JS_NewUint32(ctx, pTextHook->GetX());
       break;
     case TEXT_Y:
-      vp.setInt32(pTextHook->GetY());
+      return JS_NewUint32(ctx, pTextHook->GetY());
       break;
     case TEXT_COLOR:
-      vp.setInt32(pTextHook->GetColor());
+      return JS_NewUint32(ctx, pTextHook->GetColor());
       break;
     case TEXT_FONT:
-      vp.setInt32(pTextHook->GetFont());
+      return JS_NewUint32(ctx, pTextHook->GetFont());
       break;
     case TEXT_TEXT:
-      vp.setString(JS_InternUCString(cx, pTextHook->GetText()));
+      return JS_NewString(ctx, pTextHook->GetText());
       break;
     case TEXT_ALIGN:
-      vp.setInt32(pTextHook->GetAlign());
+      return JS_NewUint32(ctx, pTextHook->GetAlign());
       break;
     case TEXT_VISIBLE:
-      vp.setBoolean(pTextHook->GetIsVisible());
+      return JS_NewBool(ctx, pTextHook->GetIsVisible());
       break;
     case TEXT_ZORDER:
-      vp.setInt32(pTextHook->GetZOrder());
+      return JS_NewUint32(ctx, pTextHook->GetZOrder());
       break;
     case TEXT_ONCLICK:
-      vp.set(pTextHook->GetClickHandler());
+      return JS_DupValue(ctx, pTextHook->GetClickHandler());
       break;
     case TEXT_ONHOVER:
-      vp.set(pTextHook->GetHoverHandler());
+      return JS_DupValue(ctx, pTextHook->GetHoverHandler());
       break;
   }
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_STRICT_PROP(text_setProperty) {
-  (strict);
-
-  TextHook* pTextHook = (TextHook*)JS_GetPrivate(cx, obj);
+  TextHook* pTextHook = (TextHook*)JS_GetOpaque3(this_val);
   if (!pTextHook)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
-  jsval ID;
-  JS_IdToValue(cx, id, &ID);
-  switch (JSVAL_TO_INT(ID)) {
+  uint32_t ival = 0;
+  bool bval = 0;
+  if (JS_IsBool(val)) {
+    bval = JS_ToBool(ctx, val);
+  }
+  if (JS_IsNumber(val) && JS_ToUint32(ctx, &ival, val)) {
+    return JS_EXCEPTION;
+  }
+
+  switch (magic) {
     case TEXT_X:
-      if (vp.isInt32())
-        pTextHook->SetX(vp.toInt32());
+      pTextHook->SetX(ival);
       break;
     case TEXT_Y:
-      if (vp.isInt32())
-        pTextHook->SetY(vp.toInt32());
+      pTextHook->SetY(ival);
       break;
     case TEXT_COLOR:
-      if (vp.isInt32())
-        pTextHook->SetColor((ushort)vp.toInt32());
+      pTextHook->SetColor((ushort)ival);
       break;
     case TEXT_FONT:
-      if (vp.isInt32())
-        pTextHook->SetFont((ushort)vp.toInt32());
+      pTextHook->SetFont((ushort)ival);
       break;
     case TEXT_TEXT:
-      if (vp.isString()) {
-        const wchar_t* pText = JS_GetStringCharsZ(cx, vp.toString());
-        if (!pText)
-          return JS_TRUE;
-        pTextHook->SetText(pText);
+      if (JS_IsString(val)) {
+        const char* szText = JS_ToCString(ctx, val);
+        if (!szText) {
+          return JS_EXCEPTION;
+        }
+        std::wstring pText = AnsiToWide(szText);
+        pTextHook->SetText(pText.c_str());
+        JS_FreeCString(ctx, szText);
       }
       break;
     case TEXT_ALIGN:
-      if (vp.isInt32())
-        pTextHook->SetAlign((Align)vp.toInt32());
+      pTextHook->SetAlign((Align)ival);
       break;
     case TEXT_VISIBLE:
-      if (vp.isBoolean())
-        pTextHook->SetIsVisible(!!vp.toBoolean());
+      pTextHook->SetIsVisible(!!bval);
       break;
     case TEXT_ZORDER:
-      if (vp.isInt32())
-        pTextHook->SetZOrder((ushort)vp.toInt32());
+      pTextHook->SetZOrder((ushort)ival);
       break;
     case TEXT_ONCLICK:
-      pTextHook->SetClickHandler(vp.get());
+      pTextHook->SetClickHandler(val);
       break;
     case TEXT_ONHOVER:
-      pTextHook->SetHoverHandler(vp.get());
+      pTextHook->SetHoverHandler(val);
       break;
   }
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 // Function to create a image which gets called on a "new Image ()"
 
 // Parameters: image, x, y, color, align, automap, onHover, onimage
 JSAPI_FUNC(image_ctor) {
-  Script* script = (Script*)JS_GetContextPrivate(cx);
+  Script* script = (Script*)JS_GetContextOpaque(ctx);
 
   ScreenhookState state = (script->GetMode() == kScriptModeMenu) ? OOG : IG;
-  uint x = 0, y = 0;
-  ushort color = 0;
-  Align align = Left;
+  uint32_t x = 0, y = 0, color = 0, align = Left;
   bool automap = false;
-  jsval click = JSVAL_VOID, hover = JSVAL_VOID;
-  const wchar_t* szText = L"";
+  JSValue click = JS_UNDEFINED, hover = JS_UNDEFINED;
+  const char* szText = nullptr;
   wchar_t path[_MAX_FNAME + _MAX_PATH];
 
-  if (argc > 0 && JSVAL_IS_STRING(JS_ARGV(cx, vp)[0]))
-    szText = JS_GetStringCharsZ(cx, JS_ValueToString(cx, JS_ARGV(cx, vp)[0]));
-  if (!szText)
-    return JS_TRUE;
-  if (argc > 1 && JSVAL_IS_INT(JS_ARGV(cx, vp)[1]))
-    x = JSVAL_TO_INT(JS_ARGV(cx, vp)[1]);
-  if (argc > 2 && JSVAL_IS_INT(JS_ARGV(cx, vp)[2]))
-    y = JSVAL_TO_INT(JS_ARGV(cx, vp)[2]);
-  if (argc > 3 && JSVAL_IS_INT(JS_ARGV(cx, vp)[3]))
-    color = (ushort)JSVAL_TO_INT(JS_ARGV(cx, vp)[3]);
-  if (argc > 4 && JSVAL_IS_INT(JS_ARGV(cx, vp)[4]))
-    align = (Align)JSVAL_TO_INT(JS_ARGV(cx, vp)[4]);
-  if (argc > 5 && JSVAL_IS_BOOLEAN(JS_ARGV(cx, vp)[5]))
-    automap = !!JSVAL_TO_BOOLEAN(JS_ARGV(cx, vp)[5]);
-  if (argc > 6 && JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[6]))
-    click = JS_ARGV(cx, vp)[6];
-  if (argc > 7 && JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[7]))
-    hover = JS_ARGV(cx, vp)[7];
+  if (argc > 0 && JS_IsString(argv[0])) {
+    szText = JS_ToCString(ctx, argv[0]);
+    if (!szText) {
+      return JS_EXCEPTION;
+    }
+  }
+  if (argc > 1 && JS_IsNumber(argv[1]))
+    JS_ToUint32(ctx, &x, argv[1]);
+  if (argc > 2 && JS_IsNumber(argv[2]))
+    JS_ToUint32(ctx, &y, argv[2]);
+  if (argc > 3 && JS_IsNumber(argv[3]))
+    JS_ToUint32(ctx, &color, argv[3]);
+  if (argc > 4 && JS_IsNumber(argv[4]))
+    JS_ToUint32(ctx, &align, argv[4]);
+  if (argc > 5 && JS_IsBool(argv[5]))
+    automap = !!JS_ToBool(ctx, argv[5]);
+  if (argc > 6 && JS_IsFunction(ctx, argv[6]))
+    click = argv[6];
+  if (argc > 7 && JS_IsFunction(ctx, argv[7]))
+    hover = argv[7];
 
-  if (isValidPath(path))
-    swprintf_s(path, _countof(path), L"%s", szText);
-  else
-    THROW_ERROR(cx, "Invalid image file path");
+  if (isValidPath(szText)) {
+    swprintf_s(path, _countof(path), L"%S", szText);
+    JS_FreeCString(ctx, szText);
+  } else {
+    JS_FreeCString(ctx, szText);
+    THROW_ERROR(ctx, "Invalid image file path");
+  }
 
-  JSObject* hook = BuildObject(cx, &image_class, image_methods, image_props);
+  JSValue hook = BuildObject(ctx, image_class_id, image_methods, _countof(image_methods), image_props, _countof(image_props));
   if (!hook)
-    THROW_ERROR(cx, "Failed to create image object");
+    THROW_ERROR(ctx, "Failed to create image object");
 
-  ImageHook* pImageHook = new ImageHook(script, hook, path, x, y, color, automap, align, state, true);
+  ImageHook* pImageHook = new ImageHook(script, hook, path, x, y, static_cast<ushort>(color), automap, (Align)align, state, true);
 
   if (!pImageHook)
-    THROW_ERROR(cx, "Failed to create ImageHook");
+    THROW_ERROR(ctx, "Failed to create ImageHook");
 
-  JS_SetPrivate(cx, hook, pImageHook);
+  JS_SetOpaque(hook, pImageHook);
   pImageHook->SetClickHandler(click);
   pImageHook->SetHoverHandler(hover);
 
-  JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(hook));
-
-  return JS_TRUE;
+  return hook;
 }
 
 JSAPI_PROP(image_getProperty) {
-  ImageHook* pImageHook = (ImageHook*)JS_GetPrivate(cx, obj);
+  ImageHook* pImageHook = (ImageHook*)JS_GetOpaque3(this_val);
   if (!pImageHook)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
-  jsval ID;
-  JS_IdToValue(cx, id, &ID);
-  switch (JSVAL_TO_INT(ID)) {
+  switch (magic) {
     case IMAGE_X:
-      vp.setInt32(pImageHook->GetX());
+      return JS_NewUint32(ctx, pImageHook->GetX());
       break;
     case IMAGE_Y:
-      vp.setInt32(pImageHook->GetY());
+      return JS_NewUint32(ctx, pImageHook->GetY());
       break;
     case IMAGE_LOCATION:
-      vp.setString(JS_InternUCString(cx, pImageHook->GetImage()));
+      return JS_NewString(ctx, pImageHook->GetImage());
       break;
     case IMAGE_ALIGN:
-      vp.setInt32(pImageHook->GetAlign());
+      return JS_NewUint32(ctx, pImageHook->GetAlign());
       break;
     case IMAGE_VISIBLE:
-      vp.setBoolean(pImageHook->GetIsVisible());
+      return JS_NewBool(ctx, pImageHook->GetIsVisible());
       break;
     case IMAGE_ZORDER:
-      vp.setInt32(pImageHook->GetZOrder());
+      return JS_NewUint32(ctx, pImageHook->GetZOrder());
       break;
     case IMAGE_ONCLICK:
-      vp.set(pImageHook->GetClickHandler());
+      return JS_DupValue(ctx, pImageHook->GetClickHandler());
       break;
     case IMAGE_ONHOVER:
-      vp.set(pImageHook->GetHoverHandler());
+      return JS_DupValue(ctx, pImageHook->GetHoverHandler());
       break;
   }
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_STRICT_PROP(image_setProperty) {
-  (strict);
-
-  ImageHook* pImageHook = (ImageHook*)JS_GetPrivate(cx, obj);
+  ImageHook* pImageHook = (ImageHook*)JS_GetOpaque3(this_val);
   if (!pImageHook)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
-  jsval ID;
-  JS_IdToValue(cx, id, &ID);
-  switch (JSVAL_TO_INT(ID)) {
+  uint32_t ival = 0;
+  bool bval = 0;
+  if (JS_IsBool(val)) {
+    bval = JS_ToBool(ctx, val);
+  }
+  if (JS_IsNumber(val) && JS_ToUint32(ctx, &ival, val)) {
+    return JS_EXCEPTION;
+  }
+
+  switch (magic) {
     case IMAGE_X:
-      if (vp.isInt32())
-        pImageHook->SetX(vp.toInt32());
+      pImageHook->SetX(ival);
       break;
     case IMAGE_Y:
-      if (vp.isInt32())
-        pImageHook->SetY(vp.toInt32());
+      pImageHook->SetY(ival);
       break;
     case IMAGE_LOCATION:
-      if (vp.isString()) {
-        const wchar_t* pimage = JS_GetStringCharsZ(cx, vp.toString());
-        if (!pimage)
-          return JS_TRUE;
-        pImageHook->SetImage(pimage);
+      if (JS_IsString(val)) {
+        const char* szText = JS_ToCString(ctx, val);
+        if (!szText) {
+          return JS_EXCEPTION;
+        }
+        std::wstring pText = AnsiToWide(szText);
+        pImageHook->SetImage(pText.c_str());
+        JS_FreeCString(ctx, szText);
       }
       break;
     case IMAGE_ALIGN:
-      if (vp.isInt32())
-        pImageHook->SetAlign((Align)vp.toInt32());
+      pImageHook->SetAlign((Align)ival);
       break;
     case IMAGE_VISIBLE:
-      if (vp.isBoolean())
-        pImageHook->SetIsVisible(!!vp.toBoolean());
+      pImageHook->SetIsVisible(!!bval);
       break;
     case IMAGE_ZORDER:
-      if (vp.isInt32())
-        pImageHook->SetZOrder((ushort)vp.toInt32());
+      pImageHook->SetZOrder((ushort)ival);
       break;
     case IMAGE_ONCLICK:
-      pImageHook->SetClickHandler(vp.get());
+      pImageHook->SetClickHandler(val);
       break;
     case IMAGE_ONHOVER:
-      pImageHook->SetHoverHandler(vp.get());
+      pImageHook->SetHoverHandler(val);
       break;
   }
-  return JS_TRUE;
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(screenToAutomap) {
   if (argc == 1) {
     // the arg must be an object with an x and a y that we can convert
-    if (JSVAL_IS_OBJECT(JS_ARGV(cx, vp)[0])) {
-      // get the params
-      JSObject* arg = JSVAL_TO_OBJECT(JS_ARGV(cx, vp)[0]);
-      jsval x, y;
-      if (JS_GetProperty(cx, arg, "x", &x) == JS_FALSE || JS_GetProperty(cx, arg, "y", &y) == JS_FALSE)
-        THROW_ERROR(cx, "Failed to get x and/or y values");
-      if (!JSVAL_IS_INT(x) || !JSVAL_IS_INT(y))
-        THROW_ERROR(cx, "Input has an x or y, but they aren't the correct type!");
-      int32 ix, iy;
-      if (JS_ValueToInt32(cx, x, &ix) == JS_FALSE || JS_ValueToInt32(cx, y, &iy))
-        THROW_ERROR(cx, "Failed to convert x and/or y values");
+    if (JS_IsObject(argv[0])) {
+      JSValue x = JS_GetPropertyStr(ctx, argv[0], "x");
+      JSValue y = JS_GetPropertyStr(ctx, argv[0], "y");
+      if (!JS_IsNumber(x) || !JS_IsNumber(y)) {
+        THROW_ERROR(ctx, "Input has an x or y, but they aren't the correct type!");
+      }
+
+      int32_t ix, iy;
+      if (JS_ToInt32(ctx, &ix, x) || JS_ToInt32(ctx, &iy, y)) {
+        THROW_ERROR(ctx, "Failed to convert x and/or y values");
+      }
+
       // convert the values
       POINT result = ScreenToAutomap(ix, iy);
-      x = INT_TO_JSVAL(result.x);
-      y = INT_TO_JSVAL(result.y);
-      JSObject* res = JS_NewObject(cx, NULL, NULL, NULL);
-      jsval* argv = JS_ARGV(cx, vp);
-      if (JS_SetProperty(cx, res, "x", &argv[0]) == JS_FALSE || JS_SetProperty(cx, res, "y", &argv[1]) == JS_FALSE)
-        THROW_ERROR(cx, "Failed to set x and/or y values");
-      JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(res));
+      JSValue rval = JS_NewObject(ctx);
+      JS_SetPropertyStr(ctx, argv[0], "x", JS_NewInt32(ctx, result.x));
+      JS_SetPropertyStr(ctx, argv[0], "y", JS_NewInt32(ctx, result.y));
+      return rval;
     } else
-      THROW_ERROR(cx, "Invalid object specified to screenToAutomap");
+      THROW_ERROR(ctx, "Invalid object specified to screenToAutomap");
   } else if (argc == 2) {
     // the args must be ints
-    if (JSVAL_IS_INT(JS_ARGV(cx, vp)[0]) && JSVAL_IS_INT(JS_ARGV(cx, vp)[1])) {
-      int32 ix, iy;
-      jsval* argv = JS_ARGV(cx, vp);
-      if (JS_ValueToInt32(cx, argv[0], &ix) == JS_FALSE || JS_ValueToInt32(cx, argv[1], &iy) == JS_FALSE)
-        THROW_ERROR(cx, "Failed to convert x and/or y values");
+    if (JS_IsNumber(argv[0]) && JS_IsNumber(argv[1])) {
+      int32_t ix, iy;
+      if (JS_ToInt32(ctx, &ix, argv[0]) || JS_ToInt32(ctx, &iy, argv[1])) {
+        THROW_ERROR(ctx, "Failed to convert x and/or y values");
+      }
+
       // convert the values
       POINT result = ScreenToAutomap(ix, iy);
-      argv[0] = INT_TO_JSVAL(result.x);
-      argv[1] = INT_TO_JSVAL(result.y);
-      JSObject* res = JS_NewObject(cx, NULL, NULL, NULL);
-      if (JS_SetProperty(cx, res, "x", &argv[0]) == JS_FALSE || JS_SetProperty(cx, res, "y", &argv[1]) == JS_FALSE)
-        THROW_ERROR(cx, "Failed to set x and/or y values");
-      JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(res));
+      JSValue rval = JS_NewObject(ctx);
+      JS_SetPropertyStr(ctx, argv[0], "x", JS_NewInt32(ctx, result.x));
+      JS_SetPropertyStr(ctx, argv[0], "y", JS_NewInt32(ctx, result.y));
+      return rval;
     } else
-      THROW_ERROR(cx, "screenToAutomap expects two arguments to be two integers");
-  } else
-    THROW_ERROR(cx, "Invalid arguments specified for screenToAutomap");
-  return JS_TRUE;
+      THROW_ERROR(ctx, "screenToAutomap expects two arguments to be two integers");
+  }
+  THROW_ERROR(ctx, "Invalid arguments specified for screenToAutomap");
 }
 
+// POINT result = {ix, iy};
+// AutomapToScreen(&result);
 JSAPI_FUNC(automapToScreen) {
-  jsval* argv = JS_ARGV(cx, vp);
   if (argc == 1) {
     // the arg must be an object with an x and a y that we can convert
-    if (JSVAL_IS_OBJECT(argv[0])) {
-      // get the params
-      JSObject* arg = JSVAL_TO_OBJECT(argv[0]);
-      jsval x, y;
-      if (JS_GetProperty(cx, arg, "x", &x) == JS_FALSE || JS_GetProperty(cx, arg, "y", &y) == JS_FALSE)
-        THROW_ERROR(cx, "Failed to get x and/or y values");
-      if (!JSVAL_IS_INT(x) || !JSVAL_IS_INT(y))
-        THROW_ERROR(cx, "Input has an x or y, but they aren't the correct type!");
-      int32 ix, iy;
-      JS_BeginRequest(cx);
-      if (JS_ValueToInt32(cx, x, &ix) == JS_FALSE || JS_ValueToInt32(cx, y, &iy)) {
-        JS_EndRequest(cx);
-        THROW_ERROR(cx, "Failed to convert x and/or y values");
+    if (JS_IsObject(argv[0])) {
+      JSValue x = JS_GetPropertyStr(ctx, argv[0], "x");
+      JSValue y = JS_GetPropertyStr(ctx, argv[0], "y");
+      if (!JS_IsNumber(x) || !JS_IsNumber(y)) {
+        THROW_ERROR(ctx, "Input has an x or y, but they aren't the correct type!");
       }
-      JS_EndRequest(cx);
+
+      int32_t ix, iy;
+      if (JS_ToInt32(ctx, &ix, x) || JS_ToInt32(ctx, &iy, y)) {
+        THROW_ERROR(ctx, "Failed to convert x and/or y values");
+      }
+
       // convert the values
       POINT result = {ix, iy};
       AutomapToScreen(&result);
-      x = INT_TO_JSVAL(ix);
-      y = INT_TO_JSVAL(iy);
-      JS_BeginRequest(cx);
-      if (JS_SetProperty(cx, arg, "x", &x) == JS_FALSE || JS_SetProperty(cx, arg, "y", &y) == JS_FALSE) {
-        JS_EndRequest(cx);
-        THROW_ERROR(cx, "Failed to set x and/or y values");
-      }
-      JS_EndRequest(cx);
-      JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(arg));
+      JSValue rval = JS_NewObject(ctx);
+      JS_SetPropertyStr(ctx, argv[0], "x", JS_NewInt32(ctx, result.x));
+      JS_SetPropertyStr(ctx, argv[0], "y", JS_NewInt32(ctx, result.y));
+      return rval;
     } else
-      THROW_ERROR(cx, "Invalid object specified to automapToScreen");
+      THROW_ERROR(ctx, "Invalid object specified to screenToAutomap");
   } else if (argc == 2) {
     // the args must be ints
-    if (JSVAL_IS_INT(argv[0]) && JSVAL_IS_INT(argv[1])) {
-      int32 ix, iy;
-      JS_BeginRequest(cx);
-      if (JS_ValueToInt32(cx, argv[0], &ix) == JS_FALSE || JS_ValueToInt32(cx, argv[1], &iy) == JS_FALSE) {
-        JS_EndRequest(cx);
-        THROW_ERROR(cx, "Failed to convert x and/or y values");
+    if (JS_IsNumber(argv[0]) && JS_IsNumber(argv[1])) {
+      int32_t ix, iy;
+      if (JS_ToInt32(ctx, &ix, argv[0]) || JS_ToInt32(ctx, &iy, argv[1])) {
+        THROW_ERROR(ctx, "Failed to convert x and/or y values");
       }
-      JS_EndRequest(cx);
+
       // convert the values
       POINT result = {ix, iy};
       AutomapToScreen(&result);
-      argv[0] = INT_TO_JSVAL(result.x);
-      argv[1] = INT_TO_JSVAL(result.y);
-      JSObject* res = JS_NewObject(cx, NULL, NULL, NULL);
-      if (JS_SetProperty(cx, res, "x", &argv[0]) == JS_FALSE || JS_SetProperty(cx, res, "y", &argv[1]) == JS_FALSE)
-        THROW_ERROR(cx, "Failed to set x and/or y values");
-      JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(res));
-    } else
-      THROW_ERROR(cx, "automapToScreen expects two arguments to be two integers");
-  } else
-    THROW_ERROR(cx, "Invalid arguments specified for automapToScreen");
-  return JS_TRUE;
+      JSValue rval = JS_NewObject(ctx);
+      JS_SetPropertyStr(ctx, argv[0], "x", JS_NewInt32(ctx, result.x));
+      JS_SetPropertyStr(ctx, argv[0], "y", JS_NewInt32(ctx, result.y));
+      return rval;
+    } else {
+      THROW_ERROR(ctx, "automapToScreen expects two arguments to be two integers");
+    }
+  }
+  THROW_ERROR(ctx, "Invalid arguments specified for automapToScreen");
 }

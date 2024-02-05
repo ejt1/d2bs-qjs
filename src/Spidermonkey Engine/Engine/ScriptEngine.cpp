@@ -13,12 +13,12 @@
 #include "Helpers.h"
 
 // internal ForEachScript helper functions
-bool __fastcall DisposeScript(Script* script, void*, uint) {
+bool __fastcall DisposeScript(Script* script, void*, uint32_t) {
   sScriptEngine->DisposeScript(script);
   return true;
 }
 
-bool __fastcall StopScript(Script* script, void* argv, uint /*argc*/) {
+bool __fastcall StopScript(Script* script, void* argv, uint32_t /*argc*/) {
   script->TriggerOperationCallback();
   if (script->GetMode() != kScriptModeCommand)
     script->Stop(*(bool*)(argv));
@@ -39,14 +39,14 @@ ScriptEngine* ScriptEngine::GetInstance() {
 BOOL ScriptEngine::Initialize(void) {
   InitializeCriticalSection(&m_scriptListLock);
   LockScriptList("startup - enter");
-  if (wcslen(Vars.szConsole) > 0) {
-    wchar_t file[_MAX_FNAME + _MAX_PATH];
-    swprintf_s(file, _countof(file), L"%s\\%s", Vars.szScriptPath, Vars.szConsole);
+  if (strlen(Vars.szConsole) > 0) {
+    char file[_MAX_FNAME + _MAX_PATH];
+    sprintf_s(file, _countof(file), "%s\\%s", Vars.szScriptPath, Vars.szConsole);
     m_console = new Script(file, kScriptModeCommand);
   } else {
-    m_console = new Script(L"", kScriptModeCommand);
+    m_console = new Script("", kScriptModeCommand);
   }
-  m_scripts[L"console"] = m_console;
+  m_scripts["console"] = m_console;
   m_console->Start();
   UnLockScriptList("startup - leave");
   return TRUE;
@@ -68,23 +68,21 @@ void ScriptEngine::Shutdown(void) {
   DeleteCriticalSection(&m_lock);
 }
 
-Script* ScriptEngine::NewScript(const wchar_t* file, ScriptMode mode, uint argc, JSAutoStructuredCloneBuffer** argv, bool /*recompile*/) {
-  wchar_t* fileName = _wcsdup(file);
-  _wcslwr_s(fileName, wcslen(file) + 1);
+Script* ScriptEngine::NewScript(const char* file, ScriptMode mode/*, uint32_t argc, JSAutoStructuredCloneBuffer** argv*/, bool /*recompile*/) {
+  char* fileName = _strdup(file);
+  _strlwr_s(fileName, strlen(file) + 1);
 
   try {
     if (m_scripts.count(fileName))
       m_scripts[fileName]->Stop();
 
-    Script* script = new Script(fileName, mode, argc, argv);
+    Script* script = new Script(fileName, mode/*, argc, argv*/);
     m_scripts[fileName] = script;
     free(fileName);
     return script;
   } catch (std::exception e) {
     LeaveCriticalSection(&m_lock);
-    wchar_t* what = AnsiToUnicode(e.what());
-    Print(what);
-    delete[] what;
+    Print(L"%S", e.what());
     free(fileName);
     return NULL;
   }
@@ -109,20 +107,18 @@ void ScriptEngine::FlushCache(void) {
   LeaveCriticalSection(&Vars.cFlushCacheSection);
 }
 
-void ScriptEngine::RunCommand(const wchar_t* command) {
+void ScriptEngine::RunCommand(const char* command) {
   try {
     m_console->RunCommand(command);
   } catch (std::exception e) {
-    wchar_t* what = AnsiToUnicode(e.what());
-    Print(what);
-    delete[] what;
+    Print(L"%S", e.what());
   }
 }
 
 void ScriptEngine::DisposeScript(Script* script) {
   LockScriptList("DisposeScript");
 
-  const wchar_t* nFilename = script->GetFilename();
+  const char* nFilename = script->GetFilename();
 
   if (m_scripts.count(nFilename))
     m_scripts.erase(nFilename);
@@ -149,7 +145,7 @@ void ScriptEngine::UnLockScriptList(const char* /*loc*/) {
   LeaveCriticalSection(&m_scriptListLock);
 }
 
-bool ScriptEngine::ForEachScript(ScriptCallback callback, void* argv, uint argc) {
+bool ScriptEngine::ForEachScript(ScriptCallback callback, void* argv, uint32_t argc) {
   if (callback == NULL || m_scripts.size() < 1)
     return false;
   bool block = false;
@@ -194,7 +190,7 @@ void ScriptEngine::UpdateConsole() {
   m_console->UpdatePlayerGid();
 }
 
-bool __fastcall StopIngameScript(Script* script, void*, uint) {
+bool __fastcall StopIngameScript(Script* script, void*, uint32_t) {
   if (script->GetMode() == kScriptModeGame)
     script->Stop(true);
   return true;

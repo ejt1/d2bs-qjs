@@ -13,89 +13,31 @@
 #include <tlhelp32.h>
 #include <wctype.h>
 
-wchar_t* AnsiToUnicode(const char* str, UINT codepage) {
-  wchar_t* buf = NULL;
-  int len = MultiByteToWideChar(codepage, 0, str, -1, buf, 0);
-  buf = new wchar_t[len];
-  MultiByteToWideChar(codepage, 0, str, -1, buf, len);
-  return buf;
-}
-
-char* UnicodeToAnsi(const wchar_t* str, UINT codepage) {
-  char* buf = NULL;
-  int len = WideCharToMultiByte(codepage, 0, str, -1, buf, 0, (codepage ? NULL : "?"), NULL);
-  buf = new char[len];
-  WideCharToMultiByte(codepage, 0, str, -1, buf, len, (codepage ? NULL : "?"), NULL);
-  return buf;
-}
-
-void StringToLower(char* p) {
-  for (; *p; ++p) *p = static_cast<char>(tolower(*p));
-}
-
-void StringToLower(wchar_t* p) {
-  for (; *p; ++p) *p = static_cast<wchar_t>(towlower(*p));
-}
-
-bool StringToBool(const char* str) {
-  switch (tolower(str[0])) {
-    case 't':
-    case '1':
-      return true;
-    case 'f':
-    case '0':
-    default:
-      return false;
-  }
-}
-
-bool StringToBool(const wchar_t* str) {
-  switch (tolower(str[0])) {
-    case 't':
-    case '1':
-      return true;
-    case 'f':
-    case '0':
-    default:
-      return false;
-  }
-}
-
-void StringReplace(char* str, const char find, const char replace, size_t buflen) {
-  for (size_t i = 0; i < buflen; i++) {
-    if (str[i] == find)
-      str[i] = replace;
-  }
-}
-
-void StringReplace(wchar_t* str, const wchar_t find, const wchar_t replace, size_t buflen) {
-  for (size_t i = 0; i < buflen; i++) {
-    if (str[i] == find)
-      str[i] = replace;
-  }
-}
-
-bool SwitchToProfile(const wchar_t* profile) {
+bool SwitchToProfile(const char* profile) {
   if (Vars.bUseProfileScript != TRUE || !Profile::ProfileExists(profile))
     return false;
 
-  wchar_t file[_MAX_FNAME + _MAX_PATH] = L"", defaultStarter[_MAX_FNAME] = L"", defaultConsole[_MAX_FNAME] = L"", defaultGame[_MAX_FNAME] = L"",
-                            scriptPath[_MAX_PATH] = L"";
-  swprintf_s(file, _countof(file), L"%sd2bs.ini", Vars.szPath);
+  char file[_MAX_FNAME + _MAX_PATH] = "";
+  char scriptPath[_MAX_PATH] = "";
+  char defaultStarter[_MAX_PATH] = "";
+  char defaultConsole[_MAX_PATH] = "";
+  char defaultGame[_MAX_PATH] = "";
 
-  GetPrivateProfileStringW(profile, L"ScriptPath", L"scripts", scriptPath, _MAX_PATH, file);
-  GetPrivateProfileStringW(profile, L"DefaultConsoleScript", L"", defaultConsole, _MAX_FNAME, file);
-  GetPrivateProfileStringW(profile, L"DefaultGameScript", L"", defaultGame, _MAX_FNAME, file);
-  GetPrivateProfileStringW(profile, L"DefaultStarterScript", L"", defaultStarter, _MAX_FNAME, file);
+  sprintf_s(file, _countof(file), "%sd2bs.ini", Vars.szPath);
 
-  wcscpy_s(Vars.szProfile, 256, profile);
-  swprintf_s(Vars.szScriptPath, _MAX_PATH, L"%s%s", Vars.szPath, scriptPath);
-  if (wcslen(defaultConsole) > 0)
-    wcscpy_s(Vars.szConsole, _MAX_FNAME, defaultConsole);
-  if (wcslen(defaultGame) > 0)
-    wcscpy_s(Vars.szDefault, _MAX_FNAME, defaultGame);
-  if (wcslen(defaultStarter) > 0)
-    wcscpy_s(Vars.szStarter, _MAX_FNAME, defaultStarter);
+  GetPrivateProfileStringA(profile, "ScriptPath", "scripts", scriptPath, _MAX_PATH, file);
+  GetPrivateProfileStringA(profile, "DefaultConsoleScript", "", defaultConsole, _MAX_FNAME, file);
+  GetPrivateProfileStringA(profile, "DefaultGameScript", "", defaultGame, _MAX_FNAME, file);
+  GetPrivateProfileStringA(profile, "DefaultStarterScript", "", defaultStarter, _MAX_FNAME, file);
+
+  strcpy_s(Vars.szProfile, 256, profile);
+  sprintf_s(Vars.szScriptPath, _MAX_PATH, "%s%s", Vars.szPath, scriptPath);
+  if (strlen(defaultConsole) > 0)
+    strcpy_s(Vars.szConsole, _MAX_FNAME, defaultConsole);
+  if (strlen(defaultGame) > 0)
+    strcpy_s(Vars.szDefault, _MAX_FNAME, defaultGame);
+  if (strlen(defaultStarter) > 0)
+    strcpy_s(Vars.szStarter, _MAX_FNAME, defaultStarter);
 
   Vars.bUseProfileScript = FALSE;
   // Reload();
@@ -103,43 +45,45 @@ bool SwitchToProfile(const wchar_t* profile) {
 }
 
 void InitSettings(void) {
-  wchar_t fname[_MAX_FNAME + _MAX_PATH], scriptPath[_MAX_PATH], defaultStarter[_MAX_FNAME], defaultGame[_MAX_FNAME], defaultConsole[_MAX_FNAME], hosts[256], debug[6],
-      quitOnHostile[6], quitOnError[6], maxGameTime[6], gameTimeout[6], startAtMenu[6], disableCache[6], memUsage[6], gamePrint[6], useProfilePath[6], logConsole[6],
-      enableUnsupported[6], forwardMessageBox[6], consoleFont[6];
+  char hosts[256], debug[6], quitOnHostile[6], quitOnError[6], maxGameTime[6], gameTimeout[6], startAtMenu[6], disableCache[6],
+      memUsage[6], gamePrint[6], useProfilePath[6], logConsole[6], enableUnsupported[6], forwardMessageBox[6], consoleFont[6];
 
-  swprintf_s(fname, _countof(fname), L"%sd2bs.ini", Vars.szPath);
+  char file[_MAX_FNAME + _MAX_PATH] = "";
+  char scriptPath[_MAX_PATH] = "";
+  char defaultStarter[_MAX_PATH] = "";
+  char defaultConsole[_MAX_PATH] = "";
+  char defaultGame[_MAX_PATH] = "";
+  sprintf_s(file, _countof(file), "%sd2bs.ini", Vars.szPath);
 
-  GetPrivateProfileStringW(L"settings", L"ScriptPath", L"scripts", scriptPath, _MAX_PATH, fname);
-  GetPrivateProfileStringW(L"settings", L"DefaultConsoleScript", L"", defaultConsole, _MAX_FNAME, fname);
-  GetPrivateProfileStringW(L"settings", L"DefaultGameScript", L"default.dbj", defaultGame, _MAX_FNAME, fname);
-  GetPrivateProfileStringW(L"settings", L"DefaultStarterScript", L"starter.dbj", defaultStarter, _MAX_FNAME, fname);
-  GetPrivateProfileStringW(L"settings", L"Hosts", L"", hosts, 256, fname);
-  GetPrivateProfileStringW(L"settings", L"MaxGameTime", L"0", maxGameTime, 6, fname);
-  GetPrivateProfileStringW(L"settings", L"Debug", L"false", debug, 6, fname);
-  GetPrivateProfileStringW(L"settings", L"QuitOnHostile", L"false", quitOnHostile, 6, fname);
-  GetPrivateProfileStringW(L"settings", L"QuitOnError", L"false", quitOnError, 6, fname);
-  GetPrivateProfileStringW(L"settings", L"StartAtMenu", L"true", startAtMenu, 6, fname);
-  GetPrivateProfileStringW(L"settings", L"DisableCache", L"true", disableCache, 6, fname);
-  GetPrivateProfileStringW(L"settings", L"MemoryLimit", L"100", memUsage, 6, fname);
-  GetPrivateProfileStringW(L"settings", L"UseGamePrint", L"false", gamePrint, 6, fname);
-  GetPrivateProfileStringW(L"settings", L"GameReadyTimeout", L"5", gameTimeout, 6, fname);
-  GetPrivateProfileStringW(L"settings", L"UseProfileScript", L"false", useProfilePath, 6, fname);
-  GetPrivateProfileStringW(L"settings", L"LogConsoleOutput", L"false", logConsole, 6, fname);
-  GetPrivateProfileStringW(L"settings", L"EnableUnsupported", L"false", enableUnsupported, 6, fname);
-  GetPrivateProfileStringW(L"settings", L"ForwardMessageBox", L"false", forwardMessageBox, 6, fname);
-  GetPrivateProfileStringW(L"settings", L"ConsoleFont", L"0", consoleFont, 6, fname);
-  swprintf_s(Vars.szScriptPath, _MAX_PATH, L"%s%s", Vars.szPath, scriptPath);
-  wcscpy_s(Vars.szStarter, _MAX_FNAME, defaultStarter);
-  wcscpy_s(Vars.szConsole, _MAX_FNAME, defaultConsole);
-  wcscpy_s(Vars.szDefault, _MAX_FNAME, defaultGame);
+  GetPrivateProfileStringA("settings", "ScriptPath", "scripts", scriptPath, _MAX_PATH, file);
+  GetPrivateProfileStringA("settings", "DefaultConsoleScript", "", defaultConsole, _MAX_FNAME, file);
+  GetPrivateProfileStringA("settings", "DefaultGameScript", "default.dbj", defaultGame, _MAX_FNAME, file);
+  GetPrivateProfileStringA("settings", "DefaultStarterScript", "starter.dbj", defaultStarter, _MAX_FNAME, file);
+  GetPrivateProfileStringA("settings", "Hosts", "", hosts, 256, file);
+  GetPrivateProfileStringA("settings", "MaxGameTime", "0", maxGameTime, 6, file);
+  GetPrivateProfileStringA("settings", "Debug", "false", debug, 6, file);
+  GetPrivateProfileStringA("settings", "QuitOnHostile", "false", quitOnHostile, 6, file);
+  GetPrivateProfileStringA("settings", "QuitOnError", "false", quitOnError, 6, file);
+  GetPrivateProfileStringA("settings", "StartAtMenu", "true", startAtMenu, 6, file);
+  GetPrivateProfileStringA("settings", "DisableCache", "true", disableCache, 6, file);
+  GetPrivateProfileStringA("settings", "MemoryLimit", "100", memUsage, 6, file);
+  GetPrivateProfileStringA("settings", "UseGamePrint", "false", gamePrint, 6, file);
+  GetPrivateProfileStringA("settings", "GameReadyTimeout", "5", gameTimeout, 6, file);
+  GetPrivateProfileStringA("settings", "UseProfileScript", "false", useProfilePath, 6, file);
+  GetPrivateProfileStringA("settings", "LogConsoleOutput", "false", logConsole, 6, file);
+  GetPrivateProfileStringA("settings", "EnableUnsupported", "false", enableUnsupported, 6, file);
+  GetPrivateProfileStringA("settings", "ForwardMessageBox", "false", forwardMessageBox, 6, file);
+  GetPrivateProfileStringA("settings", "ConsoleFont", "0", consoleFont, 6, file);
+  sprintf_s(Vars.szScriptPath, _MAX_PATH, "%s%s", Vars.szPath, scriptPath);
+  strcpy_s(Vars.szStarter, _MAX_FNAME, defaultStarter);
+  strcpy_s(Vars.szConsole, _MAX_FNAME, defaultConsole);
+  strcpy_s(Vars.szDefault, _MAX_FNAME, defaultGame);
 
-  char* szHosts = UnicodeToAnsi(hosts);
-  strcpy_s(Vars.szHosts, 256, szHosts);
-  delete[] szHosts;
+  strcpy_s(Vars.szHosts, 256, hosts);
 
   Vars.dwGameTime = GetTickCount();
-  Vars.dwMaxGameTime = abs(_wtoi(maxGameTime) * 1000);
-  Vars.dwGameTimeout = abs(_wtoi(gameTimeout) * 1000);
+  Vars.dwMaxGameTime = abs(atoi(maxGameTime) * 1000);
+  Vars.dwGameTimeout = abs(atoi(gameTimeout) * 1000);
 
   Vars.bQuitOnHostile = StringToBool(quitOnHostile);
   Vars.bQuitOnError = StringToBool(quitOnError);
@@ -151,14 +95,14 @@ void InitSettings(void) {
   Vars.bEnableUnsupported = StringToBool(enableUnsupported);
   Vars.bForwardMessageBox = StringToBool(forwardMessageBox);
   Vars.eventSignal = CreateEventA(0, true, false, nullptr);
-  Vars.dwMemUsage = abs(_wtoi(memUsage));
-  Vars.dwConsoleFont = abs(_wtoi(consoleFont));
+  Vars.dwMemUsage = abs(atoi(memUsage));
+  Vars.dwConsoleFont = abs(atoi(consoleFont));
   if (Vars.dwMemUsage < 1)
     Vars.dwMemUsage = 50;
   Vars.dwMemUsage *= 1024 * 1024;
 }
 
-const wchar_t* GetStarterScriptName(void) {
+const char* GetStarterScriptName(void) {
   return (ClientState() == ClientStateInGame ? Vars.szDefault : ClientState() == ClientStateMenu ? Vars.szStarter : NULL);
 }
 
@@ -167,14 +111,14 @@ ScriptMode GetStarterScriptState(void) {
   return (ClientState() == ClientStateInGame ? kScriptModeGame : ClientState() == ClientStateMenu ? kScriptModeMenu : kScriptModeGame);
 }
 
-bool ExecCommand(const wchar_t* command) {
+bool ExecCommand(const char* command) {
   sScriptEngine->RunCommand(command);
   return true;
 }
 
-bool StartScript(const wchar_t* scriptname, ScriptMode mode) {
-  wchar_t file[_MAX_FNAME + _MAX_PATH];
-  swprintf_s(file, _countof(file), L"%s\\%s", Vars.szScriptPath, scriptname);
+bool StartScript(const char* scriptname, ScriptMode mode) {
+  char file[_MAX_FNAME + _MAX_PATH];
+  sprintf_s(file, _countof(file), "%s\\%s", Vars.szScriptPath, scriptname);
   Script* script = sScriptEngine->NewScript(file, mode);
   return (script && script->Start());
 }
@@ -192,7 +136,7 @@ void Reload(void) {
   Sleep(500);
 
   if (!Vars.bUseProfileScript) {
-    const wchar_t* script = GetStarterScriptName();
+    const char* script = GetStarterScriptName();
     if (StartScript(script, GetStarterScriptState()))
       Print(L"\u00FFc2D2BS\u00FFc0 :: Started %s", script);
     else
@@ -211,11 +155,11 @@ bool ProcessCommand(const wchar_t* command, bool unprocessedIsCommand) {
     return false;
 
   if (_wcsicmp(argv, L"start") == 0) {
-    const wchar_t* script = GetStarterScriptName();
+    const char* script = GetStarterScriptName();
     if (StartScript(script, GetStarterScriptState()))
-      Print(L"\u00FFc2D2BS\u00FFc0 :: Started %s", script);
+      Print(L"\u00FFc2D2BS\u00FFc0 :: Started %S", script);
     else
-      Print(L"\u00FFc2D2BS\u00FFc0 :: Failed to start %s", script);
+      Print(L"\u00FFc2D2BS\u00FFc0 :: Failed to start %S", script);
     result = true;
   } else if (_wcsicmp(argv, L"stop") == 0) {
     if (sScriptEngine->GetCount() > 0)
@@ -228,11 +172,11 @@ bool ProcessCommand(const wchar_t* command, bool unprocessedIsCommand) {
     sScriptEngine->FlushCache();
     result = true;
   } else if (_wcsicmp(argv, L"load") == 0) {
-    const wchar_t* script = command + 5;
-    if (StartScript(script, GetStarterScriptState()))
-      Print(L"\u00FFc2D2BS\u00FFc0 :: Started %s", script);
+    std::string script = WideToAnsi(command + 5);
+    if (StartScript(script.c_str(), GetStarterScriptState()))
+      Print(L"\u00FFc2D2BS\u00FFc0 :: Started %S", script.c_str());
     else
-      Print(L"\u00FFc2D2BS\u00FFc0 :: Failed to start %s", script);
+      Print(L"\u00FFc2D2BS\u00FFc0 :: Failed to start %S", script.c_str());
     result = true;
   } else if (_wcsicmp(argv, L"reload") == 0) {
     Reload();
@@ -253,10 +197,12 @@ bool ProcessCommand(const wchar_t* command, bool unprocessedIsCommand) {
   }
 #endif
   else if (_wcsicmp(argv, L"exec") == 0 && !unprocessedIsCommand) {
-    ExecCommand(command + 5);
+    std::string cmd = WideToAnsi(command + 5);
+    ExecCommand(cmd.c_str());
     result = true;
   } else if (unprocessedIsCommand) {
-    ExecCommand(command);
+    std::string cmd = WideToAnsi(command);
+    ExecCommand(cmd.c_str());
     result = true;
   }
   free(buf);
@@ -327,11 +273,10 @@ LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* ptrs) {
   already_crashed = true;
 
   // spdlog::info("Generating exception dump");
-  wchar_t crashpath[_MAX_PATH]{};
-  swprintf_s(crashpath, L"%s\\D2BS_crash_%d-%d.dmp", Vars.szPath, GetCurrentProcessId(), GetCurrentThreadId());
+  char crashpath[_MAX_PATH]{};
+  sprintf_s(crashpath, "%s\\D2BS_crash_%d-%d.dmp", Vars.szPath, GetCurrentProcessId(), GetCurrentThreadId());
 
-
-  auto hFile = CreateFileW(crashpath, GENERIC_WRITE, FILE_SHARE_READ, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+  auto hFile = CreateFileA(crashpath, GENERIC_WRITE, FILE_SHARE_READ, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
   if (hFile == INVALID_HANDLE_VALUE)
     return EXCEPTION_EXECUTE_HANDLER;
 
@@ -396,10 +341,12 @@ void ResumeProcess() {
 }
 
 void InitCommandLine() {
-  wchar_t* line = GetCommandLineW();
-  memcpy(Vars.szCommandLine, line, min(sizeof(Vars.szCommandLine), sizeof(wchar_t) * wcslen(line)));
+  char* line = GetCommandLineA();
+  memcpy(Vars.szCommandLine, line, min(sizeof(Vars.szCommandLine), sizeof(char) * strlen(line)));
+
+  wchar_t* wline = GetCommandLineW();
   LPCWSTR cline = L"C:\\Program Files (x86)\\Diablo II\\Game.exe -w";
-  memcpy(line, cline, sizeof(LPCWSTR) * wcslen(cline));
+  memcpy(wline, line, sizeof(LPCWSTR) * wcslen(cline));
 }
 
 bool GetStackWalk() {

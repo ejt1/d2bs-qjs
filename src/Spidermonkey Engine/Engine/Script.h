@@ -7,11 +7,10 @@
 
 #include "js32.h"
 #include "JSGlobalClasses.h"
-#include "AutoRoot.h"
 #include "JSUnit.h"
 #include "Events.h"
 
-typedef std::map<std::wstring, bool> IncludeList;
+typedef std::map<std::string, bool> IncludeList;
 typedef std::map<std::string, FunctionList> FunctionMap;
 
 enum ScriptMode { kScriptModeGame, kScriptModeMenu, kScriptModeCommand };
@@ -27,7 +26,7 @@ enum ScriptState {
 class Script {
   friend class ScriptEngine;
 
-  Script(const wchar_t* file, ScriptMode mode, uint argc = 0, JSAutoStructuredCloneBuffer** argv = NULL);
+  Script(const char* file, ScriptMode mode/*, uint32_t argc = 0, JSAutoStructuredCloneBuffer** argv = NULL*/);
   ~Script();
 
  public:
@@ -44,22 +43,22 @@ class Script {
   bool IsUninitialized();
   bool IsRunning(void);
   bool IsAborted(void);
-  void RunCommand(const wchar_t* command);
+  void RunCommand(const char* command);
 
   inline void TriggerOperationCallback(void) {
-    if (m_hasActiveCX)
-      JS_TriggerOperationCallback(m_runtime);
+    //if (m_hasActiveCX)
+    //  JS_TriggerOperationCallback(m_runtime);
   }
 
   inline void SetPauseState(bool reallyPaused) {
     m_isReallyPaused = reallyPaused;
   }
 
-  inline const wchar_t* GetFilename(void) {
+  inline const char* GetFilename(void) {
     return m_fileName.c_str();
   }
 
-  const wchar_t* GetShortFilename(void);
+  const char* GetShortFilename(void);
 
   inline JSContext* GetContext(void) {
     return m_context;
@@ -78,13 +77,13 @@ class Script {
   // UGLY HACK to fix up the player gid on game join for cached scripts/oog scripts
   void UpdatePlayerGid(void);
 
-  bool IsIncluded(const wchar_t* file);
-  bool Include(const wchar_t* file);
+  bool IsIncluded(const char* file);
+  bool Include(const char* file);
 
   bool IsListenerRegistered(const char* evtName);
-  void RegisterEvent(const char* evtName, jsval evtFunc);
-  bool IsRegisteredEvent(const char* evtName, jsval evtFunc);
-  void UnregisterEvent(const char* evtName, jsval evtFunc);
+  void RegisterEvent(const char* evtName, JSValue evtFunc);
+  bool IsRegisteredEvent(const char* evtName, JSValue evtFunc);
+  void UnregisterEvent(const char* evtName, JSValue evtFunc);
   void ClearEvent(const char* evtName);
   void ClearAllEvents(void);
   void FireEvent(Event*);
@@ -92,8 +91,8 @@ class Script {
   void ClearEventList();
   // blocks the executing thread for X milliseconds, keeping the event loop running during this time
   void BlockThread(DWORD delay);
-  void ExecuteEvent(char* evtName, int argc, const jsval* argv, bool* block = nullptr);
-  void ExecuteEvent(char* evtName, const JS::AutoValueVector& args, bool* block = nullptr);
+  void ExecuteEvent(char* evtName, int argc, const JSValue* argv, bool* block = nullptr);
+  //void ExecuteEvent(char* evtName, const JS::AutoValueVector& args, bool* block = nullptr);
 
   void OnDestroyContext();
 
@@ -108,19 +107,19 @@ class Script {
   bool RunEventLoop();
   bool ProcessAllEvents();
 
-  static JSBool InterruptHandler(JSContext* ctx);
+  static int InterruptHandler(JSRuntime* rt, void* opaque);
 
-  std::wstring m_fileName;
+  std::string m_fileName;
   ScriptMode m_scriptMode;
   std::atomic<ScriptState> m_scriptState;
 
   JSRuntime* m_runtime;
   JSContext* m_context;
-  JSObject* m_globalObject;
-  JSScript* m_script;
+  JSValue m_globalObject;
+  JSValue m_script;
   myUnit* m_me;
-  uint m_argc;
-  JSAutoStructuredCloneBuffer** m_argv;
+  uint32_t m_argc;
+  //JSAutoStructuredCloneBuffer** m_argv;
   DWORD m_LastGC;
   // wtf is this trying to do anyway, why not just check m_context or m_runtime?
   bool m_hasActiveCX;  // hack to get away from JS_IsRunning
@@ -144,7 +143,7 @@ struct RUNCOMMANDSTRUCT {
   const wchar_t* command;
 };
 
-DWORD WINAPI ScriptThread(void* data);
+DWORD WINAPI ScriptThread(LPVOID lpThreadParameter);
 
-JSBool contextCallback(JSContext* ctx, uint contextOp);
-void reportError(JSContext* cx, const char* message, JSErrorReport* report);
+//JSBool contextCallback(JSContext* ctx, uint32_t contextOp);
+//void reportError(JSContext* cx, const char* message, JSErrorReport* report);

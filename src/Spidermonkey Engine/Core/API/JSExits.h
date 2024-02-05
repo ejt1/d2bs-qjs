@@ -5,19 +5,17 @@
 #include <windows.h>
 
 CLASS_CTOR(exit);
+CLASS_FINALIZER(exit);
 
-void exit_finalize(JSFreeOp* fop, JSObject* obj);
 JSAPI_PROP(exit_getProperty);
 
 enum exit_tinyid { EXIT_X, EXIT_Y, EXIT_TARGET, EXIT_TYPE, EXIT_TILEID, EXIT_LEVELID };
 
-static JSPropertySpec exit_props[] = {{"x", EXIT_X, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(exit_getProperty), JSOP_NULLWRAPPER},
-                                      {"y", EXIT_Y, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(exit_getProperty), JSOP_NULLWRAPPER},
-                                      {"target", EXIT_TARGET, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(exit_getProperty), JSOP_NULLWRAPPER},
-                                      {"type", EXIT_TYPE, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(exit_getProperty), JSOP_NULLWRAPPER},
-                                      {"tileid", EXIT_TILEID, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(exit_getProperty), JSOP_NULLWRAPPER},
-                                      {"level", EXIT_LEVELID, JSPROP_PERMANENT_VAR, JSOP_WRAPPER(exit_getProperty), JSOP_NULLWRAPPER},
-                                      {0, 0, 0, JSOP_NULLWRAPPER, JSOP_NULLWRAPPER}};
+static JSCFunctionListEntry exit_props[] = {
+    JS_CGETSET_MAGIC_DEF("x", exit_getProperty, nullptr, EXIT_X),           JS_CGETSET_MAGIC_DEF("y", exit_getProperty, nullptr, EXIT_Y),
+    JS_CGETSET_MAGIC_DEF("target", exit_getProperty, nullptr, EXIT_TARGET), JS_CGETSET_MAGIC_DEF("type", exit_getProperty, nullptr, EXIT_TYPE),
+    JS_CGETSET_MAGIC_DEF("tileid", exit_getProperty, nullptr, EXIT_TILEID), JS_CGETSET_MAGIC_DEF("level", exit_getProperty, nullptr, EXIT_LEVELID),
+};
 
 struct myExit {
   DWORD x;

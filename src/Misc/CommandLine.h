@@ -6,16 +6,16 @@
 
 class CommandLineParser {
  public:
-  CommandLineParser(std::wstring cmdline);
+  CommandLineParser(std::string cmdline);
 
-  bool Contains(const std::wstring& arg);
-  std::wstring Value(const std::wstring& arg);
-  std::map<std::wstring, std::wstring> Args();
+  bool Contains(const std::string& arg);
+  std::string Value(const std::string& arg);
+  std::map<std::string, std::string> Args();
 
  private:
-  void TrimBinary(std::wstring& cmdline);
-  std::wstring& TrimQuote(std::wstring& val);
-  std::vector<std::wstring> ParseArguments(std::wstring& cmdline);
+  void TrimBinary(std::string& cmdline);
+  std::string& TrimQuote(std::string& val);
+  std::vector<std::string> ParseArguments(std::string& cmdline);
 
-  std::map<std::wstring, std::wstring> m_args;
+  std::map<std::string, std::string> m_args;
 };

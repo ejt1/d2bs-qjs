@@ -13,61 +13,63 @@
 #include "Console.h"
 
 #include <chrono>
+#include <cassert>
 
-Script::Script(const wchar_t* file, ScriptMode mode, uint argc, JSAutoStructuredCloneBuffer** argv)
+Script::Script(const char* file, ScriptMode mode /*, uint32_t argc, JSAutoStructuredCloneBuffer** argv*/)
     : m_runtime(NULL),
       m_context(NULL),
-      m_globalObject(NULL),
-      m_script(NULL),
+      m_globalObject(JS_UNDEFINED),
+      m_script(JS_UNDEFINED),
       m_isPaused(false),
       m_isReallyPaused(false),
       m_scriptMode(mode),
       m_scriptState(kScriptStateUninitialized),
       m_threadHandle(INVALID_HANDLE_VALUE),
-      m_threadId(0),
-      m_argc(argc),
-      m_argv(argv) {
+      m_threadId(0) /*,
+       m_argc(argc),
+       m_argv(argv)*/
+{
   InitializeCriticalSection(&m_lock);
   // moved the runtime initilization to thread start
   m_LastGC = 0;
   m_hasActiveCX = false;
   m_eventSignal = CreateEvent(nullptr, true, false, nullptr);
 
-  if (m_scriptMode == kScriptModeCommand && wcslen(file) < 1) {
-    m_fileName = std::wstring(L"Command Line");
+  if (m_scriptMode == kScriptModeCommand && strlen(file) < 1) {
+    m_fileName = "Command Line";
   } else {
-    if (_waccess(file, 0) != 0) {
-      Log(L"%s (%s, %d)", file, __FILE__, __LINE__);
+    if (_access(file, 0) != 0) {
+      Log(L"%S (%s, %d)", file, __FILE__, __LINE__);
 
       throw std::exception("File not found");
     }
 
-    wchar_t* tmpName = _wcsdup(file);
+    char* tmpName = _strdup(file);
     if (!tmpName)
       throw std::exception("Could not dup filename");
 
-    _wcslwr_s(tmpName, wcslen(file) + 1);
-    m_fileName = std::wstring(tmpName);
-    replace(m_fileName.begin(), m_fileName.end(), L'/', L'\\');
+    _strlwr_s(tmpName, strlen(file) + 1);
+    m_fileName = tmpName;
+    replace(m_fileName.begin(), m_fileName.end(), '/', '\\');
     free(tmpName);
   }
 }
 
 Script::~Script(void) {
+  assert(!m_runtime);
+  assert(!m_context);
+
   m_hasActiveCX = false;
-  // JS_SetPendingException(context, JSVAL_NULL);
-  if (JS_IsInRequest(m_runtime))
-    JS_EndRequest(m_context);
+  // if (JS_IsInRequest(m_runtime))
+  //   JS_EndRequest(m_context);
 
   EnterCriticalSection(&m_lock);
-  //    JS_SetRuntimeThread(rt);
-  JS_DestroyContext(m_context);
-  // JS_ClearRuntimeThread(rt);
-  JS_DestroyRuntime(m_runtime);
+  // JS_DestroyContext(m_context);
+  // JS_DestroyRuntime(m_runtime);
 
-  m_context = NULL;
-  m_globalObject = NULL;
-  m_script = NULL;
+  // m_context = NULL;
+  // m_globalObject = NULL;
+  // m_script = NULL;
   CloseHandle(m_eventSignal);
   m_includes.clear();
   if (m_threadHandle != INVALID_HANDLE_VALUE)
@@ -102,8 +104,8 @@ void Script::Stop(bool force) {
   m_isPaused = false;
   m_isReallyPaused = false;
   if (m_scriptMode != kScriptModeCommand) {
-    const wchar_t* displayName = m_fileName.c_str() + wcslen(Vars.szScriptPath) + 1;
-    Print(L"Script %s ended", displayName);
+    const char* displayName = m_fileName.c_str() + strlen(Vars.szScriptPath) + 1;
+    Print(L"Script %S ended", displayName);
   }
 
   // trigger call back so script ends
@@ -159,26 +161,26 @@ bool Script::IsUninitialized() {
 }
 
 bool Script::IsRunning(void) {
-  return m_context && !(m_scriptState != kScriptStateRunning || m_isPaused || !m_hasActiveCX);
+  return /*m_context && */ !(m_scriptState != kScriptStateRunning || m_isPaused || !m_hasActiveCX);
 }
 
 bool Script::IsAborted() {
   return m_scriptState == kScriptStateStopped;
 }
 
-void Script::RunCommand(const wchar_t* command) {
+void Script::RunCommand(const char* command) {
   Event* evt = new Event;
   evt->argc = m_argc;
   evt->name = "Command";
-  evt->arg1 = _wcsdup(command);
+  evt->arg1 = _strdup(command);
   FireEvent(evt);
 }
 
-const wchar_t* Script::GetShortFilename() {
-  if (wcscmp(m_fileName.c_str(), L"Command Line") == 0)
+const char* Script::GetShortFilename() {
+  if (strcmp(m_fileName.c_str(), "Command Line") == 0)
     return m_fileName.c_str();
   else
-    return (m_fileName.c_str() + wcslen(Vars.szScriptPath) + 1);
+    return (m_fileName.c_str() + strlen(Vars.szScriptPath) + 1);
 }
 
 DWORD Script::GetThreadId(void) {
@@ -189,79 +191,75 @@ void Script::UpdatePlayerGid(void) {
   m_me->dwUnitId = (D2CLIENT_GetPlayerUnit() == NULL ? NULL : D2CLIENT_GetPlayerUnit()->dwUnitId);
 }
 
-bool Script::IsIncluded(const wchar_t* file) {
-  uint count = 0;
-  wchar_t* fname = _wcsdup(file);
+bool Script::IsIncluded(const char* file) {
+  uint32_t count = 0;
+  char* fname = _strdup(file);
   if (!fname)
     return false;
 
-  _wcslwr_s(fname, wcslen(fname) + 1);
-  StringReplace(fname, '/', '\\', wcslen(fname));
-  count = m_includes.count(std::wstring(fname));
+  _strlwr_s(fname, strlen(fname) + 1);
+  StringReplace(fname, '/', '\\', strlen(fname));
+  count = m_includes.count(fname);
   free(fname);
 
   return !!count;
 }
 
-bool Script::Include(const wchar_t* file) {
+bool Script::Include(const char* file) {
   // since includes will happen on the same thread, locking here is acceptable
   EnterCriticalSection(&m_lock);
-  wchar_t* fname = _wcsdup(file);
+  char* fname = _strdup(file);
   if (!fname) {
     LeaveCriticalSection(&m_lock);
     return false;
   }
-  _wcslwr_s(fname, wcslen(fname) + 1);
-  StringReplace(fname, L'/', L'\\', wcslen(fname));
+  _strlwr_s(fname, strlen(fname) + 1);
+  StringReplace(fname, '/', '\\', strlen(fname));
 
   // don't invoke the string ctor more than once...
-  std::wstring currentFileName = std::wstring(fname);
+  std::string currentFileName = std::string(fname);
   // ignore already included, 'in-progress' includes, and self-inclusion
   if (!!m_includes.count(fname) || !!m_inProgress.count(fname) || (currentFileName.compare(m_fileName.c_str()) == 0)) {
     LeaveCriticalSection(&m_lock);
     free(fname);
     return true;
   }
-  bool rval = false;
 
-  JSContext* cx = GetContext();
-
-  JSAutoRequest request(m_context);
-
-  JSScript* _script = JS_CompileFile(cx, m_globalObject, fname);
-  if (_script) {
-    jsval dummy;
+  JSValue rval = JS_CompileFile(m_context, m_globalObject, fname);
+  if (!JS_IsException(rval)) {
     m_inProgress[fname] = true;
-    rval = !!JS_ExecuteScript(cx, m_globalObject, _script, &dummy);
-    if (rval)
+    rval = JS_EvalFunction(m_context, rval);
+    if (!JS_IsException(rval)) {
       m_includes[fname] = true;
-    else
-      JS_ReportPendingException(cx);
+    }
     m_inProgress.erase(fname);
-    // JS_RemoveRoot(&scriptObj);
-  } else
-    JS_ReportPendingException(cx);
+  }
 
-  // JS_RemoveScriptRoot(cx, &script);
   LeaveCriticalSection(&m_lock);
   free(fname);
-  return rval;
+
+  if (JS_IsException(rval)) {
+    JS_ReportPendingException(m_context);
+    return false;
+  }
+
+  JS_FreeValue(m_context, rval);
+  return true;
 }
 
 bool Script::IsListenerRegistered(const char* evtName) {
   return strlen(evtName) > 0 && m_functions.count(evtName) > 0;
 }
 
-void Script::RegisterEvent(const char* evtName, jsval evtFunc) {
+void Script::RegisterEvent(const char* evtName, JSValue evtFunc) {
   EnterCriticalSection(&m_lock);
-  if (JSVAL_IS_FUNCTION(m_context, evtFunc) && strlen(evtName) > 0) {
-    AutoRoot* root = new AutoRoot(m_context, evtFunc);
-    m_functions[evtName].push_back(root);
+  if (JS_IsFunction(m_context, evtFunc) && strlen(evtName) > 0) {
+    m_functions[evtName].push_back(JS_DupValue(m_context, evtFunc));
   }
   LeaveCriticalSection(&m_lock);
 }
 
-bool Script::IsRegisteredEvent(const char* evtName, jsval evtFunc) {
+bool Script::IsRegisteredEvent(const char* evtName, JSValue evtFunc) {
   // nothing can be registered under an empty name
   if (strlen(evtName) < 1)
     return false;
@@ -272,27 +270,24 @@ bool Script::IsRegisteredEvent(const char* evtName, jsval evtFunc) {
     return false;
 
   for (FunctionList::iterator it = m_functions[evtName].begin(); it != m_functions[evtName].end(); it++)
-    if (*(*it)->value() == evtFunc)
+    if (*it == evtFunc)
       return true;
 
   return false;
 }
 
-void Script::UnregisterEvent(const char* evtName, jsval evtFunc) {
+void Script::UnregisterEvent(const char* evtName, JSValue evtFunc) {
   if (strlen(evtName) < 1)
     return;
 
   EnterCriticalSection(&m_lock);
-  AutoRoot* func = NULL;
   for (FunctionList::iterator it = m_functions[evtName].begin(); it != m_functions[evtName].end(); it++) {
-    if (*(*it)->value() == evtFunc) {
-      func = *it;
+    if (*it == evtFunc) {
+      JS_FreeValue(m_context, *it);
+      it = m_functions[evtName].erase(it);
       break;
     }
   }
-  m_functions[evtName].remove(func);
-  // func->Release();
-  delete func;
 
   // Remove event completely if there are no listeners for it.
   if (m_functions.count(evtName) > 0 && m_functions[evtName].size() == 0)
@@ -304,9 +299,7 @@ void Script::UnregisterEvent(const char* evtName, jsval evtFunc) {
 void Script::ClearEvent(const char* evtName) {
   EnterCriticalSection(&m_lock);
   for (FunctionList::iterator it = m_functions[evtName].begin(); it != m_functions[evtName].end(); it++) {
-    AutoRoot* func = *it;
-    func->Release();
-    delete func;
+    JS_FreeValue(m_context, *it);
   }
   m_functions[evtName].clear();
   LeaveCriticalSection(&m_lock);
@@ -314,13 +307,14 @@ void Script::ClearEvent(const char* evtName) {
 
 void Script::ClearAllEvents(void) {
   EnterCriticalSection(&m_lock);
-  for (FunctionMap::iterator it = m_functions.begin(); it != m_functions.end(); it++) ClearEvent(it->first.c_str());
+  for (FunctionMap::iterator it = m_functions.begin(); it != m_functions.end(); it++) {
+    ClearEvent(it->first.c_str());
+  }
   m_functions.clear();
   LeaveCriticalSection(&m_lock);
 }
 
 void Script::FireEvent(Event* evt) {
-  // EnterCriticalSection(&sScriptEngine->lock);
   EnterCriticalSection(&Vars.cEventSection);
   m_EventList.push_front(evt);
   LeaveCriticalSection(&Vars.cEventSection);
@@ -329,7 +323,6 @@ void Script::FireEvent(Event* evt) {
     TriggerOperationCallback();
   }
   SetEvent(m_eventSignal);
-  // LeaveCriticalSection(&sScriptEngine->lock);
 }
 
 void Script::ClearEventList() {
@@ -358,29 +351,34 @@ void Script::BlockThread(DWORD delay) {
       break;
     }
 
-    if (JS_GetGCParameter(m_runtime, JSGC_BYTES) - m_LastGC > 524288)  // gc every .5 mb
-    {
-      JS_GC(m_runtime);
-      m_LastGC = JS_GetGCParameter(m_runtime, JSGC_BYTES);
-    }
+    // if (JS_GetGCParameter(m_runtime, JSGC_BYTES) - m_LastGC > 524288)  // gc every .5 mb
+    //{
+    //   JS_GC(m_runtime);
+    //   m_LastGC = JS_GetGCParameter(m_runtime, JSGC_BYTES);
+    // }
 
     amt = delay - (GetTickCount() - start);
   }
 }
 
-void Script::ExecuteEvent(char* evtName, int argc, const jsval* argv, bool* block) {
+void Script::ExecuteEvent(char* evtName, int argc, const JSValue* argv, bool* block) {
   for (const auto& root : m_functions[evtName]) {
-    jsval rval;
-    JS_CallFunctionValue(m_context, JS_GetGlobalObject(m_context), *root->value(), argc, const_cast<JS::Value*>(argv), &rval);
-    if (block) {
-      *block |= static_cast<bool>(JSVAL_IS_BOOLEAN(rval) && JSVAL_TO_BOOLEAN(rval));
+    JSValue rval;
+    rval = JS_Call(m_context, root, JS_UNDEFINED, argc, const_cast<JSValue*>(argv));
+    if (JS_IsException(rval)) {
+      JS_ReportPendingException(m_context);
+      return;
     }
+    if (block) {
+      *block |= static_cast<bool>(JS_IsBool(rval) && JS_ToBool(m_context, rval));
+    }
+    JS_FreeValue(m_context, rval);
   }
 }
 
-void Script::ExecuteEvent(char* evtName, const JS::AutoValueVector& args, bool* block) {
-  ExecuteEvent(evtName, args.length(), args.begin(), block);
-}
+// void Script::ExecuteEvent(char* evtName, const JS::AutoValueVector& args, bool* block) {
+//   ExecuteEvent(evtName, args.length(), args.begin(), block);
+// }
 
 void Script::OnDestroyContext() {
   m_hasActiveCX = false;
@@ -389,7 +387,6 @@ void Script::OnDestroyContext() {
 }
 
 bool Script::HandleEvent(Event* evt, bool clearList) {
-  JSContext* cx = m_context;
   char* evtName = (char*)evt->name.c_str();
 
   if (strcmp(evtName, "itemaction") == 0) {
@@ -399,13 +396,18 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
       DWORD* mode = (DWORD*)evt->arg3;
       bool* global = (bool*)evt->arg4;
 
-      JSAutoRequest request(m_context);
-      JS::AutoValueVector args(m_context);
-      args.append(JS_NumberValue(*gid));
-      args.append(JS_NumberValue(*mode));
-      args.append(STRING_TO_JSVAL(JS_NewStringCopyZ(cx, code)));
-      args.append(BOOLEAN_TO_JSVAL(*global));
-      ExecuteEvent(evtName, args);
+      JSValue args[] = {
+          JS_NewUint32(m_context, *gid),
+          JS_NewUint32(m_context, *mode),
+          JS_NewString(m_context, code),
+          JS_NewBool(m_context, *global),
+      };
+
+      ExecuteEvent(evtName, _countof(args), args);
+
+      for (size_t i = 0; i < _countof(args); ++i) {
+        JS_FreeValue(m_context, args[i]);
+      }
     }
     delete evt->arg1;
     free(evt->arg2);
@@ -416,15 +418,19 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
   }
   if (strcmp(evtName, "gameevent") == 0) {
     if (!clearList) {
-      JSAutoRequest request(m_context);
-      JS::AutoValueVector args(m_context);
-      args.append(JS_NumberValue(*(BYTE*)evt->arg1));
-      args.append(JS_NumberValue(*(DWORD*)evt->arg2));
-      args.append(JS_NumberValue(*(DWORD*)evt->arg3));
-      args.append(STRING_TO_JSVAL(JS_NewStringCopyZ(cx, (char*)evt->arg4)));
-      args.append(STRING_TO_JSVAL(JS_NewUCStringCopyZ(cx, (wchar_t*)evt->arg5)));
+      JSValue args[] = {
+          JS_NewUint32(m_context, *(BYTE*)evt->arg1),
+          JS_NewUint32(m_context, *(DWORD*)evt->arg2),
+          JS_NewUint32(m_context, *(DWORD*)evt->arg3),
+          evt->arg4 ? JS_NewString(m_context, (const char*)evt->arg4) : JS_UNDEFINED,
+          evt->arg5 ? JS_NewString(m_context, (const char*)evt->arg5) : JS_UNDEFINED,
+      };
 
-      ExecuteEvent(evtName, args);
+      ExecuteEvent(evtName, _countof(args), args);
+
+      for (size_t i = 0; i < _countof(args); ++i) {
+        JS_FreeValue(m_context, args[i]);
+      }
     }
     delete evt->arg1;
     delete evt->arg2;
@@ -436,12 +442,16 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
   }
   if (strcmp(evtName, "copydata") == 0) {
     if (!clearList) {
-      JSAutoRequest request(m_context);
-      JS::AutoValueVector args(m_context);
-      args.append(JS_NumberValue(*(DWORD*)evt->arg1));
-      args.append(STRING_TO_JSVAL(JS_NewUCStringCopyZ(cx, (wchar_t*)evt->arg2)));
+      JSValue args[] = {
+          JS_NewUint32(m_context, *(DWORD*)evt->arg1),
+          evt->arg2 ? JS_NewString(m_context, (const char*)evt->arg2) : JS_UNDEFINED,
+      };
 
-      ExecuteEvent(evtName, args);
+      ExecuteEvent(evtName, _countof(args), args);
+
+      for (size_t i = 0; i < _countof(args); ++i) {
+        JS_FreeValue(m_context, args[i]);
+      }
     }
     delete evt->arg1;
     free(evt->arg2);
@@ -452,12 +462,16 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
       strcmp(evtName, "chatinputblocker") == 0 || strcmp(evtName, "whispermsgblocker") == 0) {
     bool block = false;
     if (!clearList) {
-      JSAutoRequest request(m_context);
-      JS::AutoValueVector args(m_context);
-      args.append(STRING_TO_JSVAL(JS_NewStringCopyZ(cx, (char*)evt->arg1)));
-      args.append(STRING_TO_JSVAL(JS_NewUCStringCopyZ(cx, (wchar_t*)evt->arg2)));
+      JSValue args[] = {
+          evt->arg1 ? JS_NewString(m_context, (const char*)evt->arg1) : JS_UNDEFINED,
+          evt->arg2 ? JS_NewString(m_context, (const char*)evt->arg2) : JS_UNDEFINED,
+      };
 
-      ExecuteEvent(evtName, args, &block);
+      ExecuteEvent(evtName, _countof(args), args, &block);
+
+      for (size_t i = 0; i < _countof(args); ++i) {
+        JS_FreeValue(m_context, args[i]);
+      }
     }
     if (strcmp(evtName, "chatmsgblocker") == 0 || strcmp(evtName, "chatinputblocker") == 0 || strcmp(evtName, "whispermsgblocker") == 0) {
       *(DWORD*)evt->arg4 = block;
@@ -471,15 +485,19 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
   }
   if (strcmp(evtName, "mousemove") == 0 || strcmp(evtName, "ScreenHookHover") == 0) {
     if (!clearList) {
-      JSAutoRequest request(m_context);
-      JS::AutoValueVector args(m_context);
-      args.append(JS_NumberValue(*(DWORD*)evt->arg1));
-      args.append(JS_NumberValue(*(DWORD*)evt->arg2));
+      JSValue args[] = {
+          JS_NewUint32(m_context, *(DWORD*)evt->arg1),
+          JS_NewUint32(m_context, *(DWORD*)evt->arg2),
+      };
 
       if (strcmp(evtName, "ScreenHookHover") == 0) {
-        ExecuteEvent(evtName, evt->argc + 1, args.begin());
+        ExecuteEvent(evtName, evt->argc + 1, args);
       } else {
-        ExecuteEvent(evtName, args);
+        ExecuteEvent(evtName, _countof(args), args);
+      }
+
+      for (size_t i = 0; i < _countof(args); ++i) {
+        JS_FreeValue(m_context, args[i]);
       }
     }
     delete evt->arg1;
@@ -489,14 +507,18 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
   }
   if (strcmp(evtName, "mouseclick") == 0) {
     if (!clearList) {
-      JSAutoRequest request(m_context);
-      JS::AutoValueVector args(m_context);
-      args.append(JS_NumberValue(*(DWORD*)evt->arg1));
-      args.append(JS_NumberValue(*(DWORD*)evt->arg2));
-      args.append(JS_NumberValue(*(DWORD*)evt->arg3));
-      args.append(JS_NumberValue(*(DWORD*)evt->arg4));
+      JSValue args[] = {
+          JS_NewUint32(m_context, *(DWORD*)evt->arg1),
+          JS_NewUint32(m_context, *(DWORD*)evt->arg2),
+          JS_NewUint32(m_context, *(DWORD*)evt->arg3),
+          JS_NewUint32(m_context, *(DWORD*)evt->arg4),
+      };
 
-      ExecuteEvent(evtName, args);
+      ExecuteEvent(evtName, _countof(args), args);
+
+      for (size_t i = 0; i < _countof(args); ++i) {
+        JS_FreeValue(m_context, args[i]);
+      }
     }
     delete evt->arg1;
     delete evt->arg2;
@@ -509,10 +531,15 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
       strcmp(evtName, "melife") == 0 || strcmp(evtName, "playerassign") == 0) {
     bool block = false;
     if (!clearList) {
-      JSAutoRequest request(m_context);
-      JS::AutoValueVector args(m_context);
-      args.append(JS_NumberValue(*(DWORD*)evt->arg1));
-      ExecuteEvent(evtName, args, &block);
+      JSValue args[] = {
+          JS_NewUint32(m_context, *(DWORD*)evt->arg1),
+      };
+
+      ExecuteEvent(evtName, _countof(args), args, &block);
+
+      for (size_t i = 0; i < _countof(args); ++i) {
+        JS_FreeValue(m_context, args[i]);
+      }
     }
     if (strcmp(evtName, "keydownblocker") == 0) {
       *(DWORD*)evt->arg4 = block;
@@ -526,17 +553,21 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
   if (strcmp(evtName, "ScreenHookClick") == 0) {
     bool block = false;
     if (!clearList) {
-      JSAutoRequest request(m_context);
-      JS::AutoValueVector args(m_context);
-      args.append(JS_NumberValue(*(DWORD*)evt->arg1));
-      args.append(JS_NumberValue(*(DWORD*)evt->arg2));
-      args.append(JS_NumberValue(*(DWORD*)evt->arg3));
+      JSValue args[] = {
+          JS_NewUint32(m_context, *(DWORD*)evt->arg1),
+          JS_NewUint32(m_context, *(DWORD*)evt->arg2),
+          JS_NewUint32(m_context, *(DWORD*)evt->arg3),
+      };
 
-      jsval rval;
+      JSValue rval;
       // diffrent function source for hooks
       for (FunctionList::iterator it = evt->functions.begin(); it != evt->functions.end(); it++) {
-        JS_CallFunctionValue(cx, JS_GetGlobalObject(cx), *(*it)->value(), args.length(), args.begin(), &rval);
-        block |= static_cast<bool>(JSVAL_IS_BOOLEAN(rval) && JSVAL_TO_BOOLEAN(rval));
+        rval = JS_Call(m_context, m_globalObject, *it, _countof(args), args);
+        block |= static_cast<bool>(JS_IsBool(rval) && JS_ToBool(m_context, rval));
+      }
+
+      for (size_t i = 0; i < _countof(args); ++i) {
+        JS_FreeValue(m_context, args[i]);
       }
     }
     *(DWORD*)evt->arg4 = block;
@@ -545,44 +576,40 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
     return true;
   }
   if (strcmp(evtName, "Command") == 0) {
-    wchar_t* cmd = (wchar_t*)evt->arg1;
-    std::wstring test;
+    const char* cmd = (const char*)evt->arg1;
+    std::string test;
 
-    test.append(L"try{ ");
+    test.append("try{ ");
     test.append(cmd);
-    test.append(L" } catch (error){print(error)}");
-    JSAutoRequest request(m_context);
-    jsval rval;
+    test.append(" } catch (error){print(error)}");
 
-    if (JS_EvaluateUCScript(cx, JS_GetGlobalObject(cx), test.data(), test.length(), "Command Line", 0, &rval)) {
-      if (!JSVAL_IS_NULL(rval) && !JSVAL_IS_VOID(rval)) {
-        JS_ConvertValue(cx, rval, JSTYPE_STRING, &rval);
-        const wchar_t* text = JS_GetStringCharsZ(cx, JS_ValueToString(cx, rval));
-        Print(L"%s", text);
+    JSValue rval = JS_Eval(m_context, test.data(), test.length(), "Command Line", JS_EVAL_TYPE_GLOBAL);
+    if (!JS_IsException(rval)) {
+      if (!JS_IsNull(rval) && !JS_IsUndefined(rval)) {
+        const char* text = JS_ToCString(m_context, rval);
+        Print(L"%S", text);
+        JS_FreeCString(m_context, text);
       }
+      JS_FreeValue(m_context, rval);
+    } else {
+      JS_ReportPendingException(m_context);
     }
     free(evt->arg1);
     delete evt;
   }
   if (strcmp(evtName, "scriptmsg") == 0) {
     if (!clearList) {
-      DWORD* argc = (DWORD*)evt->arg1;
-      JSAutoRequest request(m_context);
-      JS::AutoValueVector args(m_context);
-
-      for (uint i = 0; i < *argc; ++i) {
-        jsval v;
-        evt->argv[i]->read(m_context, &v);
-        args.append(v);
-      }
-
-      ExecuteEvent(evtName, args);
+      JSValue data_obj = JS_ReadObject(m_context, evt->data, evt->data_len, JS_READ_OBJ_SAB | JS_READ_OBJ_REFERENCE);
+      ExecuteEvent(evtName, 1, &data_obj);
+      JS_FreeValue(m_context, data_obj);
     }
-    for (uint i = 0; i < evt->argc; i++) {
-      evt->argv[i]->clear();
-      delete evt->argv[i];
+
+    // decrease SAB reference count
+    for (size_t i = 0; i < evt->sab_tab_len; ++i) {
+      js_sab_free(NULL, evt->sab_tab[i]);
     }
-    delete evt->arg1;
+    free(evt->data);
+    free(evt->sab_tab);
     delete evt;
     return true;
   }
@@ -591,16 +618,14 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
     if (!clearList) {
       BYTE* help = (BYTE*)evt->arg1;
       DWORD* size = (DWORD*)evt->arg2;
-      //  DWORD* argc = (DWORD*)1;
-      JSAutoRequest request(m_context);
 
-      JS::RootedValue arr(m_context, JS::ObjectOrNullValue(JS_NewUint8Array(cx, *size)));
-      for (uint i = 0; i < *size; i++) {
-        jsval jsarr = UINT_TO_JSVAL(help[i]);
-        JS_SetElement(cx, arr.toObjectOrNull(), i, &jsarr);
+      JSValue arr = JS_NewArray(m_context);
+      for (uint32_t i = 0; i < *size; i++) {
+        JS_SetPropertyUint32(m_context, arr, i, JS_NewUint32(m_context, help[i]));
       }
-      
-      ExecuteEvent(evtName, 1, arr.address(), &block);
+
+      ExecuteEvent(evtName, 1, &arr, &block);
+      JS_FreeValue(m_context, arr);
       *(DWORD*)evt->arg4 = block;
       SetEvent(Vars.eventSignal);
     }
@@ -612,18 +637,19 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
   }
   if (strcmp(evtName, "setTimeout") == 0 || strcmp(evtName, "setInterval") == 0) {
     if (!clearList) {
-      JSAutoRequest request(m_context);
-      jsval dummy;
-      ExecuteEvent(evtName, 0, &dummy);
+      // JSAutoRequest request(m_context);
+      // JSValue dummy;
+      // ExecuteEvent(evtName, 0, &dummy);
     }
 
-    //if (strcmp(evtName, "setTimeout") == 0) {
-    //  sScriptEngine->RemoveDelayedEvent(*(DWORD*)evt->arg1);
-    //}
+    // if (strcmp(evtName, "setTimeout") == 0) {
+    //   sScriptEngine->RemoveDelayedEvent(*(DWORD*)evt->arg1);
+    // }
 
     return true;
   }
   if (strcmp(evtName, "DisposeMe") == 0) {
+    Log(L"DisposeMe");
     sScriptEngine->DisposeScript(this);
   }
 
@@ -631,50 +657,64 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
 }
 
 bool Script::Initialize() {
-  m_runtime = JS_NewRuntime(Vars.dwMemUsage, JS_NO_HELPER_THREADS);
-  JS_SetContextCallback(m_runtime, contextCallback);
+  m_runtime = JS_NewRuntime();
+  JS_SetRuntimeOpaque(m_runtime, this);
+  JS_SetInterruptHandler(m_runtime, InterruptHandler, this);
+  JS_SetMaxStackSize(m_runtime, 0);
+  JS_SetMemoryLimit(m_runtime, 100 * 1024 * 1024);
 
-  m_context = JS_NewContext(m_runtime, 0x800000);
+  m_context = JS_NewContext(m_runtime);
   if (!m_context) {
     Log(L"Couldn't create the context");
     return false;
   }
-  JS_SetContextPrivate(m_context, this);
-  JS_SetErrorReporter(m_context, reportError);
-  JS_SetOperationCallback(m_context, InterruptHandler);
-  JS_SetOptions(m_context, JSOPTION_STRICT | JSOPTION_VAROBJFIX);
-  JS_SetVersion(m_context, JSVERSION_LATEST);
+  JS_SetContextOpaque(m_context, this);
 
-  JSAutoRequest request(m_context);
+  m_globalObject = JS_GetGlobalObject(m_context);
 
-  m_globalObject = JS_NewGlobalObject(m_context, &global_obj, NULL);
-  JS_SetGCParameter(JS_GetRuntime(m_context), JSGC_MODE, 2);
+  // JSValue console = JS_NewObject(m_context);
+  // JS_SetPropertyStr(m_context, console, "trace", JS_NewCFunction(m_context, my_print, "trace", 1));
+  // JS_SetPropertyStr(m_context, console, "debug", JS_NewCFunction(m_context, my_print, "debug", 1));
+  // JS_SetPropertyStr(m_context, console, "log", JS_NewCFunction(m_context, my_print, "log", 1));
+  // JS_SetPropertyStr(m_context, console, "error", JS_NewCFunction(m_context, my_print, "error", 1));
+  // JS_SetPropertyStr(m_context, m_globalObject, "console", console);
 
-  if (JS_InitStandardClasses(m_context, m_globalObject) == JS_FALSE) {
-    Log(L"failed to init standard classes");
-    return false;
-  }
-  if (JS_DefineFunctions(m_context, m_globalObject, global_funcs) == JS_FALSE) {
-    Log(L"failed to define functions globalObject");
-    return false;
-  }
+  // TODO(ejt): this is a solution to minimize changes during migration to quickjs, refactor this in the future
+  JS_SetPropertyFunctionList(m_context, m_globalObject, global_funcs, _countof(global_funcs));
   for (JSClassSpec* entry = global_classes; entry->classp != NULL; entry++) {
-    if (!JS_InitClass(m_context, m_globalObject, NULL, entry->classp, entry->classp->construct, 0, entry->properties, entry->methods, entry->static_properties,
-                      entry->static_methods)) {
-      Log(L"Couldn't initialize the class");
-      return false;
-    }
-  }
+    JS_NewClassID(entry->pclass_id);
+    JS_NewClass(m_runtime, *entry->pclass_id, entry->classp);
+    JSValue proto = JS_NewObject(m_context);
+    JSValue obj;
 
-#define DEFCONST(vp)                                                                                            \
-  if (!JS_DefineProperty(m_context, m_globalObject, #vp, INT_TO_JSVAL(vp), NULL, NULL, JSPROP_PERMANENT_VAR)) { \
-    Log(L"Couldn't initialize the constant");                                                                   \
-    return false;                                                                                               \
+    if (entry->methods) {
+      // define methods?
+      JS_SetPropertyFunctionList(m_context, proto, entry->methods, entry->num_methods);
+    }
+    if (entry->properties) {
+      // define properties?
+      JS_SetPropertyFunctionList(m_context, proto, entry->properties, entry->num_properties);
+    }
+
+    if (entry->ctor) {
+      obj = JS_NewCFunction2(m_context, entry->ctor, entry->classp->class_name, 0, JS_CFUNC_constructor, 0);
+      JS_SetConstructor(m_context, obj, proto);
+    } else {
+      obj = JS_NewObjectProtoClass(m_context, proto, *entry->pclass_id);
+    }
+
+    if (entry->static_methods) {
+      // define static methods?
+      JS_SetPropertyFunctionList(m_context, obj, entry->static_methods, entry->num_s_methods);
+    }
+    if (entry->static_properties) {
+      // define static properties?
+      JS_SetPropertyFunctionList(m_context, obj, entry->static_properties, entry->num_s_properties);
+    }
+
+    JS_SetClassProto(m_context, *entry->pclass_id, proto);
+    JS_SetPropertyStr(m_context, m_globalObject, entry->classp->class_name, obj);
   }
-  DEFCONST(FILE_READ);
-  DEFCONST(FILE_WRITE);
-  DEFCONST(FILE_APPEND);
-#undef DEFCONST
 
   // define 'me' property
   m_me = new myUnit;
@@ -687,31 +727,28 @@ bool Script::Initialize() {
   m_me->dwUnitId = player ? player->dwUnitId : NULL;
   m_me->_dwPrivateType = PRIVATE_UNIT;
 
-  JSObject* meObject = BuildObject(m_context, &unit_class, unit_methods, me_props, m_me);
+  JSValue meObject = BuildObject(m_context, unit_class_id, unit_methods, _countof(unit_methods), me_props, _countof(me_props), m_me);
   if (!meObject) {
     Log(L"failed to build object 'me'");
     return false;
   }
 
-  if (JS_DefineProperty(m_context, m_globalObject, "me", OBJECT_TO_JSVAL(meObject), NULL, NULL, JSPROP_PERMANENT_VAR) == JS_FALSE) {
-    Log(L"failed to define property 'me'");
-    return false;
-  }
+  JS_SetPropertyStr(m_context, m_globalObject, "me", meObject);
 
   // compile script file
   if (m_scriptMode == kScriptModeCommand) {
-    if (wcslen(Vars.szConsole) > 0) {
+    if (strlen(Vars.szConsole) > 0) {
       m_script = JS_CompileFile(m_context, m_globalObject, m_fileName);
     } else {
       const char* cmd = "function main() {print('ÿc2D2BSÿc0 :: Started Console'); while (true){delay(10000)};}  ";
-      m_script = JS_CompileScript(m_context, m_globalObject, cmd, strlen(cmd), "Command Line", 1);
+      m_script = JS_Eval(m_context, cmd, strlen(cmd), "Command Line", JS_EVAL_TYPE_GLOBAL);
     }
-    JS_AddNamedScriptRoot(m_context, &m_script, "console script");
-  } else
+  } else {
     m_script = JS_CompileFile(m_context, m_globalObject, m_fileName);
+  }
 
-  if (!m_script) {
-    Log(L"Couldn't compile the script");
+  if (JS_IsException(m_script)) {
+    JS_ReportPendingException(m_context);
     return false;
   }
 
@@ -723,23 +760,38 @@ bool Script::Initialize() {
 }
 
 void Script::RunMain() {
-  JSAutoRequest request(m_context);
-  JS::RootedValue main(m_context, INT_TO_JSVAL(1));
-  JS::RootedValue dummy(m_context, INT_TO_JSVAL(1));
+  JSValue main;
 
   // args passed from load
-  JS::AutoValueVector args(m_context);
-  args.resize(m_argc);
-  for (uint i = 0; i < m_argc; i++) {
-    jsval v;
-    m_argv[i]->read(m_context, &v);
-    args.append(v);
+  // JS::AutoValueVector args(m_context);
+  // args.resize(m_argc);
+  // for (uint32_t i = 0; i < m_argc; i++) {
+  //  JSValue v;
+  //  m_argv[i]->read(m_context, &v);
+  //  args.append(v);
+  //}
+  m_script = JS_EvalFunction(m_context, m_script);
+  if (JS_IsException(m_script)) {
+    JS_ReportPendingException(m_context);
+    return;
   }
-
-  if (JS_ExecuteScript(m_context, m_globalObject, m_script, dummy.address()) != JS_FALSE &&
-      JS_GetProperty(m_context, m_globalObject, "main", main.address()) != JS_FALSE && JSVAL_IS_FUNCTION(m_context, main)) {
-    JS_CallFunctionValue(m_context, m_globalObject, main, args.length(), args.begin(), dummy.address());
+  main = JS_GetPropertyStr(m_context, m_globalObject, "main");
+  if (JS_IsException(main)) {
+    JS_ReportPendingException(m_context);
+    return;
   }
+  if (!JS_IsFunction(m_context, main)) {
+    JS_ThrowTypeError(m_context, "'main' is not a function");
+    JS_ReportPendingException(m_context);
+    return;
+  }
+  JSValue rval = JS_Call(m_context, main, JS_UNDEFINED, 0, nullptr);
+  JS_FreeValue(m_context, main);
+  if (JS_IsException(rval)) {
+    JS_ReportPendingException(m_context);
+    return;
+  }
+  JS_FreeValue(m_context, rval);
 }
 
 // return false to stop the script
@@ -749,7 +801,7 @@ bool Script::RunEventLoop() {
     SetPauseState(true);
   while (m_isPaused) {
     Sleep(50);
-    JS_MaybeGC(m_context);
+    // JS_MaybeGC(m_context);
   }
   if (pause)
     SetPauseState(false);
@@ -784,15 +836,36 @@ bool Script::ProcessAllEvents() {
 }
 
 void Script::Cleanup() {
+  ClearEventList();
+  Genhook::Clean(this);
+
+  if (m_context) {
+    JS_FreeValue(m_context, m_script);
+    m_script = JS_UNDEFINED;
+    JS_FreeValue(m_context, m_globalObject);
+    m_globalObject = JS_UNDEFINED;
+    JS_FreeContext(m_context);
+    m_context = nullptr;
+  }
+  if (m_runtime) {
+    JS_FreeRuntime(m_runtime);
+    m_runtime = nullptr;
+  }
+  m_hasActiveCX = false;
   m_scriptState = kScriptStateStopped;
+
+  // TODO(ejt): revisit this
+  if (Vars.bDisableCache)
+    sScriptEngine->DisposeScript(this);
 }
 
-JSBool Script::InterruptHandler(JSContext* ctx) {
-  Script* script = (Script*)JS_GetContextPrivate(ctx);
+// return != 0 if the JS code needs to be interrupted
+int Script::InterruptHandler(JSRuntime* rt, void* /*opaque*/) {
+  Script* script = (Script*)JS_GetRuntimeOpaque(rt);
   if (!script->RunEventLoop()) {
-    return JS_FALSE;
+    return 1;
   }
-  return JS_TRUE;
+  return 0;
 }
 
 #ifdef DEBUG
@@ -825,42 +898,40 @@ DWORD WINAPI ScriptThread(LPVOID lpThreadParameter) {
     SetThreadName(0xFFFFFFFF, script->GetShortFilename());
 #endif
     script->Run();
-    if (Vars.bDisableCache)
-      sScriptEngine->DisposeScript(script);
   }
   return 0;
 }
 
-JSBool contextCallback(JSContext* ctx, uint contextOp) {
-  if (contextOp == JSCONTEXT_DESTROY) {
-    Script* script = (Script*)JS_GetContextPrivate(ctx);
-    script->OnDestroyContext();
-  }
-  return JS_TRUE;
-}
-
-void reportError(JSContext* cx, const char* message, JSErrorReport* report) {
-  (cx);
-
-  bool warn = JSREPORT_IS_WARNING(report->flags);
-  bool isStrict = JSREPORT_IS_STRICT(report->flags);
-  const char* type = (warn ? "Warning" : "Error");
-  const char* strict = (isStrict ? "Strict " : "");
-  wchar_t* filename = report->filename ? AnsiToUnicode(report->filename) : _wcsdup(L"<unknown>");
-  wchar_t* displayName = filename;
-  if (_wcsicmp(L"Command Line", filename) != 0 && _wcsicmp(L"<unknown>", filename) != 0)
-    displayName = filename + wcslen(Vars.szPath);
-
-  Log(L"[%hs%hs] Code(%d) File(%s:%d) %hs\nLine: %hs", strict, type, report->errorNumber, filename, report->lineno, message, report->linebuf);
-  Print(L"[\u00FFc%d%hs%hs\u00FFc0 (%d)] File(%s:%d) %hs", (warn ? 9 : 1), strict, type, report->errorNumber, displayName, report->lineno, message);
-
-  if (filename[0] == L'<')
-    free(filename);
-  else
-    delete[] filename;
-
-  if (Vars.bQuitOnError && !JSREPORT_IS_WARNING(report->flags) && ClientState() == ClientStateInGame)
-    D2CLIENT_ExitGame();
-  else
-    Console::ShowBuffer();
-}
+// JSBool contextCallback(JSContext* ctx, uint32_t contextOp) {
+//   if (contextOp == JSCONTEXT_DESTROY) {
+//     Script* script = (Script*)JS_GetContextOpaque(ctx);
+//     script->OnDestroyContext();
+//   }
+//   return JS_TRUE;
+// }
+//
+// void reportError(JSContext* cx, const char* message, JSErrorReport* report) {
+//   (cx);
+//
+//   bool warn = JSREPORT_IS_WARNING(report->flags);
+//   bool isStrict = JSREPORT_IS_STRICT(report->flags);
+//   const char* type = (warn ? "Warning" : "Error");
+//   const char* strict = (isStrict ? "Strict " : "");
+//   wchar_t* filename = report->filename ? AnsiToUnicode(report->filename) : _wcsdup(L"<unknown>");
+//   wchar_t* displayName = filename;
+//   if (_wcsicmp(L"Command Line", filename) != 0 && _wcsicmp(L"<unknown>", filename) != 0)
+//     displayName = filename + wcslen(Vars.szPath);
+//
+//   Log(L"[%hs%hs] Code(%d) File(%s:%d) %hs\nLine: %hs", strict, type, report->errorNumber, filename, report->lineno, message, report->linebuf);
+//   Print(L"[\u00FFc%d%hs%hs\u00FFc0 (%d)] File(%s:%d) %hs", (warn ? 9 : 1), strict, type, report->errorNumber, displayName, report->lineno, message);
+//
+//   if (filename[0] == L'<')
+//     free(filename);
+//   else
+//     delete[] filename;
+//
+//   if (Vars.bQuitOnError && !JSREPORT_IS_WARNING(report->flags) && ClientState() == ClientStateInGame)
+//     D2CLIENT_ExitGame();
+//   else
+//     Console::ShowBuffer();
+// }

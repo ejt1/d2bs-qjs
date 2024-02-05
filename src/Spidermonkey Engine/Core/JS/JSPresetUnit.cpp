@@ -6,84 +6,78 @@
 
 EMPTY_CTOR(presetunit)
 
-void presetunit_finalize(JSFreeOp* /*fop*/, JSObject* obj) {
-  myPresetUnit* pUnit = (myPresetUnit*)JS_GetPrivate(obj);
+CLASS_FINALIZER(presetunit) {
+  myPresetUnit* pUnit = (myPresetUnit*)JS_GetOpaque3(val);
 
   if (pUnit) {
-    JS_SetPrivate(obj, NULL);
+    JS_SetOpaque(val, NULL);
     delete pUnit;
   }
 }
 
 JSAPI_PROP(presetunit_getProperty) {
-  myPresetUnit* pUnit = (myPresetUnit*)JS_GetPrivate(cx, obj);
+  myPresetUnit* pUnit = (myPresetUnit*)JS_GetOpaque3(this_val);
 
   if (!pUnit)
-    return JS_TRUE;
+    return JS_UNDEFINED;
 
-  jsval ID;
-  JS_IdToValue(cx, id, &ID);
-  switch (JSVAL_TO_INT(ID)) {
+  switch (magic) {
     case PUNIT_TYPE:
-      vp.setInt32(pUnit->dwType);
+      return JS_NewUint32(ctx, pUnit->dwType);
       break;
     case PUNIT_ROOMX:
-      vp.setInt32(pUnit->dwRoomX);
+      return JS_NewUint32(ctx, pUnit->dwRoomX);
       break;
     case PUNIT_ROOMY:
-      vp.setInt32(pUnit->dwRoomY);
+      return JS_NewUint32(ctx, pUnit->dwRoomY);
       break;
     case PUNIT_X:
-      vp.setInt32(pUnit->dwPosX);
+      return JS_NewUint32(ctx, pUnit->dwPosX);
       break;
     case PUNIT_Y:
-      vp.setInt32(pUnit->dwPosY);
+      return JS_NewUint32(ctx, pUnit->dwPosY);
       break;
     case PUNIT_ID:
-      vp.setInt32(pUnit->dwId);
+      return JS_NewUint32(ctx, pUnit->dwId);
       break;
     case PUINT_LEVEL:
-      vp.setInt32(pUnit->dwLevel);
+      return JS_NewUint32(ctx, pUnit->dwLevel);
     default:
       break;
   }
-  return JS_TRUE;
+
+  return JS_UNDEFINED;
 }
 
 JSAPI_FUNC(my_getPresetUnits) {
   if (!WaitForGameReady())
-    THROW_WARNING(cx, vp, "Game not ready");
+    THROW_WARNING(ctx, "Game not ready");
 
   if (argc < 1) {
-    JS_SET_RVAL(cx, vp, JSVAL_FALSE);
-    return JS_TRUE;
+    return JS_FALSE;
   }
 
-  uint32 levelId;
-  JS_BeginRequest(cx);
-  JS_ValueToECMAUint32(cx, JS_ARGV(cx, vp)[0], &levelId);
-  JS_EndRequest(cx);
+  uint32_t levelId;
+  JS_ToUint32(ctx, &levelId, argv[0]);
   Level* pLevel = GetLevel(levelId);
 
   if (!pLevel)
-    THROW_ERROR(cx, "getPresetUnits failed, couldn't access the level!");
+    THROW_ERROR(ctx, "getPresetUnits failed, couldn't access the level!");
 
-  uint nClassId = NULL;
-  uint nType = NULL;
+  uint32_t nClassId = NULL;
+  uint32_t nType = NULL;
 
   if (argc >= 2)
-    nType = JSVAL_TO_INT(JS_ARGV(cx, vp)[1]);
+    JS_ToUint32(ctx, &nType, argv[1]);
   if (argc >= 3)
-    nClassId = JSVAL_TO_INT(JS_ARGV(cx, vp)[2]);
+    JS_ToUint32(ctx, &nClassId, argv[2]);
 
   AutoCriticalRoom* cRoom = new AutoCriticalRoom;
 
   bool bAddedRoom = FALSE;
   DWORD dwArrayCount = NULL;
 
-  JSObject* pReturnArray = JS_NewArrayObject(cx, 0, NULL);
-  JS_BeginRequest(cx);
-  JS_AddRoot(cx, &pReturnArray);
+  JSValue pReturnArray = JS_NewArray(ctx);
   for (Room2* pRoom = pLevel->pRoom2First; pRoom; pRoom = pRoom->pRoom2Next) {
     bAddedRoom = FALSE;
 
@@ -105,16 +99,15 @@ JSAPI_FUNC(my_getPresetUnits) {
         mypUnit->dwId = pUnit->dwTxtFileNo;
         mypUnit->dwLevel = levelId;
 
-        JSObject* unit = BuildObject(cx, &presetunit_class, NULL, presetunit_props, mypUnit);
-        if (!unit) {
+        JSValue unit = BuildObject(ctx, presetunit_class_id, NULL, 0, presetunit_props, _countof(presetunit_props), mypUnit);
+        if (JS_IsException(unit)) {
           delete mypUnit;
-          JS_EndRequest(cx);
           delete cRoom;
-          THROW_ERROR(cx, "Failed to build object?");
+          JS_FreeValue(ctx, pReturnArray);
+          THROW_ERROR(ctx, "Failed to build object?");
         }
 
-        jsval a = OBJECT_TO_JSVAL(unit);
-        JS_SetElement(cx, pReturnArray, dwArrayCount, &a);
+        JS_SetPropertyUint32(ctx, pReturnArray, dwArrayCount, unit);
 
         dwArrayCount++;
       }
@@ -125,39 +118,33 @@ JSAPI_FUNC(my_getPresetUnits) {
       bAddedRoom = FALSE;
     }
   }
-  JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(pReturnArray));
 
-  JS_RemoveRoot(cx, &pReturnArray);
-  JS_EndRequest(cx);
   delete cRoom;
-  return JS_TRUE;
+  return pReturnArray;
 }
 
 JSAPI_FUNC(my_getPresetUnit) {
   if (!WaitForGameReady())
-    THROW_WARNING(cx, vp, "Game not ready");
+    THROW_WARNING(ctx, "Game not ready");
 
   if (argc < 1) {
-    JS_SET_RVAL(cx, vp, JSVAL_FALSE);
-    return JS_TRUE;
+    return JS_FALSE;
   }
 
-  uint32 levelId;
-  JS_BeginRequest(cx);
-  JS_ValueToECMAUint32(cx, JS_ARGV(cx, vp)[0], &levelId);
-  JS_EndRequest(cx);
+  uint32_t levelId;
+  JS_ToUint32(ctx, &levelId, argv[0]);
   Level* pLevel = GetLevel(levelId);
 
   if (!pLevel)
-    THROW_ERROR(cx, "getPresetUnits failed, couldn't access the level!");
+    THROW_ERROR(ctx, "getPresetUnits failed, couldn't access the level!");
 
-  DWORD nClassId = NULL;
-  DWORD nType = NULL;
+  uint32_t nClassId = NULL;
+  uint32_t nType = NULL;
 
   if (argc >= 2)
-    nType = JSVAL_TO_INT(JS_ARGV(cx, vp)[1]);
+    JS_ToUint32(ctx, &nType, argv[1]);
   if (argc >= 3)
-    nClassId = JSVAL_TO_INT(JS_ARGV(cx, vp)[2]);
+    JS_ToUint32(ctx, &nClassId, argv[2]);
 
   AutoCriticalRoom* cRoom = new AutoCriticalRoom;
 
@@ -185,15 +172,14 @@ JSAPI_FUNC(my_getPresetUnit) {
         mypUnit->dwId = pUnit->dwTxtFileNo;
         mypUnit->dwLevel = levelId;
 
-        JSObject* obj = BuildObject(cx, &presetunit_class, NULL, presetunit_props, mypUnit);
-        if (!obj) {
+        JSValue obj = BuildObject(ctx, presetunit_class_id, NULL, 0, presetunit_props, _countof(presetunit_props), mypUnit);
+        if (JS_IsException(obj)) {
           delete cRoom;
           delete mypUnit;
-          THROW_ERROR(cx, "Failed to create presetunit object");
+          THROW_ERROR(ctx, "Failed to create presetunit object");
         }
-        JS_SET_RVAL(cx, vp, OBJECT_TO_JSVAL(obj));
         delete cRoom;
-        return JS_TRUE;
+        return obj;
       }
     }
 
@@ -202,7 +188,7 @@ JSAPI_FUNC(my_getPresetUnit) {
       bAddedRoom = FALSE;
     }
   }
-  JS_SET_RVAL(cx, vp, JSVAL_FALSE);
+
   delete cRoom;
-  return JS_TRUE;
+  return JS_FALSE;
 }
