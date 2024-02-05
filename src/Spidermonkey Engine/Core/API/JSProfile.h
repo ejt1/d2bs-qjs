@@ -1,5 +1,4 @@
-#ifndef JSPROFILE_H
-#define JSPROFILE_H
+#pragma once
 
 #include <windows.h>
 #include "js32.h"
@@ -39,17 +38,3 @@ static JSCFunctionListEntry profile_proto_funcs[] = {
 
     JS_FS("login", profile_login, 0, FUNCTION_FLAGS),
 };
-
-CLASS_CTOR(profileType);
-
-JSAPI_PROP(profileType_getProperty);
-
-static JSCFunctionListEntry profileType_props[] = {
-    JS_CGETSET_MAGIC_DEF("singlePlayer", profileType_getProperty, nullptr, PROFILETYPE_SINGLEPLAYER),
-    JS_CGETSET_MAGIC_DEF("battleNet", profileType_getProperty, nullptr, PROFILETYPE_BATTLENET),
-    JS_CGETSET_MAGIC_DEF("openBattleNet", profileType_getProperty, nullptr, PROFILETYPE_OPEN_BATTLENET),
-    JS_CGETSET_MAGIC_DEF("tcpIpHost", profileType_getProperty, nullptr, PROFILETYPE_TCPIP_HOST),
-    JS_CGETSET_MAGIC_DEF("tcpIpJoin", profileType_getProperty, nullptr, PROFILETYPE_TCPIP_JOIN),
-};
-
-#endif

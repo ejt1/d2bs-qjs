@@ -2,8 +2,6 @@
 
 #include "js32.h"
 
-extern JSClassSpec global_classes[];
-
 extern JSClassID script_class_id;
 extern JSClassID frame_class_id;
 extern JSClassID box_class_id;
@@ -24,3 +22,5 @@ extern JSClassID unit_class_id;
 extern JSClassID profile_class_id;
 extern JSClassID profileType_class_id;
 extern JSClassID dialogLine_class_id;
+
+extern JSClassSpec global_classes[];

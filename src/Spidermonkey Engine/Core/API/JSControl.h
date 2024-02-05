@@ -9,13 +9,13 @@
 CLASS_CTOR(control);
 CLASS_FINALIZER(control);
 
+JSAPI_PROP(control_getProperty);
+JSAPI_STRICT_PROP(control_setProperty);
+
 JSAPI_FUNC(control_getNext);
 JSAPI_FUNC(control_click);
 JSAPI_FUNC(control_setText);
 JSAPI_FUNC(control_getText);
-
-JSAPI_PROP(control_getProperty);
-JSAPI_STRICT_PROP(control_setProperty);
 
 struct ControlData {
   DWORD _dwPrivate;

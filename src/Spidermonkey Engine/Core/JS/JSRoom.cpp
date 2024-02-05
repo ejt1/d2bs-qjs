@@ -2,6 +2,7 @@
 #include "CriticalSections.h"
 #include "JSPresetUnit.h"
 #include "D2Ptrs.h"
+#include "Room.h"
 
 EMPTY_CTOR(room)
 

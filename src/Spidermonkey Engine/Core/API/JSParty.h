@@ -1,9 +1,9 @@
-#ifndef PARTY_H
-#define PARTY_H
+#pragma once
 
 #include "js32.h"
 
 CLASS_CTOR(party);
+
 JSAPI_PROP(party_getProperty);
 
 JSAPI_FUNC(party_getNext);
@@ -37,5 +37,3 @@ static JSCFunctionListEntry party_proto_funcs[] = {
 
     JS_FS("getNext", party_getNext, 0, FUNCTION_FLAGS),
 };
-
-#endif

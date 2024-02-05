@@ -1,7 +1,4 @@
-#ifndef ROOM_H
-#define ROOM_H
-
-#include "Room.h"
+#pragma once
 
 #include "js32.h"
 
@@ -54,5 +51,3 @@ static JSCFunctionListEntry room_proto_funcs[] = {
     JS_FS("getFirst", room_getFirst, 0, FUNCTION_FLAGS),
     JS_FS("unitInRoom", room_unitInRoom, 1, FUNCTION_FLAGS),
 };
-
-#endif

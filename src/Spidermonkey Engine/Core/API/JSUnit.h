@@ -7,12 +7,8 @@
 CLASS_CTOR(unit);
 CLASS_FINALIZER(unit);
 
-#define PRIVATE_UNIT 1
-#define PRIVATE_ITEM 3
-
-struct Private {
-  DWORD dwPrivateType;
-};
+JSAPI_PROP(unit_getProperty);
+JSAPI_STRICT_PROP(unit_setProperty);
 
 JSAPI_FUNC(unit_getUnit);
 JSAPI_FUNC(unit_getNext);
@@ -42,8 +38,12 @@ JSAPI_FUNC(unit_getMinionCount);
 JSAPI_FUNC(me_getRepairCost);
 JSAPI_FUNC(item_getItemCost);
 
-JSAPI_PROP(unit_getProperty);
-JSAPI_STRICT_PROP(unit_setProperty);
+#define PRIVATE_UNIT 1
+#define PRIVATE_ITEM 3
+
+struct Private {
+  DWORD dwPrivateType;
+};
 
 struct myUnit {
   DWORD _dwPrivateType;

@@ -3,14 +3,18 @@
 
 #include "js32.h"
 
-JSAPI_FUNC(hook_remove);
 CLASS_FINALIZER(hook);
 
+// used by all
+JSAPI_FUNC(hook_remove);
+
 /*********************************************************
-                                        Frame Header
+                                        frame Header
 **********************************************************/
+
 JSAPI_FUNC(frame_ctor);
 JSAPI_PROP(frame_getProperty);
+
 JSAPI_STRICT_PROP(frame_setProperty);
 
 enum frame_tinyid { FRAME_X, FRAME_Y, FRAME_XSIZE, FRAME_YSIZE, FRAME_VISIBLE, FRAME_ALIGN, FRAME_ONCLICK, FRAME_ONHOVER, FRAME_ZORDER };
@@ -32,8 +36,10 @@ static JSCFunctionListEntry frame_proto_funcs[] = {
 /*********************************************************
                                         box Header
 **********************************************************/
+
 JSAPI_FUNC(box_ctor);
 JSAPI_PROP(box_getProperty);
+
 JSAPI_STRICT_PROP(box_setProperty);
 
 enum box_tinyid { BOX_X, BOX_Y, BOX_XSIZE, BOX_YSIZE, BOX_COLOR, BOX_OPACITY, BOX_VISIBLE, BOX_ALIGN, BOX_ONCLICK, BOX_ONHOVER, BOX_ZORDER };
@@ -57,8 +63,10 @@ static JSCFunctionListEntry box_proto_funcs[] = {
 /*********************************************************
                                         Line Header
 **********************************************************/
+
 JSAPI_FUNC(line_ctor);
 JSAPI_PROP(line_getProperty);
+
 JSAPI_STRICT_PROP(line_setProperty);
 
 enum line_tinyid { LINE_X, LINE_Y, LINE_XSIZE, LINE_YSIZE, LINE_COLOR, LINE_VISIBLE, LINE_ONCLICK, LINE_ONHOVER, LINE_ZORDER };
@@ -80,8 +88,10 @@ static JSCFunctionListEntry line_proto_funcs[] = {
 /*********************************************************
                                         Text Header
 **********************************************************/
+
 JSAPI_FUNC(text_ctor);
 JSAPI_PROP(text_getProperty);
+
 JSAPI_STRICT_PROP(text_setProperty);
 
 enum text_tinyid { TEXT_X, TEXT_Y, TEXT_COLOR, TEXT_FONT, TEXT_TEXT, TEXT_ALIGN, TEXT_VISIBLE, TEXT_ONCLICK, TEXT_ONHOVER, TEXT_ZORDER };
@@ -104,8 +114,10 @@ static JSCFunctionListEntry text_proto_funcs[] = {
 /*********************************************************
                                         Image Header
 **********************************************************/
+
 JSAPI_FUNC(image_ctor);
 JSAPI_PROP(image_getProperty);
+
 JSAPI_STRICT_PROP(image_setProperty);
 
 enum image_tinyid { IMAGE_X, IMAGE_Y, IMAGE_LOCATION, IMAGE_ALIGN, IMAGE_VISIBLE, IMAGE_ONCLICK, IMAGE_ONHOVER, IMAGE_ZORDER };
@@ -122,8 +134,5 @@ static JSCFunctionListEntry image_proto_funcs[] = {
 
     JS_FS("remove", hook_remove, 0, FUNCTION_FLAGS),
 };
-
-JSAPI_FUNC(screenToAutomap);
-JSAPI_FUNC(automapToScreen);
 
 #endif

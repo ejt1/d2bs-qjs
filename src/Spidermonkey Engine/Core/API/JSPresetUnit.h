@@ -12,6 +12,16 @@ JSAPI_PROP(presetunit_getProperty);
 JSAPI_FUNC(my_getPresetUnit);
 JSAPI_FUNC(my_getPresetUnits);
 
+struct myPresetUnit {
+  DWORD dwType;
+  DWORD dwRoomX;
+  DWORD dwRoomY;
+  DWORD dwPosX;
+  DWORD dwPosY;
+  DWORD dwId;
+  DWORD dwLevel;
+};
+
 enum presetunit_tinyid {
   PUNIT_TYPE,   // 0
   PUNIT_ROOMX,  // 1
@@ -30,16 +40,6 @@ static JSCFunctionListEntry presetunit_proto_funcs[] = {
     JS_CGETSET_MAGIC_DEF("y", presetunit_getProperty, nullptr, PUNIT_Y),          //
     JS_CGETSET_MAGIC_DEF("id", presetunit_getProperty, nullptr, PUNIT_ID),        //
     JS_CGETSET_MAGIC_DEF("level", presetunit_getProperty, nullptr, PUINT_LEVEL),
-};
-
-struct myPresetUnit {
-  DWORD dwType;
-  DWORD dwRoomX;
-  DWORD dwRoomY;
-  DWORD dwPosX;
-  DWORD dwPosY;
-  DWORD dwId;
-  DWORD dwLevel;
 };
 
 #endif

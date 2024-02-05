@@ -1,12 +1,12 @@
 #pragma once
 
-#include <windows.h>
-
+#include "js32.h"
 #include "Script.h"
 
-#include "js32.h"
+#include <windows.h>
 
 CLASS_CTOR(script);
+
 JSAPI_PROP(script_getProperty);
 
 JSAPI_FUNC(script_getNext);

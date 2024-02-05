@@ -156,9 +156,3 @@ JSAPI_PROP(profile_getProperty) {
 
   return JS_UNDEFINED;
 }
-
-EMPTY_CTOR(profileType);
-
-JSAPI_PROP(profileType_getProperty) {
-  return JS_UNDEFINED;
-}
