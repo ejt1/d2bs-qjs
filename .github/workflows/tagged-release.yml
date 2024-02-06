@@ -38,8 +38,7 @@ jobs:
       uses: thedoctor0/zip-release@main
       with:
         type: 'zip'
-        directory: ${{github.workspace}}
-        path: final/bin/*
+        directory: ${{ env.INSTALL_PREFIX }}/bin
         filename: "d2bs-${{ github.ref_name }}.zip"
 
     - name: Release
