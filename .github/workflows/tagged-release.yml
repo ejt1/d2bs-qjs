@@ -8,6 +8,7 @@ on:
 env:
   BUILD_TYPE: Release
   INSTALL_PREFIX: ${{github.workspace}}/final
+  D2BS_VERSION: ${{ github.ref_name }}
 
 jobs:
   pre-release:
@@ -22,7 +23,7 @@ jobs:
         echo "branch=$(echo ${GITHUB_REF#refs/heads/})" >> "$GITHUB_ENV"
 
     - name: Configure CMake
-      run: cmake -A Win32 -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{env.INSTALL_PREFIX}}
+      run: cmake -A Win32 -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{env.INSTALL_PREFIX}} -DD2BS_VERSION="${{ env.D2BS_VERSION }}"
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
@@ -39,14 +40,14 @@ jobs:
       with:
         type: 'zip'
         directory: ${{ env.INSTALL_PREFIX }}/bin
-        filename: "d2bs-${{ github.ref_name }}.zip"
+        filename: "d2bs-${{ env.D2BS_VERSION }}.zip"
 
     - name: Release
       uses: "marvinpinto/action-automatic-releases@latest"
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
-        automatic_release_tag: "${{ github.ref_name }}"
+        automatic_release_tag: "${{ env.D2BS_VERSION }}"
         prerelease: false
-        title: ${{ github.ref_name }}
+        title: ${{ env.D2BS_VERSION }}
         files: |
-          ${{ env.INSTALL_PREFIX }}/bin/d2bs-${{ github.ref_name }}.zip
+          ${{ env.INSTALL_PREFIX }}/bin/d2bs-${{ env.D2BS_VERSION }}.zip
