@@ -6,12 +6,13 @@
 (function (module) {
   const recursiveCheck = function (stackNumber) {
     let stack = new Error().stack.match(/[^\r\n]+/g);
-    let functionName = stack[stackNumber || 1].substr(0, stack[stackNumber || 1].indexOf("@"));
+    let fileAndLine = stack[stackNumber || 1].substring(stack[stackNumber || 1].indexOf("@"));
 
     for (let i = (stackNumber || 1) + 1; i < stack.length; i++) {
-      let curFunc = stack[i].substr(0, stack[i].indexOf("@"));
+      let curFileAndLine = stack[i].substring(stack[i].indexOf("@"));
 
-      if (functionName === curFunc) {
+      if (fileAndLine === curFileAndLine) {
+        console.log(`!!${fileAndLine} === ${curFileAndLine}\n${JSON.stringify(stack)}`);
         return true;
       } // recursion appeared
     }
@@ -82,6 +83,7 @@
           }
         };
         self.pushLowPrio(proxyCallback);
+        return true;
       },
       deleteProperty: function (target, name) {
         if (!target.processes.hasOwnProperty(name)) {
