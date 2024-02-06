@@ -5,16 +5,20 @@ on:
     branches: [ "master" ]
 
 env:
-  GIT_HASH: $(git rev-parse --short "$GITHUB_SHA")
   BUILD_TYPE: RelWithDebInfo
   INSTALL_PREFIX: ${{github.workspace}}/final
 
 jobs:
   pre-release:
     runs-on: windows-latest
-
     steps:
     - uses: actions/checkout@v3
+    
+    - name: Setup environment variables
+      shell: bash
+      run: |
+        echo "sha_short=$(git rev-parse --short "$GITHUB_SHA")" >> "$GITHUB_ENV"
+        echo "branch=$(echo ${GITHUB_REF#refs/heads/})" >> "$GITHUB_ENV"
 
     - name: Configure CMake
       run: cmake -A Win32 -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{env.INSTALL_PREFIX}}
@@ -35,13 +39,14 @@ jobs:
         type: 'zip'
         directory: ${{github.workspace}}
         path: final/bin/*
-        filename: "d2bs-${{env.GIT_HASH}}"
+        filename: "d2bs-${{env.sha_short}}"
 
     - name: Release
       uses: "marvinpinto/action-automatic-releases@latest"
       with:
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
         automatic_release_tag: "latest"
         prerelease: true
         title: "Pre-release Build"
         files: |
-          d2bs-${{env.GIT_HASH}}.zip
+          d2bs-${{env.sha_short}}.zip
