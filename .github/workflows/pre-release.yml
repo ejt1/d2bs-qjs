@@ -24,8 +24,7 @@ jobs:
     - name: Copy Distributables
       shell: bash
       run: |
-        mkdir final
-        mkdir final/bin
+        mkdir -p final/bin
         mv dist/* final/bin
 
     - name: Configure CMake
