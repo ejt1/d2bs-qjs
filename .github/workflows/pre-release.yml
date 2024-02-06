@@ -3,8 +3,6 @@ name: Pre Release
 on:
   push:
     branches: [ "master" ]
-  pull_request: # only for testing
-    branches: [ "master" ]
 
 env:
   BUILD_TYPE: Release
