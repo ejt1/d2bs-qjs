@@ -669,31 +669,33 @@ Item.equipMerc = function (item, bodyLoc) {
   if (item.isInStash && !Town.openStash()) return false;
 
   for (let i = 0; i < 3; i += 1) {
-    if (item.toCursor()) {
-      if (clickItem(sdk.clicktypes.click.item.Mercenary, bodyLoc)) {
-        delay(500 + me.ping * 2);
-        Developer.debugging.autoEquip && Item.logItem("Merc Equipped", mercenary.getItem(item.classid));
-      }
-
-      let check = mercenary.getItem(item.classid);
-
-      if (check && check.bodylocation === bodyLoc) {
-        if (check.runeword) {
-          // just track runewords for now
-          me.data.merc.gear.push(check.prefixnum);
-          CharData.updateData("merc", me.data);
+    try{
+      if (item.toCursor()) {
+        if (clickItem(sdk.clicktypes.click.item.Mercenary, bodyLoc)) {
+          delay(500 + me.ping * 2);
+          Developer.debugging.autoEquip && Item.logItem("Merc Equipped", mercenary.getItem(item.classid));
         }
 
-        if (getCursorType() === 3) {
-          let cursorItem = Game.getCursorUnit();
-          !!cursorItem && !cursorItem.shouldKeep() && cursorItem.drop();
+        let check = mercenary.getItem(item.classid);
+
+        if (check && check.bodylocation === bodyLoc) {
+          if (check.runeword) {
+            // just track runewords for now
+            me.data.merc.gear.push(check.prefixnum);
+            CharData.updateData("merc", me.data);
+          }
+
+          if (getCursorType() === 3) {
+            let cursorItem = Game.getCursorUnit();
+            !!cursorItem && !cursorItem.shouldKeep() && cursorItem.drop();
+          }
+
+          Developer.logEquipped && MuleLogger.logEquippedItems();
+
+          return true;
         }
-
-        Developer.logEquipped && MuleLogger.logEquippedItems();
-
-        return true;
       }
-    }
+    }catch(e){}
   }
 
   return false;
