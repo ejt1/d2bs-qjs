@@ -123,7 +123,7 @@ void JS_ReportPendingException(JSContext* ctx) {
       Print("[ÿc%d%hs%hsÿc0] %s\n%s", (warn ? 9 : 1), strict, type, what->c_str(), stackframe->c_str());
     } else {
       Log("[%hs%hs] %s", strict, type, what->c_str());
-      Print("[ÿc%d%hs%hs\ÿc0] %s", (warn ? 9 : 1), strict, type, what->c_str());
+      Print("[ÿc%d%hs%hsÿc0] %s", (warn ? 9 : 1), strict, type, what->c_str());
     }
   }
 
