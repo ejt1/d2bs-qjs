@@ -20,9 +20,15 @@ jobs:
       run: |
         echo "sha_short=$(git rev-parse --short "$GITHUB_SHA")" >> "$GITHUB_ENV"
         echo "branch=$(echo ${GITHUB_REF#refs/heads/})" >> "$GITHUB_ENV"
+        
+    - name: Copy Distributables
+      shell: bash
+      run: |
+        mkdir ${{github.workspace}}/final
+        mv ${{github.workspace}}/dist/* ${{github.workspace}}/final/bin
 
     - name: Configure CMake
-      run: cmake -A Win32 -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/d2bs-${{ env.D2BS_VERSION }} -DD2BS_VERSION="${{ env.D2BS_VERSION }}"
+      run: cmake -A Win32 -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/final -DD2BS_VERSION="${{ env.D2BS_VERSION }}"
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
@@ -32,14 +38,13 @@ jobs:
       run: ctest -C ${{env.BUILD_TYPE}}
 
     - name: Install
-      run: cmake --install ${{github.workspace}}/build --prefix ${{ github.workspace }}/d2bs-${{ env.D2BS_VERSION }} --config ${{env.BUILD_TYPE}}
+      run: cmake --install ${{github.workspace}}/build --prefix ${{ github.workspace }}/final --config ${{env.BUILD_TYPE}}
 
     - name: Package
       uses: thedoctor0/zip-release@main
       with:
         type: 'zip'
-        directory: ${{ github.workspace }}
-        path: ${{ github.workspace }}/d2bs-${{ env.D2BS_VERSION }}/*
+        directory: ${{ github.workspace }}/final/bin
         filename: d2bs-${{ env.D2BS_VERSION }}.zip
 
     - name: Release
@@ -50,4 +55,4 @@ jobs:
         prerelease: false
         title: ${{ env.D2BS_VERSION }}
         files: |
-          d2bs-${{ env.D2BS_VERSION }}.zip
+          final/bin/d2bs-${{ env.D2BS_VERSION }}.zip
