@@ -1,8 +1,9 @@
-name: Pre Release
+name: Tagged release
 
 on:
   push:
-    branches: [ "master" ]
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
 
 env:
   BUILD_TYPE: Release
@@ -39,14 +40,14 @@ jobs:
         type: 'zip'
         directory: ${{github.workspace}}
         path: final/bin/*
-        filename: "d2bs-${{env.sha_short}}"
+        filename: "d2bs-${{ github.ref_name }}.zip"
 
     - name: Release
       uses: "marvinpinto/action-automatic-releases@latest"
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
-        automatic_release_tag: "latest"
-        prerelease: true
-        title: "Pre-release Build"
+        automatic_release_tag: "${{ github.ref_name }}"
+        prerelease: false
+        title: ${{ github.ref_name }}
         files: |
-          d2bs-${{env.sha_short}}.zip
+          d2bs-${{ github.ref_name }}.zip
