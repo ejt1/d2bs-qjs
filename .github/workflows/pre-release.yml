@@ -3,6 +3,8 @@ name: Pre Release
 on:
   push:
     branches: [ "master" ]
+  pull_request: # only for testing
+    branches: [ "master" ]
 
 env:
   BUILD_TYPE: Release
@@ -20,7 +22,7 @@ jobs:
         echo "branch=$(echo ${GITHUB_REF#refs/heads/})" >> "$GITHUB_ENV"
 
     - name: Configure CMake
-      run: cmake -A Win32 -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/d2bs-${{ env.sha_short }} -DD2BS_VERSION="${{ env.sha_short }}"
+      run: cmake -A Win32 -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/final -DD2BS_VERSION="${{ env.sha_short }}"
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
@@ -30,14 +32,13 @@ jobs:
       run: ctest -C ${{env.BUILD_TYPE}}
 
     - name: Install
-      run: cmake --install ${{github.workspace}}/build --prefix ${{ github.workspace }}/d2bs-${{ env.sha_short }} --config ${{env.BUILD_TYPE}}
+      run: cmake --install ${{github.workspace}}/build --prefix ${{ github.workspace }}/final --config ${{env.BUILD_TYPE}}
 
     - name: Package
       uses: thedoctor0/zip-release@main
       with:
         type: 'zip'
-        directory: ${{ github.workspace }}
-        path: ${{ github.workspace }}/d2bs-${{ env.sha_short }}/*
+        directory: ${{ github.workspace }}/final/bin
         filename: d2bs-${{ env.sha_short }}.zip
 
     - name: Release
@@ -48,4 +49,4 @@ jobs:
         prerelease: true
         title: "Pre-release Build"
         files: |
-          d2bs-${{ env.sha_short }}.zip
+          final/bin/d2bs-${{ env.sha_short }}.zip
