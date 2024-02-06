@@ -49,4 +49,4 @@ jobs:
         prerelease: false
         title: ${{ github.ref_name }}
         files: |
-          d2bs-${{ github.ref_name }}.zip
+          ${{ env.INSTALL_PREFIX }}/bin/d2bs-${{ github.ref_name }}.zip
