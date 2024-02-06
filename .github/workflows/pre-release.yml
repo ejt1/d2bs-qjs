@@ -20,6 +20,12 @@ jobs:
       run: |
         echo "sha_short=$(git rev-parse --short "$GITHUB_SHA")" >> "$GITHUB_ENV"
         echo "branch=$(echo ${GITHUB_REF#refs/heads/})" >> "$GITHUB_ENV"
+        
+    - name: Copy Distributables
+      shell: bash
+      run: |
+        mkdir final
+        mv dist/* final/bin
 
     - name: Configure CMake
       run: cmake -A Win32 -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/final -DD2BS_VERSION="${{ env.sha_short }}"
