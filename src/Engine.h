@@ -3,8 +3,6 @@
 #include "ScreenHook.h"
 #include "Globals.h"
 
-#define D2BS_VERSION "2.0.0"
-
 class Engine final {
  public:
   Engine();

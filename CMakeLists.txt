@@ -11,6 +11,10 @@ string(REGEX REPLACE "/W[0-4]$" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
+if (NOT D2BS_VERSION)
+  set(D2BS_VERSION "local" CACHE STRING "")
+endif()
+
 project(d2bs)
 
 add_subdirectory(vendor)
@@ -106,7 +110,8 @@ target_compile_definitions(D2BS PRIVATE
   WIN32
   WIN32_LEAN_AND_MEAN
   XP_WIN
-  STATIC_JS_API)
+  STATIC_JS_API
+  D2BS_VERSION="${D2BS_VERSION}")
 
 target_link_libraries(D2BS PRIVATE
   # windows dependencies
