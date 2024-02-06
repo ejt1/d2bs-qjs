@@ -115,6 +115,8 @@ target_link_libraries(D2BS PRIVATE
 
   # vendor dependencies
   libquickjs
-  minhook)
+  minhook
+  # libuv
+  uv_a)
 
 install(TARGETS D2BS RUNTIME DESTINATION bin/d2bs)

@@ -18,7 +18,7 @@
 #include <MinHook.h>
 #include <mutex>
 
-Engine::Engine() : m_hModule(nullptr), m_pScriptEngine(std::make_unique<ScriptEngine>()) {
+Engine::Engine() : m_hModule(nullptr), m_loop(uv_default_loop()), m_pScriptEngine(std::make_unique<ScriptEngine>()) {
   m_instance = this;
   m_fnWndProc = nullptr;
   m_fnCreateWindow = nullptr;
@@ -27,6 +27,7 @@ Engine::Engine() : m_hModule(nullptr), m_pScriptEngine(std::make_unique<ScriptEn
 }
 
 Engine::~Engine() {
+  uv_loop_close(m_loop);
 }
 
 bool Engine::Initialize(HMODULE hModule) {
@@ -172,6 +173,9 @@ void Engine::OnUpdate() {
     Log("D2BS Engine startup complete. %s", D2BS_VERSION);
     Print("ÿc2D2BSÿc0 :: Engine startup complete!");
   });
+
+  // spin the event loop
+  uv_run(m_loop, UV_RUN_NOWAIT);
 
   static bool beginStarter = true;
   static bool bInGame = false;

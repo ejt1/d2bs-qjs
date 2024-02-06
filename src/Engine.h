@@ -3,6 +3,8 @@
 #include "ScreenHook.h"
 #include "Globals.h"
 
+#include <uv.h>
+
 #define D2BS_VERSION "2.0.0"
 
 class Engine final {
@@ -46,5 +48,6 @@ class Engine final {
   static void HandleGameDrawMenu();
 
   HMODULE m_hModule;
+  uv_loop_t* m_loop;
   std::unique_ptr<ScriptEngine> m_pScriptEngine;
 };
