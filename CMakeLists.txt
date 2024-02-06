@@ -118,3 +118,4 @@ target_link_libraries(D2BS PRIVATE
   minhook)
 
 install(TARGETS D2BS RUNTIME DESTINATION bin/d2bs)
+install(FILES $<TARGET_PDB_FILE:D2BS> DESTINATION bin/d2bs OPTIONAL)
