@@ -7,7 +7,6 @@ on:
 
 env:
   BUILD_TYPE: Release
-  INSTALL_PREFIX: ${{ github.workspace }}/final
   D2BS_VERSION: ${{ github.ref_name }}
 
 jobs:
@@ -23,7 +22,7 @@ jobs:
         echo "branch=$(echo ${GITHUB_REF#refs/heads/})" >> "$GITHUB_ENV"
 
     - name: Configure CMake
-      run: cmake -A Win32 -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{env.INSTALL_PREFIX}} -DD2BS_VERSION="${{ env.D2BS_VERSION }}"
+      run: cmake -A Win32 -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/d2bs-${{ env.D2BS_VERSION }} -DD2BS_VERSION="${{ env.D2BS_VERSION }}"
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
@@ -33,14 +32,15 @@ jobs:
       run: ctest -C ${{env.BUILD_TYPE}}
 
     - name: Install
-      run: cmake --install ${{github.workspace}}/build --prefix ${{env.INSTALL_PREFIX}} --config ${{env.BUILD_TYPE}}
+      run: cmake --install ${{github.workspace}}/build --prefix ${{ github.workspace }}/d2bs-${{ env.D2BS_VERSION }} --config ${{env.BUILD_TYPE}}
 
     - name: Package
       uses: thedoctor0/zip-release@main
       with:
         type: 'zip'
-        directory: ${{ env.INSTALL_PREFIX }}/bin
-        filename: "d2bs-${{ env.D2BS_VERSION }}.zip"
+        directory: ${{ github.workspace }}
+        path: ${{ github.workspace }}/d2bs-${{ env.D2BS_VERSION }}/*
+        filename: d2bs-${{ env.D2BS_VERSION }}.zip
 
     - name: Release
       uses: "marvinpinto/action-automatic-releases@latest"
@@ -50,4 +50,4 @@ jobs:
         prerelease: false
         title: ${{ env.D2BS_VERSION }}
         files: |
-          ${{ env.INSTALL_PREFIX }}/bin/d2bs-${{ env.D2BS_VERSION }}.zip
+          d2bs-${{ env.D2BS_VERSION }}.zip
