@@ -25,6 +25,7 @@ jobs:
       shell: bash
       run: |
         mkdir final
+        mkdir final/bin
         mv dist/* final/bin
 
     - name: Configure CMake
