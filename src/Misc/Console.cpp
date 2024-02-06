@@ -217,7 +217,7 @@ void Console::Draw(void) {
     if (IsEnabled()) {
       std::string cmdstr = cmd.str();
       if (cmdstr.length() > 0) {
-        SplitLines(cmdstr, Console::MaxWidth(), L' ', cmdsplit);
+        SplitLines(cmdstr, Console::MaxWidth(), ' ', cmdsplit);
         cmdsize = CalculateTextLen(cmdsplit.back().c_str(), Vars.dwConsoleFont).x;
         cmdlines += cmdsplit.size() - 1;
       }

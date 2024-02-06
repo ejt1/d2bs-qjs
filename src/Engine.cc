@@ -303,18 +303,20 @@ LRESULT __stdcall Engine::HandleWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
     case WM_SYSKEYDOWN:
     case WM_KEYUP:
     case WM_SYSKEYUP:
-    case WM_CHAR: {
+    //case WM_CHAR: 
+    {
       // TODO(ejt): scuffed solution to ignore keyboard events from scripts
       if (Vars.bIgnoreKeys) {
         break;
       }
+      WORD vkCode = LOWORD(wParam);
       WORD repeatCount = LOWORD(lParam);
-      bool altState = !!(HIWORD(lParam) & KF_ALTDOWN);
-      bool previousState = !!(HIWORD(lParam) & KF_REPEAT);
-      bool transitionState = !!(HIWORD(lParam) & KF_UP);
-      bool isRepeat = !transitionState && repeatCount != 1;
-      bool isDown = !(previousState && transitionState);
-      bool isUp = previousState && transitionState;
+
+      WORD keyFlags = HIWORD(lParam);
+      bool altState = (keyFlags & KF_ALTDOWN) == KF_ALTDOWN;
+      bool isRepeat = ((keyFlags & KF_REPEAT) == KF_REPEAT) && repeatCount > 1;
+      bool isDown = (keyFlags & KF_UP) != KF_UP;
+      bool isUp = !isDown;
 
       bool gameState = ClientState() == ClientStateInGame;
       bool chatBoxOpen = gameState ? !!D2CLIENT_GetUIState(UI_CHAT_CONSOLE) : false;
@@ -326,7 +328,7 @@ LRESULT __stdcall Engine::HandleWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
       if (Vars.bBlockKeys)
         return 0;
 
-      if (wParam == VK_HOME && !(chatBoxOpen || escMenuOpen)) {
+      if (vkCode == VK_HOME && !(chatBoxOpen || escMenuOpen)) {
         if (isDown && !isRepeat) {
           if (!altState)
             Console::ToggleBuffer();
@@ -335,7 +337,7 @@ LRESULT __stdcall Engine::HandleWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
 
           break;
         }
-      } else if (wParam == VK_ESCAPE && Console::IsVisible()) {
+      } else if (vkCode == VK_ESCAPE && Console::IsVisible()) {
         if (isDown && !isRepeat) {
           Console::Hide();
           return 0;
@@ -344,14 +346,15 @@ LRESULT __stdcall Engine::HandleWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
       } else if (Console::IsEnabled()) {
         BYTE layout[256] = {0};
         WORD out[2] = {0};
-        switch (wParam) {
+        switch (vkCode) {
           case VK_TAB:
             if (isUp)
               for (int i = 0; i < 5; i++) Console::AddKey(' ');
             break;
           case VK_RETURN:
-            if (isUp && !isRepeat && !escMenuOpen)
+            if (isUp && !isRepeat && !escMenuOpen) {
               Console::ExecuteCommand();
+            }
             break;
           case VK_BACK:
             if (isDown)
@@ -375,13 +378,15 @@ LRESULT __stdcall Engine::HandleWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
             break;
           case VK_MENU:  // alt
             // Send the alt to the scripts to fix sticky alt. There may be a better way.
-            KeyDownUpEvent(wParam, isUp);
-            return m_fnWndProc(hWnd, uMsg, wParam, lParam);
+            KeyDownUpEvent(vkCode, isUp);
+            return m_fnWndProc(hWnd, uMsg, vkCode, lParam);
             break;
           default:
             if (isDown) {
-              if (GetKeyboardState(layout) && ToAscii(wParam, (lParam & 0xFF0000), layout, out, 0) != 0) {
-                for (int i = 0; i < repeatCount; i++) Console::AddKey(out[0]);
+              if (GetKeyboardState(layout) && ToAscii(vkCode, (lParam & 0xFF0000), layout, out, 0) != 0) {
+                for (int i = 0; i < repeatCount; i++) {
+                  Console::AddKey(out[0]);
+                }
               }
             }
             break;
