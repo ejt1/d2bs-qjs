@@ -25,6 +25,13 @@ enum ScriptState {
   kScriptStateStopped,
 };
 
+struct ThreadState {
+  class Script* script;
+  uv_loop_t* loop;
+  DWORD id;
+  HANDLE handle;
+};
+
 class Script {
   friend class ScriptEngine;
 
@@ -46,11 +53,6 @@ class Script {
   bool IsRunning(void);
   bool IsAborted(void);
   void RunCommand(const char* command);
-
-  inline void TriggerOperationCallback(void) {
-    //if (m_hasActiveCX)
-    //  JS_TriggerOperationCallback(m_runtime);
-  }
 
   inline void SetPauseState(bool reallyPaused) {
     m_isReallyPaused = reallyPaused;
@@ -74,7 +76,8 @@ class Script {
     return m_scriptMode;
   }
 
-  DWORD GetThreadId(void);
+  ThreadState* GetThreadState();
+  DWORD GetThreadId();
 
   // UGLY HACK to fix up the player gid on game join for cached scripts/oog scripts
   void UpdatePlayerGid(void);
@@ -110,17 +113,12 @@ class Script {
   ScriptMode m_scriptMode;
   std::atomic<ScriptState> m_scriptState;
 
+  ThreadState m_threadState;
   JSRuntime* m_runtime;
   JSContext* m_context;
   JSValue m_globalObject;
   JSValue m_script;
   JSUnit* m_me;
-
-  // wtf is this trying to do anyway, why not just check m_context or m_runtime?
-  bool m_hasActiveCX;  // hack to get away from JS_IsRunning
-
-  DWORD m_threadId;
-  HANDLE m_threadHandle;
 
   FunctionMap m_functions;
   HANDLE m_eventSignal;

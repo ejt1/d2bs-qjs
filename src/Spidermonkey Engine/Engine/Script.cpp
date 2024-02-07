@@ -22,11 +22,8 @@ Script::Script(const char* file, ScriptMode mode /*, uint32_t argc, JSAutoStruct
       m_isReallyPaused(false),
       m_scriptMode(mode),
       m_scriptState(kScriptStateUninitialized),
-      m_threadHandle(INVALID_HANDLE_VALUE),
-      m_threadId(0) {
+      m_threadState({}) {
   InitializeCriticalSection(&m_lock);
-  // moved the runtime initilization to thread start
-  m_hasActiveCX = false;
   m_eventSignal = CreateEvent(nullptr, true, false, nullptr);
 
   if (m_scriptMode == kScriptModeCommand && strlen(file) < 1) {
@@ -53,7 +50,6 @@ Script::~Script(void) {
   assert(!m_runtime);
   assert(!m_context);
 
-  m_hasActiveCX = false;
   // if (JS_IsInRequest(m_runtime))
   //   JS_EndRequest(m_context);
 
@@ -66,8 +62,8 @@ Script::~Script(void) {
   // m_script = NULL;
   CloseHandle(m_eventSignal);
   m_includes.clear();
-  if (m_threadHandle != INVALID_HANDLE_VALUE)
-    CloseHandle(m_threadHandle);
+  if (m_threadState.handle != INVALID_HANDLE_VALUE)
+    CloseHandle(m_threadState.handle);
   LeaveCriticalSection(&m_lock);
   DeleteCriticalSection(&m_lock);
 }
@@ -76,13 +72,13 @@ bool Script::Start() {
   EnterCriticalSection(&m_lock);
   DWORD dwExitCode = STILL_ACTIVE;
 
-  if ((!GetExitCodeThread(m_threadHandle, &dwExitCode) || dwExitCode != STILL_ACTIVE) &&
-      (m_threadHandle = CreateThread(0, 0, ScriptThread, this, 0, &m_threadId)) != NULL) {
+  if ((!GetExitCodeThread(m_threadState.handle, &dwExitCode) || dwExitCode != STILL_ACTIVE) &&
+      (m_threadState.handle = CreateThread(0, 0, ScriptThread, this, 0, &m_threadState.id)) != NULL) {
     LeaveCriticalSection(&m_lock);
     return true;
   }
 
-  m_threadHandle = INVALID_HANDLE_VALUE;
+  m_threadState.handle = INVALID_HANDLE_VALUE;
   LeaveCriticalSection(&m_lock);
   return false;
 }
@@ -103,13 +99,12 @@ void Script::Stop(bool force) {
   }
 
   // trigger call back so script ends
-  TriggerOperationCallback();
   SetEvent(m_eventSignal);
 
   // normal wait: 500ms, forced wait: 300ms, really forced wait: 100ms
   int maxCount = (force ? 10 : 30);
   if (GetCurrentThreadId() != GetThreadId()) {
-    for (int i = 0; m_hasActiveCX == true; i++) {
+    for (int i = 0; m_scriptState != kScriptStateStopped; i++) {
       // if we pass the time frame, just ignore the wait because the thread will end forcefully anyway
       if (i >= maxCount)
         break;
@@ -129,7 +124,7 @@ void Script::Run(void) {
 void Script::Join() {
   // TODO(ejt): investigate if locking here is necessary
   EnterCriticalSection(&m_lock);
-  HANDLE hThread = m_threadHandle;
+  HANDLE hThread = m_threadState.handle;
   LeaveCriticalSection(&m_lock);
 
   if (hThread != INVALID_HANDLE_VALUE)
@@ -139,14 +134,12 @@ void Script::Join() {
 void Script::Pause(void) {
   if (!(m_scriptState == kScriptStateRunning) && !m_isPaused)
     m_isPaused = true;
-  TriggerOperationCallback();
   SetEvent(m_eventSignal);
 }
 
 void Script::Resume(void) {
   if (!(m_scriptState == kScriptStateRunning) && m_isPaused)
     m_isPaused = false;
-  TriggerOperationCallback();
   SetEvent(m_eventSignal);
 }
 
@@ -155,7 +148,7 @@ bool Script::IsUninitialized() {
 }
 
 bool Script::IsRunning(void) {
-  return /*m_context && */ !(m_scriptState != kScriptStateRunning || m_isPaused || !m_hasActiveCX);
+  return /*m_context && */ !(m_scriptState != kScriptStateRunning || m_isPaused);
 }
 
 bool Script::IsAborted() {
@@ -177,7 +170,11 @@ const char* Script::GetShortFilename() {
 }
 
 DWORD Script::GetThreadId(void) {
-  return (m_threadHandle == INVALID_HANDLE_VALUE ? -1 : m_threadId);
+  return (m_threadState.handle == INVALID_HANDLE_VALUE ? -1 : m_threadState.id);
+}
+
+ThreadState* Script::GetThreadState() {
+  return &m_threadState;
 }
 
 void Script::UpdatePlayerGid(void) {
@@ -314,10 +311,6 @@ void Script::DispatchEvent(Event* evt) {
   EnterCriticalSection(&Vars.cEventSection);
   m_EventList.push_front(evt);
   LeaveCriticalSection(&Vars.cEventSection);
-
-  if (IsRunning()) {
-    TriggerOperationCallback();
-  }
   SetEvent(m_eventSignal);
 }
 
@@ -340,8 +333,12 @@ void Script::BlockThread(DWORD delay) {
 }
 
 bool Script::Initialize() {
+  m_threadState.script = this;
+  m_threadState.loop = static_cast<uv_loop_t*>(malloc(sizeof(uv_loop_t)));
+  uv_loop_init(m_threadState.loop);
+
   m_runtime = JS_NewRuntime();
-  JS_SetRuntimeOpaque(m_runtime, this);
+  JS_SetRuntimeOpaque(m_runtime, &m_threadState);
   JS_SetInterruptHandler(m_runtime, InterruptHandler, this);
   JS_SetMaxStackSize(m_runtime, 0);
   JS_SetMemoryLimit(m_runtime, 100 * 1024 * 1024);
@@ -431,9 +428,35 @@ bool Script::Initialize() {
 
   // TODO(ejt): revisit these
   m_scriptState = kScriptStateRunning;
-  m_hasActiveCX = true;
 
   return true;
+}
+
+void Script::Cleanup() {
+  PurgeEventList();
+  Genhook::Clean(this);
+
+  if (m_context) {
+    JS_FreeValue(m_context, m_script);
+    m_script = JS_UNDEFINED;
+    JS_FreeValue(m_context, m_globalObject);
+    m_globalObject = JS_UNDEFINED;
+    JS_FreeContext(m_context);
+    m_context = nullptr;
+  }
+  if (m_runtime) {
+    JS_FreeRuntime(m_runtime);
+    m_runtime = nullptr;
+  }
+  if (m_threadState.loop) {
+    uv_loop_close(m_threadState.loop);
+    free(m_threadState.loop);
+  }
+  m_scriptState = kScriptStateStopped;
+
+  // TODO(ejt): revisit this
+  if (Vars.bDisableCache)
+    sScriptEngine->DisposeScript(this);
 }
 
 void Script::RunMain() {
@@ -822,33 +845,15 @@ bool Script::ProcessAllEvents() {
   return true;
 }
 
-void Script::Cleanup() {
-  PurgeEventList();
-  Genhook::Clean(this);
-
-  if (m_context) {
-    JS_FreeValue(m_context, m_script);
-    m_script = JS_UNDEFINED;
-    JS_FreeValue(m_context, m_globalObject);
-    m_globalObject = JS_UNDEFINED;
-    JS_FreeContext(m_context);
-    m_context = nullptr;
-  }
-  if (m_runtime) {
-    JS_FreeRuntime(m_runtime);
-    m_runtime = nullptr;
-  }
-  m_hasActiveCX = false;
-  m_scriptState = kScriptStateStopped;
-
-  // TODO(ejt): revisit this
-  if (Vars.bDisableCache)
-    sScriptEngine->DisposeScript(this);
-}
-
 // return != 0 if the JS code needs to be interrupted
 int Script::InterruptHandler(JSRuntime* rt, void* /*opaque*/) {
-  Script* script = (Script*)JS_GetRuntimeOpaque(rt);
+  ThreadState* ts = (ThreadState*)JS_GetRuntimeOpaque(rt);
+  Script* script = ts->script;
+  uv_loop_t* loop = ts->loop;
+
+  // run loop once without waiting for now, could run a certain amount of time if handles/requests are piling up
+  uv_run(loop, UV_RUN_NOWAIT);
+
   if (!script->RunEventLoop()) {
     return 1;
   }

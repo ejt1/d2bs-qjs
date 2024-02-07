@@ -17,7 +17,6 @@ bool __fastcall DisposeScript(Script* script, void*) {
 }
 
 bool __fastcall StopScript(Script* script, void* argv) {
-  script->TriggerOperationCallback();
   if (script->GetMode() != kScriptModeCommand)
     script->Stop(*(bool*)(argv));
   return true;
