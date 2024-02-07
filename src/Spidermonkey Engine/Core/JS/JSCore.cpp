@@ -443,7 +443,7 @@ JSAPI_FUNC(my_scriptBroadcast) {
   if (argc < 1)
     THROW_ERROR(ctx, "You must specify something to broadcast");
 
-  ScriptBroadcastEvent(ctx, argc, argv);
+  ScriptBroadcastEvent(ctx, argv);
   return JS_NULL;
 }
 

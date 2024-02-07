@@ -88,7 +88,7 @@ void __fastcall GamePlayerAssignment(D2UnitStrc* pPlayer) {
 
 void GameLeave(void) {
   Vars.bQuitting = false;
-  sScriptEngine->ForEachScript(StopIngameScript, NULL, 0);
+  sScriptEngine->ForEachScript(StopIngameScript, NULL);
   ActMap::ClearCache();
 }
 

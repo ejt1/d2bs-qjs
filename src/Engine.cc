@@ -191,11 +191,11 @@ void Engine::OnUpdate() {
 
         D2CLIENT_InitInventory();
         sScriptEngine->ForEachScript(
-            [](Script* script, void*, uint32_t) {
+            [](Script* script, void*) {
               script->UpdatePlayerGid();
               return true;
             },
-            NULL, 0);
+            NULL);
         sScriptEngine->UpdateConsole();
         Vars.bQuitting = false;
         OnGameEntered();

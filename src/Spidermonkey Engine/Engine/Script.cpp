@@ -26,7 +26,6 @@ Script::Script(const char* file, ScriptMode mode /*, uint32_t argc, JSAutoStruct
       m_threadId(0) {
   InitializeCriticalSection(&m_lock);
   // moved the runtime initilization to thread start
-  m_LastGC = 0;
   m_hasActiveCX = false;
   m_eventSignal = CreateEvent(nullptr, true, false, nullptr);
 
@@ -165,7 +164,6 @@ bool Script::IsAborted() {
 
 void Script::RunCommand(const char* command) {
   Event* evt = new Event;
-  evt->argc = m_argc;
   evt->name = "Command";
   evt->arg1 = _strdup(command);
   DispatchEvent(evt);
@@ -323,18 +321,6 @@ void Script::DispatchEvent(Event* evt) {
   SetEvent(m_eventSignal);
 }
 
-void Script::PurgeEventList() {
-  while (m_EventList.size() > 0) {
-    EnterCriticalSection(&Vars.cEventSection);
-    Event* evt = m_EventList.back();
-    m_EventList.pop_back();
-    LeaveCriticalSection(&Vars.cEventSection);
-    HandleEvent(evt, true);  // clean list and pop events
-  }
-
-  RemoveAllEventListeners();
-}
-
 void Script::BlockThread(DWORD delay) {
   DWORD start = GetTickCount();
   int amt = delay - (GetTickCount() - start);
@@ -348,12 +334,6 @@ void Script::BlockThread(DWORD delay) {
     if (!ProcessAllEvents()) {
       break;
     }
-
-    // if (JS_GetGCParameter(m_runtime, JSGC_BYTES) - m_LastGC > 524288)  // gc every .5 mb
-    //{
-    //   JS_GC(m_runtime);
-    //   m_LastGC = JS_GetGCParameter(m_runtime, JSGC_BYTES);
-    // }
 
     amt = delay - (GetTickCount() - start);
   }
@@ -507,6 +487,18 @@ bool Script::RunEventLoop() {
   return ProcessAllEvents();
 }
 
+void Script::PurgeEventList() {
+  while (m_EventList.size() > 0) {
+    EnterCriticalSection(&Vars.cEventSection);
+    Event* evt = m_EventList.back();
+    m_EventList.pop_back();
+    LeaveCriticalSection(&Vars.cEventSection);
+    HandleEvent(evt, true);  // clean list and pop events
+  }
+
+  RemoveAllEventListeners();
+}
+
 void Script::ExecuteEvent(char* evtName, int argc, const JSValue* argv, bool* block) {
   for (const auto& root : m_functions[evtName]) {
     JSValue rval;
@@ -619,18 +611,32 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
     }
     return true;
   }
-  if (strcmp(evtName, "mousemove") == 0 || strcmp(evtName, "ScreenHookHover") == 0) {
+  if (strcmp(evtName, "mousemove") == 0) {
     if (!clearList) {
       JSValue args[] = {
           JS_NewUint32(m_context, *(DWORD*)evt->arg1),
           JS_NewUint32(m_context, *(DWORD*)evt->arg2),
       };
 
-      if (strcmp(evtName, "ScreenHookHover") == 0) {
-        ExecuteEvent(evtName, evt->argc + 1, args);
-      } else {
-        ExecuteEvent(evtName, _countof(args), args);
+      ExecuteEvent(evtName, _countof(args), args);
+
+      for (size_t i = 0; i < _countof(args); ++i) {
+        JS_FreeValue(m_context, args[i]);
       }
+    }
+    delete evt->arg1;
+    delete evt->arg2;
+    delete evt;
+    return true;
+  }
+  if (strcmp(evtName, "ScreenHookHover") == 0) {
+    if (!clearList) {
+      JSValue args[] = {
+          JS_NewUint32(m_context, *(DWORD*)evt->arg1),
+          JS_NewUint32(m_context, *(DWORD*)evt->arg2),
+      };
+
+      ExecuteEvent(evtName, _countof(args), args);
 
       for (size_t i = 0; i < _countof(args); ++i) {
         JS_FreeValue(m_context, args[i]);

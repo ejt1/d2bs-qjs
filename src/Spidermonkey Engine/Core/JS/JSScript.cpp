@@ -12,8 +12,8 @@ struct FindHelper {
   Script* script;
 };
 
-bool __fastcall FindScriptByTid(Script* script, void* argv, uint32_t argc);
-bool __fastcall FindScriptByName(Script* script, void* argv, uint32_t argc);
+bool __fastcall FindScriptByTid(Script* script, void* argv);
+bool __fastcall FindScriptByName(Script* script, void* argv);
 
 JSAPI_PROP(script_getProperty) {
   Script* script = (Script*)JS_GetOpaque3(this_val);
@@ -129,7 +129,7 @@ JSAPI_FUNC(my_getScript) {
       return JS_EXCEPTION;
     }
     FindHelper args = {tid, NULL, NULL};
-    sScriptEngine->ForEachScript(FindScriptByTid, &args, 1);
+    sScriptEngine->ForEachScript(FindScriptByTid, &args);
     if (args.script != NULL)
       iterp = args.script;
     else
@@ -143,7 +143,7 @@ JSAPI_FUNC(my_getScript) {
     JS_FreeCString(ctx, name);
     StringReplace(fname, '/', '\\', strlen(fname));
     FindHelper args = {0, fname, NULL};
-    sScriptEngine->ForEachScript(FindScriptByName, &args, 1);
+    sScriptEngine->ForEachScript(FindScriptByName, &args);
     free(fname);
     if (args.script != NULL)
       iterp = args.script;
@@ -186,7 +186,7 @@ JSAPI_FUNC(my_getScripts) {
   return pReturnArray;
 }
 
-bool __fastcall FindScriptByName(Script* script, void* argv, uint32_t /*argc*/) {
+bool __fastcall FindScriptByName(Script* script, void* argv) {
   FindHelper* helper = (FindHelper*)argv;
   // static uint32_t pathlen = wcslen(Vars.szScriptPath) + 1;
   const char* fname = script->GetShortFilename();
@@ -197,7 +197,7 @@ bool __fastcall FindScriptByName(Script* script, void* argv, uint32_t /*argc*/) 
   return true;
 }
 
-bool __fastcall FindScriptByTid(Script* script, void* argv, uint32_t /*argc*/) {
+bool __fastcall FindScriptByTid(Script* script, void* argv) {
   FindHelper* helper = (FindHelper*)argv;
   if (script->GetThreadId() == helper->tid) {
     helper->script = script;

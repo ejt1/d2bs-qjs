@@ -88,7 +88,6 @@ class Script {
   void RemoveAllListeners(const char* evtName);
   void RemoveAllEventListeners();
   void DispatchEvent(Event* evt);
-  void PurgeEventList();
 
   // blocks the executing thread for X milliseconds, keeping the event loop running during this time
   void BlockThread(DWORD delay);
@@ -98,7 +97,9 @@ class Script {
   void Cleanup();
 
   void RunMain();
+
   bool RunEventLoop();
+  void PurgeEventList();
   void ExecuteEvent(char* evtName, int argc, const JSValue* argv, bool* block = nullptr);
   bool HandleEvent(Event* evt, bool clearList);
   bool ProcessAllEvents();
@@ -114,9 +115,7 @@ class Script {
   JSValue m_globalObject;
   JSValue m_script;
   JSUnit* m_me;
-  uint32_t m_argc;
-  //JSAutoStructuredCloneBuffer** m_argv;
-  DWORD m_LastGC;
+
   // wtf is this trying to do anyway, why not just check m_context or m_runtime?
   bool m_hasActiveCX;  // hack to get away from JS_IsRunning
 
