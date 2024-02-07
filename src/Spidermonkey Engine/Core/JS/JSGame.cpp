@@ -1,7 +1,6 @@
 #include "JSGame.h"
 #include "D2Helpers.h"
 #include "CriticalSections.h"
-#include "D2Skills.h"
 #include "MPQStats.h"
 #include "Core.h"
 #include "Helpers.h"
@@ -10,7 +9,6 @@
 #include "JSGlobalClasses.h"
 #include "MapHeader.h"
 #include "JSRoom.h"
-#include "Room.h"
 
 #include "Game/D2Quests.h"
 #include "Game/D2Roster.h"
@@ -79,7 +77,7 @@ JSAPI_FUNC(my_clickMap) {
     if (!mypUnit || (mypUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
       return JS_FALSE;
 
-    D2UnitStrc* pUnit = D2CLIENT_FindUnit(mypUnit->dwUnitId, mypUnit->dwType);
+    D2UnitStrc* pUnit = D2UnitStrc::FindUnit(mypUnit->dwUnitId, mypUnit->dwType);
 
     if (!pUnit)
       return JS_FALSE;
@@ -213,8 +211,8 @@ JSAPI_FUNC(my_getPath) {
   if (lvl == 0) {
     THROW_ERROR(ctx, "Invalid level passed to getPath");
   }
-  D2DrlgLevelStrc* level = GetLevel(lvl);
 
+  D2DrlgLevelStrc* level = D2DrlgLevelStrc::FindLevelFromLevelId(lvl);
   if (!level)
     return JS_EXCEPTION;
 
@@ -282,7 +280,7 @@ JSAPI_FUNC(my_getCollision) {
   }
 
   Point point(nX, nY);
-  D2DrlgLevelStrc* level = GetLevel(nLevelId);
+  D2DrlgLevelStrc* level = D2DrlgLevelStrc::FindLevelFromLevelId(nLevelId);
   if (!level) {
     THROW_ERROR(ctx, "Level Not loaded");
   }
@@ -348,7 +346,7 @@ JSAPI_FUNC(my_clickItem) {
       return rval;
     }
 
-    pUnit = D2CLIENT_FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
+    pUnit = D2UnitStrc::FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
 
     if (!pUnit) {
       return rval;
@@ -381,7 +379,7 @@ JSAPI_FUNC(my_clickItem) {
     // Click Merc Gear
     else if (nClickType == 4) {
       if (nBodyLoc == 1 || nBodyLoc == 3 || nBodyLoc == 4) {
-        D2UnitStrc* pMerc = GetMercUnit(D2CLIENT_GetPlayerUnit());
+        D2UnitStrc* pMerc = D2CLIENT_GetPlayerUnit()->FindMercUnit();
 
         if (pMerc) {
           D2CLIENT_MercItemAction(0x61, nBodyLoc);
@@ -397,7 +395,7 @@ JSAPI_FUNC(my_clickItem) {
       return rval;
     }
 
-    pUnit = D2CLIENT_FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
+    pUnit = D2UnitStrc::FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
 
     int32_t nClickType;
     JS_ToInt32(ctx, &nClickType, argv[0]);
@@ -406,7 +404,7 @@ JSAPI_FUNC(my_clickItem) {
       THROW_ERROR(ctx, "Object is not an item!");
     }
 
-    int InventoryLocation = GetItemLocation(pUnit);
+    int InventoryLocation = pUnit->GetItemLocation();
     int ClickLocation = LOCATION_NULL;
 
     int x = pUnit->pItemPath->dwPosX;
@@ -418,7 +416,7 @@ JSAPI_FUNC(my_clickItem) {
     InventoryLayout* pLayout = NULL;
 
     if (nClickType == 4) {
-      D2UnitStrc* pMerc = GetMercUnit(D2CLIENT_GetPlayerUnit());
+      D2UnitStrc* pMerc = D2CLIENT_GetPlayerUnit()->FindMercUnit();
 
       if (pMerc)
         if (pUnit->pItemData && pUnit->pItemData->pOwner)
@@ -674,7 +672,7 @@ JSAPI_FUNC(my_getDistance) {
       if (!pUnit1 || (pUnit1->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
         return JS_UNDEFINED;
 
-      D2UnitStrc* pUnitA = D2CLIENT_FindUnit(pUnit1->dwUnitId, pUnit1->dwType);
+      D2UnitStrc* pUnitA = D2UnitStrc::FindUnit(pUnit1->dwUnitId, pUnit1->dwType);
 
       if (!pUnitA)
         return JS_UNDEFINED;
@@ -689,7 +687,7 @@ JSAPI_FUNC(my_getDistance) {
       if (!pUnit1 || (pUnit1->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
         return JS_UNDEFINED;
 
-      D2UnitStrc* pUnitA = D2CLIENT_FindUnit(pUnit1->dwUnitId, pUnit1->dwType);
+      D2UnitStrc* pUnitA = D2UnitStrc::FindUnit(pUnit1->dwUnitId, pUnit1->dwType);
 
       if (!pUnitA)
         return JS_UNDEFINED;
@@ -740,8 +738,8 @@ JSAPI_FUNC(my_checkCollision) {
     if (!pUnitA || (pUnitA->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT || !pUnitB || (pUnitB->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
       return JS_UNDEFINED;
 
-    D2UnitStrc* pUnit1 = D2CLIENT_FindUnit(pUnitA->dwUnitId, pUnitA->dwType);
-    D2UnitStrc* pUnit2 = D2CLIENT_FindUnit(pUnitB->dwUnitId, pUnitB->dwType);
+    D2UnitStrc* pUnit1 = D2UnitStrc::FindUnit(pUnitA->dwUnitId, pUnitA->dwType);
+    D2UnitStrc* pUnit2 = D2UnitStrc::FindUnit(pUnitB->dwUnitId, pUnitB->dwType);
 
     if (!pUnit1 || !pUnit2)
       return JS_UNDEFINED;
@@ -769,15 +767,19 @@ JSAPI_FUNC(my_getSkillByName) {
   if (!lpszText || lpszText[0])
     THROW_ERROR(ctx, "Could not convert string");
 
-  for (int i = 0; i < _countof(Game_Skills); i++) {
-    if (!_strcmpi(Game_Skills[i].name, lpszText)) {
-      JS_FreeCString(ctx, lpszText);
-      return JS_NewInt32(ctx, Game_Skills[i].skillID);
-    }
+  D2UnitStrc* player = D2CLIENT_GetPlayerUnit();
+  if (!player) {
+    JS_FreeCString(ctx, lpszText);
+    return JS_UNDEFINED;
   }
 
-  JS_FreeCString(ctx, lpszText);
-  return JS_UNDEFINED;
+  D2SkillStrc* skill = player->GetSkillFromSkillName(lpszText);
+  if (!skill) {
+    JS_FreeCString(ctx, lpszText);
+    return JS_UNDEFINED;
+  }
+
+  return JS_NewInt32(ctx, skill->pSkillInfo->wSkillId);
 }
 
 JSAPI_FUNC(my_getSkillById) {
@@ -1297,7 +1299,7 @@ JSAPI_FUNC(my_revealLevel) {
   }
 
   for (D2DrlgRoomStrc* room = level->pRoom2First; room; room = room->pRoom2Next) {
-    RevealRoom(room, bDrawPresets);
+    room->Reveal(bDrawPresets);
   }
   return JS_UNDEFINED;
 }

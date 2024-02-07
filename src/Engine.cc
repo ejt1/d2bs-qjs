@@ -11,7 +11,6 @@
 #include "Console.h"
 #include "CommandLine.h"
 #include "Core.h"
-#include "Unit.h"
 #include "D2Handlers.h"
 #include "Control.h"
 
@@ -184,8 +183,8 @@ void Engine::OnUpdate() {
     case ClientStateInGame: {
       if (bInGame) {
         if ((Vars.dwMaxGameTime && Vars.dwGameTime && (GetTickCount() - Vars.dwGameTime) > Vars.dwMaxGameTime) ||
-            (!D2COMMON_IsTownByLevelNo(GetPlayerArea()) && (Vars.nChickenHP && Vars.nChickenHP >= GetUnitHP(D2CLIENT_GetPlayerUnit())) ||
-             (Vars.nChickenMP && Vars.nChickenMP >= GetUnitMP(D2CLIENT_GetPlayerUnit()))))
+            (!D2COMMON_IsTownByLevelNo(GetPlayerArea()) && (Vars.nChickenHP && Vars.nChickenHP >= D2CLIENT_GetPlayerUnit()->GetHealth()) ||
+             (Vars.nChickenMP && Vars.nChickenMP >= D2CLIENT_GetPlayerUnit()->GetMana())))
           D2CLIENT_ExitGame();
       } else {
         Vars.dwGameTime = GetTickCount();

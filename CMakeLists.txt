@@ -11,6 +11,10 @@ string(REGEX REPLACE "/W[0-4]$" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
+if (NOT D2BS_VERSION)
+  set(D2BS_VERSION "local" CACHE STRING "")
+endif()
+
 project(d2bs)
 
 add_subdirectory(vendor)
@@ -22,10 +26,15 @@ endif()
 set(D2BS_SRCS
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Diablo II/Handlers/D2Handlers.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Diablo II/Handlers/D2NetHandlers.cpp"
-  
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Diablo II/Patches/D2Intercepts.cpp"
-
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Diablo II/D2Helpers.cpp"
+
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/Game/Drlg/D2DrlgDrlg.cc"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/Game/UI/NPCMenu.cc"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/Game/Units/Units.cc"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/Game/D2Automap.cc"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/Game/D2Gfx.cc"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/Game/D2Skills.cc"
 
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Map/Diablo_II/ActMap.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Map/Diablo_II/LevelMap.cpp"
@@ -46,9 +55,7 @@ set(D2BS_SRCS
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/C/Hash.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/C/MPQStats.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/C/Profile.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/C/Room.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/C/ScreenHook.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/C/Unit.cpp"
   
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSArea.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSControl.cpp"
@@ -106,7 +113,8 @@ target_compile_definitions(D2BS PRIVATE
   WIN32
   WIN32_LEAN_AND_MEAN
   XP_WIN
-  STATIC_JS_API)
+  STATIC_JS_API
+  D2BS_VERSION="${D2BS_VERSION}")
 
 target_link_libraries(D2BS PRIVATE
   # windows dependencies

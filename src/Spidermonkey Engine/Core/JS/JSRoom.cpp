@@ -1,7 +1,6 @@
 #include "JSRoom.h"
 #include "CriticalSections.h"
 #include "JSPresetUnit.h"
-#include "Room.h"
 #include "D2Helpers.h"
 #include "JSGlobalClasses.h"
 #include "JSUnit.h"
@@ -142,7 +141,7 @@ JSAPI_FUNC(room_getCollisionTypeArray) {
     return JS_UNDEFINED;
 
   if (pRoom2->pRoom1)
-    pCol = pRoom2->pRoom1->Coll;
+    pCol = pRoom2->pRoom1->pCoords;
 
   if (!pCol) {
     if (bAdded)
@@ -200,7 +199,7 @@ JSAPI_FUNC(room_getCollision) {
   }
 
   if (pRoom2->pRoom1)
-    pCol = pRoom2->pRoom1->Coll;
+    pCol = pRoom2->pRoom1->pCoords;
 
   if (!pCol) {
     if (bAdded)
@@ -307,21 +306,21 @@ JSAPI_FUNC(room_getStat) {
   //	else if(nStat == 8)
   //		*rval = INT_TO_JSVAL(pRoom2->pRoom1->dwYStart); // God knows??!!??!?!?!?!
   else if (nStat == 9)
-    rval = JS_NewInt32(ctx, (pRoom2->pRoom1->Coll->dwPosGameX));
+    rval = JS_NewInt32(ctx, (pRoom2->pRoom1->pCoords->dwPosGameX));
   else if (nStat == 10)
-    rval = JS_NewInt32(ctx, (pRoom2->pRoom1->Coll->dwPosGameY));
+    rval = JS_NewInt32(ctx, (pRoom2->pRoom1->pCoords->dwPosGameY));
   else if (nStat == 11)
-    rval = JS_NewInt32(ctx, (pRoom2->pRoom1->Coll->dwSizeGameX));
+    rval = JS_NewInt32(ctx, (pRoom2->pRoom1->pCoords->dwSizeGameX));
   else if (nStat == 12)
-    rval = JS_NewInt32(ctx, (pRoom2->pRoom1->Coll->dwSizeGameY));
+    rval = JS_NewInt32(ctx, (pRoom2->pRoom1->pCoords->dwSizeGameY));
   else if (nStat == 13)
-    rval = JS_NewInt32(ctx, (pRoom2->pRoom1->Coll->dwPosRoomX));
+    rval = JS_NewInt32(ctx, (pRoom2->pRoom1->pCoords->dwPosRoomX));
   else if (nStat == 14)
-    rval = JS_NewInt32(ctx, (pRoom2->pRoom1->Coll->dwPosGameY));
+    rval = JS_NewInt32(ctx, (pRoom2->pRoom1->pCoords->dwPosGameY));
   else if (nStat == 15)
-    rval = JS_NewInt32(ctx, (pRoom2->pRoom1->Coll->dwSizeRoomX));
+    rval = JS_NewInt32(ctx, (pRoom2->pRoom1->pCoords->dwSizeRoomX));
   else if (nStat == 16)
-    rval = JS_NewInt32(ctx, (pRoom2->pRoom1->Coll->dwSizeRoomY));
+    rval = JS_NewInt32(ctx, (pRoom2->pRoom1->pCoords->dwSizeRoomY));
 
   if (bAdded)
     D2COMMON_RemoveRoomData(D2CLIENT_GetPlayerUnit()->pAct, pRoom2->pLevel->dwLevelNo, pRoom2->dwPosX, pRoom2->dwPosY, D2CLIENT_GetPlayerUnit()->pPath->pRoom1);
@@ -346,7 +345,7 @@ JSAPI_FUNC(room_unitInRoom) {
   if (!pmyUnit || (pmyUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_UNDEFINED;
 
-  D2UnitStrc* pUnit = D2CLIENT_FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
+  D2UnitStrc* pUnit = D2UnitStrc::FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
 
   if (!pUnit)
     return JS_UNDEFINED;
@@ -371,7 +370,7 @@ JSAPI_FUNC(room_reveal) {
     return JS_UNDEFINED;
   }
 
-  return JS_NewBool(ctx, RevealRoom(pRoom2, bDrawPresets));
+  return JS_NewBool(ctx, pRoom2->Reveal(bDrawPresets));
 }
 
 JSAPI_FUNC(my_getRoom) {
@@ -385,8 +384,7 @@ JSAPI_FUNC(my_getRoom) {
     JS_ToUint32(ctx, &levelId, argv[0]);
     if (levelId != 0)  // 1 Parameter, AreaId
     {
-      D2DrlgLevelStrc* pLevel = GetLevel(levelId);
-
+      D2DrlgLevelStrc* pLevel = D2DrlgLevelStrc::FindLevelFromLevelId(levelId);
       if (!pLevel || !pLevel->pRoom2First) {
         return JS_UNDEFINED;
       }
@@ -415,8 +413,9 @@ JSAPI_FUNC(my_getRoom) {
 
     uint32_t levelId;
     JS_ToUint32(ctx, &levelId, argv[0]);
-    if (argc == 3)
-      pLevel = GetLevel(levelId);
+    if (argc == 3) {
+      pLevel = D2DrlgLevelStrc::FindLevelFromLevelId(levelId);
+    }
     else if (D2CLIENT_GetPlayerUnit() && D2CLIENT_GetPlayerUnit()->pPath && D2CLIENT_GetPlayerUnit()->pPath->pRoom1 && D2CLIENT_GetPlayerUnit()->pPath->pRoom1->pRoom2)
       pLevel = D2CLIENT_GetPlayerUnit()->pPath->pRoom1->pRoom2->pLevel;
 
@@ -445,7 +444,7 @@ JSAPI_FUNC(my_getRoom) {
         bAdded = TRUE;
       }
 
-      D2DrlgCoordsStrc* map = pRoom->pRoom1->Coll;
+      D2DrlgCoordsStrc* map = pRoom->pRoom1->pCoords;
       if (nX >= map->dwPosGameX && nY >= map->dwPosGameY && nX < (map->dwPosGameX + map->dwSizeGameX) && nY < (map->dwPosGameY + map->dwSizeGameY)) {
         if (bAdded)
           D2COMMON_RemoveRoomData(D2CLIENT_GetPlayerUnit()->pAct, pLevel->dwLevelNo, pRoom->dwPosX, pRoom->dwPosY, D2CLIENT_GetPlayerUnit()->pPath->pRoom1);

@@ -4,6 +4,8 @@
 
 #pragma pack(push, 1)
 struct NPCMenu {
+  static bool Click(uint32_t npcClassId, uint32_t menuId);
+
   uint32_t dwNPCClassId;
   uint32_t dwEntryAmount;
   uint16_t wEntryId1;

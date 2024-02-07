@@ -20,9 +20,6 @@ typedef struct PatchHook_t {
 
 void InitOffsets();
 
-uint32_t GetDllOffset(int num);
-uint32_t GetDllOffset(const char* DllName, int Offset);
-
 PatchHook* RetrievePatchHooks(int* pBuffer);
 void PatchBytes(uint32_t dwAddr, uint32_t dwValue, uint32_t dwLen);
 void PatchJmp(uint32_t dwAddr, uint32_t dwFunc, uint32_t dwLen);

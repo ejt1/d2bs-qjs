@@ -99,14 +99,6 @@
 #define LADDERFLAG_EXPANSION_NORMAL 0x03
 
 ///////////////////////////////////////////////////
-// Mercenary Class ID's
-///////////////////////////////////////////////////
-#define MERC_A1 0x010f
-#define MERC_A2 0x0152
-#define MERC_A3 0x0167
-#define MERC_A5 0x0231
-
-///////////////////////////////////////////////////
 // Unit Stat ID Definition (Partial)
 ///////////////////////////////////////////////////
 #define STAT_STRENGTH 0   // str
@@ -302,16 +294,6 @@ enum {
   ITEM_MODE_BEING_DROPPED,             // Item being dropped
   ITEM_MODE_SOCKETED_IN_ITEM
 };  // Item socketed in item
-
-///////////////////////////////////////////////////
-// Unit Types
-///////////////////////////////////////////////////
-#define UNIT_PLAYER 0
-#define UNIT_MONSTER 1
-#define UNIT_OBJECT 2
-#define UNIT_MISSILE 3
-#define UNIT_ITEM 4
-#define UNIT_TILE 5
 
 ///////////////////////////////////////////////////
 // Spell Stats
