@@ -296,36 +296,40 @@ uint32_t GetDllOffset(int num) {
 }
 
 void InstallPatches() {
+  size_t base = reinterpret_cast<size_t>(GetModuleHandle(nullptr));
   for (int x = 0; x < ArraySize(Patches); x++) {
     Patches[x].bOldCode = new BYTE[Patches[x].dwLen];
-    ::ReadProcessMemory(GetCurrentProcess(), (void*)Patches[x].dwAddr, Patches[x].bOldCode, Patches[x].dwLen, NULL);
-    Patches[x].pFunc(Patches[x].dwAddr, Patches[x].dwFunc, Patches[x].dwLen);
+    ::ReadProcessMemory(GetCurrentProcess(), (void*)(base + Patches[x].dwAddr), Patches[x].bOldCode, Patches[x].dwLen, NULL);
+    Patches[x].pFunc((base + Patches[x].dwAddr), Patches[x].dwFunc, Patches[x].dwLen);
   }
 }
 
 void RemovePatches() {
+  size_t base = reinterpret_cast<size_t>(GetModuleHandle(nullptr));
   for (int x = 0; x < ArraySize(Patches); x++) {
-    WriteBytes((void*)Patches[x].dwAddr, Patches[x].bOldCode, Patches[x].dwLen);
+    WriteBytes((void*)(base + Patches[x].dwAddr), Patches[x].bOldCode, Patches[x].dwLen);
     delete[] Patches[x].bOldCode;
   }
 }
 
 void InstallConditional() {
+  size_t base = reinterpret_cast<size_t>(GetModuleHandle(nullptr));
   for (int x = 0; x < ArraySize(Conditional); x++) {
     if (Conditional[x].enabled == NULL || *Conditional[x].enabled != TRUE) {
       continue;
     }
     Conditional[x].bOldCode = new BYTE[Conditional[x].dwLen];
-    ::ReadProcessMemory(GetCurrentProcess(), (void*)Conditional[x].dwAddr, Conditional[x].bOldCode, Conditional[x].dwLen, NULL);
-    Conditional[x].pFunc(Conditional[x].dwAddr, Conditional[x].dwFunc, Conditional[x].dwLen);
+    ::ReadProcessMemory(GetCurrentProcess(), (void*)(base + Conditional[x].dwAddr), Conditional[x].bOldCode, Conditional[x].dwLen, NULL);
+    Conditional[x].pFunc((base + Conditional[x].dwAddr), Conditional[x].dwFunc, Conditional[x].dwLen);
   }
 }
 
 void RemoveConditional() {
+  size_t base = reinterpret_cast<size_t>(GetModuleHandle(nullptr));
   for (int x = 0; x < ArraySize(Conditional); x++) {
     if (Conditional[x].enabled == NULL || *Conditional[x].enabled != TRUE)
       continue;
-    WriteBytes((void*)Conditional[x].dwAddr, Conditional[x].bOldCode, Conditional[x].dwLen);
+    WriteBytes((void*)(base + Conditional[x].dwAddr), Conditional[x].bOldCode, Conditional[x].dwLen);
     delete[] Conditional[x].bOldCode;
   }
 }
