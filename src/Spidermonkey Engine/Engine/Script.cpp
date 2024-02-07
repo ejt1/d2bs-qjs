@@ -23,10 +23,7 @@ Script::Script(const char* file, ScriptMode mode /*, uint32_t argc, JSAutoStruct
       m_scriptMode(mode),
       m_scriptState(kScriptStateUninitialized),
       m_threadHandle(INVALID_HANDLE_VALUE),
-      m_threadId(0) /*,
-       m_argc(argc),
-       m_argv(argv)*/
-{
+      m_threadId(0) {
   InitializeCriticalSection(&m_lock);
   // moved the runtime initilization to thread start
   m_LastGC = 0;
@@ -171,7 +168,7 @@ void Script::RunCommand(const char* command) {
   evt->argc = m_argc;
   evt->name = "Command";
   evt->arg1 = _strdup(command);
-  FireEvent(evt);
+  DispatchEvent(evt);
 }
 
 const char* Script::GetShortFilename() {
@@ -245,11 +242,31 @@ bool Script::Include(const char* file) {
   return true;
 }
 
-bool Script::IsListenerRegistered(const char* evtName) {
-  return strlen(evtName) > 0 && m_functions.count(evtName) > 0;
+size_t Script::GetListenerCount(const char* evtName, JSValue evtFunc) {
+  // idk old code had this check so keeping it just in case, but such validation is really the callers responsibility // ejt
+  if (!evtName || strlen(evtName) == 0) {
+    return 0;
+  }
+  if (JS_IsUndefined(evtFunc)) {
+    return m_functions.count(evtName);
+  }
+
+  // if there are no events registered under that name at all, then obviously there
+  // can't be a specific one registered under that name
+  if (!m_functions.contains(evtName)) {
+    return 0;
+  }
+
+  size_t count = 0;
+  for (const auto& func : m_functions[evtName]) {
+    if (func == evtFunc) {
+      ++count;
+    }
+  }
+  return count;
 }
 
-void Script::RegisterEvent(const char* evtName, JSValue evtFunc) {
+void Script::AddEventListener(const char* evtName, JSValue evtFunc) {
   EnterCriticalSection(&m_lock);
   if (JS_IsFunction(m_context, evtFunc) && strlen(evtName) > 0) {
     m_functions[evtName].push_back(JS_DupValue(m_context, evtFunc));
@@ -257,24 +274,7 @@ void Script::RegisterEvent(const char* evtName, JSValue evtFunc) {
   LeaveCriticalSection(&m_lock);
 }
 
-bool Script::IsRegisteredEvent(const char* evtName, JSValue evtFunc) {
-  // nothing can be registered under an empty name
-  if (strlen(evtName) < 1)
-    return false;
-
-  // if there are no events registered under that name at all, then obviously there
-  // can't be a specific one registered under that name
-  if (m_functions.count(evtName) < 1)
-    return false;
-
-  for (FunctionList::iterator it = m_functions[evtName].begin(); it != m_functions[evtName].end(); it++)
-    if (*it == evtFunc)
-      return true;
-
-  return false;
-}
-
-void Script::UnregisterEvent(const char* evtName, JSValue evtFunc) {
+void Script::RemoveEventListener(const char* evtName, JSValue evtFunc) {
   if (strlen(evtName) < 1)
     return;
 
@@ -294,7 +294,7 @@ void Script::UnregisterEvent(const char* evtName, JSValue evtFunc) {
   LeaveCriticalSection(&m_lock);
 }
 
-void Script::ClearEvent(const char* evtName) {
+void Script::RemoveAllListeners(const char* evtName) {
   EnterCriticalSection(&m_lock);
   for (FunctionList::iterator it = m_functions[evtName].begin(); it != m_functions[evtName].end(); it++) {
     JS_FreeValue(m_context, *it);
@@ -303,16 +303,16 @@ void Script::ClearEvent(const char* evtName) {
   LeaveCriticalSection(&m_lock);
 }
 
-void Script::ClearAllEvents(void) {
+void Script::RemoveAllEventListeners() {
   EnterCriticalSection(&m_lock);
   for (FunctionMap::iterator it = m_functions.begin(); it != m_functions.end(); it++) {
-    ClearEvent(it->first.c_str());
+    RemoveAllListeners(it->first.c_str());
   }
   m_functions.clear();
   LeaveCriticalSection(&m_lock);
 }
 
-void Script::FireEvent(Event* evt) {
+void Script::DispatchEvent(Event* evt) {
   EnterCriticalSection(&Vars.cEventSection);
   m_EventList.push_front(evt);
   LeaveCriticalSection(&Vars.cEventSection);
@@ -323,7 +323,7 @@ void Script::FireEvent(Event* evt) {
   SetEvent(m_eventSignal);
 }
 
-void Script::ClearEventList() {
+void Script::PurgeEventList() {
   while (m_EventList.size() > 0) {
     EnterCriticalSection(&Vars.cEventSection);
     Event* evt = m_EventList.back();
@@ -332,7 +332,7 @@ void Script::ClearEventList() {
     HandleEvent(evt, true);  // clean list and pop events
   }
 
-  ClearAllEvents();
+  RemoveAllEventListeners();
 }
 
 void Script::BlockThread(DWORD delay) {
@@ -380,7 +380,7 @@ void Script::ExecuteEvent(char* evtName, int argc, const JSValue* argv, bool* bl
 
 void Script::OnDestroyContext() {
   m_hasActiveCX = false;
-  ClearEventList();
+  PurgeEventList();
   Genhook::Clean(this);
 }
 
@@ -827,7 +827,7 @@ bool Script::ProcessAllEvents() {
 }
 
 void Script::Cleanup() {
-  ClearEventList();
+  PurgeEventList();
   Genhook::Clean(this);
 
   if (m_context) {

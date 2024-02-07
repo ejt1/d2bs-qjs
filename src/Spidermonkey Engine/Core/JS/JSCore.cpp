@@ -66,7 +66,7 @@ JSAPI_FUNC(my_setTimeout) {
   // if (JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[0]) && JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1])) {
   //   Script* self = (Script*)JS_GetContextOpaque(cx);
   //   int freq = JSVAL_TO_INT(JS_ARGV(cx, vp)[1]);
-  //   self->RegisterEvent("setTimeout", JS_ARGV(cx, vp)[0]);
+  //   self->AddEventListener("setTimeout", JS_ARGV(cx, vp)[0]);
   //   Event* evt = new Event;
   //   evt->owner = self;
   //   evt->name = "setTimeout";
@@ -89,7 +89,7 @@ JSAPI_FUNC(my_setInterval) {
   // if (JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[0]) && JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1])) {
   //   Script* self = (Script*)JS_GetContextOpaque(cx);
   //   int freq = JSVAL_TO_INT(JS_ARGV(cx, vp)[1]);
-  //   self->RegisterEvent("setInterval", JS_ARGV(cx, vp)[0]);
+  //   self->AddEventListener("setInterval", JS_ARGV(cx, vp)[0]);
   //   Event* evt = new Event;
   //   evt->owner = self;
   //   evt->name = "setInterval";
@@ -379,7 +379,7 @@ JSAPI_FUNC(my_addEventListener) {
     const char* evtName = JS_ToCString(ctx, argv[0]);
     if (evtName && strlen(evtName)) {
       Script* self = (Script*)JS_GetContextOpaque(ctx);
-      self->RegisterEvent(evtName, argv[1]);
+      self->AddEventListener(evtName, argv[1]);
     } else {
       THROW_ERROR(ctx, "Event name is invalid!");
     }
@@ -393,7 +393,7 @@ JSAPI_FUNC(my_removeEventListener) {
     const char* evtName = JS_ToCString(ctx, argv[0]);
     if (evtName && strlen(evtName)) {
       Script* self = (Script*)JS_GetContextOpaque(ctx);
-      self->UnregisterEvent(evtName, argv[1]);
+      self->RemoveEventListener(evtName, argv[1]);
     } else {
       THROW_ERROR(ctx, "Event name is invalid!");
     }
@@ -406,7 +406,7 @@ JSAPI_FUNC(my_clearEvent) {
   if (JS_IsString(argv[0])) {
     Script* self = (Script*)JS_GetContextOpaque(ctx);
     const char* evt = JS_ToCString(ctx, argv[0]);
-    self->ClearEvent(evt);
+    self->RemoveAllListeners(evt);
     JS_FreeCString(ctx, evt);
   }
   return JS_UNDEFINED;
@@ -414,7 +414,7 @@ JSAPI_FUNC(my_clearEvent) {
 
 JSAPI_FUNC(my_clearAllEvents) {
   Script* self = (Script*)JS_GetContextOpaque(ctx);
-  self->ClearAllEvents();
+  self->RemoveAllEventListeners();
   return JS_UNDEFINED;
 }
 

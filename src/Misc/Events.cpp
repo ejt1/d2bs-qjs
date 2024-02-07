@@ -3,14 +3,14 @@
 
 bool __fastcall LifeEventCallback(Script* script, void* argv, uint32_t argc) {
   SingleArgHelper* helper = (SingleArgHelper*)argv;
-  if (script->IsRunning() && script->IsListenerRegistered("melife")) {
+  if (script->IsRunning() && script->GetListenerCount("melife") > 0) {
     Event* evt = new Event;
     // evt->owner = script;
     evt->argc = argc;
     evt->name = "melife";
     evt->arg1 = new DWORD(helper->arg1);
 
-    script->FireEvent(evt);
+    script->DispatchEvent(evt);
   }
   return true;
 }
@@ -22,14 +22,14 @@ void LifeEvent(DWORD dwLife) {
 
 bool __fastcall ManaEventCallback(Script* script, void* argv, uint32_t argc) {
   SingleArgHelper* helper = (SingleArgHelper*)argv;
-  if (script->IsRunning() && script->IsListenerRegistered("memana")) {
+  if (script->IsRunning() && script->GetListenerCount("memana") > 0) {
     Event* evt = new Event;
     // evt->owner = script;
     evt->argc = argc;
     evt->name = "memana";
     evt->arg1 = new DWORD(helper->arg1);
 
-    script->FireEvent(evt);
+    script->DispatchEvent(evt);
   }
   return true;
 }
@@ -42,18 +42,18 @@ void ManaEvent(DWORD dwMana) {
 bool __fastcall KeyEventCallback(Script* script, void* argv, uint32_t argc) {
   KeyEventHelper* helper = (KeyEventHelper*)argv;
   const char* name = (helper->up ? "keyup" : "keydown");
-  if (script->IsRunning() && script->IsListenerRegistered(name)) {
+  if (script->IsRunning() && script->GetListenerCount(name) > 0) {
     Event* evt = new Event;
     // evt->owner = script;
     evt->argc = argc;
     evt->name = name;
     evt->arg1 = new DWORD((DWORD)helper->key);
 
-    script->FireEvent(evt);
+    script->DispatchEvent(evt);
   }
   bool block = false;
   name = (helper->up ? "keyupblocker" : "keydownblocker");
-  if (script->IsRunning() && script->IsListenerRegistered(name)) {
+  if (script->IsRunning() && script->GetListenerCount(name) > 0) {
     Event* evt = new Event;
     // evt->owner = script;
     evt->argc = argc;
@@ -61,7 +61,7 @@ bool __fastcall KeyEventCallback(Script* script, void* argv, uint32_t argc) {
     evt->arg1 = new DWORD((DWORD)helper->key);
     evt->arg4 = new DWORD(false);
     ResetEvent(Vars.eventSignal);
-    script->FireEvent(evt);
+    script->DispatchEvent(evt);
 
     if (WaitForSingleObject(Vars.eventSignal, 1000) == WAIT_TIMEOUT)
       return false;
@@ -83,14 +83,14 @@ bool KeyDownUpEvent(WPARAM key, BYTE bUp) {
 
 bool __fastcall PlayerAssignCallback(Script* script, void* argv, uint32_t argc) {
   SingleArgHelper* helper = (SingleArgHelper*)argv;
-  if (script->IsRunning() && script->IsListenerRegistered("playerassign")) {
+  if (script->IsRunning() && script->GetListenerCount("playerassign") > 0) {
     Event* evt = new Event;
     // evt->owner = script;
     evt->argc = argc;
     evt->name = "playerassign";
     evt->arg1 = new DWORD((DWORD)helper->arg1);
 
-    script->FireEvent(evt);
+    script->DispatchEvent(evt);
   }
   return true;
 }
@@ -102,7 +102,7 @@ void PlayerAssignEvent(DWORD dwUnitId) {
 
 bool __fastcall MouseClickCallback(Script* script, void* argv, uint32_t argc) {
   QuadArgHelper* helper = (QuadArgHelper*)argv;
-  if (script->IsRunning() && script->IsListenerRegistered("mouseclick")) {
+  if (script->IsRunning() && script->GetListenerCount("mouseclick") > 0) {
     Event* evt = new Event;
     // evt->owner = script;
     evt->argc = argc;
@@ -112,7 +112,7 @@ bool __fastcall MouseClickCallback(Script* script, void* argv, uint32_t argc) {
     evt->arg3 = new DWORD(helper->arg3);
     evt->arg4 = new DWORD(helper->arg4);
 
-    script->FireEvent(evt);
+    script->DispatchEvent(evt);
   }
   return true;
 }
@@ -124,7 +124,7 @@ void MouseClickEvent(int button, POINT pt, bool bUp) {
 
 bool __fastcall MouseMoveCallback(Script* script, void* argv, uint32_t argc) {
   DoubleArgHelper* helper = (DoubleArgHelper*)argv;
-  if (script->IsRunning() && script->IsListenerRegistered("mousemove")) {
+  if (script->IsRunning() && script->GetListenerCount("mousemove") > 0) {
     Event* evt = new Event;
     // evt->owner = script;
     evt->argc = argc;
@@ -132,7 +132,7 @@ bool __fastcall MouseMoveCallback(Script* script, void* argv, uint32_t argc) {
     evt->arg1 = new DWORD(helper->arg1);
     evt->arg2 = new DWORD(helper->arg2);
 
-    script->FireEvent(evt);
+    script->DispatchEvent(evt);
   }
   return true;
 }
@@ -147,7 +147,7 @@ void MouseMoveEvent(POINT pt) {
 bool __fastcall BCastEventCallback(Script* script, void* argv, uint32_t /*argc*/) {
   BCastEventHelper* helper = (BCastEventHelper*)argv;
 
-  if (script->IsRunning() && script->IsListenerRegistered("scriptmsg")) {
+  if (script->IsRunning() && script->GetListenerCount("scriptmsg") > 0) {
     uint8_t* data;
     size_t data_len;
     uint8_t** sab_tab;
@@ -191,7 +191,7 @@ bool __fastcall BCastEventCallback(Script* script, void* argv, uint32_t /*argc*/
     js_free(helper->cx, data);
     js_free(helper->cx, sab_tab);
 
-    script->FireEvent(evt);
+    script->DispatchEvent(evt);
   }
   return true;
 }
@@ -203,7 +203,7 @@ void ScriptBroadcastEvent(JSContext* cx, uint32_t argc, JSValue* args) {
 
 bool __fastcall ChatEventCallback(Script* script, void* argv, uint32_t argc) {
   ChatEventHelper* helper = (ChatEventHelper*)argv;
-  if (script->IsRunning() && script->IsListenerRegistered(helper->name)) {
+  if (script->IsRunning() && script->GetListenerCount(helper->name) > 0) {
     Event* evt = new Event;
     // evt->owner = script;
     evt->argc = argc;
@@ -211,13 +211,13 @@ bool __fastcall ChatEventCallback(Script* script, void* argv, uint32_t argc) {
     evt->arg1 = _strdup(helper->nick);
     evt->arg2 = _strdup(helper->msg);
 
-    script->FireEvent(evt);
+    script->DispatchEvent(evt);
   }
   std::string evtname = helper->name;
   evtname = evtname + "blocker";
   bool block = false;
 
-  if (script->IsRunning() && script->IsListenerRegistered(evtname.c_str())) {
+  if (script->IsRunning() && script->GetListenerCount(evtname.c_str()) > 0) {
     Event* evt = new Event;
     // evt->owner = script;
     evt->argc = argc;
@@ -226,7 +226,7 @@ bool __fastcall ChatEventCallback(Script* script, void* argv, uint32_t argc) {
     evt->arg2 = _strdup(helper->msg);
     evt->arg4 = new DWORD(false);
     ResetEvent(Vars.eventSignal);
-    script->FireEvent(evt);
+    script->DispatchEvent(evt);
 
     if (WaitForSingleObject(Vars.eventSignal, 500) == WAIT_TIMEOUT)
       return false;
@@ -257,7 +257,7 @@ bool WhisperEvent(const char* lpszNick, const char* lpszMsg) {
 
 bool __fastcall CopyDataCallback(Script* script, void* argv, uint32_t argc) {
   CopyDataHelper* helper = (CopyDataHelper*)argv;
-  if (script->IsRunning() && script->IsListenerRegistered("copydata")) {
+  if (script->IsRunning() && script->GetListenerCount("copydata") > 0) {
     Event* evt = new Event;
     // evt->owner = script;
     evt->argc = argc;
@@ -265,7 +265,7 @@ bool __fastcall CopyDataCallback(Script* script, void* argv, uint32_t argc) {
     evt->arg1 = new DWORD(helper->mode);
     evt->arg2 = _strdup(helper->msg);
 
-    script->FireEvent(evt);
+    script->DispatchEvent(evt);
   }
   return true;
 }
@@ -277,7 +277,7 @@ void CopyDataEvent(DWORD dwMode, const char* lpszMsg) {
 
 bool __fastcall ItemEventCallback(Script* script, void* argv, uint32_t argc) {
   ItemEventHelper* helper = (ItemEventHelper*)argv;
-  if (script->IsRunning() && script->IsListenerRegistered("itemaction")) {
+  if (script->IsRunning() && script->GetListenerCount("itemaction") > 0) {
     Event* evt = new Event;
     // evt->owner = script;
     evt->argc = argc;
@@ -287,7 +287,7 @@ bool __fastcall ItemEventCallback(Script* script, void* argv, uint32_t argc) {
     evt->arg3 = new DWORD(helper->mode);
     evt->arg4 = new bool(helper->global);
 
-    script->FireEvent(evt);
+    script->DispatchEvent(evt);
   }
   return true;
 }
@@ -299,7 +299,7 @@ void ItemActionEvent(DWORD GID, char* Code, BYTE Mode, bool Global) {
 
 bool __fastcall GameActionEventCallback(Script* script, void* argv, uint32_t argc) {
   GameActionEventHelper* helper = (GameActionEventHelper*)argv;
-  if (script->IsRunning() && script->IsListenerRegistered("gameevent")) {
+  if (script->IsRunning() && script->GetListenerCount("gameevent") > 0) {
     Event* evt = new Event;
     // evt->owner = script;
     evt->argc = argc;
@@ -310,7 +310,7 @@ bool __fastcall GameActionEventCallback(Script* script, void* argv, uint32_t arg
     evt->arg4 = _strdup(helper->name1);
     evt->arg5 = _strdup(helper->name2);
 
-    script->FireEvent(evt);
+    script->DispatchEvent(evt);
   }
   return true;
 }
@@ -323,7 +323,7 @@ void GameActionEvent(BYTE mode, DWORD param1, DWORD param2, const char* name1, c
 bool __fastcall PacketEventCallback(Script* script, void* argv, uint32_t argc) {
   PacketEventHelper* helper = (PacketEventHelper*)argv;
 
-  if (script->IsRunning() && script->IsListenerRegistered(helper->name)) {
+  if (script->IsRunning() && script->GetListenerCount(helper->name) > 0) {
     Event* evt = new Event;
     // evt->owner = script;
     evt->argc = argc;
@@ -333,18 +333,10 @@ bool __fastcall PacketEventCallback(Script* script, void* argv, uint32_t argc) {
     evt->arg4 = new DWORD(false);
     memcpy(evt->arg1, helper->pPacket, helper->dwSize);
 
-    if (GetCurrentThreadId() == script->GetThreadId())
-      script->HandleEvent(evt, false);
-    else {
-      ResetEvent(Vars.eventSignal);
-      script->FireEvent(evt);
-      static DWORD result;
-      ReleaseGameLock();
-      result = WaitForSingleObject(Vars.eventSignal, 500);
-      TakeGameLock();
-
-      if (result == WAIT_TIMEOUT)
-        return false;
+    ResetEvent(Vars.eventSignal);
+    script->DispatchEvent(evt);
+    if (WaitForSingleObject(Vars.eventSignal, 500) == WAIT_TIMEOUT) {
+      return false;
     }
 
     bool retval = (*(DWORD*)evt->arg4);
@@ -371,14 +363,4 @@ bool GamePacketSentEvent(BYTE* pPacket, DWORD dwSize) {
 bool RealmPacketEvent(BYTE* pPacket, DWORD dwSize) {
   PacketEventHelper helper = {"realmpacket", pPacket, dwSize};
   return sScriptEngine->ForEachScript(PacketEventCallback, &helper, 3);
-}
-
-void ReleaseGameLock(void) {
-  if (Vars.bGameLoopEntered && Vars.dwGameThreadId == GetCurrentThreadId())
-    LeaveCriticalSection(&Vars.cGameLoopSection);
-}
-
-void TakeGameLock(void) {
-  if (Vars.bGameLoopEntered && Vars.dwGameThreadId == GetCurrentThreadId())
-    EnterCriticalSection(&Vars.cGameLoopSection);
 }

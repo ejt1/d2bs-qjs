@@ -3,6 +3,8 @@
 #include "ScreenHook.h"
 #include "Globals.h"
 
+#include <uv.h>
+
 class Engine final {
  public:
   Engine();

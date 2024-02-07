@@ -212,7 +212,7 @@ bool Genhook::Click(int button, POINT* loc) {
 
     ResetEvent(Vars.eventSignal);
     evt->functions.push_back(JS_DupValue(owner->GetContext(), clicked));
-    owner->FireEvent(evt);
+    owner->DispatchEvent(evt);
 
     if (WaitForSingleObject(Vars.eventSignal, 3000) == WAIT_TIMEOUT)
       return false;
@@ -241,7 +241,7 @@ void Genhook::Hover(POINT* loc) {
     evt->arg1 = new DWORD((DWORD)loc->x);
     evt->arg2 = new DWORD((DWORD)loc->y);
 
-    owner->FireEvent(evt);
+    owner->DispatchEvent(evt);
   }
 }
 void Genhook::SetClickHandler(JSValue handler) {

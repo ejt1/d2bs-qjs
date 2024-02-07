@@ -170,7 +170,7 @@ JSAPI_FUNC(script_send) {
   js_free(ctx, data);
   js_free(ctx, sab_tab);
 
-  script->FireEvent(evt);
+  script->DispatchEvent(evt);
   sScriptEngine->UnLockScriptList("script.send");
 
   return JS_NULL;

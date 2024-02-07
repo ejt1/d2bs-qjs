@@ -10,6 +10,8 @@
 #include "JSUnit.h"
 #include "Events.h"
 
+#include <uv.h>
+
 typedef std::map<std::string, bool> IncludeList;
 typedef std::map<std::string, FunctionList> FunctionMap;
 
@@ -80,15 +82,14 @@ class Script {
   bool IsIncluded(const char* file);
   bool Include(const char* file);
 
-  bool IsListenerRegistered(const char* evtName);
-  void RegisterEvent(const char* evtName, JSValue evtFunc);
-  bool IsRegisteredEvent(const char* evtName, JSValue evtFunc);
-  void UnregisterEvent(const char* evtName, JSValue evtFunc);
-  void ClearEvent(const char* evtName);
-  void ClearAllEvents(void);
-  void FireEvent(Event*);
+  size_t GetListenerCount(const char* evtName, JSValue evtFunc = JS_UNDEFINED);
+  void AddEventListener(const char* evtName, JSValue evtFunc);
+  void RemoveEventListener(const char* evtName, JSValue evtFunc);
+  void RemoveAllListeners(const char* evtName);
+  void RemoveAllEventListeners();
+  void DispatchEvent(Event* evt);
+  void PurgeEventList();
 
-  void ClearEventList();
   // blocks the executing thread for X milliseconds, keeping the event loop running during this time
   void BlockThread(DWORD delay);
   void ExecuteEvent(char* evtName, int argc, const JSValue* argv, bool* block = nullptr);

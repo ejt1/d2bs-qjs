@@ -44,9 +44,6 @@ bool GamePacketEvent(BYTE* pPacket, DWORD dwSize);
 bool GamePacketSentEvent(BYTE* pPacket, DWORD dwSize);
 bool RealmPacketEvent(BYTE* pPacket, DWORD dwSize);
 
-void ReleaseGameLock(void);
-void TakeGameLock(void);
-
 struct ChatEventHelper {
   const char *name, *nick;
   const char* msg;

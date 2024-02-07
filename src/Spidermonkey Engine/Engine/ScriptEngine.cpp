@@ -129,7 +129,7 @@ void ScriptEngine::DisposeScript(Script* script) {
     // bad things happen if we delete from another thread
     Event* evt = new Event;
     evt->name = "DisposeMe";
-    script->FireEvent(evt);
+    script->DispatchEvent(evt);
   }
 }
 
