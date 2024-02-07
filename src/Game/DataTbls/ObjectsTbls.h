@@ -19,3 +19,5 @@ struct D2ObjectsTxt {
   uint8_t _5[8];          // 0x1B4
   uint32_t nAutoMap;      // 0x1BB
 };
+
+inline D2ObjectsTxt*(__stdcall* D2COMMON_GetObjectText)(uint32_t objno) = nullptr;

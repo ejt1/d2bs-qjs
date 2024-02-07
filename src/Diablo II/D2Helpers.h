@@ -23,71 +23,14 @@ bool GameReady(void);
 bool WaitForGameReady(void);
 
 DWORD GetPlayerArea(void);
+
 void SendMouseClick(int x, int y, int clicktype);
 void SendKeyPress(uint32_t type, uint32_t key, uint32_t ext);
-POINT CalculateTextLen(const char* szwText, int Font);
-POINT CalculateTextLen(const wchar_t* szwText, int Font);
-void WorldToScreen(POINT* pPos);
-void ScreenToWorld(POINT* ptPos);
-POINT ScreenToAutomap(int x, int y);
-void AutomapToScreen(POINT* pPos);
-D2DrlgLevelStrc* GetLevel(DWORD dwLevelNo);
-void D2CLIENT_Interact(D2UnitStrc* pUnit, DWORD dwMoveType);
-void myDrawText(const char* szwText, int x, int y, int color, int font);
-void myDrawText(const wchar_t* szwText, int x, int y, int color, int font);
-void myDrawCenterText(const char* szwText, int x, int y, int color, int font, int div);
-void myDrawCenterText(const wchar_t* szwText, int x, int y, int color, int font, int div);
-// D2UnitStrc* FindItemByPosition(DWORD x, DWORD y, DWORD Location);
+
 BYTE CalcPercent(DWORD dwVal, DWORD dwMaxVal, BYTE iMin = NULL);
-DWORD GetTileLevelNo(D2DrlgRoomStrc* lpRoom2, DWORD dwTileNo);
-D2UnitStrc* GetMercUnit(D2UnitStrc* pUnit);
 
-BOOL ClickNPCMenu(DWORD NPCClassId, DWORD MenuId);
-int GetItemLocation(D2UnitStrc* pItem);
-// void	SelectInventoryItem(DWORD x, DWORD y, DWORD dwLocation);
-
-int GetSkill(WORD wSkillId);
-BOOL SetSkill(JSContext* cx, WORD wSkillId, BOOL bLeft, DWORD dwItemId = 0xFFFFFFFF);
-char* GetSkillByID(WORD id);
-WORD GetSkillByName(const char* szSkillName);
-
-const char* GetUnitName(D2UnitStrc* pUnit, char* szBuf, size_t bufSize);
-void GetItemCode(D2UnitStrc* pUnit, char* szBuf);
-
-D2UnitStrc* D2CLIENT_FindUnit(DWORD dwId, DWORD dwType);
-
-POINT GetScreenSize();
-int D2GetScreenSizeX();
-int D2GetScreenSizeY();
-
-D2AutomapLayerStrc* InitAutomapLayer(DWORD levelno);
-DWORD __fastcall D2CLIENT_InitAutomapLayer_STUB(DWORD nLayerNo);
-void myDrawAutomapCell(D2CellFileStrc* cellfile, int xpos, int ypos, BYTE col);
-
-D2CellFileStrc* LoadCellFile(const char* lpszPath, DWORD bMPQ = TRUE);
-D2CellFileStrc* LoadCellFile(const wchar_t* lpszPath, DWORD bMPQ = 3);
-D2CellFileStrc* LoadBmpCellFile(BYTE* buf1, int width, int height);
-D2CellFileStrc* LoadBmpCellFile(const char* filename);
-D2CellFileStrc* LoadBmpCellFile(const wchar_t* filename);
-D2CellFileStrc* myInitCellFile(D2CellFileStrc* cf);
-
-static inline void AddRoomData(D2DrlgRoomStrc* room) {
-  D2COMMON_AddRoomData(room->pLevel->pMisc->pAct, room->pLevel->dwLevelNo, room->dwPosX, room->dwPosY, room->pRoom1);
-}
-static inline void RemoveRoomData(D2DrlgRoomStrc* room) {
-  D2COMMON_RemoveRoomData(room->pLevel->pMisc->pAct, room->pLevel->dwLevelNo, room->dwPosX, room->dwPosY, room->pRoom1);
-}
-static inline char* __stdcall GetLevelName(const D2DrlgLevelStrc* level) {
-  return D2COMMON_GetLevelText(level->dwLevelNo)->szName;
-}
-static inline char* __stdcall GetLevelIdName(DWORD level) {
-  return D2COMMON_GetLevelText(level)->szName;
-}
-
-DWORD __fastcall D2CLIENT_GetUnitName_STUB(DWORD UnitAny);
 DWORD __fastcall D2CLIENT_GetUIVar_STUB(DWORD varno);
 void __fastcall D2CLIENT_SetSelectedUnit_STUB(DWORD UnitAny);
-void __fastcall D2CLIENT_Interact_ASM(DWORD Struct);
 DWORD __fastcall D2CLIENT_ClickParty_ASM(DWORD RosterUnit, DWORD Mode);
 void __fastcall D2CLIENT_ClickShopItem_ASM(DWORD x, DWORD y, DWORD BuyOrSell);
 void __fastcall D2CLIENT_ShopAction_ASM(DWORD pTable, DWORD pItem, DWORD pNPC, DWORD _1, DWORD pTable2 /* Could be also the ItemCost?*/, DWORD dwMode, DWORD _2,

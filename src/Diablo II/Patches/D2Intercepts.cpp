@@ -109,7 +109,7 @@ Block:
 D2UnitStrc* GetSelectedUnit_Intercept(void) {
   if (Vars.bClickAction) {
     if (Vars.dwSelectedUnitId) {
-      D2UnitStrc* pUnit = D2CLIENT_FindUnit(Vars.dwSelectedUnitId, Vars.dwSelectedUnitType);
+      D2UnitStrc* pUnit = D2UnitStrc::FindUnit(Vars.dwSelectedUnitId, Vars.dwSelectedUnitType);
 
       return pUnit;
     }
@@ -318,7 +318,7 @@ HANDLE __stdcall CacheFix(LPCSTR /*lpFileName*/, DWORD dwDesiredAccess, DWORD dw
 
   if (Vars.bCacheFix) {
     char szTitle[128];
-    GetWindowText(D2GFX_GetHwnd(), szTitle, 128);
+    GetWindowText(static_cast<HWND>(D2GFX_GetHwnd()), szTitle, 128);
     CHAR Def[100] = "";
 
     if (strlen(szTitle) > 1) {

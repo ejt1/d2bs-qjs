@@ -44,14 +44,14 @@ LevelMap::LevelMap(const D2DrlgLevelStrc* level) {
   D2DrlgRoomStrc* room = level->pRoom2First;
   cachedLevel = room->pLevel;
   if (!level->pRoom2First->pRoom1) {
-    AddRoomData(room);
+    room->AddRoomData();
     added = true;
   }
 
   Build();
 
   if (added)
-    RemoveRoomData(room);
+    room->AddRoomData();
 }
 
 LevelMap::~LevelMap(void) {
@@ -89,7 +89,7 @@ void LevelMap::AddRoom(D2DrlgRoomStrc* const room, RoomList& rooms, D2UnitStrc* 
   // add the room if necessary
   bool added = false;
   if (!room->pRoom1) {
-    AddRoomData(room);
+    room->AddRoomData();
     added = true;
   }
 
@@ -105,11 +105,11 @@ void LevelMap::AddRoom(D2DrlgRoomStrc* const room, RoomList& rooms, D2UnitStrc* 
 
   // and remove the room afterwards if we added it
   if (added)
-    RemoveRoomData(room);
+    room->RemoveRoomData();
 }
 
 void LevelMap::AddCollisionMap(D2ActiveRoomStrc* pRoom1) {
-  D2DrlgCoordsStrc* map = pRoom1->Coll;
+  D2DrlgCoordsStrc* map = pRoom1->pCoords;
   if (map == NULL)
     return;
 
@@ -138,7 +138,7 @@ void LevelMap::AddCollisionMap(D2ActiveRoomStrc* pRoom1) {
 
   for (D2UnitStrc* pUnit = pRoom1->pUnitFirst; pUnit; pUnit = pUnit->pRoomNext) {
     char tmp[128] = "";
-    GetUnitName(pUnit, tmp, 128);
+    pUnit->GetUnitName(tmp, 128);
     if (pUnit->dwType == 2 &&
         (0 == strcmp(tmp, "Barrel") || 0 == strcmp(tmp, "Door") || 0 == strcmp(tmp, "door") || 0 == strcmp(tmp, "Urn") || 0 == strcmp(tmp, "LargeUrn"))) {
       Point loc(D2CLIENT_GetUnitX(pUnit), D2CLIENT_GetUnitY(pUnit));
@@ -253,7 +253,7 @@ void LevelMap::GetExits(ExitArray& exits) const {
 
   for (D2DrlgRoomStrc* room = level->pRoom2First; room; room = room->pRoom2Next) {
     if (!room->pRoom1) {
-      AddRoomData(room);
+      room->AddRoomData();
       added.push_back(room);
     }
 
@@ -265,7 +265,9 @@ void LevelMap::GetExits(ExitArray& exits) const {
   FindRoomLinkageExits(exits, added);
 
   RoomList::iterator start = added.begin(), last = added.end();
-  for (RoomList::iterator it = start; it != last; it++) RemoveRoomData(*it);
+  for (RoomList::iterator it = start; it != last; it++) {
+    (*it)->RemoveRoomData();
+  }
 
   LeaveCriticalSection(lock);
 }
@@ -350,7 +352,7 @@ void LevelMap::FindRoomLinkageExits(ExitArray& exits, RoomList& added) const {
     D2DrlgRoomStrc** rooms = room->pRoom2Near;
     for (DWORD i = 0; i < room->dwRoomsNear; i++) {
       if (!rooms[i]->pRoom1) {
-        AddRoomData(rooms[i]);
+        rooms[i]->AddRoomData();
         added.push_back(rooms[i]);
       }
 
@@ -590,17 +592,17 @@ bool LevelMap::RoomSpaceIsWalkable(D2ActiveRoomStrc* pRoom1, const Point& point,
   unsigned int x = point.first, y = point.second;
   if (abs) {
     // convert to origin
-    x -= pRoom1->Coll->dwPosGameX;  // already x5
-    y -= pRoom1->Coll->dwPosGameY;  // already x5
+    x -= pRoom1->pCoords->dwPosGameX;  // already x5
+    y -= pRoom1->pCoords->dwPosGameY;  // already x5
   }
   // out of room?
-  if (x >= pRoom1->Coll->dwSizeGameX || y >= pRoom1->Coll->dwSizeGameY || x < 0 || y < 0) {
+  if (x >= pRoom1->pCoords->dwSizeGameX || y >= pRoom1->pCoords->dwSizeGameY || x < 0 || y < 0) {
     return false;
   }
   // p = pointer to space in room1 - by relative coords
-  WORD* p = pRoom1->Coll->pMapStart           // origin
+  WORD* p = pRoom1->pCoords->pMapStart           // origin
             + x                               // x
-            + pRoom1->Coll->dwSizeGameX * y;  // y
+            + pRoom1->pCoords->dwSizeGameX * y;  // y
   bool output = ValueIsWalkable(p);
   return output;
 }
@@ -645,7 +647,7 @@ void LevelMap::Dump(const char* file, const PointList& points) const {
   fopen_s(&f, file, "wt+");
   if (!f)
     return;
-  fprintf(f, "Map (%d x %d) at (%d, %d) for area %s (id %d):\n", width, height, posX, posY, GetLevelName(level), level->dwLevelNo);
+  fprintf(f, "Map (%d x %d) at (%d, %d) for area %s (id %d):\n", width, height, posX, posY, level->GetName(), level->dwLevelNo);
 
   fprintf(f, "Exits:\n");
 
@@ -655,7 +657,7 @@ void LevelMap::Dump(const char* file, const PointList& points) const {
   for (ExitArray::iterator it = exits.begin(); it != exits.end(); it++) {
     Point rel = AbsToRelative(it->Position);
     fprintf(f, "Exit %d: at (%d, %d, relative: %d, %d) of type %s linkage to area %s (id: %d, tile id: %d)\n", i++, it->Position.first, it->Position.second, rel.first,
-            rel.second, it->Type == Linkage ? "Area" : "Tile", GetLevelIdName(it->Target), it->Target, it->TileId);
+            rel.second, it->Type == Linkage ? "Area" : "Tile", D2COMMON_GetLevelText(it->Target)->szName, it->Target, it->TileId);
   }
 
   fprintf(f, "\n");

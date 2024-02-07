@@ -60,8 +60,8 @@ JSAPI_FUNC(my_getPresetUnits) {
 
   uint32_t levelId;
   JS_ToUint32(ctx, &levelId, argv[0]);
-  D2DrlgLevelStrc* pLevel = GetLevel(levelId);
 
+  D2DrlgLevelStrc* pLevel = D2DrlgLevelStrc::FindLevelFromLevelId(levelId);
   if (!pLevel)
     THROW_ERROR(ctx, "getPresetUnits failed, couldn't access the level!");
 
@@ -132,8 +132,8 @@ JSAPI_FUNC(my_getPresetUnit) {
 
   uint32_t levelId;
   JS_ToUint32(ctx, &levelId, argv[0]);
-  D2DrlgLevelStrc* pLevel = GetLevel(levelId);
 
+  D2DrlgLevelStrc* pLevel = D2DrlgLevelStrc::FindLevelFromLevelId(levelId);
   if (!pLevel)
     THROW_ERROR(ctx, "getPresetUnits failed, couldn't access the level!");
 

@@ -6,7 +6,6 @@
 #include "D2NetHandlers.h"
 #include "Script.h"
 #include "ScreenHook.h"
-#include "Unit.h"
 #include "Helpers.h"
 #include "Core.h"
 #include "Events.h"

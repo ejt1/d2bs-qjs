@@ -26,10 +26,15 @@ endif()
 set(D2BS_SRCS
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Diablo II/Handlers/D2Handlers.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Diablo II/Handlers/D2NetHandlers.cpp"
-  
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Diablo II/Patches/D2Intercepts.cpp"
-
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Diablo II/D2Helpers.cpp"
+
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/Game/Drlg/D2DrlgDrlg.cc"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/Game/UI/NPCMenu.cc"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/Game/Units/Units.cc"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/Game/D2Automap.cc"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/Game/D2Gfx.cc"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/Game/D2Skills.cc"
 
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Map/Diablo_II/ActMap.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Map/Diablo_II/LevelMap.cpp"
@@ -50,9 +55,7 @@ set(D2BS_SRCS
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/C/Hash.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/C/MPQStats.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/C/Profile.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/C/Room.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/C/ScreenHook.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/C/Unit.cpp"
   
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSArea.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSControl.cpp"

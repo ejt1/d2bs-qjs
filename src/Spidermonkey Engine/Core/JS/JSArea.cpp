@@ -24,7 +24,7 @@ JSAPI_PROP(area_getProperty) {
   if (!pArea)
     return JS_EXCEPTION;
 
-  D2DrlgLevelStrc* pLevel = GetLevel(pArea->AreaId);
+  D2DrlgLevelStrc* pLevel = D2DrlgLevelStrc::FindLevelFromLevelId(pArea->AreaId);
   if (!pLevel)
     return JS_EXCEPTION;
 
@@ -95,7 +95,7 @@ JSAPI_FUNC(my_getArea) {
     THROW_ERROR(ctx, "Invalid parameter passed to getArea!");
   }
 
-  D2DrlgLevelStrc* pLevel = GetLevel(nArea);
+  D2DrlgLevelStrc* pLevel = D2DrlgLevelStrc::FindLevelFromLevelId(nArea);
 
   if (!pLevel) {
     return JS_FALSE;

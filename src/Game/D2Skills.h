@@ -5,6 +5,9 @@
 #include <cstdint>
 
 struct D2SkillStrc {
+  const char* GetName();
+  D2SkillStrc* GetNext();
+
   D2SkillsTxt* pSkillInfo;  // 0x00
   D2SkillStrc* pNextSkill;  // 0x04
   uint32_t _1[8];           // 0x08

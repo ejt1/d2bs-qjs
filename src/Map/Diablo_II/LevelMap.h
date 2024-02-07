@@ -71,7 +71,7 @@ class LevelMap : public Map {
   void Build(void);
 
   static inline int GetLevelNo(D2DrlgRoomStrc* room, DWORD tile) {
-    return GetTileLevelNo(room, tile);
+    return room->GetTileLevelNo(tile);
   }
 
   void AddRoom(D2DrlgRoomStrc* const room, RoomList& rooms, D2UnitStrc* player);

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Game/D2DataTbls.h"
 #include "Game/Units/Item.h"
 #include "Game/Units/Monster.h"
 #include "Game/Units/Object.h"
@@ -14,7 +15,57 @@
 
 #include <cstdint>
 
+///////////////////////////////////////////////////
+// Unit Types
+///////////////////////////////////////////////////
+#define UNIT_PLAYER 0
+#define UNIT_MONSTER 1
+#define UNIT_OBJECT 2
+#define UNIT_MISSILE 3
+#define UNIT_ITEM 4
+#define UNIT_TILE 5
+
+struct UnitInteraction {
+  uint32_t dwMoveType;       // 0x00
+  D2UnitStrc* lpPlayerUnit;  // 0x04
+  D2UnitStrc* lpTargetUnit;  // 0x08
+  uint32_t dwTargetX;        // 0x0C
+  uint32_t dwTargetY;        // 0x10
+  uint32_t _1;               // 0x14
+  uint32_t _2;               // 0x18
+  D2SkillStrc* pSkill;
+};
+
 struct D2UnitStrc {
+  // TODO(ejt): these should return std::string instead of requiring an allocated char array
+  const char* GetUnitName(char* szTmp, size_t bufSize);
+  void GetItemCode(char* szBuf);
+
+  static D2UnitStrc* FindUnit(uint32_t id, uint32_t type);
+  static D2UnitStrc* FindUnit(const char* name, uint32_t classId, uint32_t type, uint32_t mode, uint32_t unitId);
+  D2UnitStrc* GetNext(const char* name, uint32_t classId, uint32_t type, uint32_t mode);
+  D2UnitStrc* FindItem(const char* name, uint32_t classId, uint32_t mode, uint32_t unitId);
+  D2UnitStrc* GetNextItem(D2UnitStrc* pOwner, const char* name, uint32_t classId, uint32_t mode);
+  bool ValidateUnit(const char* name, uint32_t classId, uint32_t type, uint32_t mode, uint32_t unitId);
+  D2UnitStrc* FindMercUnit();
+
+  D2SkillStrc* GetStartSkill();
+  D2SkillStrc* GetLeftSkill();
+  D2SkillStrc* GetRightSkill();
+  D2SkillStrc* GetUsedSkill();
+  D2SkillStrc* GetSkillFromSkillId(int skillId);
+  D2SkillStrc* GetSkillFromSkillName(const char* name);
+
+  int GetHealth();
+  int GetMana();
+
+  uint32_t GetX();
+  uint32_t GetY();
+
+  void Interact(uint32_t dwMoveType);
+
+  int GetItemLocation();
+
   uint32_t dwType;       // 0x00
   uint32_t dwTxtFileNo;  // 0x04
   uint32_t _1;           // 0x08
@@ -61,7 +112,7 @@ struct D2UnitStrc {
   uint32_t dwOwnerType;         // 0x94
   uint32_t dwOwnerId;           // 0x98
   uint32_t _8[2];               // 0x9C
-  D2HoverTextStrc* pOMsg;           // 0xA4
+  D2HoverTextStrc* pOMsg;       // 0xA4
   D2SkillListStrc* pInfo;       // 0xA8
   uint32_t _9[6];               // 0xAC
   uint32_t dwFlags;             // 0xC4
@@ -78,15 +129,20 @@ struct UnitHashTable {
 
 inline D2UnitStrc*(__fastcall* D2CLIENT_FindClientSideUnit)(uint32_t dwId, uint32_t dwType) = nullptr;
 inline D2UnitStrc*(__fastcall* D2CLIENT_FindServerSideUnit)(uint32_t dwId, uint32_t dwType) = nullptr;
+inline D2UnitStrc*(__stdcall* D2CLIENT_GetPlayerUnit)() = nullptr;
 inline D2UnitStrc*(__fastcall* D2CLIENT_GetCurrentInteractingNPC)() = nullptr;
 inline D2UnitStrc*(__stdcall* D2CLIENT_GetSelectedUnit)() = nullptr;
 inline D2UnitStrc*(__fastcall* D2CLIENT_GetCursorItem)() = nullptr;
 // inline D2UnitStrc* (__fastcall *D2CLIENT_GetMercUnit)(void) = nullptr; //Updated 1.14d //00478A90-BASE 478F20 with 7 0 args
 inline void(__fastcall* D2CLIENT_SetSelectedUnit_I)(D2UnitStrc* pUnit) = nullptr;
+inline D2UnitStrc*(__stdcall* D2COMMON_GetItemFromInventory)(D2InventoryStrc* inv) = nullptr;
+inline D2UnitStrc*(__stdcall* D2COMMON_GetNextItemFromInventory)(D2UnitStrc* pItem) = nullptr;
 inline int(__fastcall* D2CLIENT_GetItemName)(D2UnitStrc* pItem, wchar_t* wBuffer, uint32_t dwSize) = nullptr;
+inline D2ItemsTxt*(__stdcall* D2COMMON_GetItemText)(uint32_t itemno) = nullptr;
 inline int(__stdcall* D2CLIENT_LoadItemDesc)(D2UnitStrc* pItem, int type) = nullptr;
 inline uint32_t(__fastcall* D2CLIENT_GetMonsterOwner)(uint32_t nMonsterId) = nullptr;
 inline uint32_t(__fastcall* D2CLIENT_GetUnitHPPercent)(uint32_t dwUnitId) = nullptr;
+inline uint32_t(__stdcall* D2COMMON_GetUnitStat)(D2UnitStrc* pUnit, uint32_t dwStat, uint32_t dwStat2) = nullptr;
 inline void(__fastcall* D2CLIENT_InitInventory)(void) = nullptr;
 inline uint32_t(__fastcall* D2CLIENT_SetUIVar)(uint32_t varno, uint32_t howset, uint32_t unknown1) = nullptr;
 inline int(__fastcall* D2CLIENT_GetUnitX)(D2UnitStrc* pUnit) = nullptr;
@@ -100,3 +156,11 @@ inline UnitHashTable* D2CLIENT_ServerSideUnitHashTables = nullptr;
 inline UnitHashTable* D2CLIENT_ClientSideUnitHashTables = nullptr;
 inline D2UnitStrc** D2CLIENT_PlayerUnit = nullptr;
 inline D2UnitStrc** D2CLIENT_SelectedInvItem = nullptr;
+
+inline uint32_t D2CLIENT_GetUnitName_I = NULL;
+uint32_t __fastcall D2CLIENT_GetUnitName_STUB(D2UnitStrc* UnitAny);
+#define D2CLIENT_GetUnitName(x) (wchar_t*)D2CLIENT_GetUnitName_STUB(x)
+
+inline uint32_t D2CLIENT_Interact_I = NULL;
+void __fastcall D2CLIENT_Interact_ASM(UnitInteraction* Struct);
+#define D2CLIENT_Interact_STUB(x) (D2CLIENT_Interact_ASM((UnitInteraction*)x))
