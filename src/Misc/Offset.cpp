@@ -278,23 +278,6 @@ void InitOffsets() {
   InitOffset(&D2GAME_exit0, base + 0x576F);
 }
 
-uint32_t GetDllOffset(const char* /*DllName*/, int Offset) {
-  HMODULE hMod = GetModuleHandle(NULL);
-
-  if (Offset < 0)
-    return (uint32_t)GetProcAddress(hMod, (LPCSTR)(-Offset));
-
-  return ((uint32_t)hMod) + Offset;
-}
-
-uint32_t GetDllOffset(int num) {
-  static const char* dlls[] = {"D2Client.DLL", "D2Common.DLL", "D2Gfx.DLL",    "D2Lang.DLL", "D2Win.DLL", "D2Net.DLL",  "D2Game.DLL",
-                               "D2Launch.DLL", "Fog.DLL",      "BNClient.DLL", "Storm.DLL",  "D2Cmp.DLL", "D2Multi.DLL"};
-  if ((num & 0xff) > 12)
-    return 0;
-  return GetDllOffset(dlls[num & 0xff], num >> 8);
-}
-
 void InstallPatches() {
   size_t base = reinterpret_cast<size_t>(GetModuleHandle(nullptr));
   for (int x = 0; x < ArraySize(Patches); x++) {

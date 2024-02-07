@@ -370,12 +370,13 @@ JSAPI_PROP(unit_getProperty) {
       wchar_t bBuffer[1] = {1};
       if (pUnit->pItemData && pUnit->pItemData->pOwnerInventory && pUnit->pItemData->pOwnerInventory->pOwner) {
         // TODO(ejt): rewrite this to use defined offsets instead then remove ReadProcessBYTES from D2Helpers.h/cpp
-        ::WriteProcessMemory(GetCurrentProcess(), (void*)GetDllOffset("D2Client.dll", 0x7BCBE8 - 0x400000), bBuffer, 1, NULL);
-        ::WriteProcessMemory(GetCurrentProcess(), (void*)GetDllOffset("D2Client.dll", 0x7BCBF4 - 0x400000), &pUnit, 4, NULL);
+        size_t base = reinterpret_cast<size_t>(GetModuleHandle(nullptr));
+        ::WriteProcessMemory(GetCurrentProcess(), (void*)(base + 0x7BCBE8 - 0x400000), bBuffer, 1, NULL);
+        ::WriteProcessMemory(GetCurrentProcess(), (void*)(base + 0x7BCBF4 - 0x400000), &pUnit, 4, NULL);
 
         // D2CLIENT_LoadItemDesc(D2CLIENT_GetPlayerUnit(), 0);
         D2CLIENT_LoadItemDesc(pUnit->pItemData->pOwnerInventory->pOwner, 0);
-        ReadProcessBYTES(GetCurrentProcess(), GetDllOffset("D2Win.dll", 0x841EC8 - 0x400000), wBuffer, 2047);
+        ReadProcessBYTES(GetCurrentProcess(), (base + 0x841EC8 - 0x400000), wBuffer, 2047);
       }
       if (wcslen(wBuffer) > 0) {
         return JS_NewString(ctx, wBuffer);
