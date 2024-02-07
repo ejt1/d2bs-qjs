@@ -91,6 +91,7 @@ class Script {
 
   // blocks the executing thread for X milliseconds, keeping the event loop running during this time
   void BlockThread(DWORD delay);
+  bool HandleEvent(Event* evt, bool clearList);
 
  private:
   bool Initialize();
@@ -101,7 +102,6 @@ class Script {
   bool RunEventLoop();
   void PurgeEventList();
   void ExecuteEvent(char* evtName, int argc, const JSValue* argv, bool* block = nullptr);
-  bool HandleEvent(Event* evt, bool clearList);
   bool ProcessAllEvents();
 
   static int InterruptHandler(JSRuntime* rt, void* opaque);

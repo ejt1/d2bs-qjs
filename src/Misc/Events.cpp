@@ -1,6 +1,8 @@
 #include "ScriptEngine.h"
 #include "Engine.h"
 
+#include "Core.h" // Print
+
 bool __fastcall LifeEventCallback(Script* script, void* argv) {
   SingleArgHelper* helper = (SingleArgHelper*)argv;
   if (script->IsRunning() && script->GetListenerCount("melife") > 0) {
@@ -309,10 +311,21 @@ bool __fastcall PacketEventCallback(Script* script, void* argv) {
     evt->arg4 = new DWORD(false);
     memcpy(evt->arg1, helper->pPacket, helper->dwSize);
 
-    ResetEvent(Vars.eventSignal);
-    script->DispatchEvent(evt);
-    if (WaitForSingleObject(Vars.eventSignal, 500) == WAIT_TIMEOUT) {
-      return false;
+    // TODO(ejt): this is a mess but can't fix until scripting is single-threaded
+    if (GetCurrentThreadId() == script->GetThreadId())
+      script->HandleEvent(evt, false);
+    else {
+      ResetEvent(Vars.eventSignal);
+      script->DispatchEvent(evt);
+      static DWORD result;
+      if (Vars.bGameLoopEntered && Vars.dwGameThreadId == GetCurrentThreadId())
+        LeaveCriticalSection(&Vars.cGameLoopSection);
+      result = WaitForSingleObject(Vars.eventSignal, 500);
+      if (Vars.bGameLoopEntered && Vars.dwGameThreadId == GetCurrentThreadId())
+        EnterCriticalSection(&Vars.cGameLoopSection);
+
+      if (result == WAIT_TIMEOUT)
+        return false;
     }
 
     bool retval = (*(DWORD*)evt->arg4);
