@@ -646,7 +646,7 @@ const Misc = {
    * @param {string} [script] 
    */
   errorReport: function (error, script) {
-    let msg, oogmsg, filemsg, source, stack;
+    let msg, oogmsg, filemsg, source = "<unknown>", lineNumber = 0, stack;
     let stackLog = "";
 
     let date = new Date();
@@ -658,10 +658,15 @@ const Misc = {
       oogmsg = error.replace(/ÿc[0-9!"+<:;.*]/gi, "");
       filemsg = dateString + " <" + me.profile + "> " + error.replace(/ÿc[0-9!"+<:;.*]/gi, "") + "\n";
     } else {
-      source = error.fileName.substring(error.fileName.lastIndexOf("\\") + 1, error.fileName.length);
-      msg = "ÿc1Error in ÿc0" + script + " ÿc1(" + source + " line ÿc1" + error.lineNumber + "): ÿc1" + error.message;
+      if (error.fileName) {
+        source = error.fileName.substring(error.fileName.lastIndexOf("\\") + 1, error.fileName.length);
+      }
+      if (error.lineNumber) {
+        lineNumber = error.lineNumber;
+      }
+      msg = "ÿc1Error in ÿc0" + script + " ÿc1(" + source + " line ÿc1" + lineNumber + "): ÿc1" + error.message;
       oogmsg = (
-        "Error in " + script + " (" + source + " #" + error.lineNumber + ") " + error.message
+        "Error in " + script + " (" + source + " #" + lineNumber + ") " + error.message
         + " (Area: " + me.area + ", Ping:" + me.ping + ", Game: " + me.gamename + ")"
       );
       filemsg = dateString + " <" + me.profile + "> " + msg.replace(/ÿc[0-9!"+<:;.*]/gi, "") + "\n";
