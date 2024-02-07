@@ -359,6 +359,154 @@ void Script::BlockThread(DWORD delay) {
   }
 }
 
+bool Script::Initialize() {
+  m_runtime = JS_NewRuntime();
+  JS_SetRuntimeOpaque(m_runtime, this);
+  JS_SetInterruptHandler(m_runtime, InterruptHandler, this);
+  JS_SetMaxStackSize(m_runtime, 0);
+  JS_SetMemoryLimit(m_runtime, 100 * 1024 * 1024);
+
+  m_context = JS_NewContext(m_runtime);
+  if (!m_context) {
+    Log("Couldn't create the context");
+    return false;
+  }
+  JS_SetContextOpaque(m_context, this);
+
+  m_globalObject = JS_GetGlobalObject(m_context);
+
+  // JSValue console = JS_NewObject(m_context);
+  // JS_SetPropertyStr(m_context, console, "trace", JS_NewCFunction(m_context, my_print, "trace", 1));
+  // JS_SetPropertyStr(m_context, console, "debug", JS_NewCFunction(m_context, my_print, "debug", 1));
+  // JS_SetPropertyStr(m_context, console, "log", JS_NewCFunction(m_context, my_print, "log", 1));
+  // JS_SetPropertyStr(m_context, console, "error", JS_NewCFunction(m_context, my_print, "error", 1));
+  // JS_SetPropertyStr(m_context, m_globalObject, "console", console);
+
+  // TODO(ejt): this is a solution to minimize changes during migration to quickjs, refactor this in the future
+  JS_SetPropertyFunctionList(m_context, m_globalObject, global_funcs, _countof(global_funcs));
+  for (JSClassSpec* entry = global_classes; entry->name != NULL; entry++) {
+    JSClassDef def{};
+    def.class_name = entry->name;
+    def.finalizer = entry->finalizer;
+
+    JS_NewClassID(entry->pclass_id);
+    JS_NewClass(m_runtime, *entry->pclass_id, &def);
+    JSValue proto = JS_NewObject(m_context);
+    JSValue obj;
+
+    if (entry->proto_funcs) {
+      JS_SetPropertyFunctionList(m_context, proto, entry->proto_funcs, entry->num_proto_funcs);
+    }
+
+    if (entry->ctor) {
+      obj = JS_NewCFunction2(m_context, entry->ctor, entry->name, 0, JS_CFUNC_constructor, 0);
+      JS_SetConstructor(m_context, obj, proto);
+    } else {
+      obj = JS_NewObjectProtoClass(m_context, proto, *entry->pclass_id);
+    }
+
+    if (entry->static_funcs) {
+      JS_SetPropertyFunctionList(m_context, obj, entry->static_funcs, entry->num_static_funcs);
+    }
+
+    JS_SetClassProto(m_context, *entry->pclass_id, proto);
+    JS_SetPropertyStr(m_context, m_globalObject, entry->name, obj);
+  }
+
+  // define 'me' property
+  m_me = new JSUnit;
+  memset(m_me, NULL, sizeof(JSUnit));
+
+  D2UnitStrc* player = D2CLIENT_GetPlayerUnit();
+  m_me->dwMode = (DWORD)-1;
+  m_me->dwClassId = (DWORD)-1;
+  m_me->dwType = UNIT_PLAYER;
+  m_me->dwUnitId = player ? player->dwUnitId : NULL;
+  m_me->dwPrivateType = PRIVATE_UNIT;
+
+  JSValue meObject = BuildObject(m_context, unit_class_id, FUNCLIST(me_proto_funcs), m_me);
+  if (!meObject) {
+    Log("failed to build object 'me'");
+    return false;
+  }
+
+  JS_SetPropertyStr(m_context, m_globalObject, "me", meObject);
+
+  // compile script file
+  if (m_scriptMode == kScriptModeCommand) {
+    if (strlen(Vars.szConsole) > 0) {
+      m_script = JS_CompileFile(m_context, m_globalObject, m_fileName);
+    } else {
+      const char* cmd = "function main() {print('ÿc2D2BSÿc0 :: Started Console'); while (true){delay(10000)};}  ";
+      m_script = JS_Eval(m_context, cmd, strlen(cmd), "Command Line", JS_EVAL_TYPE_GLOBAL);
+    }
+  } else {
+    m_script = JS_CompileFile(m_context, m_globalObject, m_fileName);
+  }
+
+  if (JS_IsException(m_script)) {
+    JS_ReportPendingException(m_context);
+    return false;
+  }
+
+  // TODO(ejt): revisit these
+  m_scriptState = kScriptStateRunning;
+  m_hasActiveCX = true;
+
+  return true;
+}
+
+void Script::RunMain() {
+  JSValue main;
+
+  // args passed from load
+  // JS::AutoValueVector args(m_context);
+  // args.resize(m_argc);
+  // for (uint32_t i = 0; i < m_argc; i++) {
+  //  JSValue v;
+  //  m_argv[i]->read(m_context, &v);
+  //  args.append(v);
+  //}
+  m_script = JS_EvalFunction(m_context, m_script);
+  if (JS_IsException(m_script)) {
+    JS_ReportPendingException(m_context);
+    return;
+  }
+  main = JS_GetPropertyStr(m_context, m_globalObject, "main");
+  if (JS_IsException(main)) {
+    JS_ReportPendingException(m_context);
+    return;
+  }
+  if (!JS_IsFunction(m_context, main)) {
+    JS_ThrowTypeError(m_context, "'main' is not a function");
+    JS_ReportPendingException(m_context);
+    return;
+  }
+  JSValue rval = JS_Call(m_context, main, JS_UNDEFINED, 0, nullptr);
+  JS_FreeValue(m_context, main);
+  if (JS_IsException(rval)) {
+    JS_ReportPendingException(m_context);
+    return;
+  }
+  JS_FreeValue(m_context, rval);
+}
+
+// return false to stop the script
+bool Script::RunEventLoop() {
+  bool pause = m_isPaused;
+  if (pause)
+    SetPauseState(true);
+  while (m_isPaused) {
+    Sleep(50);
+    // JS_MaybeGC(m_context);
+  }
+  if (pause)
+    SetPauseState(false);
+
+  // run loop until there are no more events or script is interrupted
+  return ProcessAllEvents();
+}
+
 void Script::ExecuteEvent(char* evtName, int argc, const JSValue* argv, bool* block) {
   for (const auto& root : m_functions[evtName]) {
     JSValue rval;
@@ -372,16 +520,6 @@ void Script::ExecuteEvent(char* evtName, int argc, const JSValue* argv, bool* bl
     }
     JS_FreeValue(m_context, rval);
   }
-}
-
-// void Script::ExecuteEvent(char* evtName, const JS::AutoValueVector& args, bool* block) {
-//   ExecuteEvent(evtName, args.length(), args.begin(), block);
-// }
-
-void Script::OnDestroyContext() {
-  m_hasActiveCX = false;
-  PurgeEventList();
-  Genhook::Clean(this);
 }
 
 bool Script::HandleEvent(Event* evt, bool clearList) {
@@ -653,154 +791,6 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
   return true;
 }
 
-bool Script::Initialize() {
-  m_runtime = JS_NewRuntime();
-  JS_SetRuntimeOpaque(m_runtime, this);
-  JS_SetInterruptHandler(m_runtime, InterruptHandler, this);
-  JS_SetMaxStackSize(m_runtime, 0);
-  JS_SetMemoryLimit(m_runtime, 100 * 1024 * 1024);
-
-  m_context = JS_NewContext(m_runtime);
-  if (!m_context) {
-    Log("Couldn't create the context");
-    return false;
-  }
-  JS_SetContextOpaque(m_context, this);
-
-  m_globalObject = JS_GetGlobalObject(m_context);
-
-  // JSValue console = JS_NewObject(m_context);
-  // JS_SetPropertyStr(m_context, console, "trace", JS_NewCFunction(m_context, my_print, "trace", 1));
-  // JS_SetPropertyStr(m_context, console, "debug", JS_NewCFunction(m_context, my_print, "debug", 1));
-  // JS_SetPropertyStr(m_context, console, "log", JS_NewCFunction(m_context, my_print, "log", 1));
-  // JS_SetPropertyStr(m_context, console, "error", JS_NewCFunction(m_context, my_print, "error", 1));
-  // JS_SetPropertyStr(m_context, m_globalObject, "console", console);
-
-  // TODO(ejt): this is a solution to minimize changes during migration to quickjs, refactor this in the future
-  JS_SetPropertyFunctionList(m_context, m_globalObject, global_funcs, _countof(global_funcs));
-  for (JSClassSpec* entry = global_classes; entry->name != NULL; entry++) {
-    JSClassDef def{};
-    def.class_name = entry->name;
-    def.finalizer = entry->finalizer;
-
-    JS_NewClassID(entry->pclass_id);
-    JS_NewClass(m_runtime, *entry->pclass_id, &def);
-    JSValue proto = JS_NewObject(m_context);
-    JSValue obj;
-
-    if (entry->proto_funcs) {
-      JS_SetPropertyFunctionList(m_context, proto, entry->proto_funcs, entry->num_proto_funcs);
-    }
-
-    if (entry->ctor) {
-      obj = JS_NewCFunction2(m_context, entry->ctor, entry->name, 0, JS_CFUNC_constructor, 0);
-      JS_SetConstructor(m_context, obj, proto);
-    } else {
-      obj = JS_NewObjectProtoClass(m_context, proto, *entry->pclass_id);
-    }
-
-    if (entry->static_funcs) {
-      JS_SetPropertyFunctionList(m_context, obj, entry->static_funcs, entry->num_static_funcs);
-    }
-
-    JS_SetClassProto(m_context, *entry->pclass_id, proto);
-    JS_SetPropertyStr(m_context, m_globalObject, entry->name, obj);
-  }
-
-  // define 'me' property
-  m_me = new JSUnit;
-  memset(m_me, NULL, sizeof(JSUnit));
-
-  D2UnitStrc* player = D2CLIENT_GetPlayerUnit();
-  m_me->dwMode = (DWORD)-1;
-  m_me->dwClassId = (DWORD)-1;
-  m_me->dwType = UNIT_PLAYER;
-  m_me->dwUnitId = player ? player->dwUnitId : NULL;
-  m_me->dwPrivateType = PRIVATE_UNIT;
-
-  JSValue meObject = BuildObject(m_context, unit_class_id, FUNCLIST(me_proto_funcs), m_me);
-  if (!meObject) {
-    Log("failed to build object 'me'");
-    return false;
-  }
-
-  JS_SetPropertyStr(m_context, m_globalObject, "me", meObject);
-
-  // compile script file
-  if (m_scriptMode == kScriptModeCommand) {
-    if (strlen(Vars.szConsole) > 0) {
-      m_script = JS_CompileFile(m_context, m_globalObject, m_fileName);
-    } else {
-      const char* cmd = "function main() {print('ÿc2D2BSÿc0 :: Started Console'); while (true){delay(10000)};}  ";
-      m_script = JS_Eval(m_context, cmd, strlen(cmd), "Command Line", JS_EVAL_TYPE_GLOBAL);
-    }
-  } else {
-    m_script = JS_CompileFile(m_context, m_globalObject, m_fileName);
-  }
-
-  if (JS_IsException(m_script)) {
-    JS_ReportPendingException(m_context);
-    return false;
-  }
-
-  // TODO(ejt): revisit these
-  m_scriptState = kScriptStateRunning;
-  m_hasActiveCX = true;
-
-  return true;
-}
-
-void Script::RunMain() {
-  JSValue main;
-
-  // args passed from load
-  // JS::AutoValueVector args(m_context);
-  // args.resize(m_argc);
-  // for (uint32_t i = 0; i < m_argc; i++) {
-  //  JSValue v;
-  //  m_argv[i]->read(m_context, &v);
-  //  args.append(v);
-  //}
-  m_script = JS_EvalFunction(m_context, m_script);
-  if (JS_IsException(m_script)) {
-    JS_ReportPendingException(m_context);
-    return;
-  }
-  main = JS_GetPropertyStr(m_context, m_globalObject, "main");
-  if (JS_IsException(main)) {
-    JS_ReportPendingException(m_context);
-    return;
-  }
-  if (!JS_IsFunction(m_context, main)) {
-    JS_ThrowTypeError(m_context, "'main' is not a function");
-    JS_ReportPendingException(m_context);
-    return;
-  }
-  JSValue rval = JS_Call(m_context, main, JS_UNDEFINED, 0, nullptr);
-  JS_FreeValue(m_context, main);
-  if (JS_IsException(rval)) {
-    JS_ReportPendingException(m_context);
-    return;
-  }
-  JS_FreeValue(m_context, rval);
-}
-
-// return false to stop the script
-bool Script::RunEventLoop() {
-  bool pause = m_isPaused;
-  if (pause)
-    SetPauseState(true);
-  while (m_isPaused) {
-    Sleep(50);
-    // JS_MaybeGC(m_context);
-  }
-  if (pause)
-    SetPauseState(false);
-
-  // run loop until there are no more events or script is interrupted
-  return ProcessAllEvents();
-}
-
 bool Script::ProcessAllEvents() {
   for (;;) {
     if (m_scriptState == kScriptStateRequestStop) {
@@ -892,37 +882,3 @@ DWORD WINAPI ScriptThread(LPVOID lpThreadParameter) {
   }
   return 0;
 }
-
-// JSBool contextCallback(JSContext* ctx, uint32_t contextOp) {
-//   if (contextOp == JSCONTEXT_DESTROY) {
-//     Script* script = (Script*)JS_GetContextOpaque(ctx);
-//     script->OnDestroyContext();
-//   }
-//   return JS_TRUE;
-// }
-//
-// void reportError(JSContext* cx, const char* message, JSErrorReport* report) {
-//   (cx);
-//
-//   bool warn = JSREPORT_IS_WARNING(report->flags);
-//   bool isStrict = JSREPORT_IS_STRICT(report->flags);
-//   const char* type = (warn ? "Warning" : "Error");
-//   const char* strict = (isStrict ? "Strict " : "");
-//   wchar_t* filename = report->filename ? AnsiToUnicode(report->filename) : _wcsdup(L"<unknown>");
-//   wchar_t* displayName = filename;
-//   if (_wcsicmp(L"Command Line", filename) != 0 && _wcsicmp(L"<unknown>", filename) != 0)
-//     displayName = filename + wcslen(Vars.szPath);
-//
-//   Log(L"[%hs%hs] Code(%d) File(%s:%d) %hs\nLine: %hs", strict, type, report->errorNumber, filename, report->lineno, message, report->linebuf);
-//   Print(L"[\u00FFc%d%hs%hs\u00FFc0 (%d)] File(%s:%d) %hs", (warn ? 9 : 1), strict, type, report->errorNumber, displayName, report->lineno, message);
-//
-//   if (filename[0] == L'<')
-//     free(filename);
-//   else
-//     delete[] filename;
-//
-//   if (Vars.bQuitOnError && !JSREPORT_IS_WARNING(report->flags) && ClientState() == ClientStateInGame)
-//     D2CLIENT_ExitGame();
-//   else
-//     Console::ShowBuffer();
-// }

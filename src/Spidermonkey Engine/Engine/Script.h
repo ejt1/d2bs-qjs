@@ -92,13 +92,6 @@ class Script {
 
   // blocks the executing thread for X milliseconds, keeping the event loop running during this time
   void BlockThread(DWORD delay);
-  void ExecuteEvent(char* evtName, int argc, const JSValue* argv, bool* block = nullptr);
-  //void ExecuteEvent(char* evtName, const JS::AutoValueVector& args, bool* block = nullptr);
-
-  void OnDestroyContext();
-
-  // public because PacketEventCallback calls this directly
-  bool HandleEvent(Event* evt, bool clearList);
 
  private:
   bool Initialize();
@@ -106,6 +99,8 @@ class Script {
 
   void RunMain();
   bool RunEventLoop();
+  void ExecuteEvent(char* evtName, int argc, const JSValue* argv, bool* block = nullptr);
+  bool HandleEvent(Event* evt, bool clearList);
   bool ProcessAllEvents();
 
   static int InterruptHandler(JSRuntime* rt, void* opaque);

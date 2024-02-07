@@ -102,76 +102,10 @@ JSAPI_FUNC(script_send) {
   Script* script = (Script*)JS_GetOpaque3(this_val);
   if (!script || !script->IsRunning())
     return JS_NULL;
-  sScriptEngine->LockScriptList("script.send");
 
-  uint8_t* data;
-  size_t data_len;
-  uint8_t** sab_tab;
-  size_t sab_tab_len;
-
-  data = JS_WriteObject2(ctx, &data_len, argv[0], JS_WRITE_OBJ_SAB | JS_WRITE_OBJ_REFERENCE, &sab_tab, &sab_tab_len);
-  if (!data) {
+  if (!ScriptMessageEvent(ctx, script, argv[0])) {
     return JS_EXCEPTION;
   }
-
-  // !! TESTING SHARED ARRAY BUFFER !!
-  Event* evt = new Event;
-  // arg1 = data
-  // arg2 = data length
-  // arg3 = sab
-  // arg4 = sab length
-  evt->name = "scriptmsg";
-
-  // write data
-  evt->arg1 = malloc(data_len);
-  if (!evt->arg1) {
-    js_free(ctx, data);
-    js_free(ctx, sab_tab);
-    return JS_EXCEPTION;
-  }
-  memcpy(evt->arg1, data, data_len);
-
-  evt->arg2 = malloc(sizeof(size_t));
-  if (!evt->arg2) {
-    free(evt->arg1);
-    js_free(ctx, data);
-    js_free(ctx, sab_tab);
-    return JS_EXCEPTION;
-  }
-  *(size_t*)evt->arg2 = data_len;
-
-  // write sab
-  evt->arg3 = malloc(sizeof(uint8_t*) * sab_tab_len);
-  if (!evt->arg3) {
-    free(evt->arg1);
-    free(evt->arg2);
-    js_free(ctx, data);
-    js_free(ctx, sab_tab);
-    return JS_EXCEPTION;
-  }
-  memcpy(evt->arg3, sab_tab, sizeof(uint8_t*) * sab_tab_len);
-
-  evt->arg4 = malloc(sizeof(size_t));
-  if (!evt->arg4) {
-    free(evt->arg1);
-    free(evt->arg2);
-    free(evt->arg3);
-    js_free(ctx, data);
-    js_free(ctx, sab_tab);
-    return JS_EXCEPTION;
-  }
-  *(size_t*)evt->arg4 = sab_tab_len;
-
-  // increase SAB reference counts
-  for (size_t i = 0; i < sab_tab_len; ++i) {
-    js_sab_dup(NULL, ((uint8_t**)evt->arg3)[i]);
-  }
-
-  js_free(ctx, data);
-  js_free(ctx, sab_tab);
-
-  script->DispatchEvent(evt);
-  sScriptEngine->UnLockScriptList("script.send");
 
   return JS_NULL;
 }

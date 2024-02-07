@@ -4,6 +4,7 @@
 
 #include <windows.h>
 
+class Script;
 typedef std::list<JSValue> FunctionList;
 
 struct Event {
@@ -38,11 +39,14 @@ bool KeyDownUpEvent(WPARAM bByte, BYTE bUp);
 void PlayerAssignEvent(DWORD dwUnitId);
 void MouseClickEvent(int button, POINT pt, bool bUp);
 void MouseMoveEvent(POINT pt);
+bool ScriptMessageEvent(JSContext* ctx, Script* script, JSValue obj);
 void ScriptBroadcastEvent(JSContext* cx, uint32_t argc, JSValue* argv);
 void ItemActionEvent(DWORD GID, char* Code, BYTE Mode, bool Global);
 bool GamePacketEvent(BYTE* pPacket, DWORD dwSize);
 bool GamePacketSentEvent(BYTE* pPacket, DWORD dwSize);
 bool RealmPacketEvent(BYTE* pPacket, DWORD dwSize);
+bool GenhookClickEvent(Script* script, int button, POINT* loc, JSValue func);
+void GenhookHoverEvent(Script* script, POINT* loc, JSValue func);
 
 struct ChatEventHelper {
   const char *name, *nick;
@@ -97,4 +101,10 @@ struct PacketEventHelper {
   const char* name;
   BYTE* pPacket;
   DWORD dwSize;
+};
+
+struct GenhookClickEventHelper {
+  const char* name;
+  int button;
+  POINT* loc;
 };

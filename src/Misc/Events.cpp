@@ -144,19 +144,16 @@ void MouseMoveEvent(POINT pt) {
   sScriptEngine->ForEachScript(MouseMoveCallback, &helper, 2);
 }
 
-bool __fastcall BCastEventCallback(Script* script, void* argv, uint32_t /*argc*/) {
-  BCastEventHelper* helper = (BCastEventHelper*)argv;
-
-  if (script->IsRunning() && script->GetListenerCount("scriptmsg") > 0) {
+bool ScriptMessageEvent(JSContext* ctx, Script* script, JSValue obj) {
+  if (script && script->IsRunning() && script->GetListenerCount("scriptmsg") > 0) {
     uint8_t* data;
     size_t data_len;
     uint8_t** sab_tab;
     size_t sab_tab_len;
 
-    data = JS_WriteObject2(helper->cx, &data_len, helper->argv[0], JS_WRITE_OBJ_SAB | JS_WRITE_OBJ_REFERENCE, &sab_tab, &sab_tab_len);
+    data = JS_WriteObject2(ctx, &data_len, obj, JS_WRITE_OBJ_SAB | JS_WRITE_OBJ_REFERENCE, &sab_tab, &sab_tab_len);
     if (!data) {
-      Log("could not write SAB");
-      return true;
+      return false;
     }
 
     Event* evt = new Event;
@@ -166,9 +163,9 @@ bool __fastcall BCastEventCallback(Script* script, void* argv, uint32_t /*argc*/
     evt->data = static_cast<uint8_t*>(malloc(data_len));
     evt->data_len = data_len;
     if (!evt->data) {
-      js_free(helper->cx, data);
-      js_free(helper->cx, sab_tab);
-      return true;
+      js_free(ctx, data);
+      js_free(ctx, sab_tab);
+      return false;
     }
     memcpy(evt->data, data, data_len);
 
@@ -176,9 +173,9 @@ bool __fastcall BCastEventCallback(Script* script, void* argv, uint32_t /*argc*/
     evt->sab_tab = static_cast<uint8_t**>(malloc(sizeof(uint8_t*) * sab_tab_len));
     if (!evt->sab_tab) {
       free(evt->data);
-      js_free(helper->cx, data);
-      js_free(helper->cx, sab_tab);
-      return true;
+      js_free(ctx, data);
+      js_free(ctx, sab_tab);
+      return false;
     }
     memcpy(evt->sab_tab, sab_tab, sizeof(uint8_t*) * sab_tab_len);
     evt->sab_tab_len = sab_tab_len;
@@ -188,12 +185,17 @@ bool __fastcall BCastEventCallback(Script* script, void* argv, uint32_t /*argc*/
       js_sab_dup(NULL, evt->sab_tab[i]);
     }
 
-    js_free(helper->cx, data);
-    js_free(helper->cx, sab_tab);
+    js_free(ctx, data);
+    js_free(ctx, sab_tab);
 
     script->DispatchEvent(evt);
   }
   return true;
+}
+
+bool __fastcall BCastEventCallback(Script* script, void* argv, uint32_t /*argc*/) {
+  BCastEventHelper* helper = (BCastEventHelper*)argv;
+  return ScriptMessageEvent(helper->cx, script, helper->argv[0]);
 }
 
 void ScriptBroadcastEvent(JSContext* cx, uint32_t argc, JSValue* args) {
@@ -363,4 +365,48 @@ bool GamePacketSentEvent(BYTE* pPacket, DWORD dwSize) {
 bool RealmPacketEvent(BYTE* pPacket, DWORD dwSize) {
   PacketEventHelper helper = {"realmpacket", pPacket, dwSize};
   return sScriptEngine->ForEachScript(PacketEventCallback, &helper, 3);
+}
+
+bool GenhookClickEvent(Script* script, int button, POINT* loc, JSValue func) {
+  bool block = false;
+  if (script && JS_IsFunction(script->GetContext(), func)) {
+    Event* evt = new Event;
+    // evt->owner = owner;
+    evt->argc = 3;
+    evt->name = "ScreenHookClick";
+    evt->arg1 = new DWORD((DWORD)button);
+    evt->arg2 = new DWORD((DWORD)loc->x);
+    evt->arg3 = new DWORD((DWORD)loc->y);
+    evt->arg4 = new DWORD(false);
+
+    ResetEvent(Vars.eventSignal);
+    evt->functions.push_back(JS_DupValue(script->GetContext(), func));
+    script->DispatchEvent(evt);
+
+    if (WaitForSingleObject(Vars.eventSignal, 3000) == WAIT_TIMEOUT)
+      return false;
+    bool* global = (bool*)evt->arg4;
+    block = *global;
+    delete evt->arg1;
+    delete evt->arg2;
+    delete evt->arg3;
+    delete evt->arg4;
+    JS_FreeValue(script->GetContext(), func);
+    delete evt;
+  }
+  return block;
+}
+
+void GenhookHoverEvent(Script* script, POINT* loc, JSValue func) {
+  if (script && JS_IsFunction(script->GetContext(), func)) {
+    Event* evt = new Event;
+    // evt->owner = owner;
+    evt->argc = 2;
+    evt->functions.push_back(JS_DupValue(script->GetContext(), func));
+    evt->name = "ScreenHookHover";
+    evt->arg1 = new DWORD((DWORD)loc->x);
+    evt->arg2 = new DWORD((DWORD)loc->y);
+
+    script->DispatchEvent(evt);
+  }
 }
