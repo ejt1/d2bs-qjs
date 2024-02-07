@@ -105,10 +105,6 @@ DWORD GetPlayerArea(void) {
   return (ClientState() == ClientStateInGame ? D2CLIENT_GetPlayerUnit()->pPath->pRoom1->pRoom2->pLevel->dwLevelNo : NULL);
 }
 
-bool InArea(int x, int y, int x2, int y2, int sizex, int sizey) {
-  return !!(x >= x2 && x < x2 + sizex && y >= y2 && y < y2 + sizey);
-}
-
 void SendMouseClick(int x, int y, int clicktype) {
   // HACK: Using PostMessage instead of SendMessage--need to fix this ASAP!
   LPARAM lp = x + (y << 16);

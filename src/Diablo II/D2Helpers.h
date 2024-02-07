@@ -21,6 +21,7 @@ enum ClientGameState { ClientStateNull, ClientStateMenu, ClientStateInGame, Clie
 ClientGameState ClientState(void);
 bool GameReady(void);
 bool WaitForGameReady(void);
+
 DWORD GetPlayerArea(void);
 
 void SendMouseClick(int x, int y, int clicktype);
