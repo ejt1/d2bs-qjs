@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Game/D2DataTbls.h"
 #include "D2DrlgPreset.h"
 
 #include <cstdint>
@@ -27,6 +28,15 @@ struct D2DrlgCoordsStrc {
 
 #pragma pack(push, 1)
 struct D2DrlgRoomStrc {
+  // TODO(ejt): find names
+  void AddRoomData();
+  void RemoveRoomData();
+
+  uint32_t GetTileLevelNo(uint32_t dwTileNo);
+
+  bool Reveal(bool revealPresets);
+  void DrawPresets();
+
   uint32_t _1[2];               // 0x00
   D2DrlgRoomStrc** pRoom2Near;  // 0x08
   uint32_t _2[5];               // 0x0C
@@ -57,7 +67,7 @@ struct D2ActiveRoomStrc {
   uint32_t _1[3];                 // 0x04
   D2DrlgRoomStrc* pRoom2;         // 0x10
   uint32_t _2[3];                 // 0x14
-  D2DrlgCoordsStrc* Coll;         // 0x20
+  D2DrlgCoordsStrc* pCoords;      // 0x20
   uint32_t dwRoomsNear;           // 0x24
   uint32_t _3[9];                 // 0x28
   uint32_t dwXStart;              // 0x4C
@@ -99,6 +109,10 @@ struct D2DrlgActStrc {
 
 #pragma pack(push, 1)
 struct D2DrlgLevelStrc {
+  const char* GetName() const;
+
+  static D2DrlgLevelStrc* FindLevelFromLevelId(uint32_t levelId);
+
   uint32_t _1[4];               // 0x00
   D2DrlgRoomStrc* pRoom2First;  // 0x10
   uint32_t _2[2];               // 0x14
@@ -124,3 +138,9 @@ struct D2DrlgLevelStrc {
   uint32_t dwRoomEntries;  // 0x228
 };
 #pragma pack(pop)
+
+inline void(__stdcall* D2COMMON_AddRoomData)(D2DrlgActStrc* ptAct, int LevelId, int Xpos, int Ypos, D2ActiveRoomStrc* pRoom) = nullptr;
+inline void(__stdcall* D2COMMON_RemoveRoomData)(D2DrlgActStrc* ptAct, int LevelId, int Xpos, int Ypos, D2ActiveRoomStrc* pRoom) = nullptr;
+
+inline void(__stdcall* D2COMMON_InitLevel)(D2DrlgLevelStrc* pLevel) = nullptr;
+inline D2LevelsTxt*(__stdcall* D2COMMON_GetLevelText)(uint32_t levelno) = nullptr;

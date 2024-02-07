@@ -169,10 +169,10 @@ WORD ActMap::getAvoidLayerPoint(D2DrlgRoomStrc* room, const Point& pt) const {
 
 WORD ActMap::getCollFromRoom(D2DrlgRoomStrc* room, const Point& pt) const {
   if (!room->pRoom1) {
-    AddRoomData(room);
+    room->AddRoomData();
     RoomsAdded.push_back(room);
   }
-  D2DrlgCoordsStrc* map = room->pRoom1->Coll;
+  D2DrlgCoordsStrc* map = room->pRoom1->pCoords;
   WORD val = *(map->pMapStart + (pt.second - map->dwPosGameY) * (map->dwSizeGameX) + (pt.first - map->dwPosGameX));
 
   // todo: avoid layer could be used in every area, we can add unwalkable objects like torches, chests etc
@@ -184,7 +184,9 @@ WORD ActMap::getCollFromRoom(D2DrlgRoomStrc* room, const Point& pt) const {
 }
 
 void ActMap::CleanUp(void) const {
-  for (RoomList::iterator it = RoomsAdded.begin(); it != RoomsAdded.end(); it++) RemoveRoomData(*it);
+  for (RoomList::iterator it = RoomsAdded.begin(); it != RoomsAdded.end(); it++) {
+    (*it)->RemoveRoomData();
+  }
   RoomsAdded.clear();
   levelCache.clear();
   roomCache.clear();
@@ -205,7 +207,7 @@ void ActMap::GetExits(ExitArray& exits) const {
 
   for (D2DrlgRoomStrc* room = level->pRoom2First; room; room = room->pRoom2Next) {
     if (!room->pRoom1) {
-      AddRoomData(room);
+      room->AddRoomData();
       added.push_back(room);
     }
 
@@ -217,7 +219,9 @@ void ActMap::GetExits(ExitArray& exits) const {
   FindRoomLinkageExits(exits);
 
   RoomList::iterator start = added.begin(), last = added.end();
-  for (RoomList::iterator it = start; it != last; it++) RemoveRoomData(*it);
+  for (RoomList::iterator it = start; it != last; it++) {
+    (*it)->RemoveRoomData();
+  }
 
   LeaveCriticalSection(lock);
 }
@@ -553,7 +557,7 @@ void ActMap::Dump(const char* file, const PointList& points) const {
   fopen_s(&f, file, "wt+");
   if (!f)
     return;
-  fprintf(f, "Map (%d x %d) at (%d, %d) for area %s (id %d):\n", width, height, posX, posY, GetLevelName(level), level->dwLevelNo);
+  fprintf(f, "Map (%d x %d) at (%d, %d) for area %s (id %d):\n", width, height, posX, posY, level->GetName(), level->dwLevelNo);
   fprintf(f, "\n");
   typedef std::map<Point, char> PointMap;
   PointMap pathMap;
@@ -618,9 +622,11 @@ void ActMap::DumpLevel(const char* file) const {
   EnterCriticalSection(lock);
   FILE* f = NULL;
   fopen_s(&f, file, "wt+");
-  if (!f)
+  if (!f) {
+    LeaveCriticalSection(lock);
     return;
-  fprintf(f, "Map (%d x %d) at (%d, %d) for area %s (id %d):\n", width, height, posX, posY, GetLevelName(level), level->dwLevelNo);
+  }
+  fprintf(f, "Map (%d x %d) at (%d, %d) for area %s (id %d):\n", width, height, posX, posY, level->GetName(), level->dwLevelNo);
 
   fprintf(f, "--------------------------\n");
   fprintf(f, "Presets:\n");
@@ -647,7 +653,7 @@ void ActMap::DumpLevel(const char* file) const {
   i = 1;
   for (D2DrlgRoomStrc* room = level->pRoom2First; room; room = room->pRoom2Next) {
     if (!room->pRoom1) {
-      AddRoomData(room);
+      room->AddRoomData();
       added.push_back(room);
     }
 
@@ -655,14 +661,16 @@ void ActMap::DumpLevel(const char* file) const {
       Point loc(D2CLIENT_GetUnitX(pUnit), D2CLIENT_GetUnitY(pUnit));
       Point rel = AbsToRelative(loc);
       char tmp[128] = "";
-      GetUnitName(pUnit, tmp, 128);
+      pUnit->GetUnitName(tmp, 128);
       fprintf(f, "Unit %d: at (%d, %d, relative: %d, %d) of type %d, txtFile %d, %s, %d, %d\n",
 
               i++, loc.first, loc.second, rel.first, rel.second, pUnit->dwType, pUnit->dwTxtFileNo, tmp, pUnit->wX, pUnit->wY);
     }
   }
   RoomList::iterator start = added.begin(), last = added.end();
-  for (RoomList::iterator it = start; it != last; it++) RemoveRoomData(*it);
+  for (RoomList::iterator it = start; it != last; it++) {
+    (*it)->RemoveRoomData();
+  }
 
   fprintf(f, "--------------------------\n");
   fprintf(f, "Exits:\n");
@@ -673,7 +681,7 @@ void ActMap::DumpLevel(const char* file) const {
   for (ExitArray::iterator it = exits.begin(); it != exits.end(); it++) {
     Point rel = AbsToRelative(it->Position);
     fprintf(f, "Exit %d: at (%d, %d, relative: %d, %d) of type %s linkage to area %s (id: %d, tile id: %d)\n", i++, it->Position.first, it->Position.second, rel.first,
-            rel.second, it->Type == Linkage ? "Area" : "Tile", GetLevelIdName(it->Target), it->Target, it->TileId);
+            rel.second, it->Type == Linkage ? "Area" : "Tile", D2COMMON_GetLevelText(it->Target)->szName, it->Target, it->TileId);
     exitPoints.insert(rel);
   }
   fprintf(f, "\n");

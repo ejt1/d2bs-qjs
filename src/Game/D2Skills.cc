@@ -1,5 +1,7 @@
-#ifndef D2SKILLS_H
-#define D2SKILLS_H
+#include "Game/D2Skills.h"
+
+#include <stdlib.h> // _countof
+
 // Added by lord2800 - English skill names all in a nice and complete struct.
 // TODO: Deprecate this and look it up via the MPQ tables
 
@@ -9,7 +11,7 @@ struct Skill_t {
 };
 
 static Skill_t Game_Skills[] = {
-    // Skill,					Id
+    // Skill, Id
     {"Attack", 0},
     {"Kick", 1},
     {"Throw", 2},
@@ -227,6 +229,18 @@ static Skill_t Game_Skills[] = {
     {"Blade Shield", 277},
     {"Venom", 278},
     {"Shadow Master", 279},
-    {"Phoenix Strike", 280}};
+    {"Phoenix Strike", 280},
+};
 
-#endif
+const char* D2SkillStrc::GetName() {
+  for (size_t i = 0; i < _countof(Game_Skills); ++i) {
+    if (Game_Skills[i].skillID == pSkillInfo->wSkillId) {
+      return Game_Skills[i].name;
+    }
+  }
+  return nullptr;
+}
+
+D2SkillStrc* D2SkillStrc::GetNext() {
+  return pNextSkill;
+}

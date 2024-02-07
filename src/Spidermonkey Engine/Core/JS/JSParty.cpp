@@ -96,7 +96,7 @@ JSAPI_FUNC(my_getParty) {
       if (!lpUnit)
         return JS_UNDEFINED;
 
-      inUnit = D2CLIENT_FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
+      inUnit = D2UnitStrc::FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
       if (!inUnit)
         THROW_ERROR(ctx, "Unable to get Unit");
 
