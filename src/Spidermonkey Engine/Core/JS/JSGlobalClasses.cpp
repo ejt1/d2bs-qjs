@@ -72,16 +72,6 @@ JSClassSpec global_classes[] = {
         FUNCLIST(room_proto_funcs),
         EMPTY_FUNCLIST,
     },
-
-    {
-        "File",
-        &file_class_id,
-        file_ctor,
-        file_finalizer,
-        0,
-        FUNCLIST(file_proto_funcs),
-        FUNCLIST(file_static_funcs),
-    },
     {
         "Socket",
         &socket_class_id,

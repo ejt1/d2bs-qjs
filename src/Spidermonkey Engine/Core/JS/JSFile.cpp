@@ -14,236 +14,261 @@
   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
-#define _USE_32BIT_TIME_T
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <io.h>
-
 #include "JSFile.h"
-#include "Engine.h"
+
+#include "Bindings.h"
 #include "File.h"
-#include "Helpers.h"
 
-struct FileData {
-  int mode;
-  char* path;
-  bool autoflush, locked;
-  FILE* fptr;
-#if DEBUG
-  char* lockLocation;
-  int line;
-#endif
-};
-
-EMPTY_CTOR(file)
-
-CLASS_FINALIZER(file) {
-  FileData* fdata = (FileData*)JS_GetOpaque3(val);
-  if (fdata) {
-    free(fdata->path);
-    if (fdata->fptr) {
-      if (fdata->locked) {
-        _unlock_file(fdata->fptr);
-#if DEBUG
-        fdata->lockLocation = __FILE__;
-        fdata->line = __LINE__;
-#endif
-        fclose(fdata->fptr);
-      } else
-        _fclose_nolock(fdata->fptr);
+JSValue FileWrap::Instantiate(JSContext* ctx, JSValue new_target, const FileData& data) {
+  JSValue proto;
+  if (JS_IsUndefined(new_target)) {
+    proto = JS_GetClassProto(ctx, m_class_id);
+  } else {
+    proto = JS_GetPropertyStr(ctx, new_target, "prototype");
+    if (JS_IsException(proto)) {
+      return JS_EXCEPTION;
     }
-    delete fdata;
+  }
+  JSValue obj = JS_NewObjectProtoClass(ctx, proto, m_class_id);
+  JS_FreeValue(ctx, proto);
+  if (JS_IsException(obj)) {
+    return obj;
+  }
+
+  FileWrap* wrap = new FileWrap(ctx, data);
+  if (!wrap) {
+    JS_FreeValue(ctx, obj);
+    return JS_ThrowOutOfMemory(ctx);
+  }
+  JS_SetOpaque(obj, wrap);
+
+  return obj;
+}
+
+void FileWrap::Initialize(JSContext* ctx, JSValue target) {
+  JSClassDef def{};
+  def.class_name = "File";
+  def.finalizer = [](JSRuntime* /*rt*/, JSValue val) {
+    FileWrap* wrap = static_cast<FileWrap*>(JS_GetOpaque(val, m_class_id));
+    if (wrap) {
+      delete wrap;
+    }
+  };
+
+  if (m_class_id == 0) {
+    JS_NewClassID(&m_class_id);
+  }
+  JS_NewClass(JS_GetRuntime(ctx), m_class_id, &def);
+
+  JSValue proto = JS_NewObject(ctx);
+  JS_SetPropertyFunctionList(ctx, proto, m_proto_funcs, _countof(m_proto_funcs));
+
+  JSValue obj = JS_NewObjectProtoClass(ctx, proto, m_class_id);
+  JS_SetPropertyFunctionList(ctx, obj, m_static_funcs, _countof(m_static_funcs));
+  JS_SetClassProto(ctx, m_class_id, proto);
+  JS_SetPropertyStr(ctx, target, "File", obj);
+}
+
+FileWrap::FileWrap(JSContext* /*ctx*/, const FileData& data) : fdata(data) {
+}
+
+FileWrap::~FileWrap() {
+  free(fdata.path);
+  if (fdata.fptr) {
+    if (fdata.locked) {
+      _unlock_file(fdata.fptr);
+#if DEBUG
+      fdata.lockLocation = __FILE__;
+      fdata.line = __LINE__;
+#endif
+      fclose(fdata.fptr);
+    } else
+      _fclose_nolock(fdata.fptr);
   }
 }
 
-JSAPI_PROP(file_getProperty) {
-  FileData* fdata = (FileData*)JS_GetOpaque3(this_val);
+// properties
+JSValue FileWrap::GetReadable(JSContext* ctx, JSValue this_val) {
+  FileWrap* wrap = static_cast<FileWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  FileData* fdata = &wrap->fdata;
+  return JS_NewBool(ctx, (fdata->fptr && !feof(fdata->fptr) && !ferror(fdata->fptr)));
+}
+
+JSValue FileWrap::GetWriteable(JSContext* ctx, JSValue this_val) {
+  FileWrap* wrap = static_cast<FileWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  FileData* fdata = &wrap->fdata;
+  return JS_NewBool(ctx, (fdata->fptr && !ferror(fdata->fptr) && (fdata->mode % 3) > FILE_READ));
+}
+
+JSValue FileWrap::GetSeekable(JSContext* ctx, JSValue this_val) {
+  FileWrap* wrap = static_cast<FileWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  FileData* fdata = &wrap->fdata;
+  return JS_NewBool(ctx, (fdata->fptr && !ferror(fdata->fptr)));
+}
+
+JSValue FileWrap::GetMode(JSContext* ctx, JSValue this_val) {
+  FileWrap* wrap = static_cast<FileWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  FileData* fdata = &wrap->fdata;
+  return JS_NewInt32(ctx, (fdata->mode % 3));
+}
+
+JSValue FileWrap::GetBinaryMode(JSContext* ctx, JSValue this_val) {
+  FileWrap* wrap = static_cast<FileWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  FileData* fdata = &wrap->fdata;
+  return JS_NewBool(ctx, (fdata->mode > 2));
+}
+
+JSValue FileWrap::GetLength(JSContext* ctx, JSValue this_val) {
+  FileWrap* wrap = static_cast<FileWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  FileData* fdata = &wrap->fdata;
+  if (fdata->fptr)
+    return JS_NewInt32(ctx, _filelength(_fileno(fdata->fptr)));
+
+  return JS_NewInt32(ctx, 0);  //= JSVAL_ZERO;
+}
+
+JSValue FileWrap::GetPath(JSContext* ctx, JSValue this_val) {
+  FileWrap* wrap = static_cast<FileWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  FileData* fdata = &wrap->fdata;
+  return JS_NewString(ctx, fdata->path + 1);
+}
+
+JSValue FileWrap::GetPosition(JSContext* ctx, JSValue this_val) {
+  FileWrap* wrap = static_cast<FileWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  FileData* fdata = &wrap->fdata;
+  if (fdata->fptr) {
+    if (fdata->locked)
+      return JS_NewInt32(ctx, ftell(fdata->fptr));
+
+    return JS_NewInt32(ctx, _ftell_nolock(fdata->fptr));
+  }
+
+  return JS_NewInt32(ctx, 0);  //= JSVAL_ZERO;
+}
+
+JSValue FileWrap::GetEOF(JSContext* ctx, JSValue this_val) {
+  FileWrap* wrap = static_cast<FileWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  FileData* fdata = &wrap->fdata;
+  if (fdata->fptr)
+    return JS_NewBool(ctx, !!feof(fdata->fptr));
+  else
+    return JS_TRUE;
+}
+
+JSValue FileWrap::GetAccessed(JSContext* ctx, JSValue this_val) {
+  FileWrap* wrap = static_cast<FileWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
   struct _stat filestat = {0};
-  if (fdata) {
-    switch (magic) {
-      case FILE_READABLE:
-        return JS_NewBool(ctx, (fdata->fptr && !feof(fdata->fptr) && !ferror(fdata->fptr)));
-        break;
-      case FILE_WRITEABLE:
-        return JS_NewBool(ctx, (fdata->fptr && !ferror(fdata->fptr) && (fdata->mode % 3) > FILE_READ));
-        break;
-      case FILE_SEEKABLE:
-        return JS_NewBool(ctx, (fdata->fptr && !ferror(fdata->fptr)));
-        break;
-      case FILE_MODE:
-        return JS_NewInt32(ctx, (fdata->mode % 3));
-        break;
-      case FILE_BINARYMODE:
-        return JS_NewBool(ctx, (fdata->mode > 2));
-        break;
-      case FILE_LENGTH:
-        if (fdata->fptr)
-          return JS_NewInt32(ctx, _filelength(_fileno(fdata->fptr)));
-        else
-          return JS_NewInt32(ctx, 0);  //= JSVAL_ZERO;
-        break;
-      case FILE_PATH:
-        return JS_NewString(ctx, fdata->path + 1);
-        break;
-      case FILE_POSITION:
-        if (fdata->fptr) {
-          if (fdata->locked)
-            return JS_NewInt32(ctx, ftell(fdata->fptr));
-          else
-            return JS_NewInt32(ctx, _ftell_nolock(fdata->fptr));
-        } else
-          return JS_NewInt32(ctx, 0);  //= JSVAL_ZERO;
-        break;
-      case FILE_EOF:
-        if (fdata->fptr)
-          return JS_NewBool(ctx, !!feof(fdata->fptr));
-        else
-          return JS_TRUE;
-        break;
-      case FILE_AUTOFLUSH:
-        return JS_NewBool(ctx, fdata->autoflush);
-        break;
-      case FILE_ACCESSED:
-        if (fdata->fptr) {
-          _fstat(_fileno(fdata->fptr), &filestat);
-          return JS_NewFloat64(ctx, (double)filestat.st_atime);
-        } else
-          return JS_NewInt32(ctx, 0);  //= JSVAL_ZERO;
-        break;
-      case FILE_MODIFIED:
-        if (fdata->fptr) {
-          _fstat(_fileno(fdata->fptr), &filestat);
-          return JS_NewFloat64(ctx, (double)filestat.st_mtime);
-        } else
-          return JS_NewInt32(ctx, 0);
-        break;
-      case FILE_CREATED:
-        if (fdata->fptr) {
-          _fstat(_fileno(fdata->fptr), &filestat);
-          return JS_NewFloat64(ctx, (double)filestat.st_ctime);
-        } else
-          return JS_NewInt32(ctx, 0);
-        break;
-    }
-  } else
-    THROW_ERROR(ctx, "Couldn't get file object");
+  FileData* fdata = &wrap->fdata;
+  if (fdata->fptr) {
+    _fstat(_fileno(fdata->fptr), &filestat);
+    return JS_NewFloat64(ctx, (double)filestat.st_atime);
+  }
 
+  return JS_NewInt32(ctx, 0);  //= JSVAL_ZERO;
+}
+
+JSValue FileWrap::GetCreated(JSContext* ctx, JSValue this_val) {
+  FileWrap* wrap = static_cast<FileWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  struct _stat filestat = {0};
+  FileData* fdata = &wrap->fdata;
+  if (fdata->fptr) {
+    _fstat(_fileno(fdata->fptr), &filestat);
+    return JS_NewFloat64(ctx, (double)filestat.st_ctime);
+  }
+
+  return JS_NewInt32(ctx, 0);
+}
+
+JSValue FileWrap::GetModified(JSContext* ctx, JSValue this_val) {
+  FileWrap* wrap = static_cast<FileWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  struct _stat filestat = {0};
+  FileData* fdata = &wrap->fdata;
+  if (fdata->fptr) {
+    _fstat(_fileno(fdata->fptr), &filestat);
+    return JS_NewFloat64(ctx, (double)filestat.st_mtime);
+  }
+
+  return JS_NewInt32(ctx, 0);
+}
+
+JSValue FileWrap::GetAutoFlush(JSContext* ctx, JSValue this_val) {
+  FileWrap* wrap = static_cast<FileWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  FileData* fdata = &wrap->fdata;
+  return JS_NewBool(ctx, fdata->autoflush);
+}
+
+JSValue FileWrap::SetAutoFlush(JSContext* ctx, JSValue this_val, JSValue val) {
+  FileWrap* wrap = static_cast<FileWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  FileData* fdata = &wrap->fdata;
+  if (JS_IsBool(val))
+    fdata->autoflush = !!JS_ToBool(ctx, val);
   return JS_UNDEFINED;
 }
 
-JSAPI_STRICT_PROP(file_setProperty) {
-  FileData* fdata = (FileData*)JS_GetOpaque3(this_val);
-  if (fdata) {
-    switch (magic) {
-      case FILE_AUTOFLUSH:
-        if (JS_IsBool(val))
-          fdata->autoflush = !!JS_ToBool(ctx, val);
-        break;
-    }
-  } else
-    THROW_ERROR(ctx, "Couldn't get file object");
-
-  return JS_UNDEFINED;
-}
-
-JSAPI_FUNC(file_open) {
-  if (argc < 2)
-    THROW_ERROR(ctx, "Not enough parameters, 2 or more expected");
-  if (!JS_IsString(argv[0]))
-    THROW_ERROR(ctx, "Parameter 1 not a string");
-  if (!JS_IsNumber(argv[1]))
-    THROW_ERROR(ctx, "Parameter 2 not a mode");
-
-  // Convert from JS params to C values
-  const char* szFile = JS_ToCString(ctx, argv[0]);
-  if (!szFile) {
+// functions
+JSValue FileWrap::Close(JSContext* ctx, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
+  FileWrap* wrap = static_cast<FileWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
     return JS_EXCEPTION;
   }
 
-  int32_t mode;
-  if (JS_ToInt32(ctx, &mode, argv[1])) {
-    JS_FreeCString(ctx, szFile);
-    return JS_EXCEPTION;
-  }
-  bool binary = false;
-  bool autoflush = false;
-  bool lockFile = false;
-  if (argc > 2 && JS_IsBool(argv[2]))
-    binary = !!JS_ToBool(ctx, argv[2]);
-  if (argc > 3 && JS_IsBool(argv[3]))
-    autoflush = !!JS_ToBool(ctx, argv[3]);
-  if (argc > 4 && JS_IsBool(argv[4]))
-    lockFile = !!JS_ToBool(ctx, argv[4]);
-
-  // Check that the path looks basically ok, validation is handled later
-  if (szFile[0] == '\0') {
-    JS_FreeCString(ctx, szFile);
-    THROW_ERROR(ctx, "Invalid file name");
-  }
-
-  // this could be simplified to: mode > FILE_APPEND || mode < FILE_READ
-  // but then it takes a hit for readability
-  switch (mode) {
-    // Good modes
-    case FILE_READ:
-    case FILE_WRITE:
-    case FILE_APPEND:
-      break;
-    // Bad modes
-    default:
-      JS_FreeCString(ctx, szFile);
-      THROW_ERROR(ctx, "Invalid file mode");
-  }
-
-  if (binary)
-    mode += 3;
-
-  static const char* modes[] = {"rt", "w+t", "a+t", "rb", "w+b", "a+b"};
-  FILE* fptr = fileOpenRelScript(szFile, modes[mode], ctx);
-
-  // If fileOpenRelScript failed, it already reported the error
-  if (fptr == NULL) {
-    JS_FreeCString(ctx, szFile);
-    return JS_EXCEPTION;
-  }
-
-  FileData* fdata = new FileData;
-  if (!fdata) {
-    JS_FreeCString(ctx, szFile);
-    fclose(fptr);
-    THROW_ERROR(ctx, "Couldn't allocate memory for the FileData object");
-  }
-
-  fdata->mode = mode;
-  fdata->path = _strdup(szFile);
-  fdata->autoflush = autoflush;
-  fdata->locked = lockFile;
-  fdata->fptr = fptr;
-  if (lockFile) {
-    _lock_file(fptr);
-#if DEBUG
-    fdata->lockLocation = __FILE__;
-    fdata->line = __LINE__;
-#endif
-  }
-  JS_FreeCString(ctx, szFile);
-
-  JSValue res = BuildObject(ctx, file_class_id, FUNCLIST(file_proto_funcs), fdata);
-  if (JS_IsException(res)) {
-    if (lockFile)
-      fclose(fptr);
-    else
-      _fclose_nolock(fptr);
-    free(fdata->path);
-    delete fdata;
-    THROW_ERROR(ctx, "Failed to define the file object");
-  }
-  return res;
-}
-
-JSAPI_FUNC(file_close) {
-  FileData* fdata = (FileData*)JS_GetOpaque3(this_val);
+  FileData* fdata = &wrap->fdata;
   if (fdata) {
     if (fdata->fptr) {
       if (fdata->locked) {
@@ -266,8 +291,13 @@ JSAPI_FUNC(file_close) {
   return JS_DupValue(ctx, this_val);
 }
 
-JSAPI_FUNC(file_reopen) {
-  FileData* fdata = (FileData*)JS_GetOpaque3(this_val);
+JSValue FileWrap::Reopen(JSContext* ctx, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
+  FileWrap* wrap = static_cast<FileWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  FileData* fdata = &wrap->fdata;
   if (fdata)
     if (!fdata->fptr) {
       static const char* modes[] = {"rt", "w+t", "a+t", "rb", "w+b", "a+b"};
@@ -290,8 +320,13 @@ JSAPI_FUNC(file_reopen) {
   return JS_DupValue(ctx, this_val);
 }
 
-JSAPI_FUNC(file_read) {
-  FileData* fdata = (FileData*)JS_GetOpaque3(this_val);
+JSValue FileWrap::Read(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
+  FileWrap* wrap = static_cast<FileWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  FileData* fdata = &wrap->fdata;
   if (fdata && fdata->fptr) {
     clearerr(fdata->fptr);
     int32_t count = 1;
@@ -363,8 +398,13 @@ JSAPI_FUNC(file_read) {
   return JS_UNDEFINED;
 }
 
-JSAPI_FUNC(file_readLine) {
-  FileData* fdata = (FileData*)JS_GetOpaque3(this_val);
+JSValue FileWrap::ReadLine(JSContext* ctx, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
+  FileWrap* wrap = static_cast<FileWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  FileData* fdata = &wrap->fdata;
   if (fdata && fdata->fptr) {
     uint32_t size = 0;
     int offset = 0;
@@ -393,8 +433,13 @@ JSAPI_FUNC(file_readLine) {
   return JS_UNDEFINED;
 }
 
-JSAPI_FUNC(file_readAllLines) {
-  FileData* fdata = (FileData*)JS_GetOpaque3(this_val);
+JSValue FileWrap::ReadAllLines(JSContext* ctx, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
+  FileWrap* wrap = static_cast<FileWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  FileData* fdata = &wrap->fdata;
   if (fdata && fdata->fptr) {
     JSValue arr = JS_NewArray(ctx);
     int i = 0;
@@ -427,8 +472,13 @@ JSAPI_FUNC(file_readAllLines) {
   return JS_UNDEFINED;
 }
 
-JSAPI_FUNC(file_readAll) {
-  FileData* fdata = (FileData*)JS_GetOpaque3(this_val);
+JSValue FileWrap::ReadAll(JSContext* ctx, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
+  FileWrap* wrap = static_cast<FileWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  FileData* fdata = &wrap->fdata;
   if (fdata && fdata->fptr) {
     uint32_t size = 0;
     int offset = 0;
@@ -481,8 +531,13 @@ JSAPI_FUNC(file_readAll) {
   return JS_UNDEFINED;
 }
 
-JSAPI_FUNC(file_write) {
-  FileData* fdata = (FileData*)JS_GetOpaque3(this_val);
+JSValue FileWrap::Write(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
+  FileWrap* wrap = static_cast<FileWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  FileData* fdata = &wrap->fdata;
   if (fdata && fdata->fptr) {
     for (int i = 0; i < argc; i++) writeValue(fdata->fptr, ctx, argv[i], !!(fdata->mode > 2), fdata->locked);
 
@@ -497,8 +552,13 @@ JSAPI_FUNC(file_write) {
   return JS_DupValue(ctx, this_val);
 }
 
-JSAPI_FUNC(file_seek) {
-  FileData* fdata = (FileData*)JS_GetOpaque3(this_val);
+JSValue FileWrap::Seek(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
+  FileWrap* wrap = static_cast<FileWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  FileData* fdata = &wrap->fdata;
   if (fdata && fdata->fptr) {
     if (argc > 0) {
       int32_t bytes;
@@ -531,8 +591,13 @@ JSAPI_FUNC(file_seek) {
   return JS_DupValue(ctx, this_val);
 }
 
-JSAPI_FUNC(file_flush) {
-  FileData* fdata = (FileData*)JS_GetOpaque3(this_val);
+JSValue FileWrap::Flush(JSContext* ctx, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
+  FileWrap* wrap = static_cast<FileWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  FileData* fdata = &wrap->fdata;
   if (fdata && fdata->fptr)
     if (fdata->locked)
       fflush(fdata->fptr);
@@ -543,10 +608,13 @@ JSAPI_FUNC(file_flush) {
   return JS_DupValue(ctx, this_val);
 }
 
-JSAPI_FUNC(file_reset) {
-  (argc);
+JSValue FileWrap::Reset(JSContext* ctx, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
+  FileWrap* wrap = static_cast<FileWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
 
-  FileData* fdata = (FileData*)JS_GetOpaque3(this_val);
+  FileData* fdata = &wrap->fdata;
   if (fdata && fdata->fptr) {
     if (fdata->locked && fseek(fdata->fptr, 0L, SEEK_SET)) {
       THROW_ERROR(ctx, "Seek failed");
@@ -557,10 +625,13 @@ JSAPI_FUNC(file_reset) {
   return JS_DupValue(ctx, this_val);
 }
 
-JSAPI_FUNC(file_end) {
-  (argc);
+JSValue FileWrap::End(JSContext* ctx, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
+  FileWrap* wrap = static_cast<FileWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
 
-  FileData* fdata = (FileData*)JS_GetOpaque3(this_val);
+  FileData* fdata = &wrap->fdata;
   if (fdata && fdata->fptr) {
     if (fdata->locked && fseek(fdata->fptr, 0L, SEEK_END)) {
       THROW_ERROR(ctx, "Seek failed");
@@ -570,3 +641,94 @@ JSAPI_FUNC(file_end) {
   // BUG(ejt): possible value leak
   return JS_DupValue(ctx, this_val);
 }
+
+// static functions
+JSValue FileWrap::Open(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
+  if (argc < 2)
+    THROW_ERROR(ctx, "Not enough parameters, 2 or more expected");
+  if (!JS_IsString(argv[0]))
+    THROW_ERROR(ctx, "Parameter 1 not a string");
+  if (!JS_IsNumber(argv[1]))
+    THROW_ERROR(ctx, "Parameter 2 not a mode");
+
+  // Convert from JS params to C values
+  const char* szFile = JS_ToCString(ctx, argv[0]);
+  if (!szFile) {
+    return JS_EXCEPTION;
+  }
+
+  int32_t mode;
+  if (JS_ToInt32(ctx, &mode, argv[1])) {
+    JS_FreeCString(ctx, szFile);
+    return JS_EXCEPTION;
+  }
+  bool binary = false;
+  bool autoflush = false;
+  bool lockFile = false;
+  if (argc > 2 && JS_IsBool(argv[2]))
+    binary = !!JS_ToBool(ctx, argv[2]);
+  if (argc > 3 && JS_IsBool(argv[3]))
+    autoflush = !!JS_ToBool(ctx, argv[3]);
+  if (argc > 4 && JS_IsBool(argv[4]))
+    lockFile = !!JS_ToBool(ctx, argv[4]);
+
+  // Check that the path looks basically ok, validation is handled later
+  if (szFile[0] == '\0') {
+    JS_FreeCString(ctx, szFile);
+    THROW_ERROR(ctx, "Invalid file name");
+  }
+
+  // this could be simplified to: mode > FILE_APPEND || mode < FILE_READ
+  // but then it takes a hit for readability
+  switch (mode) {
+    // Good modes
+    case FILE_READ:
+    case FILE_WRITE:
+    case FILE_APPEND:
+      break;
+    // Bad modes
+    default:
+      JS_FreeCString(ctx, szFile);
+      THROW_ERROR(ctx, "Invalid file mode");
+  }
+
+  if (binary)
+    mode += 3;
+
+  static const char* modes[] = {"rt", "w+t", "a+t", "rb", "w+b", "a+b"};
+  FILE* fptr = fileOpenRelScript(szFile, modes[mode], ctx);
+
+  // If fileOpenRelScript failed, it already reported the error
+  if (fptr == NULL) {
+    JS_FreeCString(ctx, szFile);
+    return JS_EXCEPTION;
+  }
+
+  FileData data{};
+  data.mode = mode;
+  data.path = _strdup(szFile);
+  data.autoflush = autoflush;
+  data.locked = lockFile;
+  data.fptr = fptr;
+  if (lockFile) {
+    _lock_file(fptr);
+#if DEBUG
+    data.lockLocation = __FILE__;
+    data.line = __LINE__;
+#endif
+  }
+  JS_FreeCString(ctx, szFile);
+
+  JSValue rval = FileWrap::Instantiate(ctx, JS_UNDEFINED, data);
+  if (JS_IsException(rval)) {
+    if (lockFile)
+      fclose(fptr);
+    else
+      _fclose_nolock(fptr);
+    free(data.path);
+    return JS_EXCEPTION;
+  }
+  return rval;
+}
+
+D2BS_BINDING_INTERNAL(FileWrap, FileWrap::Initialize)
