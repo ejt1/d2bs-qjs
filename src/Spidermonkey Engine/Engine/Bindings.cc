@@ -11,6 +11,7 @@
   V(PresetUnitWrap)              \
   V(ProfileWrap)                 \
   V(RoomWrap)                    \
+  V(SocketWrap)                  \
   V(ScriptWrap)
 
 #define V(name) void _register##name(JSContext* ctx, JSValue target);

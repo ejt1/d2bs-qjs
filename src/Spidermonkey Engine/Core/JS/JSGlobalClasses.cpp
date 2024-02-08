@@ -45,15 +45,6 @@ JSClassSpec global_classes[] = {
         FUNCLIST(unit_proto_funcs),
         EMPTY_FUNCLIST,
     },
-    {
-        "Socket",
-        &socket_class_id,
-        socket_ctor,
-        socket_finalizer,
-        0,
-        FUNCLIST(socket_proto_funcs),
-        FUNCLIST(socket_static_funcs),
-    },
 
     {
         "Frame",
