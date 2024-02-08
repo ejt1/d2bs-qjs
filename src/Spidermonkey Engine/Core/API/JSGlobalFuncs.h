@@ -38,7 +38,7 @@ static JSCFunctionListEntry global_funcs[] = {
     JS_FN("getParty", my_getParty, 0, FUNCTION_FLAGS),
     JS_FN("getPresetUnit", my_getPresetUnit, 0, FUNCTION_FLAGS),
     JS_FN("getPresetUnits", my_getPresetUnits, 0, FUNCTION_FLAGS),
-    JS_FN("getArea", my_getArea, 0, FUNCTION_FLAGS),
+    //JS_FN("getArea", my_getArea, 0, FUNCTION_FLAGS),
     JS_FN("getBaseStat", my_getBaseStat, 0, FUNCTION_FLAGS),
     JS_FN("getControl", my_getControl, 0, FUNCTION_FLAGS),
     JS_FN("getControls", my_getControls, 0, FUNCTION_FLAGS),

@@ -83,7 +83,7 @@ void ScriptWrap::Initialize(JSContext* ctx, JSValue target) {
   JS_SetPropertyStr(ctx, target, "getScripts", JS_NewCFunction(ctx, GetScripts, "getScripts", 0));
 }
 
-ScriptWrap::ScriptWrap(JSContext* ctx, Script* script) : m_script(script) {
+ScriptWrap::ScriptWrap(JSContext* /*ctx*/, Script* script) : m_script(script) {
 }
 
 // properties
@@ -140,7 +140,7 @@ JSValue ScriptWrap::GetMemory(JSContext* ctx, JSValue this_val) {
 }
 
 // functions
-JSValue ScriptWrap::GetNext(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
+JSValue ScriptWrap::GetNext(JSContext* ctx, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
   ScriptWrap* wrap = static_cast<ScriptWrap*>(JS_GetOpaque(this_val, m_class_id));
   if (!wrap || !wrap->m_script) {
     return JS_EXCEPTION;
@@ -165,7 +165,7 @@ JSValue ScriptWrap::GetNext(JSContext* ctx, JSValue this_val, int argc, JSValue*
   return JS_UNDEFINED;
 }
 
-JSValue ScriptWrap::Pause(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
+JSValue ScriptWrap::Pause(JSContext* /*ctx*/, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
   ScriptWrap* wrap = static_cast<ScriptWrap*>(JS_GetOpaque(this_val, m_class_id));
   if (!wrap || !wrap->m_script) {
     return JS_EXCEPTION;
@@ -177,7 +177,7 @@ JSValue ScriptWrap::Pause(JSContext* ctx, JSValue this_val, int argc, JSValue* a
   return JS_NULL;
 }
 
-JSValue ScriptWrap::Resume(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
+JSValue ScriptWrap::Resume(JSContext* /*ctx*/, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
   ScriptWrap* wrap = static_cast<ScriptWrap*>(JS_GetOpaque(this_val, m_class_id));
   if (!wrap || !wrap->m_script) {
     return JS_EXCEPTION;
@@ -188,7 +188,7 @@ JSValue ScriptWrap::Resume(JSContext* ctx, JSValue this_val, int argc, JSValue* 
   return JS_NULL;
 }
 
-JSValue ScriptWrap::Stop(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
+JSValue ScriptWrap::Stop(JSContext* /*ctx*/, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
   ScriptWrap* wrap = static_cast<ScriptWrap*>(JS_GetOpaque(this_val, m_class_id));
   if (!wrap || !wrap->m_script) {
     return JS_EXCEPTION;
@@ -200,7 +200,7 @@ JSValue ScriptWrap::Stop(JSContext* ctx, JSValue this_val, int argc, JSValue* ar
   return JS_NULL;
 }
 
-JSValue ScriptWrap::Join(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
+JSValue ScriptWrap::Join(JSContext* /*ctx*/, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
   ScriptWrap* wrap = static_cast<ScriptWrap*>(JS_GetOpaque(this_val, m_class_id));
   if (!wrap || !wrap->m_script) {
     return JS_EXCEPTION;
@@ -232,7 +232,7 @@ JSValue ScriptWrap::Send(JSContext* ctx, JSValue this_val, int argc, JSValue* ar
   return JS_NULL;
 }
 
-JSValue ScriptWrap::GetScript(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
+JSValue ScriptWrap::GetScript(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
   Script* iterp = NULL;
   if (argc == 1 && JS_IsBool(argv[0]) && JS_ToBool(ctx, argv[0]) == TRUE)
     iterp = (Script*)JS_GetContextOpaque(ctx);
@@ -279,7 +279,7 @@ JSValue ScriptWrap::GetScript(JSContext* ctx, JSValue this_val, int argc, JSValu
   return ScriptWrap::Instantiate(ctx, JS_UNDEFINED, iterp);
 }
 
-JSValue ScriptWrap::GetScripts(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
+JSValue ScriptWrap::GetScripts(JSContext* ctx, JSValue /*this_val*/, int /*argc*/, JSValue* /*argv*/) {
   DWORD dwArrayCount = NULL;
 
   JSValue pReturnArray = JS_NewArray(ctx);
