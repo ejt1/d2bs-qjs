@@ -54,24 +54,6 @@ JSClassSpec global_classes[] = {
         FUNCLIST(presetunit_proto_funcs),
         EMPTY_FUNCLIST,
     },
-    //{
-    //    "Area",
-    //    &area_class_id,
-    //    area_ctor,
-    //    area_finalizer,
-    //    0,
-    //    FUNCLIST(area_proto_funcs),
-    //    EMPTY_FUNCLIST,
-    //},
-    {
-        "Control",
-        &control_class_id,
-        control_ctor,
-        control_finalizer,
-        0,
-        FUNCLIST(control_proto_funcs),
-        EMPTY_FUNCLIST,
-    },
     {
         "Folder",
         &folder_class_id,
@@ -136,15 +118,6 @@ JSClassSpec global_classes[] = {
         EMPTY_FUNCLIST,
         FUNCLIST(filetools_static_funcs),
     },
-    //{
-    //    "D2BSScript",
-    //    &script_class_id,
-    //    script_ctor,
-    //    nullptr,
-    //    0,
-    //    FUNCLIST(script_proto_funcs),
-    //    EMPTY_FUNCLIST,
-    //},
 
     {
         "Frame",

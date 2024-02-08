@@ -4,6 +4,7 @@
 
 #define D2BS_BUILTIN_BINDINGS(V) \
   V(AreaWrap)                    \
+  V(ControlWrap)                 \
   V(ScriptWrap)
 
 #define V(name) void _register##name(JSContext* ctx, JSValue target);
