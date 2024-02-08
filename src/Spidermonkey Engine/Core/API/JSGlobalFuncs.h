@@ -69,7 +69,6 @@ static JSCFunctionListEntry global_funcs[] = {
     JS_FN("js_strict", my_js_strict, 0, FUNCTION_FLAGS),
     JS_FN("version", my_version, 0, FUNCTION_FLAGS),
     JS_FN("scriptBroadcast", my_scriptBroadcast, 1, FUNCTION_FLAGS),
-    JS_FN("dopen", my_openDir, 1, FUNCTION_FLAGS),
     JS_FN("debugLog", my_debugLog, 1, FUNCTION_FLAGS),
     JS_FN("showConsole", my_showConsole, 0, FUNCTION_FLAGS),
     JS_FN("hideConsole", my_hideConsole, 0, FUNCTION_FLAGS),

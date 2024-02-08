@@ -14,68 +14,139 @@
   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
-// TODO: Rewrite this crap :(
+#include "JSDirectory.h"
 
-#define _USE_32BIT_TIME_T
+#include "Bindings.h"
+#include "D2Helpers.h" // Log
+#include "Globals.h"
+#include "File.h"
 
 #include <direct.h>
-#include <io.h>
-#include <cerrno>
 
-#include "JSDirectory.h"
-#include "Engine.h"
-#include "File.h"
-#include "Helpers.h"
-// #include "js32.h"
+JSValue DirectoryWrap::Instantiate(JSContext* ctx, JSValue new_target, const char* name) {
+  JSValue proto;
+  if (JS_IsUndefined(new_target)) {
+    proto = JS_GetClassProto(ctx, m_class_id);
+  } else {
+    proto = JS_GetPropertyStr(ctx, new_target, "prototype");
+    if (JS_IsException(proto)) {
+      return JS_EXCEPTION;
+    }
+  }
+  JSValue obj = JS_NewObjectProtoClass(ctx, proto, m_class_id);
+  JS_FreeValue(ctx, proto);
+  if (JS_IsException(obj)) {
+    return obj;
+  }
 
-////////////////////////////////////////////////////////////////////////////////
-// Directory stuff
-////////////////////////////////////////////////////////////////////////////////
+  DirectoryWrap* wrap = new DirectoryWrap(ctx, name);
+  if (!wrap) {
+    JS_FreeValue(ctx, obj);
+    return JS_ThrowOutOfMemory(ctx);
+  }
+  JS_SetOpaque(obj, wrap);
 
-EMPTY_CTOR(dir)
-
-CLASS_FINALIZER(dir) {
-  JSDirectory* d = (JSDirectory*)JS_GetOpaque3(val);
-  delete d;
+  return obj;
 }
 
-JSAPI_FUNC(my_openDir) {
-  if (argc != 1)
-    return JS_UNDEFINED;
+void DirectoryWrap::Initialize(JSContext* ctx, JSValue target) {
+  JSClassDef def{};
+  def.class_name = "Folder";
+  def.finalizer = [](JSRuntime* /*rt*/, JSValue val) {
+    DirectoryWrap* wrap = static_cast<DirectoryWrap*>(JS_GetOpaque(val, m_class_id));
+    if (wrap) {
+      delete wrap;
+    }
+  };
+
+  if (m_class_id == 0) {
+    JS_NewClassID(&m_class_id);
+  }
+  JS_NewClass(JS_GetRuntime(ctx), m_class_id, &def);
+
+  JSValue proto = JS_NewObject(ctx);
+  JS_SetPropertyFunctionList(ctx, proto, m_proto_funcs, _countof(m_proto_funcs));
+
+  JSValue obj = JS_NewObjectProtoClass(ctx, proto, m_class_id);
+  JS_SetClassProto(ctx, m_class_id, proto);
+  JS_SetPropertyStr(ctx, target, "Folder", obj);
+
+  // globals
+  JS_SetPropertyStr(ctx, target, "dopen", JS_NewCFunction(ctx, OpenDirectory, "dopen", 0));
+}
+
+DirectoryWrap::DirectoryWrap(JSContext* /*ctx*/, const char* name) {
+  strcpy_s(szName, _MAX_PATH, name);
+}
+
+// properties
+JSValue DirectoryWrap::GetName(JSContext* ctx, JSValue this_val) {
+  DirectoryWrap* wrap = static_cast<DirectoryWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  return JS_NewString(ctx, wrap->szName);
+}
+
+// functions
+JSValue DirectoryWrap::Create(JSContext* ctx, JSValue this_val, int /*argc*/, JSValue* argv) {
+  DirectoryWrap* wrap = static_cast<DirectoryWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
 
   char path[_MAX_PATH];
+  if (!JS_IsString(argv[0]))
+    THROW_ERROR(ctx, "No path passed to dir.create()");
+
   const char* szName = JS_ToCString(ctx, argv[0]);
   if (!szName) {
     return JS_EXCEPTION;
   }
 
   if (!isValidPath(szName)) {
-    Log("The following path was deemed invalid: %s. (%s, %s)", szName, "JSDirectory.cpp", "my_openDir");
     JS_FreeCString(ctx, szName);
     return JS_EXCEPTION;
   }
 
-  sprintf_s(path, _MAX_PATH, "%s\\%s", Vars.szScriptPath, szName);
-
-  if ((_mkdir(path) == -1) && (errno == ENOENT)) {
-    JS_ReportError(ctx, "Couldn't get directory %s, path '%s' not found", szName, path);
+  sprintf_s(path, _MAX_PATH, "%s\\%s\\%s", Vars.szScriptPath, wrap->szName, szName);
+  if (_mkdir(path) == -1 && (errno == ENOENT)) {
+    JS_ReportError(ctx, "Couldn't create directory %s, path %s not found", szName, path);
     JS_FreeCString(ctx, szName);
-    return JS_EXCEPTION;
+    return JS_FALSE;
   }
-  JSDirectory* d = new JSDirectory(szName);
+
+  JSValue rval = DirectoryWrap::Instantiate(ctx, JS_UNDEFINED, szName);
   JS_FreeCString(ctx, szName);
-  return BuildObject(ctx, folder_class_id, FUNCLIST(dir_proto_funcs), d);
+  return rval;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// dir_getFiles
-// searches a directory for files with a specified extension(*.* assumed)
-//
-// Added by lord2800
-////////////////////////////////////////////////////////////////////////////////
+JSValue DirectoryWrap::Delete(JSContext* ctx, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
+  DirectoryWrap* wrap = static_cast<DirectoryWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
 
-JSAPI_FUNC(dir_getFiles) {
-  JSDirectory* d = (JSDirectory*)JS_GetOpaque3(this_val);
+  char path[_MAX_PATH];
+  sprintf_s(path, _MAX_PATH, "%s\\%s", Vars.szScriptPath, wrap->szName);
+
+  if (_rmdir(path) == -1) {
+    // TODO: Make an optional param that specifies recursive delete
+    if (errno == ENOTEMPTY)
+      THROW_ERROR(ctx, "Tried to delete directory, but it is not empty or is the current working directory");
+    if (errno == ENOENT)
+      THROW_ERROR(ctx, "Path not found");
+  }
+  return JS_TRUE;
+}
+
+JSValue DirectoryWrap::GetFiles(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
+  DirectoryWrap* wrap = static_cast<DirectoryWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
   char search[_MAX_PATH] = "*.*";
 
   if (argc > 1)
@@ -91,7 +162,7 @@ JSAPI_FUNC(dir_getFiles) {
 
   long hFile;
   char path[_MAX_PATH], oldpath[_MAX_PATH];
-  sprintf_s(path, _MAX_PATH, "%s\\%s", Vars.szScriptPath, d->name);
+  sprintf_s(path, _MAX_PATH, "%s\\%s", Vars.szScriptPath, wrap->szName);
 
   if (!_getcwd(oldpath, _MAX_PATH)) {
     Log("Error getting current working directory. (%s, %s)", "JSDirectory.cpp", "dir_getFiles");
@@ -121,8 +192,12 @@ JSAPI_FUNC(dir_getFiles) {
   return jsarray;
 }
 
-JSAPI_FUNC(dir_getFolders) {
-  JSDirectory* d = (JSDirectory*)JS_GetOpaque3(this_val);
+JSValue DirectoryWrap::GetFolders(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
+  DirectoryWrap* wrap = static_cast<DirectoryWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
   char search[_MAX_PATH] = "*.*";
 
   if (argc > 1)
@@ -138,7 +213,7 @@ JSAPI_FUNC(dir_getFolders) {
 
   long hFile;
   char path[_MAX_PATH], oldpath[_MAX_PATH];
-  sprintf_s(path, _MAX_PATH, "%s\\%s", Vars.szScriptPath, d->name);
+  sprintf_s(path, _MAX_PATH, "%s\\%s", Vars.szScriptPath, wrap->szName);
 
   if (!_getcwd(oldpath, _MAX_PATH)) {
     Log("Error getting current working directory. (%s, %s)", "JSDirectory.cpp", "dir_getFolders");
@@ -169,60 +244,34 @@ JSAPI_FUNC(dir_getFolders) {
   return jsarray;
 }
 
-JSAPI_FUNC(dir_create) {
-  JSDirectory* d = (JSDirectory*)JS_GetOpaque3(this_val);
-  char path[_MAX_PATH];
-  if (!JS_IsString(argv[0]))
-    THROW_ERROR(ctx, "No path passed to dir.create()");
+// globals
+JSValue DirectoryWrap::OpenDirectory(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
+  if (argc != 1)
+    return JS_UNDEFINED;
 
+  char path[_MAX_PATH];
   const char* szName = JS_ToCString(ctx, argv[0]);
   if (!szName) {
     return JS_EXCEPTION;
   }
 
   if (!isValidPath(szName)) {
+    Log("The following path was deemed invalid: %s. (%s, %s)", szName, "JSDirectory.cpp", "my_openDir");
     JS_FreeCString(ctx, szName);
     return JS_EXCEPTION;
   }
 
-  sprintf_s(path, _MAX_PATH, "%s\\%s\\%s", Vars.szScriptPath, d->name, szName);
-  if (_mkdir(path) == -1 && (errno == ENOENT)) {
-    JS_ReportError(ctx, "Couldn't create directory %s, path %s not found", szName, path);
-    JS_FreeCString(ctx, szName);
-    return JS_FALSE;
-  }
+  sprintf_s(path, _MAX_PATH, "%s\\%s", Vars.szScriptPath, szName);
 
-  JSDirectory* _d = new JSDirectory(szName);
+  if ((_mkdir(path) == -1) && (errno == ENOENT)) {
+    JS_ReportError(ctx, "Couldn't get directory %s, path '%s' not found", szName, path);
+    JS_FreeCString(ctx, szName);
+    return JS_EXCEPTION;
+  }
+  
+  JSValue rval = DirectoryWrap::Instantiate(ctx, JS_UNDEFINED, szName);
   JS_FreeCString(ctx, szName);
-  return BuildObject(ctx, folder_class_id, FUNCLIST(dir_proto_funcs), _d);
+  return rval;
 }
 
-JSAPI_FUNC(dir_delete) {
-  JSDirectory* d = (JSDirectory*)JS_GetOpaque3(this_val);
-
-  char path[_MAX_PATH];
-  sprintf_s(path, _MAX_PATH, "%s\\%s", Vars.szScriptPath, d->name);
-
-  if (_rmdir(path) == -1) {
-    // TODO: Make an optional param that specifies recursive delete
-    if (errno == ENOTEMPTY)
-      THROW_ERROR(ctx, "Tried to delete directory, but it is not empty or is the current working directory");
-    if (errno == ENOENT)
-      THROW_ERROR(ctx, "Path not found");
-  }
-  return JS_TRUE;
-}
-
-JSAPI_PROP(dir_getProperty) {
-  JSDirectory* d = (JSDirectory*)JS_GetOpaque3(this_val);
-
-  if (!d)
-    return JS_EXCEPTION;
-
-  switch (magic) {
-    case DIR_NAME:
-      return JS_NewString(ctx, d->name);
-      break;
-  }
-  return JS_UNDEFINED;
-}
+D2BS_BINDING_INTERNAL(DirectoryWrap, DirectoryWrap::Initialize)

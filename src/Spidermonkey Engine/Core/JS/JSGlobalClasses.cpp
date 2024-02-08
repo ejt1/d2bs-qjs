@@ -55,15 +55,6 @@ JSClassSpec global_classes[] = {
         EMPTY_FUNCLIST,
     },
     {
-        "Folder",
-        &folder_class_id,
-        dir_ctor,
-        dir_finalizer,
-        0,
-        FUNCLIST(dir_proto_funcs),
-        EMPTY_FUNCLIST,
-    },
-    {
         "Exit",
         &exit_class_id,
         exit_ctor,

@@ -5,6 +5,7 @@
 #define D2BS_BUILTIN_BINDINGS(V) \
   V(AreaWrap)                    \
   V(ControlWrap)                 \
+  V(DirectoryWrap)               \
   V(ScriptWrap)
 
 #define V(name) void _register##name(JSContext* ctx, JSValue target);
@@ -12,7 +13,6 @@ D2BS_BUILTIN_BINDINGS(V)
 #undef V
 
 void D2BSClassRegister(JSContext* ctx, JSValue target, D2BSClass* c) {
-  Log("Bind %s", c->name);
   if (c->cregister_func) {
     c->cregister_func(ctx, target);
   }
