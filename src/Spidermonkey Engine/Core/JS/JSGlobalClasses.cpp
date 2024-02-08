@@ -46,15 +46,6 @@ JSClassSpec global_classes[] = {
         EMPTY_FUNCLIST,
     },
     {
-        "PresetUnit",
-        &presetunit_class_id,
-        presetunit_ctor,
-        presetunit_finalizer,
-        0,
-        FUNCLIST(presetunit_proto_funcs),
-        EMPTY_FUNCLIST,
-    },
-    {
         "Room",
         &room_class_id,
         room_ctor,

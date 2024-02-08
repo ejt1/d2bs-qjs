@@ -94,16 +94,7 @@ JSAPI_FUNC(room_getPresetUnits) {
   JSValue pReturnArray = JS_NewArray(ctx);
   for (D2PresetUnitStrc* pUnit = pRoom2->pPreset; pUnit; pUnit = pUnit->pPresetNext) {
     if ((pUnit->dwType == nType || nType == NULL) && (pUnit->dwTxtFileNo == nClass || nClass == NULL)) {
-      JSPresetUnit* mypUnit = new JSPresetUnit;
-
-      mypUnit->dwPosX = pUnit->dwPosX;
-      mypUnit->dwPosY = pUnit->dwPosY;
-      mypUnit->dwRoomX = pRoom2->dwPosX;
-      mypUnit->dwRoomY = pRoom2->dwPosY;
-      mypUnit->dwType = pUnit->dwType;
-      mypUnit->dwId = pUnit->dwTxtFileNo;
-
-      JSValue jsUnit = BuildObject(ctx, presetunit_class_id, FUNCLIST(presetunit_proto_funcs), mypUnit);
+      JSValue jsUnit = PresetUnitWrap::Instantiate(ctx, JS_UNDEFINED, pUnit, pRoom2, pRoom2->pLevel ? pRoom2->pLevel->dwLevelNo : 0);
       if (JS_IsException(jsUnit)) {
         JS_FreeValue(ctx, pReturnArray);
         return JS_FALSE;
