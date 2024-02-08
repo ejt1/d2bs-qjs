@@ -63,7 +63,7 @@ PresetUnitWrap::PresetUnitWrap(JSContext* /*ctx*/, D2PresetUnitStrc* preset, D2D
     : dwPosX(preset->dwPosX), dwPosY(preset->dwPosY), dwRoomX(room->dwPosX), dwRoomY(room->dwPosY), dwType(preset->dwType), dwId(preset->dwTxtFileNo), dwLevel(level) {
 }
 
-JSValue PresetUnitWrap::New(JSContext* ctx, JSValue new_target, int argc, JSValue* argv) {
+JSValue PresetUnitWrap::New(JSContext* /*ctx*/, JSValue /*new_target*/, int /*argc*/, JSValue* /*argv*/) {
   // TODO(ejt): empty constructor for compatibility with kolbot
   return JS_UNDEFINED;
 }

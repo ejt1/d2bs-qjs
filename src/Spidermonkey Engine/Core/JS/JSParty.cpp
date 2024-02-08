@@ -61,7 +61,7 @@ void PartyWrap::Initialize(JSContext* ctx, JSValue target) {
 PartyWrap::PartyWrap(JSContext* /*ctx*/, D2RosterUnitStrc* unit) : pPresetUnit(unit) {
 }
 
-JSValue PartyWrap::New(JSContext* ctx, JSValue new_target, int argc, JSValue* argv) {
+JSValue PartyWrap::New(JSContext* /*ctx*/, JSValue /*new_target*/, int /*argc*/, JSValue* /*argv*/) {
   // TODO(ejt): empty constructor for compatibility with kolbot
   return JS_UNDEFINED;
 }

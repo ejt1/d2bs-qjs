@@ -10,6 +10,7 @@
   V(PartyWrap)                   \
   V(PresetUnitWrap)              \
   V(ProfileWrap)                 \
+  V(RoomWrap)                    \
   V(ScriptWrap)
 
 #define V(name) void _register##name(JSContext* ctx, JSValue target);

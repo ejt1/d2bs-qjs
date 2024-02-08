@@ -46,15 +46,6 @@ JSClassSpec global_classes[] = {
         EMPTY_FUNCLIST,
     },
     {
-        "Room",
-        &room_class_id,
-        room_ctor,
-        nullptr,
-        0,
-        FUNCLIST(room_proto_funcs),
-        EMPTY_FUNCLIST,
-    },
-    {
         "Socket",
         &socket_class_id,
         socket_ctor,

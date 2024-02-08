@@ -32,7 +32,6 @@ static JSCFunctionListEntry global_funcs[] = {
     JS_FN("getUIFlag", my_getUIFlag, 1, FUNCTION_FLAGS),
     JS_FN("getTradeInfo", my_getTradeInfo, 0, FUNCTION_FLAGS),
     JS_FN("getWaypoint", my_getWaypoint, 1, FUNCTION_FLAGS),
-    JS_FN("getRoom", my_getRoom, 0, FUNCTION_FLAGS),
     JS_FN("getBaseStat", my_getBaseStat, 0, FUNCTION_FLAGS),
     JS_FN("getPlayerFlag", my_getPlayerFlag, 2, FUNCTION_FLAGS),
     JS_FN("getTickCount", my_getTickCount, 0, FUNCTION_FLAGS),
