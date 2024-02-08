@@ -2,7 +2,7 @@
 
 #include "js32.h"
 
-extern JSClassID script_class_id;
+//extern JSClassID script_class_id;
 extern JSClassID frame_class_id;
 extern JSClassID box_class_id;
 extern JSClassID line_class_id;

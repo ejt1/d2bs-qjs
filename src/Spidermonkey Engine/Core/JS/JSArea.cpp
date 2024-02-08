@@ -6,6 +6,8 @@
 
 #include "Game/D2DataTbls.h"
 
+#include "Bindings.h"
+
 EMPTY_CTOR(area)
 
 CLASS_FINALIZER(area) {
@@ -117,3 +119,69 @@ JSAPI_FUNC(my_getArea) {
   }
   return unit;
 }
+
+void AreaWrap::Initialize(JSContext* ctx, JSValue target) {
+  Log("AreaWrap::Initialize");
+  JSClassDef def{};
+  def.class_name = "Area";
+
+  if (m_class_id == 0) {
+    JS_NewClassID(&m_class_id);
+    Log("AreaWrap::m_class_id = %d", m_class_id);
+  }
+  JS_NewClass(JS_GetRuntime(ctx), m_class_id, &def);
+
+  JSValue proto = JS_NewObject(ctx);
+  JS_SetPropertyStr(ctx, proto, "id", JS_NewCFunction(ctx, GetExits, "id", 0));
+  JS_SetPropertyStr(ctx, proto, "name", JS_NewCFunction(ctx, GetExits, "name", 0));
+  JS_SetPropertyStr(ctx, proto, "exits", JS_NewCFunction(ctx, GetExits, "exits", 0));
+  JS_SetPropertyStr(ctx, proto, "x", JS_NewCFunction(ctx, GetExits, "x", 0));
+  JS_SetPropertyStr(ctx, proto, "y", JS_NewCFunction(ctx, GetExits, "y", 0));
+  JS_SetPropertyStr(ctx, proto, "ysize", JS_NewCFunction(ctx, GetExits, "xsize", 0));
+  JS_SetPropertyStr(ctx, proto, "ysize", JS_NewCFunction(ctx, GetExits, "ysize", 0));
+
+  JSValue obj = JS_NewObjectProtoClass(ctx, proto, m_class_id);
+  JS_SetClassProto(ctx, m_class_id, proto);
+  JS_SetPropertyStr(ctx, target, "Area", obj);
+}
+
+AreaWrap::AreaWrap(JSContext* ctx) {
+  Log("AreaWrap::AreaWrap");
+}
+
+JSValue AreaWrap::GetId(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
+  Log("AreaWrap.id");
+  return JS_UNDEFINED;
+}
+
+JSValue AreaWrap::GetName(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
+  Log("AreaWrap.name");
+  return JS_UNDEFINED;
+}
+
+JSValue AreaWrap::GetExits(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
+  Log("AreaWrap.exits");
+  return JS_UNDEFINED;
+}
+
+JSValue AreaWrap::GetPosX(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
+  Log("AreaWrap.x");
+  return JS_UNDEFINED;
+}
+
+JSValue AreaWrap::GetPosY(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
+  Log("AreaWrap.y");
+  return JS_UNDEFINED;
+}
+
+JSValue AreaWrap::GetSizeX(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
+  Log("AreaWrap.xsize");
+  return JS_UNDEFINED;
+}
+
+JSValue AreaWrap::GetSizeY(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
+  Log("AreaWrap.ysize");
+  return JS_UNDEFINED;
+}
+
+D2BS_BINDING_INTERNAL(AreaWrap, AreaWrap::Initialize)

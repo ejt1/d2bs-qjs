@@ -9,6 +9,7 @@
 #include "Engine.h"
 #include "JSGlobalFuncs.h"
 #include "Console.h"
+#include "Bindings.h"
 
 #include <chrono>
 #include <cassert>
@@ -389,6 +390,8 @@ bool Script::Initialize() {
     JS_SetClassProto(m_context, *entry->pclass_id, proto);
     JS_SetPropertyStr(m_context, m_globalObject, entry->name, obj);
   }
+
+  RegisterBuiltinBindings(m_context);
 
   // define 'me' property
   m_me = new JSUnit;

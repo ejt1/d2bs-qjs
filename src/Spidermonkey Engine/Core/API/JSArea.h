@@ -29,4 +29,22 @@ static JSCFunctionListEntry area_proto_funcs[] = {
     JS_CGETSET_MAGIC_DEF("id", area_getProperty, nullptr, AUNIT_ID),        //
 };
 
+class AreaWrap {
+ public:
+  static void Initialize(JSContext* ctx, JSValue target);
+
+ private:
+  AreaWrap(JSContext* ctx);
+
+  static JSValue GetId(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+  static JSValue GetName(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+  static JSValue GetExits(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+  static JSValue GetPosX(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+  static JSValue GetPosY(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+  static JSValue GetSizeX(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+  static JSValue GetSizeY(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+
+  static inline JSClassID m_class_id = 0;
+};
+
 #endif
