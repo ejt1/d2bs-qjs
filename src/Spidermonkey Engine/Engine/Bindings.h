@@ -13,9 +13,9 @@ struct D2BSClass {
 void D2BSClassRegister(JSContext* ctx, JSValue target, D2BSClass* c);
 
 #define D2BS_BINDING_INTERNAL(name, regfunc)                 \
-  static D2BSClass _d2bs_class = {#name, __FILE__, regfunc}; \
+  static D2BSClass _d2bs_class_##name = {#name, __FILE__, regfunc}; \
   void _register##name(JSContext* ctx, JSValue target) {     \
-    D2BSClassRegister(ctx, target, &_d2bs_class);            \
+    D2BSClassRegister(ctx, target, &_d2bs_class_##name);            \
   }
 
 void RegisterBuiltinBindings(JSContext* ctx);

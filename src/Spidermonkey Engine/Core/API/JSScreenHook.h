@@ -2,137 +2,305 @@
 #define __JSSCREENHOOK_H__
 
 #include "js32.h"
+#include "ScreenHook.h"
 
-CLASS_FINALIZER(hook);
-
-// used by all
-JSAPI_FUNC(hook_remove);
+// TODO(ejt): the whole gui part must be rewritten from the ground up otherwise
+// I would put effort into making the wrappers be derivative using a base class
+// instead of redefining everything
 
 /*********************************************************
                                         frame Header
 **********************************************************/
 
-JSAPI_FUNC(frame_ctor);
-JSAPI_PROP(frame_getProperty);
+class FrameWrap {
+ public:
+  static JSValue Instantiate(JSContext* ctx, JSValue new_target, FrameHook* frame);
+  static void Initialize(JSContext* ctx, JSValue target);
 
-JSAPI_STRICT_PROP(frame_setProperty);
+ private:
+  FrameWrap(JSContext* ctx, FrameHook* frame);
+  virtual ~FrameWrap();
 
-enum frame_tinyid { FRAME_X, FRAME_Y, FRAME_XSIZE, FRAME_YSIZE, FRAME_VISIBLE, FRAME_ALIGN, FRAME_ONCLICK, FRAME_ONHOVER, FRAME_ZORDER };
+  // constructor
+  static JSValue New(JSContext* ctx, JSValue new_target, int argc, JSValue* argv);
 
-static JSCFunctionListEntry frame_proto_funcs[] = {
-    JS_CGETSET_MAGIC_DEF("x", frame_getProperty, frame_setProperty, FRAME_X),
-    JS_CGETSET_MAGIC_DEF("y", frame_getProperty, frame_setProperty, FRAME_Y),
-    JS_CGETSET_MAGIC_DEF("xsize", frame_getProperty, frame_setProperty, FRAME_XSIZE),
-    JS_CGETSET_MAGIC_DEF("ysize", frame_getProperty, frame_setProperty, FRAME_YSIZE),
-    JS_CGETSET_MAGIC_DEF("visible", frame_getProperty, frame_setProperty, FRAME_VISIBLE),
-    JS_CGETSET_MAGIC_DEF("align", frame_getProperty, frame_setProperty, FRAME_ALIGN),
-    JS_CGETSET_MAGIC_DEF("zorder", frame_getProperty, frame_setProperty, FRAME_ZORDER),
-    JS_CGETSET_MAGIC_DEF("click", frame_getProperty, frame_setProperty, FRAME_ONCLICK),
-    JS_CGETSET_MAGIC_DEF("hover", frame_getProperty, frame_setProperty, FRAME_ONHOVER),
+  // properties
+  static JSValue GetX(JSContext* ctx, JSValue this_val);
+  static JSValue SetX(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetY(JSContext* ctx, JSValue this_val);
+  static JSValue SetY(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetSizeX(JSContext* ctx, JSValue this_val);
+  static JSValue SetSizeX(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetSizeY(JSContext* ctx, JSValue this_val);
+  static JSValue SetSizeY(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetVisible(JSContext* ctx, JSValue this_val);
+  static JSValue SetVisible(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetAlign(JSContext* ctx, JSValue this_val);
+  static JSValue SetAlign(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetZOrder(JSContext* ctx, JSValue this_val);
+  static JSValue SetZOrder(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetClick(JSContext* ctx, JSValue this_val);
+  static JSValue SetClick(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetHover(JSContext* ctx, JSValue this_val);
+  static JSValue SetHover(JSContext* ctx, JSValue this_val, JSValue val);
 
-    JS_FS("remove", hook_remove, 0, FUNCTION_FLAGS),
+  // functions
+  static JSValue Remove(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+
+  static inline JSClassID m_class_id = 0;
+  static inline JSCFunctionListEntry m_proto_funcs[] = {
+      JS_CGETSET_DEF("x", GetX, SetX),
+      JS_CGETSET_DEF("y", GetY, SetY),
+      JS_CGETSET_DEF("xsize", GetSizeX, SetSizeX),
+      JS_CGETSET_DEF("ysize", GetSizeY, SetSizeY),
+      JS_CGETSET_DEF("visible", GetVisible, SetVisible),
+      JS_CGETSET_DEF("align", GetAlign, SetAlign),
+      JS_CGETSET_DEF("zorder", GetZOrder, SetZOrder),
+      JS_CGETSET_DEF("click", GetClick, SetClick),
+      JS_CGETSET_DEF("hover", GetHover, SetHover),
+
+      JS_FS("remove", Remove, 0, FUNCTION_FLAGS),
+  };
+
+  FrameHook* pFrame;
 };
 
 /*********************************************************
                                         box Header
 **********************************************************/
 
-JSAPI_FUNC(box_ctor);
-JSAPI_PROP(box_getProperty);
+class BoxWrap {
+ public:
+  static JSValue Instantiate(JSContext* ctx, JSValue new_target, BoxHook* box);
+  static void Initialize(JSContext* ctx, JSValue target);
 
-JSAPI_STRICT_PROP(box_setProperty);
+ private:
+  BoxWrap(JSContext* ctx, BoxHook* box);
+  virtual ~BoxWrap();
 
-enum box_tinyid { BOX_X, BOX_Y, BOX_XSIZE, BOX_YSIZE, BOX_COLOR, BOX_OPACITY, BOX_VISIBLE, BOX_ALIGN, BOX_ONCLICK, BOX_ONHOVER, BOX_ZORDER };
+  // constructor
+  static JSValue New(JSContext* ctx, JSValue new_target, int argc, JSValue* argv);
 
-static JSCFunctionListEntry box_proto_funcs[] = {
-    JS_CGETSET_MAGIC_DEF("x", box_getProperty, box_setProperty, BOX_X),
-    JS_CGETSET_MAGIC_DEF("y", box_getProperty, box_setProperty, BOX_Y),
-    JS_CGETSET_MAGIC_DEF("xsize", box_getProperty, box_setProperty, BOX_XSIZE),
-    JS_CGETSET_MAGIC_DEF("ysize", box_getProperty, box_setProperty, BOX_YSIZE),
-    JS_CGETSET_MAGIC_DEF("visible", box_getProperty, box_setProperty, BOX_VISIBLE),
-    JS_CGETSET_MAGIC_DEF("color", box_getProperty, box_setProperty, BOX_COLOR),
-    JS_CGETSET_MAGIC_DEF("opacity", box_getProperty, box_setProperty, BOX_OPACITY),
-    JS_CGETSET_MAGIC_DEF("align", box_getProperty, box_setProperty, BOX_ALIGN),
-    JS_CGETSET_MAGIC_DEF("zorder", box_getProperty, box_setProperty, BOX_ZORDER),
-    JS_CGETSET_MAGIC_DEF("click", box_getProperty, box_setProperty, BOX_ONCLICK),
-    JS_CGETSET_MAGIC_DEF("hover", box_getProperty, box_setProperty, BOX_ONHOVER),
+  // properties
+  static JSValue GetX(JSContext* ctx, JSValue this_val);
+  static JSValue SetX(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetY(JSContext* ctx, JSValue this_val);
+  static JSValue SetY(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetSizeX(JSContext* ctx, JSValue this_val);
+  static JSValue SetSizeX(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetSizeY(JSContext* ctx, JSValue this_val);
+  static JSValue SetSizeY(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetVisible(JSContext* ctx, JSValue this_val);
+  static JSValue SetVisible(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetAlign(JSContext* ctx, JSValue this_val);
+  static JSValue SetAlign(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetZOrder(JSContext* ctx, JSValue this_val);
+  static JSValue SetZOrder(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetClick(JSContext* ctx, JSValue this_val);
+  static JSValue SetClick(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetHover(JSContext* ctx, JSValue this_val);
+  static JSValue SetHover(JSContext* ctx, JSValue this_val, JSValue val);
 
-    JS_FS("remove", hook_remove, 0, FUNCTION_FLAGS),
+  static JSValue GetColor(JSContext* ctx, JSValue this_val);
+  static JSValue SetColor(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetOpacity(JSContext* ctx, JSValue this_val);
+  static JSValue SetOpacity(JSContext* ctx, JSValue this_val, JSValue val);
+
+  // functions
+  static JSValue Remove(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+
+  static inline JSClassID m_class_id = 0;
+  static inline JSCFunctionListEntry m_proto_funcs[] = {
+      JS_CGETSET_DEF("x", GetX, SetX),
+      JS_CGETSET_DEF("y", GetY, SetY),
+      JS_CGETSET_DEF("xsize", GetSizeX, SetSizeX),
+      JS_CGETSET_DEF("ysize", GetSizeY, SetSizeY),
+      JS_CGETSET_DEF("visible", GetVisible, SetVisible),
+      JS_CGETSET_DEF("align", GetAlign, SetAlign),
+      JS_CGETSET_DEF("zorder", GetZOrder, SetZOrder),
+      JS_CGETSET_DEF("click", GetClick, SetClick),
+      JS_CGETSET_DEF("hover", GetHover, SetHover),
+
+      JS_CGETSET_DEF("color", GetColor, SetColor),
+      JS_CGETSET_DEF("opacity", GetOpacity, SetOpacity),
+
+      JS_FS("remove", Remove, 0, FUNCTION_FLAGS),
+  };
+
+  BoxHook* pBox;
 };
 
 /*********************************************************
                                         Line Header
 **********************************************************/
 
-JSAPI_FUNC(line_ctor);
-JSAPI_PROP(line_getProperty);
+class LineWrap {
+ public:
+  static JSValue Instantiate(JSContext* ctx, JSValue new_target, LineHook* line);
+  static void Initialize(JSContext* ctx, JSValue target);
 
-JSAPI_STRICT_PROP(line_setProperty);
+ private:
+  LineWrap(JSContext* ctx, LineHook* line);
+  virtual ~LineWrap();
 
-enum line_tinyid { LINE_X, LINE_Y, LINE_XSIZE, LINE_YSIZE, LINE_COLOR, LINE_VISIBLE, LINE_ONCLICK, LINE_ONHOVER, LINE_ZORDER };
+  // constructor
+  static JSValue New(JSContext* ctx, JSValue new_target, int argc, JSValue* argv);
 
-static JSCFunctionListEntry line_proto_funcs[] = {
-    JS_CGETSET_MAGIC_DEF("x", line_getProperty, line_setProperty, LINE_X),
-    JS_CGETSET_MAGIC_DEF("y", line_getProperty, line_setProperty, LINE_Y),
-    JS_CGETSET_MAGIC_DEF("x2", line_getProperty, line_setProperty, LINE_XSIZE),
-    JS_CGETSET_MAGIC_DEF("y2", line_getProperty, line_setProperty, LINE_YSIZE),
-    JS_CGETSET_MAGIC_DEF("visible", line_getProperty, line_setProperty, LINE_VISIBLE),
-    JS_CGETSET_MAGIC_DEF("color", line_getProperty, line_setProperty, LINE_COLOR),
-    JS_CGETSET_MAGIC_DEF("zorder", line_getProperty, line_setProperty, LINE_ZORDER),
-    JS_CGETSET_MAGIC_DEF("click", line_getProperty, line_setProperty, LINE_ONCLICK),
-    JS_CGETSET_MAGIC_DEF("hover", line_getProperty, line_setProperty, LINE_ONHOVER),
+  // properties
+  static JSValue GetX(JSContext* ctx, JSValue this_val);
+  static JSValue SetX(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetY(JSContext* ctx, JSValue this_val);
+  static JSValue SetY(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetX2(JSContext* ctx, JSValue this_val);
+  static JSValue SetX2(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetY2(JSContext* ctx, JSValue this_val);
+  static JSValue SetY2(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetVisible(JSContext* ctx, JSValue this_val);
+  static JSValue SetVisible(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetColor(JSContext* ctx, JSValue this_val);
+  static JSValue SetColor(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetZOrder(JSContext* ctx, JSValue this_val);
+  static JSValue SetZOrder(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetClick(JSContext* ctx, JSValue this_val);
+  static JSValue SetClick(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetHover(JSContext* ctx, JSValue this_val);
+  static JSValue SetHover(JSContext* ctx, JSValue this_val, JSValue val);
 
-    JS_FS("remove", hook_remove, 0, FUNCTION_FLAGS),
+  // functions
+  static JSValue Remove(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+
+  static inline JSClassID m_class_id = 0;
+  static inline JSCFunctionListEntry m_proto_funcs[] = {
+      JS_CGETSET_DEF("x", GetX, SetX),
+      JS_CGETSET_DEF("y", GetY, SetY),
+      JS_CGETSET_DEF("x2", GetX2, SetY2),
+      JS_CGETSET_DEF("y2", GetY2, SetY2),
+      JS_CGETSET_DEF("visible", GetVisible, SetVisible),
+      JS_CGETSET_DEF("color", GetColor, SetColor),
+      JS_CGETSET_DEF("zorder", GetZOrder, SetZOrder),
+      JS_CGETSET_DEF("click", GetClick, SetClick),
+      JS_CGETSET_DEF("hover", GetHover, SetHover),
+
+      JS_FS("remove", Remove, 0, FUNCTION_FLAGS),
+  };
+
+  LineHook* pLine;
 };
 
 /*********************************************************
                                         Text Header
 **********************************************************/
 
-JSAPI_FUNC(text_ctor);
-JSAPI_PROP(text_getProperty);
+class TextWrap {
+ public:
+  static JSValue Instantiate(JSContext* ctx, JSValue new_target, TextHook* text);
+  static void Initialize(JSContext* ctx, JSValue target);
 
-JSAPI_STRICT_PROP(text_setProperty);
+ private:
+  TextWrap(JSContext* ctx, TextHook* text);
+  virtual ~TextWrap();
 
-enum text_tinyid { TEXT_X, TEXT_Y, TEXT_COLOR, TEXT_FONT, TEXT_TEXT, TEXT_ALIGN, TEXT_VISIBLE, TEXT_ONCLICK, TEXT_ONHOVER, TEXT_ZORDER };
+  // constructor
+  static JSValue New(JSContext* ctx, JSValue new_target, int argc, JSValue* argv);
 
-static JSCFunctionListEntry text_proto_funcs[] = {
-    JS_CGETSET_MAGIC_DEF("x", text_getProperty, text_setProperty, TEXT_X),
-    JS_CGETSET_MAGIC_DEF("y", text_getProperty, text_setProperty, TEXT_Y),
-    JS_CGETSET_MAGIC_DEF("color", text_getProperty, text_setProperty, TEXT_COLOR),
-    JS_CGETSET_MAGIC_DEF("font", text_getProperty, text_setProperty, TEXT_FONT),
-    JS_CGETSET_MAGIC_DEF("visible", text_getProperty, text_setProperty, TEXT_VISIBLE),
-    JS_CGETSET_MAGIC_DEF("text", text_getProperty, text_setProperty, TEXT_TEXT),
-    JS_CGETSET_MAGIC_DEF("align", text_getProperty, text_setProperty, TEXT_ALIGN),
-    JS_CGETSET_MAGIC_DEF("zorder", text_getProperty, text_setProperty, TEXT_ZORDER),
-    JS_CGETSET_MAGIC_DEF("click", text_getProperty, text_setProperty, TEXT_ONCLICK),
-    JS_CGETSET_MAGIC_DEF("hover", text_getProperty, text_setProperty, TEXT_ONHOVER),
+  // properties
+  static JSValue GetX(JSContext* ctx, JSValue this_val);
+  static JSValue SetX(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetY(JSContext* ctx, JSValue this_val);
+  static JSValue SetY(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetColor(JSContext* ctx, JSValue this_val);
+  static JSValue SetColor(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetVisible(JSContext* ctx, JSValue this_val);
+  static JSValue SetVisible(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetAlign(JSContext* ctx, JSValue this_val);
+  static JSValue SetAlign(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetZOrder(JSContext* ctx, JSValue this_val);
+  static JSValue SetZOrder(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetClick(JSContext* ctx, JSValue this_val);
+  static JSValue SetClick(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetHover(JSContext* ctx, JSValue this_val);
+  static JSValue SetHover(JSContext* ctx, JSValue this_val, JSValue val);
 
-    JS_FS("remove", hook_remove, 0, FUNCTION_FLAGS),
+  static JSValue GetFont(JSContext* ctx, JSValue this_val);
+  static JSValue SetFont(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetText(JSContext* ctx, JSValue this_val);
+  static JSValue SetText(JSContext* ctx, JSValue this_val, JSValue val);
+
+  // functions
+  static JSValue Remove(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+
+  static inline JSClassID m_class_id = 0;
+  static inline JSCFunctionListEntry m_proto_funcs[] = {
+      JS_CGETSET_DEF("x", GetX, SetX),
+      JS_CGETSET_DEF("y", GetY, SetY),
+      JS_CGETSET_DEF("color", GetColor, SetColor),
+      JS_CGETSET_DEF("visible", GetVisible, SetVisible),
+      JS_CGETSET_DEF("align", GetAlign, SetAlign),
+      JS_CGETSET_DEF("zorder", GetZOrder, SetZOrder),
+      JS_CGETSET_DEF("click", GetClick, SetClick),
+      JS_CGETSET_DEF("hover", GetHover, SetHover),
+
+      JS_CGETSET_DEF("font", GetFont, SetFont),
+      JS_CGETSET_DEF("text", GetText, SetText),
+
+      JS_FS("remove", Remove, 0, FUNCTION_FLAGS),
+  };
+
+  TextHook* pText;
 };
 
 /*********************************************************
                                         Image Header
 **********************************************************/
 
-JSAPI_FUNC(image_ctor);
-JSAPI_PROP(image_getProperty);
+class ImageWrap {
+ public:
+  static JSValue Instantiate(JSContext* ctx, JSValue new_target, ImageHook* image);
+  static void Initialize(JSContext* ctx, JSValue target);
 
-JSAPI_STRICT_PROP(image_setProperty);
+ private:
+  ImageWrap(JSContext* ctx, ImageHook* image);
+  virtual ~ImageWrap();
 
-enum image_tinyid { IMAGE_X, IMAGE_Y, IMAGE_LOCATION, IMAGE_ALIGN, IMAGE_VISIBLE, IMAGE_ONCLICK, IMAGE_ONHOVER, IMAGE_ZORDER };
+  // constructor
+  static JSValue New(JSContext* ctx, JSValue new_target, int argc, JSValue* argv);
 
-static JSCFunctionListEntry image_proto_funcs[] = {
-    JS_CGETSET_MAGIC_DEF("x", image_getProperty, image_setProperty, IMAGE_X),
-    JS_CGETSET_MAGIC_DEF("y", image_getProperty, image_setProperty, IMAGE_Y),
-    JS_CGETSET_MAGIC_DEF("visible", image_getProperty, image_setProperty, IMAGE_VISIBLE),
-    JS_CGETSET_MAGIC_DEF("location", image_getProperty, image_setProperty, IMAGE_LOCATION),
-    JS_CGETSET_MAGIC_DEF("align", image_getProperty, image_setProperty, IMAGE_ALIGN),
-    JS_CGETSET_MAGIC_DEF("zorder", image_getProperty, image_setProperty, IMAGE_ZORDER),
-    JS_CGETSET_MAGIC_DEF("click", image_getProperty, image_setProperty, IMAGE_ONCLICK),
-    JS_CGETSET_MAGIC_DEF("hover", image_getProperty, image_setProperty, IMAGE_ONHOVER),
+  // properties
+  static JSValue GetX(JSContext* ctx, JSValue this_val);
+  static JSValue SetX(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetY(JSContext* ctx, JSValue this_val);
+  static JSValue SetY(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetVisible(JSContext* ctx, JSValue this_val);
+  static JSValue SetVisible(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetLocation(JSContext* ctx, JSValue this_val);
+  static JSValue SetLocation(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetAlign(JSContext* ctx, JSValue this_val);
+  static JSValue SetAlign(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetZOrder(JSContext* ctx, JSValue this_val);
+  static JSValue SetZOrder(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetClick(JSContext* ctx, JSValue this_val);
+  static JSValue SetClick(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetHover(JSContext* ctx, JSValue this_val);
+  static JSValue SetHover(JSContext* ctx, JSValue this_val, JSValue val);
 
-    JS_FS("remove", hook_remove, 0, FUNCTION_FLAGS),
+  // functions
+  static JSValue Remove(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+
+  static inline JSClassID m_class_id = 0;
+  static inline JSCFunctionListEntry m_proto_funcs[] = {
+      JS_CGETSET_DEF("x", GetX, SetX),
+      JS_CGETSET_DEF("y", GetY, SetY),
+      JS_CGETSET_DEF("visible", GetVisible, SetVisible),
+      JS_CGETSET_DEF("location", GetLocation, SetLocation),
+      JS_CGETSET_DEF("align", GetAlign, SetAlign),
+      JS_CGETSET_DEF("zorder", GetZOrder, SetZOrder),
+      JS_CGETSET_DEF("click", GetClick, SetClick),
+      JS_CGETSET_DEF("hover", GetHover, SetHover),
+
+      JS_FS("remove", Remove, 0, FUNCTION_FLAGS),
+  };
+
+  ImageHook* pImage;
 };
 
 #endif

@@ -12,7 +12,13 @@
   V(ProfileWrap)                 \
   V(RoomWrap)                    \
   V(SocketWrap)                  \
-  V(ScriptWrap)
+  V(ScriptWrap)                  \
+  /* ScreenHooks */              \
+  V(FrameWrap)                   \
+  V(BoxWrap)                     \
+  V(LineWrap)                    \
+  V(TextWrap)                    \
+  V(ImageWrap)
 
 #define V(name) void _register##name(JSContext* ctx, JSValue target);
 D2BS_BUILTIN_BINDINGS(V)
