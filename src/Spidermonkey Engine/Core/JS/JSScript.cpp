@@ -72,26 +72,13 @@ void ScriptWrap::Initialize(JSContext* ctx, JSValue target) {
   JS_NewClass(JS_GetRuntime(ctx), m_class_id, &def);
 
   JSValue proto = JS_NewObject(ctx);
-  static JSCFunctionListEntry proto_funcs[] = {
-      JS_CGETSET_DEF("name", GetName, nullptr),          //
-      JS_CGETSET_DEF("type", GetType, nullptr),          //
-      JS_CGETSET_DEF("running", GetRunning, nullptr),    //
-      JS_CGETSET_DEF("threadid", GetThreadId, nullptr),  //
-      JS_CGETSET_DEF("memory", GetMemory, nullptr),
-
-      JS_FS("getNext", GetNext, 0, FUNCTION_FLAGS),  //
-      JS_FS("pause", Pause, 0, FUNCTION_FLAGS),      //
-      JS_FS("resume", Resume, 0, FUNCTION_FLAGS),    //
-      JS_FS("stop", Stop, 0, FUNCTION_FLAGS),        //
-      JS_FS("join", Join, 0, FUNCTION_FLAGS),        //
-      JS_FS("send", Send, 1, FUNCTION_FLAGS),
-  };
-  JS_SetPropertyFunctionList(ctx, proto, proto_funcs, _countof(proto_funcs));
+  JS_SetPropertyFunctionList(ctx, proto, m_proto_funcs, _countof(m_proto_funcs));
 
   JSValue obj = JS_NewObjectProtoClass(ctx, proto, m_class_id);
   JS_SetClassProto(ctx, m_class_id, proto);
   JS_SetPropertyStr(ctx, target, "D2BSScript", obj);
 
+  // globals
   JS_SetPropertyStr(ctx, target, "getScript", JS_NewCFunction(ctx, GetScript, "getScript", 0));
   JS_SetPropertyStr(ctx, target, "getScripts", JS_NewCFunction(ctx, GetScripts, "getScripts", 0));
 }
