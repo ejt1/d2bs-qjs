@@ -107,20 +107,11 @@ JSValue AreaWrap::GetExits(JSContext* ctx, JSValue this_val) {
     map->CleanUp();
     int count = exits.size();
     for (int i = 0; i < count; i++) {
-      JSExit* exit = new JSExit;
-      exit->id = exits[i].Target;
-      exit->x = exits[i].Position.first;
-      exit->y = exits[i].Position.second;
-      exit->type = exits[i].Type;
-      exit->tileid = exits[i].TileId;
-      exit->level = wrap->dwAreaId;
-
-      JSValue pExit = BuildObject(ctx, exit_class_id, FUNCLIST(exit_proto_funcs), exit);
-      if (JS_IsException(pExit)) {
-        delete exit;
+      JSValue obj = ExitWrap::Instantiate(ctx, JS_UNDEFINED, &exits[i], wrap->dwAreaId);
+      if (JS_IsException(obj)) {
         THROW_ERROR(ctx, "Failed to create exit object!");
       }
-      JS_SetPropertyUint32(ctx, wrap->arrExitArray, i, pExit);
+      JS_SetPropertyUint32(ctx, wrap->arrExitArray, i, obj);
     }
   }
   return JS_DupValue(ctx, wrap->arrExitArray);

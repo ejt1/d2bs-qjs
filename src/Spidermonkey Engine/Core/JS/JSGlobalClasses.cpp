@@ -55,15 +55,6 @@ JSClassSpec global_classes[] = {
         EMPTY_FUNCLIST,
     },
     {
-        "Exit",
-        &exit_class_id,
-        exit_ctor,
-        exit_finalizer,
-        0,
-        FUNCLIST(exit_proto_funcs),
-        EMPTY_FUNCLIST,
-    },
-    {
         "Party",
         &party_class_id,
         party_ctor,

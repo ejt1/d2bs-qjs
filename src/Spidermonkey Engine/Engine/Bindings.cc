@@ -1,11 +1,10 @@
 #include "Bindings.h"
 
-#include "D2Helpers.h"  // Log
-
 #define D2BS_BUILTIN_BINDINGS(V) \
   V(AreaWrap)                    \
   V(ControlWrap)                 \
   V(DirectoryWrap)               \
+  V(ExitWrap)                    \
   V(ScriptWrap)
 
 #define V(name) void _register##name(JSContext* ctx, JSValue target);
