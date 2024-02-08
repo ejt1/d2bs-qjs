@@ -48,7 +48,11 @@ void PartyWrap::Initialize(JSContext* ctx, JSValue target) {
   JSValue proto = JS_NewObject(ctx);
   JS_SetPropertyFunctionList(ctx, proto, m_proto_funcs, _countof(m_proto_funcs));
 
-  JSValue obj = JS_NewObjectProtoClass(ctx, proto, m_class_id);
+  // TODO(ejt): empty constructor for compatibility with kolbot
+  JSValue obj = JS_NewCFunction2(
+      ctx, [](JSContext*, JSValue, int, JSValue*) { return JS_UNDEFINED; }, "PresetUnit", 0, JS_CFUNC_constructor, 0);
+  JS_SetConstructor(ctx, obj, proto);
+
   JS_SetClassProto(ctx, m_class_id, proto);
   JS_SetPropertyStr(ctx, target, "Party", obj);
 
