@@ -6,7 +6,7 @@
 enum ProfileType { PROFILETYPE_INVALID, PROFILETYPE_SINGLEPLAYER, PROFILETYPE_BATTLENET, PROFILETYPE_OPEN_BATTLENET, PROFILETYPE_TCPIP_HOST, PROFILETYPE_TCPIP_JOIN };
 
 class Profile {
- protected:
+ public:
   ProfileType type;
   union {
     char ip[16];

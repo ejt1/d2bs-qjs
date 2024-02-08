@@ -109,15 +109,6 @@ JSClassSpec global_classes[] = {
         FUNCLIST(image_proto_funcs),
         EMPTY_FUNCLIST,
     },
-    {
-        "Profile",
-        &profile_class_id,
-        profile_ctor,
-        profile_finalizer,
-        0,
-        FUNCLIST(profile_proto_funcs),
-        EMPTY_FUNCLIST,
-    },
 
     {0},
 };

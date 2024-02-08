@@ -1,36 +1,46 @@
 #pragma once
 
-#include <windows.h>
 #include "js32.h"
 #include "Profile.h"
 
-CLASS_CTOR(profile);
-CLASS_FINALIZER(profile);
+class ProfileWrap {
+ public:
+  static JSValue Instantiate(JSContext* ctx, JSValue new_target, Profile* prof);
+  static void Initialize(JSContext* ctx, JSValue target);
 
-JSAPI_FUNC(profile_login);
+ private:
+  ProfileWrap(JSContext* ctx, Profile* prof);
+  virtual ~ProfileWrap();
 
-JSAPI_PROP(profile_getProperty);
+  // constructor
+  static JSValue New(JSContext* ctx, JSValue new_target, int argc, JSValue* argv);
 
-enum jsProfileProperty_ids {
-  PROFILE_TYPE,
-  PROFILE_IP,
-  PROFILE_USERNAME,
-  PROFILE_GATEWAY,
-  PROFILE_CHARACTER,
-  PROFILE_DIFFICULTY,
-  PROFILE_MAXLOGINTIME,
-  PROFILE_MAXCHARSELTIME
-};
+  // properties
+  static JSValue GetType(JSContext* ctx, JSValue this_val);
+  static JSValue GetIP(JSContext* ctx, JSValue this_val);
+  static JSValue GetUsername(JSContext* ctx, JSValue this_val);
+  static JSValue GetGateway(JSContext* ctx, JSValue this_val);
+  static JSValue GetCharacter(JSContext* ctx, JSValue this_val);
+  static JSValue GetDifficulty(JSContext* ctx, JSValue this_val);
+  static JSValue GetMaxLoginTime(JSContext* ctx, JSValue this_val);
+  static JSValue GetMaxCharacterSelectTime(JSContext* ctx, JSValue this_val);
 
-static JSCFunctionListEntry profile_proto_funcs[] = {
-    JS_CGETSET_MAGIC_DEF("type", profile_getProperty, nullptr, PROFILE_TYPE),
-    JS_CGETSET_MAGIC_DEF("ip", profile_getProperty, nullptr, PROFILE_IP),
-    JS_CGETSET_MAGIC_DEF("username", profile_getProperty, nullptr, PROFILE_USERNAME),
-    JS_CGETSET_MAGIC_DEF("gateway", profile_getProperty, nullptr, PROFILE_GATEWAY),
-    JS_CGETSET_MAGIC_DEF("character", profile_getProperty, nullptr, PROFILE_CHARACTER),
-    JS_CGETSET_MAGIC_DEF("difficulty", profile_getProperty, nullptr, PROFILE_DIFFICULTY),
-    JS_CGETSET_MAGIC_DEF("maxLoginTime", profile_getProperty, nullptr, PROFILE_MAXLOGINTIME),
-    JS_CGETSET_MAGIC_DEF("maxCharacterSelectTime", profile_getProperty, nullptr, PROFILE_MAXCHARSELTIME),
+  // functions
+  static JSValue Login(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
 
-    JS_FS("login", profile_login, 0, FUNCTION_FLAGS),
+  static inline JSClassID m_class_id = 0;
+  static inline JSCFunctionListEntry m_proto_funcs[] = {
+      JS_CGETSET_DEF("type", GetType, nullptr),                                      //
+      JS_CGETSET_DEF("ip", GetIP, nullptr),                                          //
+      JS_CGETSET_DEF("username", GetUsername, nullptr),                              //
+      JS_CGETSET_DEF("gateway", GetGateway, nullptr),                                //
+      JS_CGETSET_DEF("character", GetCharacter, nullptr),                            //
+      JS_CGETSET_DEF("difficulty", GetDifficulty, nullptr),                          //
+      JS_CGETSET_DEF("maxLoginTime", GetMaxLoginTime, nullptr),                      //
+      JS_CGETSET_DEF("maxCharacterSelectTime", GetMaxCharacterSelectTime, nullptr),  //
+
+      JS_FS("login", Login, 0, FUNCTION_FLAGS),
+  };
+
+  Profile* profile;
 };
