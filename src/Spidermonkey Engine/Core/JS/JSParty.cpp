@@ -1,83 +1,187 @@
 #include "JSParty.h"
-#include "D2Helpers.h"
-#include "JSUnit.h"
-#include "JSGlobalClasses.h"
 
-#include "Game/D2Roster.h"
+#include "Bindings.h"
+#include "D2Helpers.h"  // WaitForGameReady
+#include "JSUnit.h"     // JSUnit
 
-EMPTY_CTOR(party)
-
-JSAPI_PROP(party_getProperty) {
-  D2RosterUnitStrc* pUnit = (D2RosterUnitStrc*)JS_GetOpaque3(this_val);
-
-  if (!pUnit)
-    return JS_UNDEFINED;
-
-  switch (magic) {
-    case PARTY_NAME:
-      return JS_NewString(ctx, pUnit->szName);
-      break;
-    case PARTY_X:
-      return JS_NewUint32(ctx, pUnit->Xpos);
-      break;
-    case PARTY_Y:
-      return JS_NewUint32(ctx, pUnit->Ypos);
-      break;
-    case PARTY_AREA:
-      return JS_NewUint32(ctx, pUnit->dwLevelId);
-      break;
-    case PARTY_GID:
-      return JS_NewUint32(ctx, pUnit->dwUnitId);
-      break;
-    case PARTY_LIFE:
-      return JS_NewUint32(ctx, pUnit->dwPartyLife);
-      break;
-    case PARTY_CLASSID:
-      return JS_NewUint32(ctx, pUnit->dwClassId);
-      break;
-    case PARTY_LEVEL:
-      return JS_NewUint32(ctx, pUnit->wLevel);
-      break;
-    case PARTY_FLAG:
-      return JS_NewUint32(ctx, pUnit->dwPartyFlags);
-      break;
-    case PARTY_ID:
-      return JS_NewUint32(ctx, pUnit->wPartyId);
-      break;
-    default:
-      break;
+JSValue PartyWrap::Instantiate(JSContext* ctx, JSValue new_target, D2RosterUnitStrc* unit) {
+  JSValue proto;
+  if (JS_IsUndefined(new_target)) {
+    proto = JS_GetClassProto(ctx, m_class_id);
+  } else {
+    proto = JS_GetPropertyStr(ctx, new_target, "prototype");
+    if (JS_IsException(proto)) {
+      return JS_EXCEPTION;
+    }
+  }
+  JSValue obj = JS_NewObjectProtoClass(ctx, proto, m_class_id);
+  JS_FreeValue(ctx, proto);
+  if (JS_IsException(obj)) {
+    return obj;
   }
 
-  return JS_UNDEFINED;
+  PartyWrap* wrap = new PartyWrap(ctx, unit);
+  if (!wrap) {
+    JS_FreeValue(ctx, obj);
+    return JS_ThrowOutOfMemory(ctx);
+  }
+  JS_SetOpaque(obj, wrap);
+
+  return obj;
 }
 
-JSAPI_FUNC(party_getNext) {
-  if (!WaitForGameReady())
-    THROW_WARNING(ctx, "Game not ready");
+void PartyWrap::Initialize(JSContext* ctx, JSValue target) {
+  JSClassDef def{};
+  def.class_name = "Party";
+  def.finalizer = [](JSRuntime* /*rt*/, JSValue val) {
+    PartyWrap* wrap = static_cast<PartyWrap*>(JS_GetOpaque(val, m_class_id));
+    if (wrap) {
+      delete wrap;
+    }
+  };
 
-  D2RosterUnitStrc* pUnit = (D2RosterUnitStrc*)JS_GetOpaque3(this_val);
+  if (m_class_id == 0) {
+    JS_NewClassID(&m_class_id);
+  }
+  JS_NewClass(JS_GetRuntime(ctx), m_class_id, &def);
 
-  if (!pUnit) {
+  JSValue proto = JS_NewObject(ctx);
+  JS_SetPropertyFunctionList(ctx, proto, m_proto_funcs, _countof(m_proto_funcs));
+
+  JSValue obj = JS_NewObjectProtoClass(ctx, proto, m_class_id);
+  JS_SetClassProto(ctx, m_class_id, proto);
+  JS_SetPropertyStr(ctx, target, "Party", obj);
+
+  // globals
+  JS_SetPropertyStr(ctx, target, "getParty", JS_NewCFunction(ctx, GetParty, "getParty", 0));
+}
+
+PartyWrap::PartyWrap(JSContext* /*ctx*/, D2RosterUnitStrc* unit) : pPresetUnit(unit) {
+}
+
+// properties
+JSValue PartyWrap::GetX(JSContext* ctx, JSValue this_val) {
+  PartyWrap* wrap = static_cast<PartyWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  D2RosterUnitStrc* unit = wrap->pPresetUnit;
+  return JS_NewUint32(ctx, unit->Xpos);
+}
+
+JSValue PartyWrap::GetY(JSContext* ctx, JSValue this_val) {
+  PartyWrap* wrap = static_cast<PartyWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  D2RosterUnitStrc* unit = wrap->pPresetUnit;
+  return JS_NewUint32(ctx, unit->Ypos);
+}
+
+JSValue PartyWrap::GetArea(JSContext* ctx, JSValue this_val) {
+  PartyWrap* wrap = static_cast<PartyWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  D2RosterUnitStrc* unit = wrap->pPresetUnit;
+  return JS_NewUint32(ctx, unit->dwLevelId);
+}
+
+JSValue PartyWrap::GetGid(JSContext* ctx, JSValue this_val) {
+  PartyWrap* wrap = static_cast<PartyWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  D2RosterUnitStrc* unit = wrap->pPresetUnit;
+  return JS_NewUint32(ctx, unit->dwUnitId);
+}
+
+JSValue PartyWrap::GetLife(JSContext* ctx, JSValue this_val) {
+  PartyWrap* wrap = static_cast<PartyWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  D2RosterUnitStrc* unit = wrap->pPresetUnit;
+  return JS_NewUint32(ctx, unit->dwPartyLife);
+}
+
+JSValue PartyWrap::GetPartyFlag(JSContext* ctx, JSValue this_val) {
+  PartyWrap* wrap = static_cast<PartyWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  D2RosterUnitStrc* unit = wrap->pPresetUnit;
+  return JS_NewUint32(ctx, unit->dwPartyFlags);
+}
+
+JSValue PartyWrap::GetPartyId(JSContext* ctx, JSValue this_val) {
+  PartyWrap* wrap = static_cast<PartyWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  D2RosterUnitStrc* unit = wrap->pPresetUnit;
+  return JS_NewUint32(ctx, unit->wPartyId);
+}
+
+JSValue PartyWrap::GetName(JSContext* ctx, JSValue this_val) {
+  PartyWrap* wrap = static_cast<PartyWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  D2RosterUnitStrc* unit = wrap->pPresetUnit;
+  return JS_NewString(ctx, unit->szName);
+}
+
+JSValue PartyWrap::GetClassId(JSContext* ctx, JSValue this_val) {
+  PartyWrap* wrap = static_cast<PartyWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  D2RosterUnitStrc* unit = wrap->pPresetUnit;
+  return JS_NewUint32(ctx, unit->dwClassId);
+}
+
+JSValue PartyWrap::GetLevel(JSContext* ctx, JSValue this_val) {
+  PartyWrap* wrap = static_cast<PartyWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  D2RosterUnitStrc* unit = wrap->pPresetUnit;
+  return JS_NewUint32(ctx, unit->wLevel);
+}
+
+// functions
+JSValue PartyWrap::GetNext(JSContext* ctx, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
+  PartyWrap* wrap = static_cast<PartyWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  D2RosterUnitStrc* unit = wrap->pPresetUnit;
+  if (!unit || !unit->pNext) {
     return JS_FALSE;
   }
 
-  pUnit = pUnit->pNext;
-
-  if (pUnit) {
-    // BUG(ejt): possible value leak
-    JS_SetOpaque(this_val, pUnit);
-    return JS_DupValue(ctx, this_val);
-  }
-
-  return JS_FALSE;
+  wrap->pPresetUnit = unit->pNext;
+  return JS_DupValue(ctx, this_val);
 }
 
-JSAPI_FUNC(my_getParty) {
+// globals
+JSValue PartyWrap::GetParty(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
   D2RosterUnitStrc* pUnit = *D2CLIENT_PlayerUnitList;
-
   if (!pUnit)
     return JS_UNDEFINED;
 
@@ -106,16 +210,16 @@ JSAPI_FUNC(my_getParty) {
     if (!nPlayerName && !nPlayerId)
       return JS_UNDEFINED;
 
-    BOOL bFound = FALSE;
+    bool bFound = false;
 
     for (D2RosterUnitStrc* pScan = pUnit; pScan; pScan = pScan->pNext) {
       if (nPlayerId && pScan->dwUnitId == nPlayerId) {
-        bFound = TRUE;
+        bFound = true;
         pUnit = pScan;
         break;
       }
       if (nPlayerName && _stricmp(pScan->szName, nPlayerName) == 0) {
-        bFound = TRUE;
+        bFound = true;
         pUnit = pScan;
         break;
       }
@@ -129,5 +233,7 @@ JSAPI_FUNC(my_getParty) {
       return JS_UNDEFINED;
   }
 
-  return BuildObject(ctx, party_class_id, FUNCLIST(party_proto_funcs), pUnit);
+  return PartyWrap::Instantiate(ctx, JS_UNDEFINED, pUnit);
 }
+
+D2BS_BINDING_INTERNAL(PartyWrap, PartyWrap::Initialize)
