@@ -13,6 +13,9 @@ class PresetUnitWrap {
  private:
   PresetUnitWrap(JSContext* ctx, D2PresetUnitStrc* preset, D2DrlgRoomStrc* room, uint32_t level);
 
+  // constructor
+  static JSValue New(JSContext* ctx, JSValue new_target, int argc, JSValue* argv);
+
   // properties
   static JSValue GetType(JSContext* ctx, JSValue this_val);
   static JSValue GetRoomX(JSContext* ctx, JSValue this_val);

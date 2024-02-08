@@ -48,9 +48,7 @@ void PresetUnitWrap::Initialize(JSContext* ctx, JSValue target) {
   JSValue proto = JS_NewObject(ctx);
   JS_SetPropertyFunctionList(ctx, proto, m_proto_funcs, _countof(m_proto_funcs));
 
-  // TODO(ejt): empty constructor for compatibility with kolbot
-  JSValue obj = JS_NewCFunction2(
-      ctx, [](JSContext*, JSValue, int, JSValue*) { return JS_UNDEFINED; }, "PresetUnit", 0, JS_CFUNC_constructor, 0);
+  JSValue obj = JS_NewCFunction2(ctx, New, "PresetUnit", 0, JS_CFUNC_constructor, 0);
   JS_SetConstructor(ctx, obj, proto);
 
   JS_SetClassProto(ctx, m_class_id, proto);
@@ -63,6 +61,11 @@ void PresetUnitWrap::Initialize(JSContext* ctx, JSValue target) {
 
 PresetUnitWrap::PresetUnitWrap(JSContext* /*ctx*/, D2PresetUnitStrc* preset, D2DrlgRoomStrc* room, uint32_t level)
     : dwPosX(preset->dwPosX), dwPosY(preset->dwPosY), dwRoomX(room->dwPosX), dwRoomY(room->dwPosY), dwType(preset->dwType), dwId(preset->dwTxtFileNo), dwLevel(level) {
+}
+
+JSValue PresetUnitWrap::New(JSContext* ctx, JSValue new_target, int argc, JSValue* argv) {
+  // TODO(ejt): empty constructor for compatibility with kolbot
+  return JS_UNDEFINED;
 }
 
 // properties

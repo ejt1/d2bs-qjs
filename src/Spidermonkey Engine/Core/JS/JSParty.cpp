@@ -48,9 +48,7 @@ void PartyWrap::Initialize(JSContext* ctx, JSValue target) {
   JSValue proto = JS_NewObject(ctx);
   JS_SetPropertyFunctionList(ctx, proto, m_proto_funcs, _countof(m_proto_funcs));
 
-  // TODO(ejt): empty constructor for compatibility with kolbot
-  JSValue obj = JS_NewCFunction2(
-      ctx, [](JSContext*, JSValue, int, JSValue*) { return JS_UNDEFINED; }, "PresetUnit", 0, JS_CFUNC_constructor, 0);
+  JSValue obj = JS_NewCFunction2(ctx, New, "Party", 0, JS_CFUNC_constructor, 0);
   JS_SetConstructor(ctx, obj, proto);
 
   JS_SetClassProto(ctx, m_class_id, proto);
@@ -61,6 +59,11 @@ void PartyWrap::Initialize(JSContext* ctx, JSValue target) {
 }
 
 PartyWrap::PartyWrap(JSContext* /*ctx*/, D2RosterUnitStrc* unit) : pPresetUnit(unit) {
+}
+
+JSValue PartyWrap::New(JSContext* ctx, JSValue new_target, int argc, JSValue* argv) {
+  // TODO(ejt): empty constructor for compatibility with kolbot
+  return JS_UNDEFINED;
 }
 
 // properties

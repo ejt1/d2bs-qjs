@@ -12,6 +12,9 @@ class PartyWrap {
  private:
   PartyWrap(JSContext* ctx, D2RosterUnitStrc* unit);
 
+  // constructor
+  static JSValue New(JSContext* ctx, JSValue new_target, int argc, JSValue* argv);
+
   // properties
   static JSValue GetX(JSContext* ctx, JSValue this_val);
   static JSValue GetY(JSContext* ctx, JSValue this_val);
