@@ -81,15 +81,6 @@ JSClassSpec global_classes[] = {
         FUNCLIST(socket_proto_funcs),
         FUNCLIST(socket_static_funcs),
     },
-    {
-        "FileTools",
-        &filetools_class_id,
-        filetools_ctor,
-        nullptr,
-        0,
-        EMPTY_FUNCLIST,
-        FUNCLIST(filetools_static_funcs),
-    },
 
     {
         "Frame",
