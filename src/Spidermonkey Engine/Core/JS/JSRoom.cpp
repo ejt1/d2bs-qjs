@@ -487,7 +487,7 @@ JSValue RoomWrap::UnitInRoom(JSContext* ctx, JSValue this_val, int argc, JSValue
   if (!pRoom2 || argc < 1 || !JS_IsObject(argv[0]))
     return JS_UNDEFINED;
 
-  JSUnit* pmyUnit = (JSUnit*)JS_GetOpaque3(argv[0]);
+  UnitWrap::UnitData* pmyUnit = UnitWrap::DataFromJSObject(argv[0]);
   if (!pmyUnit || (pmyUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_UNDEFINED;
 

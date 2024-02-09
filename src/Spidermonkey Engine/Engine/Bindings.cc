@@ -13,6 +13,7 @@
   V(RoomWrap)                    \
   V(SocketWrap)                  \
   V(ScriptWrap)                  \
+  V(UnitWrap)                    \
   /* ScreenHooks */              \
   V(FrameWrap)                   \
   V(BoxWrap)                     \

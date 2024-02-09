@@ -18,31 +18,31 @@
 
 JSAPI_FUNC(my_copyUnit) {
   if (argc >= 1 && JS_IsObject(argv[0]) && !JS_IsNull(argv[0])) {
-    JSUnit* lpOldUnit = (JSUnit*)JS_GetOpaque3(argv[0]);
-    JSUnit* lpNewUnit = nullptr;
+    UnitWrap::UnitData* lpOldUnit = UnitWrap::DataFromJSObject(argv[0]);
+    UnitWrap::UnitData* lpNewUnit = nullptr;
 
     if (!lpOldUnit)
       return JS_UNDEFINED;
 
     if (lpOldUnit->dwPrivateType == PRIVATE_UNIT) {
-      lpNewUnit = new JSUnit;
+      lpNewUnit = new UnitWrap::UnitData;
       if (!lpNewUnit) {
         return JS_UNDEFINED;
       }
-      memcpy(lpNewUnit, lpOldUnit, sizeof(JSUnit));
+      memcpy(lpNewUnit, lpOldUnit, sizeof(UnitWrap::UnitData));
     } else if (lpOldUnit->dwPrivateType == PRIVATE_ITEM) {
-      lpNewUnit = new JSItem;
+      lpNewUnit = new UnitWrap::ItemData;
       if (!lpNewUnit) {
         return JS_UNDEFINED;
       }
-      memcpy(lpNewUnit, lpOldUnit, sizeof(JSItem));
+      memcpy(lpNewUnit, lpOldUnit, sizeof(UnitWrap::ItemData));
     }
     if (!lpNewUnit) {
       // this can only be reached if dwPrivateType was invalid
       return JS_UNDEFINED;
     }
 
-    JSValue jsunit = BuildObject(ctx, unit_class_id, FUNCLIST(unit_proto_funcs), lpNewUnit);
+    JSValue jsunit = UnitWrap::Instantiate(ctx, JS_UNDEFINED, lpNewUnit);
     if (JS_IsException(jsunit)) {
       delete lpNewUnit;
       lpNewUnit = NULL;
@@ -72,8 +72,7 @@ JSAPI_FUNC(my_clickMap) {
     JS_ToUint32(ctx, &nY, argv[3]);
 
   if (argc == 3 && JS_IsNumber(argv[0]) && (JS_IsNumber(argv[1]) || JS_IsBool(argv[1])) && JS_IsObject(argv[2]) && !JS_IsNull(argv[2])) {
-    JSUnit* mypUnit = (JSUnit*)JS_GetOpaque3(argv[2]);
-
+    UnitWrap::UnitData* mypUnit = UnitWrap::DataFromJSObject(argv[2]);
     if (!mypUnit || (mypUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
       return JS_FALSE;
 
@@ -309,7 +308,7 @@ JSAPI_FUNC(my_clickItem) {
     return rval;
   }
 
-  JSUnit* pmyUnit = NULL;
+  UnitWrap::UnitData* pmyUnit = NULL;
   D2UnitStrc* pUnit = NULL;
 
   // int ScreenSize = D2GFX_GetScreenSize();
@@ -340,7 +339,7 @@ JSAPI_FUNC(my_clickItem) {
   *D2CLIENT_CursorHoverY = 0xFFFFFFFF;
 
   if (argc == 1 && JS_IsObject(argv[0])) {
-    pmyUnit = (JSUnit*)JS_GetOpaque3(argv[0]);
+    pmyUnit = UnitWrap::DataFromJSObject(argv[0]);
 
     if (!pmyUnit || (pmyUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT) {
       return rval;
@@ -389,7 +388,7 @@ JSAPI_FUNC(my_clickItem) {
     }
     return rval;
   } else if (argc == 2 && JS_IsNumber(argv[0]) && JS_IsObject(argv[1])) {
-    pmyUnit = (JSUnit*)JS_GetOpaque3(argv[1]);
+    pmyUnit = UnitWrap::DataFromJSObject(argv[1]);
 
     if (!pmyUnit || (pmyUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT) {
       return rval;
@@ -667,8 +666,7 @@ JSAPI_FUNC(my_getDistance) {
     }
   } else if (argc == 3) {
     if (JS_IsObject(argv[0]) && JS_IsNumber(argv[1]) && JS_IsNumber(argv[2])) {
-      JSUnit* pUnit1 = (JSUnit*)JS_GetOpaque3(argv[0]);
-
+      UnitWrap::UnitData* pUnit1 = UnitWrap::DataFromJSObject(argv[0]);
       if (!pUnit1 || (pUnit1->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
         return JS_UNDEFINED;
 
@@ -682,8 +680,7 @@ JSAPI_FUNC(my_getDistance) {
       JS_ToInt32(ctx, &nX2, argv[1]);
       JS_ToInt32(ctx, &nY2, argv[2]);
     } else if (JS_IsNumber(argv[0]) && JS_IsNumber(argv[1]) && JS_IsObject(argv[2])) {
-      JSUnit* pUnit1 = (JSUnit*)JS_GetOpaque3(argv[2]);
-
+      UnitWrap::UnitData* pUnit1 = UnitWrap::DataFromJSObject(argv[2]);
       if (!pUnit1 || (pUnit1->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
         return JS_UNDEFINED;
 
@@ -730,8 +727,8 @@ JSAPI_FUNC(my_checkCollision) {
     THROW_WARNING(ctx, "Game not ready");
 
   if (argc == 3 && JS_IsObject(argv[0]) && JS_IsObject(argv[1]) && JS_IsNumber(argv[2])) {
-    JSUnit* pUnitA = (JSUnit*)JS_GetOpaque3(argv[0]);
-    JSUnit* pUnitB = (JSUnit*)JS_GetOpaque3(argv[1]);
+    UnitWrap::UnitData* pUnitA = UnitWrap::DataFromJSObject(argv[0]);
+    UnitWrap::UnitData* pUnitB = UnitWrap::DataFromJSObject(argv[1]);
     int32_t nBitMask;
     JS_ToInt32(ctx, &nBitMask, argv[2]);
 
@@ -1220,7 +1217,7 @@ JSAPI_FUNC(my_getInteractedNPC) {
     return JS_FALSE;
   }
 
-  JSUnit* pmyUnit = new JSUnit;  // leaked?
+  UnitWrap::UnitData* pmyUnit = new UnitWrap::UnitData;  // leaked?
   if (!pmyUnit)
     return JS_UNDEFINED;
 
@@ -1232,7 +1229,7 @@ JSAPI_FUNC(my_getInteractedNPC) {
   pmyUnit->dwUnitId = pNPC->dwUnitId;
   strcpy_s(pmyUnit->szName, sizeof(pmyUnit->szName), szName);
 
-  return BuildObject(ctx, unit_class_id, FUNCLIST(unit_proto_funcs), pmyUnit);
+  return UnitWrap::Instantiate(ctx, JS_UNDEFINED, pmyUnit);
 }
 
 JSAPI_FUNC(my_takeScreenshot) {
@@ -1251,8 +1248,7 @@ JSAPI_FUNC(my_moveNPC) {
   if (argc < 2)
     THROW_ERROR(ctx, "Not enough parameters were passed to moveNPC!");
 
-  JSUnit* pNpc = (JSUnit*)JS_GetOpaque3(argv[0]);
-
+  UnitWrap::UnitData* pNpc = UnitWrap::DataFromJSObject(argv[0]);
   if (!pNpc || pNpc->dwType != 1)
     THROW_ERROR(ctx, "Invalid NPC passed to moveNPC!");
 

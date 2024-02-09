@@ -362,40 +362,12 @@ bool Script::Initialize() {
 
   // TODO(ejt): this is a solution to minimize changes during migration to quickjs, refactor this in the future
   JS_SetPropertyFunctionList(m_context, m_globalObject, global_funcs, _countof(global_funcs));
-  for (JSClassSpec* entry = global_classes; entry->name != NULL; entry++) {
-    JSClassDef def{};
-    def.class_name = entry->name;
-    def.finalizer = entry->finalizer;
-
-    JS_NewClassID(entry->pclass_id);
-    JS_NewClass(m_runtime, *entry->pclass_id, &def);
-    JSValue proto = JS_NewObject(m_context);
-    JSValue obj;
-
-    if (entry->proto_funcs) {
-      JS_SetPropertyFunctionList(m_context, proto, entry->proto_funcs, entry->num_proto_funcs);
-    }
-
-    if (entry->ctor) {
-      obj = JS_NewCFunction2(m_context, entry->ctor, entry->name, 0, JS_CFUNC_constructor, 0);
-      JS_SetConstructor(m_context, obj, proto);
-    } else {
-      obj = JS_NewObjectProtoClass(m_context, proto, *entry->pclass_id);
-    }
-
-    if (entry->static_funcs) {
-      JS_SetPropertyFunctionList(m_context, obj, entry->static_funcs, entry->num_static_funcs);
-    }
-
-    JS_SetClassProto(m_context, *entry->pclass_id, proto);
-    JS_SetPropertyStr(m_context, m_globalObject, entry->name, obj);
-  }
 
   RegisterBuiltinBindings(m_context);
 
   // define 'me' property
-  m_me = new JSUnit;
-  memset(m_me, NULL, sizeof(JSUnit));
+  m_me = new UnitWrap::UnitData;
+  memset(m_me, NULL, sizeof(UnitWrap::UnitData));
 
   D2UnitStrc* player = D2CLIENT_GetPlayerUnit();
   m_me->dwMode = (DWORD)-1;
@@ -404,12 +376,12 @@ bool Script::Initialize() {
   m_me->dwUnitId = player ? player->dwUnitId : NULL;
   m_me->dwPrivateType = PRIVATE_UNIT;
 
-  JSValue meObject = BuildObject(m_context, unit_class_id, FUNCLIST(me_proto_funcs), m_me);
-  if (!meObject) {
+  JSValue meObject = UnitWrap::Instantiate(m_context, JS_UNDEFINED, m_me);
+  if (JS_IsException(meObject)) {
     Log("failed to build object 'me'");
     return false;
   }
-
+  JS_SetPropertyFunctionList(m_context, meObject, FUNCLIST(UnitWrap::me_proto_funcs));
   JS_SetPropertyStr(m_context, m_globalObject, "me", meObject);
 
   // compile script file

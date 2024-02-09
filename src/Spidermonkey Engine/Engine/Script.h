@@ -118,7 +118,7 @@ class Script {
   JSContext* m_context;
   JSValue m_globalObject;
   JSValue m_script;
-  JSUnit* m_me;
+  UnitWrap::UnitData* m_me;
 
   FunctionMap m_functions;
   HANDLE m_eventSignal;

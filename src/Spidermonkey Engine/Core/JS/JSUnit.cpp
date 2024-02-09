@@ -1,36 +1,119 @@
 #include "JSUnit.h"
-#include "D2Helpers.h"
-#include "Helpers.h"
+
+#include "Bindings.h"
 #include "Core.h"
 #include "CriticalSections.h"
-#include "MPQStats.h"
-
+#include "D2Helpers.h"
 #include "Game/UI/NPCMenu.h"
 #include "Game/D2Game.h"
 #include "Game/D2Quests.h"
+#include "Game/Unorganized.h"
+#include "Globals.h"
+#include "Localization.h"
+#include "MPQStats.h"
+#include "Script.h"
 
-EMPTY_CTOR(unit)
+JSValue UnitWrap::Instantiate(JSContext* ctx, JSValue new_target, UnitData* priv) {
+  JSValue proto;
+  if (JS_IsUndefined(new_target)) {
+    proto = JS_GetClassProto(ctx, m_unit_class_id);
+  } else {
+    proto = JS_GetPropertyStr(ctx, new_target, "prototype");
+    if (JS_IsException(proto)) {
+      return JS_EXCEPTION;
+    }
+  }
+  JSValue obj = JS_NewObjectProtoClass(ctx, proto, m_unit_class_id);
+  JS_FreeValue(ctx, proto);
+  if (JS_IsException(obj)) {
+    return obj;
+  }
 
-CLASS_FINALIZER(unit) {
-  JSUnit* lpUnit = static_cast<JSUnit*>(JS_GetOpaque3(val));
+  // BUG(ejt): ask ejt
+  JS_SetPropertyFunctionList(ctx, obj, m_unit_proto_funcs, _countof(m_unit_proto_funcs));
 
-  if (lpUnit) {
-    switch (lpUnit->dwPrivateType) {
+  UnitWrap* wrap = new UnitWrap(ctx, priv);
+  if (!wrap) {
+    JS_FreeValue(ctx, obj);
+    return JS_ThrowOutOfMemory(ctx);
+  }
+  JS_SetOpaque(obj, wrap);
+
+  return obj;
+}
+
+void UnitWrap::Initialize(JSContext* ctx, JSValue target) {
+  JSClassDef def{};
+  def.class_name = "Unit";
+  def.finalizer = [](JSRuntime* /*rt*/, JSValue val) {
+    UnitWrap* wrap = static_cast<UnitWrap*>(JS_GetOpaque(val, m_unit_class_id));
+    if (wrap) {
+      delete wrap;
+    }
+  };
+
+  if (m_unit_class_id == 0) {
+    JS_NewClassID(&m_unit_class_id);
+  }
+  JS_NewClass(JS_GetRuntime(ctx), m_unit_class_id, &def);
+
+  JSValue proto = JS_NewObject(ctx);
+  JS_SetPropertyFunctionList(ctx, proto, m_unit_proto_funcs, _countof(m_unit_proto_funcs));
+
+  JSValue obj = JS_NewCFunction2(ctx, New, "Unit", 0, JS_CFUNC_constructor, 0);
+  JS_SetConstructor(ctx, obj, proto);
+
+  JS_SetClassProto(ctx, m_unit_class_id, proto);
+  JS_SetPropertyStr(ctx, target, "Unit", obj);
+
+  // globals
+  JS_SetPropertyStr(ctx, target, "getUnit", JS_NewCFunction(ctx, getUnit, "getUnit", 0));
+  // BUG(ejt): ask ejt
+  JS_SetPropertyStr(ctx, target, "getMercHP", JS_NewCFunction(ctx, getMercHP, "getMercHP", 0));
+}
+
+UnitWrap::UnitData* UnitWrap::GetData() {
+  return pData;
+}
+
+UnitWrap* UnitWrap::FromJSObject(JSValue value) {
+  if (!JS_IsObject(value)) {
+    return nullptr;
+  }
+  //return static_cast<UnitWrap*>(JS_GetOpaque(value, m_unit_class_id));
+  return static_cast<UnitWrap*>(JS_GetOpaque3(value));
+}
+
+UnitWrap::UnitData* UnitWrap::DataFromJSObject(JSValue value) {
+  UnitWrap* wrap = FromJSObject(value);
+  return wrap ? wrap->GetData() : nullptr;
+}
+
+UnitWrap::UnitWrap(JSContext* /*ctx*/, UnitData* priv) : pData(priv) {
+}
+
+UnitWrap::~UnitWrap() {
+  if (pData) {
+    switch (pData->dwPrivateType) {
       case PRIVATE_UNIT: {
-        delete lpUnit;
+        delete pData;
         break;
       }
       case PRIVATE_ITEM: {
-        JSItem* lpItem = static_cast<JSItem*>(lpUnit);
+        ItemData* lpItem = static_cast<ItemData*>(pData);
         delete lpItem;
         break;
       }
     }
   }
-  JS_SetOpaque(val, NULL);
 }
 
-JSAPI_PROP(unit_getProperty) {
+JSValue UnitWrap::New(JSContext* /*ctx*/, JSValue /*new_target*/, int /*argc*/, JSValue* /*argv*/) {
+  return JS_UNDEFINED;
+}
+
+// properties
+JSValue UnitWrap::GetProperty(JSContext* ctx, JSValue this_val, int magic) {
   BnetData* pData = *D2LAUNCH_BnData;
   D2GameInfoStrc* pInfo = *D2CLIENT_GameInfo;
 
@@ -131,7 +214,7 @@ JSAPI_PROP(unit_getProperty) {
   if (ClientState() != ClientStateInGame)
     return JS_UNDEFINED;
 
-  JSUnit* lpUnit = (JSUnit*)JS_GetOpaque3(this_val);
+  UnitData* lpUnit = DataFromJSObject(this_val);
   if (!lpUnit || (lpUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_UNDEFINED;
 
@@ -449,7 +532,7 @@ JSAPI_PROP(unit_getProperty) {
   return JS_UNDEFINED;
 }
 
-JSAPI_STRICT_PROP(unit_setProperty) {
+JSValue UnitWrap::SetProperty(JSContext* ctx, JSValue /*this_val*/, JSValue val, int magic) {
   int32_t ival = 0;
   int32_t bval = false;
 
@@ -503,73 +586,15 @@ JSAPI_STRICT_PROP(unit_setProperty) {
   return JS_UNDEFINED;
 }
 
-JSAPI_FUNC(unit_getUnit) {
-  if (argc < 1)
-    return JS_UNDEFINED;
-
-  int nType = -1;
-  uint32_t nClassId = (uint32_t)-1;
-  uint32_t nMode = (uint32_t)-1;
-  uint32_t nUnitId = (uint32_t)-1;
-  const char* szName = nullptr;
-
-  if (argc > 0 && JS_IsNumber(argv[0]))
-    JS_ToInt32(ctx, &nType, argv[0]);
-
-  if (argc > 1 && JS_IsString(argv[1]))
-    szName = JS_ToCString(ctx, argv[1]);
-
-  if (argc > 1 && JS_IsNumber(argv[1]) && !JS_IsNull(argv[1]))
-    JS_ToUint32(ctx, &nClassId, argv[1]);
-
-  if (argc > 2 && JS_IsNumber(argv[2]) && !JS_IsNull(argv[2]))
-    JS_ToUint32(ctx, &nMode, argv[2]);
-
-  if (argc > 3 && JS_IsNumber(argv[3]) && !JS_IsNull(argv[3]))
-    JS_ToUint32(ctx, &nUnitId, argv[3]);
-
-  D2UnitStrc* pUnit = NULL;
-
-  if (nType == 100)
-    pUnit = D2CLIENT_GetCursorItem();
-  else if (nType == 101) {
-    pUnit = D2CLIENT_GetSelectedUnit();
-    if (!pUnit)
-      pUnit = (*D2CLIENT_SelectedInvItem);
-  } else
-    pUnit = D2UnitStrc::FindUnit(szName ? szName : "", nClassId, nType, nMode, nUnitId);
-
-  if (!pUnit) {
-    JS_FreeCString(ctx, szName);
-    return JS_UNDEFINED;
-  }
-
-  JSUnit* pmyUnit = new JSUnit;  // leaked?
-
-  if (!pmyUnit) {
-    JS_FreeCString(ctx, szName);
-    return JS_UNDEFINED;
-  }
-
-  pmyUnit->dwPrivateType = PRIVATE_UNIT;
-  pmyUnit->dwClassId = nClassId;
-  pmyUnit->dwMode = nMode;
-  pmyUnit->dwType = pUnit->dwType;
-  pmyUnit->dwUnitId = pUnit->dwUnitId;
-  strcpy_s(pmyUnit->szName, sizeof(pmyUnit->szName), szName ? szName : "");
-  JS_FreeCString(ctx, szName);
-
-  return BuildObject(ctx, unit_class_id, FUNCLIST(unit_proto_funcs), pmyUnit);
-}
-
-JSAPI_FUNC(unit_getNext) {
-  JSUnit* unit = (JSUnit*)JS_GetOpaque3(this_val);
+// function
+JSValue UnitWrap::getNext(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
+  UnitData* unit = DataFromJSObject(this_val);
 
   if (!unit)
     return JS_UNDEFINED;
 
   if (unit->dwPrivateType == PRIVATE_UNIT) {
-    JSUnit* lpUnit = (JSUnit*)unit;
+    UnitData* lpUnit = (UnitData*)unit;
     D2UnitStrc* pUnit = D2UnitStrc::FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
 
     if (!pUnit)
@@ -596,11 +621,11 @@ JSAPI_FUNC(unit_getNext) {
       return JS_FALSE;
     } else {
       lpUnit->dwUnitId = pUnit->dwUnitId;
-      JS_SetOpaque(this_val, lpUnit);
+      //JS_SetOpaque(this_val, lpUnit);
       return JS_TRUE;
     }
   } else if (unit->dwPrivateType == PRIVATE_ITEM) {
-    JSItem* pmyUnit = (JSItem*)unit;
+    ItemData* pmyUnit = (ItemData*)unit;
     if (!pmyUnit)
       return JS_UNDEFINED;
 
@@ -633,7 +658,7 @@ JSAPI_FUNC(unit_getNext) {
       return JS_FALSE;
     } else {
       pmyUnit->dwUnitId = nextItem->dwUnitId;
-      JS_SetOpaque(this_val, pmyUnit);
+      //JS_SetOpaque(this_val, pmyUnit);
       return JS_TRUE;
     }
   }
@@ -641,7 +666,7 @@ JSAPI_FUNC(unit_getNext) {
   return JS_UNDEFINED;
 }
 
-JSAPI_FUNC(unit_cancel) {
+JSValue UnitWrap::cancel(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
@@ -679,9 +704,8 @@ JSAPI_FUNC(unit_cancel) {
   return JS_TRUE;
 }
 
-JSAPI_FUNC(unit_repair) {
-  JSUnit* lpUnit = (JSUnit*)JS_GetOpaque3(this_val);
-
+JSValue UnitWrap::repair(JSContext* /*ctx*/, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
+  UnitData* lpUnit = DataFromJSObject(this_val);
   if (!lpUnit || (lpUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_FALSE;
 
@@ -702,9 +726,8 @@ JSAPI_FUNC(unit_repair) {
   return JS_TRUE;
 }
 
-JSAPI_FUNC(unit_useMenu) {
-  JSUnit* lpUnit = (JSUnit*)JS_GetOpaque3(this_val);
-
+JSValue UnitWrap::useMenu(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
+  UnitData* lpUnit = DataFromJSObject(this_val);
   if (argc < 1 || !JS_IsNumber(argv[0]))
     return JS_FALSE;
 
@@ -721,12 +744,11 @@ JSAPI_FUNC(unit_useMenu) {
   return JS_NewBool(ctx, NPCMenu::Click(pUnit->dwTxtFileNo, menuId));
 }
 
-JSAPI_FUNC(unit_interact) {
+JSValue UnitWrap::interact(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  JSUnit* lpUnit = (JSUnit*)JS_GetOpaque3(this_val);
-
+  UnitData* lpUnit = DataFromJSObject(this_val);
   if (!lpUnit || (lpUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_FALSE;
 
@@ -784,14 +806,412 @@ JSAPI_FUNC(unit_interact) {
   return JS_TRUE;
 }
 
-void InsertStatsToGenericObject(D2UnitStrc* pUnit, D2StatListExStrc* pStatList, JSContext* pJSContext, JSValue pGenericObject);
-void InsertStatsNow(D2StatStrc* pStat, int nStat, JSContext* cx, JSValue pArray);
-
-JSAPI_FUNC(unit_getStat) {
+JSValue UnitWrap::getItem(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  JSUnit* lpUnit = (JSUnit*)JS_GetOpaque3(this_val);
+  UnitData* pmyUnit = DataFromJSObject(this_val);
+  if (!pmyUnit || (pmyUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
+    return JS_UNDEFINED;
+
+  D2UnitStrc* pUnit = D2UnitStrc::FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
+
+  if (!pUnit || !pUnit->pInventory)
+    return JS_UNDEFINED;
+
+  uint32_t nClassId = (uint32_t)-1;
+  uint32_t nMode = (uint32_t)-1;
+  uint32_t nUnitId = (uint32_t)-1;
+  char szName[128] = "";
+
+  if (argc > 0 && JS_IsString(argv[0])) {
+    const char* szText = JS_ToCString(ctx, argv[0]);
+    strcpy_s(szName, sizeof(szName), szText);
+    JS_FreeCString(ctx, szText);
+  }
+
+  if (argc > 0 && JS_IsNumber(argv[0]) && !JS_IsNull(argv[0]))
+    JS_ToUint32(ctx, &nClassId, argv[0]);
+
+  if (argc > 1 && JS_IsNumber(argv[1]) && !JS_IsNull(argv[1]))
+    JS_ToUint32(ctx, &nMode, argv[1]);
+
+  if (argc > 2 && JS_IsNumber(argv[2]) && !JS_IsNull(argv[2]))
+    JS_ToUint32(ctx, &nUnitId, argv[2]);
+
+  D2UnitStrc* pItem = pUnit->FindItem(szName, nClassId, nMode, nUnitId);
+
+  if (!pItem)
+    return JS_UNDEFINED;
+
+  ItemData* pmyItem = new ItemData;  // leaked?
+  if (!pmyItem)
+    return JS_UNDEFINED;
+
+  pmyItem->dwPrivateType = PRIVATE_ITEM;
+  pmyItem->dwClassId = nClassId;
+  pmyItem->dwMode = nMode;
+  pmyItem->dwType = pItem->dwType;
+  pmyItem->dwUnitId = pItem->dwUnitId;
+  pmyItem->dwOwnerId = pmyUnit->dwUnitId;
+  pmyItem->dwOwnerType = pmyUnit->dwType;
+  strcpy_s(pmyItem->szName, sizeof(pmyItem->szName), szName);
+
+  return UnitWrap::Instantiate(ctx, JS_UNDEFINED, pmyItem);
+}
+
+JSValue UnitWrap::getItems(JSContext* ctx, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
+  if (!WaitForGameReady())
+    THROW_WARNING(ctx, "Game not ready");
+
+  UnitData* lpUnit = DataFromJSObject(this_val);
+  if (!lpUnit || (lpUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
+    return JS_UNDEFINED;
+
+  D2UnitStrc* pUnit = D2UnitStrc::FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
+
+  if (!pUnit || !pUnit->pInventory || !pUnit->pInventory->pFirstItem)
+    return JS_UNDEFINED;
+
+  JSValue pReturnArray = JS_NewArray(ctx);
+  if (JS_IsException(pReturnArray)) {
+    return JS_UNDEFINED;
+  }
+
+  DWORD dwArrayCount = 0;
+
+  for (D2UnitStrc* pItem = pUnit->pInventory->pFirstItem; pItem; pItem = D2COMMON_GetNextItemFromInventory(pItem), dwArrayCount++) {
+    ItemData* pmyUnit = new ItemData;
+    if (!pmyUnit)
+      continue;
+
+    pmyUnit->dwPrivateType = PRIVATE_UNIT;
+    pmyUnit->szName[0] = NULL;
+    pmyUnit->dwMode = pItem->dwMode;
+    pmyUnit->dwClassId = pItem->dwTxtFileNo;
+    pmyUnit->dwUnitId = pItem->dwUnitId;
+    pmyUnit->dwType = UNIT_ITEM;
+    pmyUnit->dwOwnerId = pUnit->dwUnitId;
+    pmyUnit->dwOwnerType = pUnit->dwType;
+
+    JSValue jsunit = UnitWrap::Instantiate(ctx, JS_UNDEFINED, pmyUnit);
+    if (JS_IsException(jsunit)) {
+      JS_FreeValue(ctx, pReturnArray);
+      THROW_ERROR(ctx, "Failed to build item array");
+    }
+    JS_SetPropertyUint32(ctx, pReturnArray, dwArrayCount, jsunit);
+  }
+
+  return pReturnArray;
+}
+
+JSValue UnitWrap::getMerc(JSContext* ctx, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
+  if (!WaitForGameReady())
+    THROW_WARNING(ctx, "Game not ready");
+
+  UnitData* lpUnit = DataFromJSObject(this_val);
+  if (lpUnit && (lpUnit->dwPrivateType & PRIVATE_UNIT) == PRIVATE_UNIT) {
+    D2UnitStrc* pUnit = D2UnitStrc::FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
+    if (pUnit && pUnit->dwType == UNIT_PLAYER) {
+      D2UnitStrc* pMerc = pUnit->FindMercUnit();
+      if (pMerc) {
+        UnitData* pmyUnit = new UnitData;
+
+        pmyUnit->dwPrivateType = PRIVATE_UNIT;
+        pmyUnit->dwUnitId = pMerc->dwUnitId;
+        pmyUnit->dwClassId = pMerc->dwTxtFileNo;
+        pmyUnit->dwMode = NULL;
+        pmyUnit->dwType = UNIT_MONSTER;
+        pmyUnit->szName[0] = NULL;
+
+        return UnitWrap::Instantiate(ctx, JS_UNDEFINED, pmyUnit);
+      }
+    }
+  }
+  return JS_NULL;
+}
+
+JSValue UnitWrap::getMercHP(JSContext* ctx, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
+  if (!WaitForGameReady())
+    THROW_WARNING(ctx, "Game not ready");
+
+  UnitData* lpUnit = DataFromJSObject(this_val);
+  D2UnitStrc* pUnit = lpUnit ? D2UnitStrc::FindUnit(lpUnit->dwUnitId, lpUnit->dwType) : D2CLIENT_GetPlayerUnit();
+
+  if (pUnit) {
+    D2UnitStrc* pMerc = pUnit->FindMercUnit();
+    if (pMerc) {
+      return (pUnit->dwMode == 12 ? JS_NewInt32(ctx, 0) : JS_NewInt32(ctx, D2CLIENT_GetUnitHPPercent(pMerc->dwUnitId)));
+    }
+  }
+
+  return JS_UNDEFINED;
+}
+
+JSValue UnitWrap::getSkill(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
+  if (argc == NULL || argc > 3)
+    return JS_UNDEFINED;
+
+  if (!WaitForGameReady())
+    THROW_WARNING(ctx, "Game not ready");
+
+  bool nCharge = false;
+  int32_t nSkillId = NULL;
+  int32_t nExt = NULL;
+
+  UnitData* pmyUnit = DataFromJSObject(this_val);
+  if (!pmyUnit)
+    return JS_UNDEFINED;
+
+  D2UnitStrc* pUnit = D2UnitStrc::FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
+  if (!pUnit)
+    return JS_UNDEFINED;
+
+  if (argc >= 1) {
+    if (!JS_IsNumber(argv[0]))
+      return JS_UNDEFINED;
+
+    JS_ToInt32(ctx, &nSkillId, argv[0]);
+  }
+
+  if (argc >= 2) {
+    if (!JS_IsNumber(argv[1]))
+      return JS_UNDEFINED;
+
+    JS_ToInt32(ctx, &nExt, argv[1]);
+  }
+
+  if (argc == 3) {
+    if (!JS_IsBool(argv[2]))
+      return JS_UNDEFINED;
+
+    nCharge = !!JS_ToBool(ctx, argv[2]);
+  }
+
+  if (argc == 1) {
+    WORD wLeftSkillId = pUnit->pInfo->pLeftSkill->pSkillInfo->wSkillId;
+    WORD wRightSkillId = pUnit->pInfo->pRightSkill->pSkillInfo->wSkillId;
+    switch (nSkillId) {
+      case 0: {
+        int row = 0;
+        if (FillBaseStat("skills", wRightSkillId, "skilldesc", &row, sizeof(int)))
+          if (FillBaseStat("skilldesc", row, "str name", &row, sizeof(int))) {
+            wchar_t* szName = D2LANG_GetLocaleText((WORD)row);
+            return JS_NewString(ctx, szName);
+          }
+      } break;
+      case 1: {
+        int row = 0;
+        if (FillBaseStat("skills", wLeftSkillId, "skilldesc", &row, sizeof(int)))
+          if (FillBaseStat("skilldesc", row, "str name", &row, sizeof(int))) {
+            wchar_t* szName = D2LANG_GetLocaleText((WORD)row);
+            return JS_NewString(ctx, szName);
+          }
+      } break;
+
+      case 2:
+        return JS_NewInt32(ctx, wRightSkillId);
+        break;
+      case 3:
+        return JS_NewInt32(ctx, wLeftSkillId);
+        break;
+      case 4: {
+        JSValue pReturnArray = JS_NewArray(ctx);
+        int i = 0;
+        for (D2SkillStrc* pSkill = pUnit->pInfo->pFirstSkill; pSkill; pSkill = pSkill->pNextSkill) {
+          JSValue pArrayInsert = JS_NewArray(ctx);
+          if (JS_IsException(pArrayInsert))
+            continue;
+
+          JS_SetPropertyUint32(ctx, pArrayInsert, 0, JS_NewInt32(ctx, pSkill->pSkillInfo->wSkillId));
+          JS_SetPropertyUint32(ctx, pArrayInsert, 1, JS_NewInt32(ctx, pSkill->dwSkillLevel));
+          JS_SetPropertyUint32(ctx, pArrayInsert, 2, JS_NewInt32(ctx, D2COMMON_GetSkillLevel(pUnit, pSkill, 1)));
+
+          JS_SetPropertyUint32(ctx, pReturnArray, i, pArrayInsert);
+          i++;
+        }
+        return pReturnArray;
+        break;
+      }
+      default:
+        break;
+    }
+    return JS_FALSE;
+  }
+
+  if (pUnit && pUnit->pInfo && pUnit->pInfo->pFirstSkill) {
+    for (D2SkillStrc* pSkill = pUnit->pInfo->pFirstSkill; pSkill; pSkill = pSkill->pNextSkill) {
+      if (pSkill->pSkillInfo && pSkill->pSkillInfo->wSkillId == nSkillId) {
+        if ((argc == 2 && pSkill->IsCharge == 0) || (argc == 3 && (nCharge == false || pSkill->IsCharge == 1))) {
+          return JS_NewInt32(ctx, D2COMMON_GetSkillLevel(pUnit, pSkill, nExt));
+        }
+      }
+    }
+  }
+
+  return JS_FALSE;
+}
+
+JSValue UnitWrap::getParent(JSContext* ctx, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
+  if (!WaitForGameReady())
+    THROW_WARNING(ctx, "Game not ready");
+
+  UnitData* lpUnit = DataFromJSObject(this_val);
+  if (!lpUnit || (lpUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
+    return JS_UNDEFINED;
+
+  D2UnitStrc* pUnit = D2UnitStrc::FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
+
+  if (!pUnit)
+    return JS_UNDEFINED;
+
+  if (pUnit->dwType == UNIT_MONSTER) {
+    DWORD dwOwnerId = D2CLIENT_GetMonsterOwner(pUnit->dwUnitId);
+    if (dwOwnerId == -1)
+      return JS_UNDEFINED;
+
+    D2UnitStrc* pMonster = D2UnitStrc::FindUnit(NULL, (DWORD)-1, (DWORD)-1, (DWORD)-1, dwOwnerId);
+    if (!pMonster)
+      return JS_UNDEFINED;
+
+    UnitData* pmyUnit = new UnitData;
+    if (!pmyUnit)
+      return JS_UNDEFINED;
+
+    pmyUnit->dwPrivateType = PRIVATE_UNIT;
+    pmyUnit->dwUnitId = pMonster->dwUnitId;
+    pmyUnit->dwClassId = pMonster->dwTxtFileNo;
+    pmyUnit->dwMode = pMonster->dwMode;
+    pmyUnit->dwType = pMonster->dwType;
+    pmyUnit->szName[0] = NULL;
+
+    return UnitWrap::Instantiate(ctx, JS_UNDEFINED, pmyUnit);
+  } else if (pUnit->dwType == UNIT_OBJECT) {
+    if (pUnit->pObjectData) {
+      char szBuffer[128] = "";
+      strcpy_s(szBuffer, sizeof(szBuffer), pUnit->pObjectData->szOwner);
+      return JS_NewString(ctx, szBuffer);
+    }
+  } else if (pUnit->dwType == UNIT_ITEM) {
+    if (pUnit->pItemData && pUnit->pItemData->pOwnerInventory && pUnit->pItemData->pOwnerInventory->pOwner) {
+      UnitData* pmyUnit = new UnitData;  // leaks
+      if (!pmyUnit)
+        return JS_UNDEFINED;
+
+      pmyUnit->dwPrivateType = PRIVATE_UNIT;
+      pmyUnit->dwUnitId = pUnit->pItemData->pOwnerInventory->pOwner->dwUnitId;
+      pmyUnit->dwClassId = pUnit->pItemData->pOwnerInventory->pOwner->dwTxtFileNo;
+      pmyUnit->dwMode = pUnit->pItemData->pOwnerInventory->pOwner->dwMode;
+      pmyUnit->dwType = pUnit->pItemData->pOwnerInventory->pOwner->dwType;
+      pmyUnit->szName[0] = NULL;
+      return UnitWrap::Instantiate(ctx, JS_UNDEFINED, pmyUnit);
+    }
+  } else if (pUnit->dwType == UNIT_MISSILE) {
+    auto* pmyUnit = new UnitData;
+    if (!pmyUnit)
+      return JS_UNDEFINED;
+
+    D2UnitStrc* pOwner = D2COMMON_GetMissileOwnerUnit(pUnit);
+    if (!pOwner)
+      return JS_UNDEFINED;
+
+    pmyUnit->dwPrivateType = PRIVATE_UNIT;
+    pmyUnit->dwUnitId = pOwner->dwUnitId;
+    pmyUnit->dwClassId = pOwner->dwTxtFileNo;
+    pmyUnit->dwMode = pOwner->dwMode;
+    pmyUnit->dwType = pOwner->dwType;
+    pmyUnit->szName[0] = NULL;
+
+    return UnitWrap::Instantiate(ctx, JS_UNDEFINED, pmyUnit);
+  }
+
+  return JS_UNDEFINED;
+}
+
+JSValue UnitWrap::overhead(JSContext* ctx, JSValue this_val, int /*argc*/, JSValue* argv) {
+  if (!WaitForGameReady())
+    THROW_WARNING(ctx, "Game not ready");
+
+  UnitData* pmyUnit = DataFromJSObject(this_val);
+  if (!pmyUnit || (pmyUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
+    return JS_FALSE;
+
+  D2UnitStrc* pUnit = D2UnitStrc::FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
+
+  if (!pUnit)
+    return JS_FALSE;
+
+  if (!JS_IsNull(argv[0]) && !JS_IsUndefined(argv[0])) {
+    const char* lpszText = JS_ToCString(ctx, argv[0]);
+    if (!lpszText) {
+      return JS_EXCEPTION;
+    }
+    std::string ansi = UTF8ToANSI(lpszText);
+    D2HoverTextStrc* pMsg = D2COMMON_GenerateOverheadMsg(NULL, ansi.c_str(), *D2CLIENT_OverheadTrigger);
+    if (pMsg) {
+      pUnit->pOMsg = pMsg;
+    }
+    JS_FreeCString(ctx, lpszText);
+  }
+
+  return JS_TRUE;
+}
+
+JSValue UnitWrap::revive(JSContext* /*ctx*/, JSValue /*this_val*/, int /*argc*/, JSValue* /*argv*/) {
+  if (!WaitForGameReady())
+    THROW_WARNING(ctx, "Game not ready");
+
+  BYTE pPacket[] = {0x41};
+  D2NET_SendPacket(1, 1, pPacket);
+  return JS_UNDEFINED;
+}
+
+JSValue UnitWrap::getFlags(JSContext* ctx, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
+  if (!WaitForGameReady())
+    THROW_WARNING(ctx, "Game not ready");
+
+  UnitData* lpUnit = DataFromJSObject(this_val);
+  if (!lpUnit || (lpUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
+    return JS_UNDEFINED;
+
+  D2UnitStrc* pUnit = D2UnitStrc::FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
+
+  if (!pUnit || pUnit->dwType != UNIT_ITEM)
+    return JS_UNDEFINED;
+
+  return JS_NewInt32(ctx, pUnit->pItemData->dwFlags);
+}
+
+JSValue UnitWrap::getFlag(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
+  if (!WaitForGameReady())
+    THROW_WARNING(ctx, "Game not ready");
+
+  if (argc < 1 || !JS_IsNumber(argv[0]))
+    return JS_UNDEFINED;
+
+  UnitData* lpUnit = DataFromJSObject(this_val);
+  if (!lpUnit || (lpUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
+    return JS_UNDEFINED;
+
+  D2UnitStrc* pUnit = D2UnitStrc::FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
+
+  if (!pUnit || pUnit->dwType != UNIT_ITEM)
+    return JS_UNDEFINED;
+
+  int32_t nFlag;
+  JS_ToInt32(ctx, &nFlag, argv[0]);
+
+  return JS_NewBool(ctx, !!(nFlag & pUnit->pItemData->dwFlags));
+}
+
+void InsertStatsToGenericObject(D2UnitStrc* pUnit, D2StatListExStrc* pStatList, JSContext* pJSContext, JSValue pGenericObject);
+void InsertStatsNow(D2StatStrc* pStat, int nStat, JSContext* cx, JSValue pArray);
+
+JSValue UnitWrap::getStat(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
+  if (!WaitForGameReady())
+    THROW_WARNING(ctx, "Game not ready");
+
+  UnitData* lpUnit = DataFromJSObject(this_val);
   if (!lpUnit || (lpUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_FALSE;
 
@@ -964,12 +1384,11 @@ void InsertStatsNow(D2StatStrc* pStat, int nStat, JSContext* cx, JSValue pArray)
   }
 }
 
-JSAPI_FUNC(unit_getState) {
+JSValue UnitWrap::getState(JSContext* ctx, JSValue this_val, int /*argc*/, JSValue* argv) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  JSUnit* lpUnit = (JSUnit*)JS_GetOpaque3(this_val);
-
+  UnitData* lpUnit = DataFromJSObject(this_val);
   if (!lpUnit || (lpUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_FALSE;
 
@@ -990,263 +1409,33 @@ JSAPI_FUNC(unit_getState) {
   return JS_NewBool(ctx, D2COMMON_GetUnitState(pUnit, nState));
 }
 
-JSAPI_FUNC(item_getFlags) {
-  if (!WaitForGameReady())
-    THROW_WARNING(ctx, "Game not ready");
-
-  JSUnit* lpUnit = (JSUnit*)JS_GetOpaque3(this_val);
-
-  if (!lpUnit || (lpUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
-    return JS_UNDEFINED;
-
-  D2UnitStrc* pUnit = D2UnitStrc::FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
-
-  if (!pUnit || pUnit->dwType != UNIT_ITEM)
-    return JS_UNDEFINED;
-
-  return JS_NewInt32(ctx, pUnit->pItemData->dwFlags);
-}
-
-JSAPI_FUNC(item_getFlag) {
+JSValue UnitWrap::getEnchant(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
   if (argc < 1 || !JS_IsNumber(argv[0]))
     return JS_UNDEFINED;
 
-  JSUnit* lpUnit = (JSUnit*)JS_GetOpaque3(this_val);
-
-  if (!lpUnit || (lpUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
-    return JS_UNDEFINED;
-
-  D2UnitStrc* pUnit = D2UnitStrc::FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
-
-  if (!pUnit || pUnit->dwType != UNIT_ITEM)
-    return JS_UNDEFINED;
-
-  int32_t nFlag;
-  JS_ToInt32(ctx, &nFlag, argv[0]);
-
-  return JS_NewBool(ctx, !!(nFlag & pUnit->pItemData->dwFlags));
-}
-
-JSAPI_FUNC(item_getItemCost) {
-  if (!WaitForGameReady())
-    THROW_WARNING(ctx, "Game not ready");
-
-  int32_t nMode;
-  D2UnitStrc* npc = D2CLIENT_GetCurrentInteractingNPC();
-  int32_t nNpcClassId = (npc ? npc->dwTxtFileNo : 0x9A);  // defaults to Charsi's NPC id
-  int32_t nDifficulty = D2CLIENT_GetDifficulty();
-
-  if (argc < 1 || !JS_IsNumber(argv[0]))
-    return JS_UNDEFINED;
-
-  JSUnit* lpUnit = (JSUnit*)JS_GetOpaque3(this_val);
-
-  if (!lpUnit || (lpUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
-    return JS_UNDEFINED;
-
-  D2UnitStrc* pUnit = D2UnitStrc::FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
-
-  if (!pUnit || pUnit->dwType != UNIT_ITEM)
-    return JS_UNDEFINED;
-
-  JS_ToInt32(ctx, &nMode, argv[0]);
-
-  if (argc > 1) {
-    if (JS_IsObject(argv[1])) {
-      JSUnit* pmyNpc = (JSUnit*)JS_GetOpaque3(argv[1]);
-
-      if (!pmyNpc || (pmyNpc->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
-        return JS_UNDEFINED;
-
-      D2UnitStrc* pNpc = D2UnitStrc::FindUnit(pmyNpc->dwUnitId, pmyNpc->dwType);
-
-      if (!pNpc)
-        return JS_UNDEFINED;
-      nNpcClassId = pNpc->dwTxtFileNo;
-    } else if (JS_IsNumber(argv[1]) && !JS_IsNull(argv[1])) {
-      if (JS_ToInt32(ctx, &nNpcClassId, argv[1])) {
-        return JS_UNDEFINED;
-      }
-    }
-    // TODO:: validate the base stat table sizes to make sure the game doesn't crash with checking values past the end of the table
-    int retVal = 0;
-    if (FillBaseStat("monstats", nNpcClassId, "inventory", &retVal, sizeof(int)) && retVal == 0)
-      nNpcClassId = 0x9A;  // invalid npcid incoming! default to charsi to allow the game to continue
-  }
-
-  if (argc > 2 && JS_IsNumber(argv[2]))
-    JS_ToInt32(ctx, &nDifficulty, argv[2]);
-
-  switch (nMode) {
-    case 0:  // Buy
-    case 1:  // Sell
-      return JS_NewInt32(ctx, D2COMMON_GetItemPrice(D2CLIENT_GetPlayerUnit(), pUnit, nDifficulty, *D2CLIENT_ItemPriceList, nNpcClassId, nMode));
-      break;
-    case 2:  // Repair
-      return JS_NewInt32(ctx, D2COMMON_GetItemPrice(D2CLIENT_GetPlayerUnit(), pUnit, nDifficulty, *D2CLIENT_ItemPriceList, nNpcClassId, 3));
-      break;
-    default:
-      break;
-  }
-
-  return JS_UNDEFINED;
-}
-
-JSAPI_FUNC(unit_getItems) {
-  if (!WaitForGameReady())
-    THROW_WARNING(ctx, "Game not ready");
-
-  JSUnit* lpUnit = (JSUnit*)JS_GetOpaque3(this_val);
-
-  if (!lpUnit || (lpUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
-    return JS_UNDEFINED;
-
-  D2UnitStrc* pUnit = D2UnitStrc::FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
-
-  if (!pUnit || !pUnit->pInventory || !pUnit->pInventory->pFirstItem)
-    return JS_UNDEFINED;
-
-  JSValue pReturnArray = JS_NewArray(ctx);
-  if (JS_IsException(pReturnArray)) {
-    return JS_UNDEFINED;
-  }
-
-  DWORD dwArrayCount = 0;
-
-  for (D2UnitStrc* pItem = pUnit->pInventory->pFirstItem; pItem; pItem = D2COMMON_GetNextItemFromInventory(pItem), dwArrayCount++) {
-    JSItem* pmyUnit = new JSItem;
-
-    if (!pmyUnit)
-      continue;
-
-    pmyUnit->dwPrivateType = PRIVATE_UNIT;
-    pmyUnit->szName[0] = NULL;
-    pmyUnit->dwMode = pItem->dwMode;
-    pmyUnit->dwClassId = pItem->dwTxtFileNo;
-    pmyUnit->dwUnitId = pItem->dwUnitId;
-    pmyUnit->dwType = UNIT_ITEM;
-    pmyUnit->dwOwnerId = pUnit->dwUnitId;
-    pmyUnit->dwOwnerType = pUnit->dwType;
-
-    JSValue jsunit = BuildObject(ctx, unit_class_id, FUNCLIST(unit_proto_funcs), pmyUnit);
-    if (JS_IsException(jsunit)) {
-      JS_FreeValue(ctx, pReturnArray);
-      THROW_ERROR(ctx, "Failed to build item array");
-    }
-    JS_SetPropertyUint32(ctx, pReturnArray, dwArrayCount, jsunit);
-  }
-
-  return pReturnArray;
-}
-
-JSAPI_FUNC(unit_getSkill) {
-  if (argc == NULL || argc > 3)
-    return JS_UNDEFINED;
-
-  if (!WaitForGameReady())
-    THROW_WARNING(ctx, "Game not ready");
-
-  bool nCharge = false;
-  int32_t nSkillId = NULL;
-  int32_t nExt = NULL;
-
-  JSUnit* pmyUnit = (JSUnit*)JS_GetOpaque3(this_val);
-  if (!pmyUnit)
+  UnitData* pmyUnit = DataFromJSObject(this_val);
+  if (!pmyUnit || (pmyUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_UNDEFINED;
 
   D2UnitStrc* pUnit = D2UnitStrc::FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
-  if (!pUnit)
+
+  if (!pUnit || pUnit->dwType != UNIT_MONSTER)
     return JS_UNDEFINED;
 
-  if (argc >= 1) {
-    if (!JS_IsNumber(argv[0]))
-      return JS_UNDEFINED;
-
-    JS_ToInt32(ctx, &nSkillId, argv[0]);
-  }
-
-  if (argc >= 2) {
-    if (!JS_IsNumber(argv[1]))
-      return JS_UNDEFINED;
-
-    JS_ToInt32(ctx, &nExt, argv[1]);
-  }
-
-  if (argc == 3) {
-    if (!JS_IsBool(argv[2]))
-      return JS_UNDEFINED;
-
-    nCharge = !!JS_ToBool(ctx, argv[2]);
-  }
-
-  if (argc == 1) {
-    WORD wLeftSkillId = pUnit->pInfo->pLeftSkill->pSkillInfo->wSkillId;
-    WORD wRightSkillId = pUnit->pInfo->pRightSkill->pSkillInfo->wSkillId;
-    switch (nSkillId) {
-      case 0: {
-        int row = 0;
-        if (FillBaseStat("skills", wRightSkillId, "skilldesc", &row, sizeof(int)))
-          if (FillBaseStat("skilldesc", row, "str name", &row, sizeof(int))) {
-            wchar_t* szName = D2LANG_GetLocaleText((WORD)row);
-            return JS_NewString(ctx, szName);
-          }
-      } break;
-      case 1: {
-        int row = 0;
-        if (FillBaseStat("skills", wLeftSkillId, "skilldesc", &row, sizeof(int)))
-          if (FillBaseStat("skilldesc", row, "str name", &row, sizeof(int))) {
-            wchar_t* szName = D2LANG_GetLocaleText((WORD)row);
-            return JS_NewString(ctx, szName);
-          }
-      } break;
-
-      case 2:
-        return JS_NewInt32(ctx, wRightSkillId);
-        break;
-      case 3:
-        return JS_NewInt32(ctx, wLeftSkillId);
-        break;
-      case 4: {
-        JSValue pReturnArray = JS_NewArray(ctx);
-        int i = 0;
-        for (D2SkillStrc* pSkill = pUnit->pInfo->pFirstSkill; pSkill; pSkill = pSkill->pNextSkill) {
-          JSValue pArrayInsert = JS_NewArray(ctx);
-          if (JS_IsException(pArrayInsert))
-            continue;
-
-          JS_SetPropertyUint32(ctx, pArrayInsert, 0, JS_NewInt32(ctx, pSkill->pSkillInfo->wSkillId));
-          JS_SetPropertyUint32(ctx, pArrayInsert, 1, JS_NewInt32(ctx, pSkill->dwSkillLevel));
-          JS_SetPropertyUint32(ctx, pArrayInsert, 2, JS_NewInt32(ctx, D2COMMON_GetSkillLevel(pUnit, pSkill, 1)));
-
-          JS_SetPropertyUint32(ctx, pReturnArray, i, pArrayInsert);
-          i++;
-        }
-        return pReturnArray;
-        break;
-      }
-      default:
-        break;
+  int nEnchant;
+  JS_ToInt32(ctx, &nEnchant, argv[0]);
+  for (int i = 0; i < 9; i++)
+    if (pUnit->pMonsterData->anEnchants[i] == nEnchant) {
+      return JS_TRUE;
     }
-    return JS_FALSE;
-  }
 
-  if (pUnit && pUnit->pInfo && pUnit->pInfo->pFirstSkill) {
-    for (D2SkillStrc* pSkill = pUnit->pInfo->pFirstSkill; pSkill; pSkill = pSkill->pNextSkill) {
-      if (pSkill->pSkillInfo && pSkill->pSkillInfo->wSkillId == nSkillId) {
-        if ((argc == 2 && pSkill->IsCharge == 0) || (argc == 3 && (nCharge == false || pSkill->IsCharge == 1))) {
-          return JS_NewInt32(ctx, D2COMMON_GetSkillLevel(pUnit, pSkill, nExt));
-        }
-      }
-    }
-  }
-
-  return JS_FALSE;
+  return JS_NewInt32(ctx, 0);
 }
 
-JSAPI_FUNC(item_shop) {
+JSValue UnitWrap::shop(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
@@ -1256,8 +1445,7 @@ JSAPI_FUNC(item_shop) {
     return JS_FALSE;
   }
 
-  JSUnit* lpItem = (JSUnit*)JS_GetOpaque3(this_val);
-
+  UnitData* lpItem = DataFromJSObject(this_val);
   if (!lpItem || (lpItem->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT) {
     return JS_FALSE;
   }
@@ -1343,130 +1531,6 @@ JSAPI_FUNC(item_shop) {
   return JS_TRUE;
 }
 
-JSAPI_FUNC(unit_getParent) {
-  if (!WaitForGameReady())
-    THROW_WARNING(ctx, "Game not ready");
-
-  JSUnit* lpUnit = (JSUnit*)JS_GetOpaque3(this_val);
-
-  if (!lpUnit || (lpUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
-    return JS_UNDEFINED;
-
-  D2UnitStrc* pUnit = D2UnitStrc::FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
-
-  if (!pUnit)
-    return JS_UNDEFINED;
-
-  if (pUnit->dwType == UNIT_MONSTER) {
-    DWORD dwOwnerId = D2CLIENT_GetMonsterOwner(pUnit->dwUnitId);
-    if (dwOwnerId == -1)
-      return JS_UNDEFINED;
-
-    D2UnitStrc* pMonster = D2UnitStrc::FindUnit(NULL, (DWORD)-1, (DWORD)-1, (DWORD)-1, dwOwnerId);
-    if (!pMonster)
-      return JS_UNDEFINED;
-
-    JSUnit* pmyUnit = new JSUnit;
-    if (!pmyUnit)
-      return JS_UNDEFINED;
-
-    pmyUnit->dwPrivateType = PRIVATE_UNIT;
-    pmyUnit->dwUnitId = pMonster->dwUnitId;
-    pmyUnit->dwClassId = pMonster->dwTxtFileNo;
-    pmyUnit->dwMode = pMonster->dwMode;
-    pmyUnit->dwType = pMonster->dwType;
-    pmyUnit->szName[0] = NULL;
-
-    return BuildObject(ctx, unit_class_id, FUNCLIST(unit_proto_funcs), pmyUnit);
-  } else if (pUnit->dwType == UNIT_OBJECT) {
-    if (pUnit->pObjectData) {
-      char szBuffer[128] = "";
-      strcpy_s(szBuffer, sizeof(szBuffer), pUnit->pObjectData->szOwner);
-      return JS_NewString(ctx, szBuffer);
-    }
-  } else if (pUnit->dwType == UNIT_ITEM) {
-    if (pUnit->pItemData && pUnit->pItemData->pOwnerInventory && pUnit->pItemData->pOwnerInventory->pOwner) {
-      JSUnit* pmyUnit = new JSUnit;  // leaks
-
-      if (!pmyUnit)
-        return JS_UNDEFINED;
-
-      pmyUnit->dwPrivateType = PRIVATE_UNIT;
-      pmyUnit->dwUnitId = pUnit->pItemData->pOwnerInventory->pOwner->dwUnitId;
-      pmyUnit->dwClassId = pUnit->pItemData->pOwnerInventory->pOwner->dwTxtFileNo;
-      pmyUnit->dwMode = pUnit->pItemData->pOwnerInventory->pOwner->dwMode;
-      pmyUnit->dwType = pUnit->pItemData->pOwnerInventory->pOwner->dwType;
-      pmyUnit->szName[0] = NULL;
-      return BuildObject(ctx, unit_class_id, FUNCLIST(unit_proto_funcs), pmyUnit);
-    }
-  } else if (pUnit->dwType == UNIT_MISSILE) {
-    auto* pmyUnit = new JSUnit;
-    if (!pmyUnit)
-      return JS_UNDEFINED;
-
-    D2UnitStrc* pOwner = D2COMMON_GetMissileOwnerUnit(pUnit);
-    if (!pOwner)
-      return JS_UNDEFINED;
-
-    pmyUnit->dwPrivateType = PRIVATE_UNIT;
-    pmyUnit->dwUnitId = pOwner->dwUnitId;
-    pmyUnit->dwClassId = pOwner->dwTxtFileNo;
-    pmyUnit->dwMode = pOwner->dwMode;
-    pmyUnit->dwType = pOwner->dwType;
-    pmyUnit->szName[0] = NULL;
-
-    return BuildObject(ctx, unit_class_id, FUNCLIST(unit_proto_funcs), pmyUnit);
-  }
-
-  return JS_UNDEFINED;
-}
-
-// Works only on players sinces monsters _CANT_ have mercs!
-JSAPI_FUNC(unit_getMerc) {
-  if (!WaitForGameReady())
-    THROW_WARNING(ctx, "Game not ready");
-
-  JSUnit* lpUnit = (JSUnit*)JS_GetOpaque3(this_val);
-
-  if (lpUnit && (lpUnit->dwPrivateType & PRIVATE_UNIT) == PRIVATE_UNIT) {
-    D2UnitStrc* pUnit = D2UnitStrc::FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
-    if (pUnit && pUnit->dwType == UNIT_PLAYER) {
-      D2UnitStrc* pMerc = pUnit->FindMercUnit();
-      if (pMerc) {
-        JSUnit* pmyUnit = new JSUnit;
-
-        pmyUnit->dwPrivateType = PRIVATE_UNIT;
-        pmyUnit->dwUnitId = pMerc->dwUnitId;
-        pmyUnit->dwClassId = pMerc->dwTxtFileNo;
-        pmyUnit->dwMode = NULL;
-        pmyUnit->dwType = UNIT_MONSTER;
-        pmyUnit->szName[0] = NULL;
-
-        return BuildObject(ctx, unit_class_id, FUNCLIST(unit_proto_funcs), pmyUnit);
-      }
-    }
-  }
-  return JS_NULL;
-}
-
-JSAPI_FUNC(unit_getMercHP) {
-  if (!WaitForGameReady())
-    THROW_WARNING(ctx, "Game not ready");
-  JSUnit* lpUnit = (JSUnit*)JS_GetOpaque3(this_val);
-  // JSUnit* lpUnit = (JSUnit*)JS_GetOpaque3(test);
-
-  D2UnitStrc* pUnit = lpUnit ? D2UnitStrc::FindUnit(lpUnit->dwUnitId, lpUnit->dwType) : D2CLIENT_GetPlayerUnit();
-
-  if (pUnit) {
-    D2UnitStrc* pMerc = pUnit->FindMercUnit();
-    if (pMerc) {
-      return (pUnit->dwMode == 12 ? JS_NewInt32(ctx, 0) : JS_NewInt32(ctx, D2CLIENT_GetUnitHPPercent(pMerc->dwUnitId)));
-    }
-  }
-
-  return JS_UNDEFINED;
-}
-
 // TODO(ejt): cleanup, remove dependency on JSContext and move to D2UnitStrc
 static BOOL SetSkill(JSContext* cx, WORD wSkillId, BOOL bLeft, DWORD dwItemId) {
   if (ClientState() != ClientStateInGame)
@@ -1506,8 +1570,7 @@ static BOOL SetSkill(JSContext* cx, WORD wSkillId, BOOL bLeft, DWORD dwItemId) {
   return FALSE;
 }
 
-// unit.setSkill( int skillId OR String skillName, int hand [, int itemGlobalId] );
-JSAPI_FUNC(unit_setskill) {
+JSValue UnitWrap::setSkill(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
@@ -1544,7 +1607,7 @@ JSAPI_FUNC(unit_setskill) {
 
   if (argc == 3 && JS_IsObject(argv[2])) {
     if (JS_IsInstanceOf(ctx, argv[2], this_val)) {
-      JSUnit* unit = (JSUnit*)JS_GetOpaque3(argv[2]);
+      UnitData* unit = DataFromJSObject(argv[2]);
       if (unit->dwType == UNIT_ITEM)
         itemId = unit->dwUnitId;
     }
@@ -1561,107 +1624,11 @@ JSAPI_FUNC(unit_setskill) {
   return JS_FALSE;
 }
 
-JSAPI_FUNC(my_overhead) {
+JSValue UnitWrap::move(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  JSUnit* pmyUnit = (JSUnit*)JS_GetOpaque3(this_val);
-
-  if (!pmyUnit || (pmyUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
-    return JS_FALSE;
-
-  D2UnitStrc* pUnit = D2UnitStrc::FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
-
-  if (!pUnit)
-    return JS_FALSE;
-
-  if (!JS_IsNull(argv[0]) && !JS_IsUndefined(argv[0])) {
-    const char* lpszText = JS_ToCString(ctx, argv[0]);
-    if (!lpszText) {
-      return JS_EXCEPTION;
-    }
-    std::string ansi = UTF8ToANSI(lpszText);
-    D2HoverTextStrc* pMsg = D2COMMON_GenerateOverheadMsg(NULL, ansi.c_str(), *D2CLIENT_OverheadTrigger);
-    if (pMsg) {
-      pUnit->pOMsg = pMsg;
-    }
-    JS_FreeCString(ctx, lpszText);
-  }
-
-  return JS_TRUE;
-}
-
-JSAPI_FUNC(my_revive) {
-  if (!WaitForGameReady())
-    THROW_WARNING(ctx, "Game not ready");
-
-  BYTE pPacket[] = {0x41};
-  D2NET_SendPacket(1, 1, pPacket);
-  return JS_UNDEFINED;
-}
-
-JSAPI_FUNC(unit_getItem) {
-  if (!WaitForGameReady())
-    THROW_WARNING(ctx, "Game not ready");
-
-  JSUnit* pmyUnit = (JSUnit*)JS_GetOpaque3(this_val);
-
-  if (!pmyUnit || (pmyUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
-    return JS_UNDEFINED;
-
-  D2UnitStrc* pUnit = D2UnitStrc::FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
-
-  if (!pUnit || !pUnit->pInventory)
-    return JS_UNDEFINED;
-
-  uint32_t nClassId = (uint32_t)-1;
-  uint32_t nMode = (uint32_t)-1;
-  uint32_t nUnitId = (uint32_t)-1;
-  char szName[128] = "";
-
-  if (argc > 0 && JS_IsString(argv[0])) {
-    const char* szText = JS_ToCString(ctx, argv[0]);
-    strcpy_s(szName, sizeof(szName), szText);
-    JS_FreeCString(ctx, szText);
-  }
-
-  if (argc > 0 && JS_IsNumber(argv[0]) && !JS_IsNull(argv[0]))
-    JS_ToUint32(ctx, &nClassId, argv[0]);
-
-  if (argc > 1 && JS_IsNumber(argv[1]) && !JS_IsNull(argv[1]))
-    JS_ToUint32(ctx, &nMode, argv[1]);
-
-  if (argc > 2 && JS_IsNumber(argv[2]) && !JS_IsNull(argv[2]))
-    JS_ToUint32(ctx, &nUnitId, argv[2]);
-
-  D2UnitStrc* pItem = pUnit->FindItem(szName, nClassId, nMode, nUnitId);
-
-  if (!pItem)
-    return JS_UNDEFINED;
-
-  JSItem* pmyItem = new JSItem;  // leaked?
-
-  if (!pmyItem)
-    return JS_UNDEFINED;
-
-  pmyItem->dwPrivateType = PRIVATE_ITEM;
-  pmyItem->dwClassId = nClassId;
-  pmyItem->dwMode = nMode;
-  pmyItem->dwType = pItem->dwType;
-  pmyItem->dwUnitId = pItem->dwUnitId;
-  pmyItem->dwOwnerId = pmyUnit->dwUnitId;
-  pmyItem->dwOwnerType = pmyUnit->dwType;
-  strcpy_s(pmyItem->szName, sizeof(pmyItem->szName), szName);
-
-  return BuildObject(ctx, unit_class_id, FUNCLIST(unit_proto_funcs), pmyItem);
-}
-
-JSAPI_FUNC(unit_move) {
-  if (!WaitForGameReady())
-    THROW_WARNING(ctx, "Game not ready");
-
-  JSUnit* pmyUnit = (JSUnit*)JS_GetOpaque3(this_val);
-
+  UnitData* pmyUnit = DataFromJSObject(this_val);
   if (!pmyUnit || (pmyUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_UNDEFINED;
 
@@ -1694,34 +1661,7 @@ JSAPI_FUNC(unit_move) {
   return JS_UNDEFINED;
 }
 
-JSAPI_FUNC(unit_getEnchant) {
-  if (!WaitForGameReady())
-    THROW_WARNING(ctx, "Game not ready");
-
-  if (argc < 1 || !JS_IsNumber(argv[0]))
-    return JS_UNDEFINED;
-
-  JSUnit* pmyUnit = (JSUnit*)JS_GetOpaque3(this_val);
-
-  if (!pmyUnit || (pmyUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
-    return JS_UNDEFINED;
-
-  D2UnitStrc* pUnit = D2UnitStrc::FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
-
-  if (!pUnit || pUnit->dwType != UNIT_MONSTER)
-    return JS_UNDEFINED;
-
-  int nEnchant;
-  JS_ToInt32(ctx, &nEnchant, argv[0]);
-  for (int i = 0; i < 9; i++)
-    if (pUnit->pMonsterData->anEnchants[i] == nEnchant) {
-      return JS_TRUE;
-    }
-
-  return JS_NewInt32(ctx, 0);
-}
-
-JSAPI_FUNC(unit_getQuest) {
+JSValue UnitWrap::getQuest(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
@@ -1736,7 +1676,7 @@ JSAPI_FUNC(unit_getQuest) {
   return JS_NewInt32(ctx, D2COMMON_GetQuestFlag(D2CLIENT_GetQuestInfo(), nAct, nQuest));
 }
 
-JSAPI_FUNC(unit_getMinionCount) {
+JSValue UnitWrap::getMinionCount(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
@@ -1746,8 +1686,7 @@ JSAPI_FUNC(unit_getMinionCount) {
   int32_t nType;
   JS_ToInt32(ctx, &nType, argv[0]);
 
-  JSUnit* pmyUnit = (JSUnit*)JS_GetOpaque3(this_val);
-
+  UnitData* pmyUnit = DataFromJSObject(this_val);
   if (!pmyUnit || (pmyUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
     return JS_UNDEFINED;
 
@@ -1759,7 +1698,7 @@ JSAPI_FUNC(unit_getMinionCount) {
   return JS_NewInt32(ctx, D2CLIENT_GetMinionCount(pUnit, (DWORD)nType));
 }
 
-JSAPI_FUNC(me_getRepairCost) {
+JSValue UnitWrap::getRepairCost(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
@@ -1771,3 +1710,128 @@ JSAPI_FUNC(me_getRepairCost) {
 
   return JS_NewInt32(ctx, D2COMMON_GetRepairCost(NULL, D2CLIENT_GetPlayerUnit(), nNpcClassId, D2CLIENT_GetDifficulty(), *D2CLIENT_ItemPriceList, 0));
 }
+
+JSValue UnitWrap::getItemCost(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
+  if (!WaitForGameReady())
+    THROW_WARNING(ctx, "Game not ready");
+
+  int32_t nMode;
+  D2UnitStrc* npc = D2CLIENT_GetCurrentInteractingNPC();
+  int32_t nNpcClassId = (npc ? npc->dwTxtFileNo : 0x9A);  // defaults to Charsi's NPC id
+  int32_t nDifficulty = D2CLIENT_GetDifficulty();
+
+  if (argc < 1 || !JS_IsNumber(argv[0]))
+    return JS_UNDEFINED;
+
+  UnitData* lpUnit = DataFromJSObject(this_val);
+  if (!lpUnit || (lpUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
+    return JS_UNDEFINED;
+
+  D2UnitStrc* pUnit = D2UnitStrc::FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
+
+  if (!pUnit || pUnit->dwType != UNIT_ITEM)
+    return JS_UNDEFINED;
+
+  JS_ToInt32(ctx, &nMode, argv[0]);
+
+  if (argc > 1) {
+    if (JS_IsObject(argv[1])) {
+      UnitData* pmyNpc = DataFromJSObject(argv[1]);
+
+      if (!pmyNpc || (pmyNpc->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
+        return JS_UNDEFINED;
+
+      D2UnitStrc* pNpc = D2UnitStrc::FindUnit(pmyNpc->dwUnitId, pmyNpc->dwType);
+
+      if (!pNpc)
+        return JS_UNDEFINED;
+      nNpcClassId = pNpc->dwTxtFileNo;
+    } else if (JS_IsNumber(argv[1]) && !JS_IsNull(argv[1])) {
+      if (JS_ToInt32(ctx, &nNpcClassId, argv[1])) {
+        return JS_UNDEFINED;
+      }
+    }
+    // TODO:: validate the base stat table sizes to make sure the game doesn't crash with checking values past the end of the table
+    int retVal = 0;
+    if (FillBaseStat("monstats", nNpcClassId, "inventory", &retVal, sizeof(int)) && retVal == 0)
+      nNpcClassId = 0x9A;  // invalid npcid incoming! default to charsi to allow the game to continue
+  }
+
+  if (argc > 2 && JS_IsNumber(argv[2]))
+    JS_ToInt32(ctx, &nDifficulty, argv[2]);
+
+  switch (nMode) {
+    case 0:  // Buy
+    case 1:  // Sell
+      return JS_NewInt32(ctx, D2COMMON_GetItemPrice(D2CLIENT_GetPlayerUnit(), pUnit, nDifficulty, *D2CLIENT_ItemPriceList, nNpcClassId, nMode));
+      break;
+    case 2:  // Repair
+      return JS_NewInt32(ctx, D2COMMON_GetItemPrice(D2CLIENT_GetPlayerUnit(), pUnit, nDifficulty, *D2CLIENT_ItemPriceList, nNpcClassId, 3));
+      break;
+    default:
+      break;
+  }
+
+  return JS_UNDEFINED;
+}
+
+JSValue UnitWrap::getUnit(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
+  if (argc < 1)
+    return JS_UNDEFINED;
+
+  int nType = -1;
+  uint32_t nClassId = (uint32_t)-1;
+  uint32_t nMode = (uint32_t)-1;
+  uint32_t nUnitId = (uint32_t)-1;
+  const char* szName = nullptr;
+
+  if (argc > 0 && JS_IsNumber(argv[0]))
+    JS_ToInt32(ctx, &nType, argv[0]);
+
+  if (argc > 1 && JS_IsString(argv[1]))
+    szName = JS_ToCString(ctx, argv[1]);
+
+  if (argc > 1 && JS_IsNumber(argv[1]) && !JS_IsNull(argv[1]))
+    JS_ToUint32(ctx, &nClassId, argv[1]);
+
+  if (argc > 2 && JS_IsNumber(argv[2]) && !JS_IsNull(argv[2]))
+    JS_ToUint32(ctx, &nMode, argv[2]);
+
+  if (argc > 3 && JS_IsNumber(argv[3]) && !JS_IsNull(argv[3]))
+    JS_ToUint32(ctx, &nUnitId, argv[3]);
+
+  D2UnitStrc* pUnit = NULL;
+
+  if (nType == 100)
+    pUnit = D2CLIENT_GetCursorItem();
+  else if (nType == 101) {
+    pUnit = D2CLIENT_GetSelectedUnit();
+    if (!pUnit)
+      pUnit = (*D2CLIENT_SelectedInvItem);
+  } else
+    pUnit = D2UnitStrc::FindUnit(szName ? szName : "", nClassId, nType, nMode, nUnitId);
+
+  if (!pUnit) {
+    JS_FreeCString(ctx, szName);
+    return JS_UNDEFINED;
+  }
+
+  UnitData* pmyUnit = new UnitData;  // leaked?
+
+  if (!pmyUnit) {
+    JS_FreeCString(ctx, szName);
+    return JS_UNDEFINED;
+  }
+
+  pmyUnit->dwPrivateType = PRIVATE_UNIT;
+  pmyUnit->dwClassId = nClassId;
+  pmyUnit->dwMode = nMode;
+  pmyUnit->dwType = pUnit->dwType;
+  pmyUnit->dwUnitId = pUnit->dwUnitId;
+  strcpy_s(pmyUnit->szName, sizeof(pmyUnit->szName), szName ? szName : "");
+  JS_FreeCString(ctx, szName);
+
+  return UnitWrap::Instantiate(ctx, JS_UNDEFINED, pmyUnit);
+}
+
+D2BS_BINDING_INTERNAL(UnitWrap, UnitWrap::Initialize)

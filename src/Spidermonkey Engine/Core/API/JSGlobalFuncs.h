@@ -19,10 +19,8 @@
 
 static JSCFunctionListEntry global_funcs[] = {
     // "get" functions
-    JS_FN("getUnit", unit_getUnit, 1, FUNCTION_FLAGS),
     JS_FN("getPath", my_getPath, 0, FUNCTION_FLAGS),
     JS_FN("getCollision", my_getCollision, 0, FUNCTION_FLAGS),
-    JS_FN("getMercHP", unit_getMercHP, 0, FUNCTION_FLAGS),
     JS_FN("getCursorType", my_getCursorType, 0, FUNCTION_FLAGS),
     JS_FN("getSkillByName", my_getSkillByName, 1, FUNCTION_FLAGS),
     JS_FN("getSkillById", my_getSkillById, 1, FUNCTION_FLAGS),

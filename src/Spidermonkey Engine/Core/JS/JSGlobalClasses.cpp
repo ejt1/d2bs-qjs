@@ -14,37 +14,5 @@
 #include "JSScript.h"
 #include "JSProfile.h"
 
-JSClassID script_class_id;
-JSClassID frame_class_id;
-JSClassID box_class_id;
-JSClassID line_class_id;
-JSClassID text_class_id;
-JSClassID image_class_id;
-JSClassID room_class_id;
-JSClassID presetunit_class_id;
-JSClassID party_class_id;
-JSClassID filetools_class_id;
-JSClassID file_class_id;
-JSClassID socket_class_id;
-JSClassID exit_class_id;
-JSClassID folder_class_id;
-JSClassID control_class_id;
-JSClassID area_class_id;
-JSClassID unit_class_id;
-JSClassID profile_class_id;
 JSClassID profileType_class_id;
 JSClassID dialogLine_class_id;
-
-JSClassSpec global_classes[] = {
-    {
-        "Unit",
-        &unit_class_id,
-        unit_ctor,
-        unit_finalizer,
-        0,
-        FUNCLIST(unit_proto_funcs),
-        EMPTY_FUNCLIST,
-    },
-
-    {0},
-};

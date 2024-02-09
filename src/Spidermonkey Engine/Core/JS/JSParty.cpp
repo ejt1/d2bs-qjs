@@ -202,8 +202,7 @@ JSValue PartyWrap::GetParty(JSContext* ctx, JSValue /*this_val*/, int argc, JSVa
     } else if (JS_IsNumber(argv[0]) && JS_ToUint32(ctx, &nPlayerId, argv[0])) {
       THROW_ERROR(ctx, "Unable to get ID");
     } else if (JS_IsObject(argv[0])) {
-      JSUnit* lpUnit = (JSUnit*)JS_GetOpaque3(argv[0]);
-
+      UnitWrap::UnitData* lpUnit = UnitWrap::DataFromJSObject(argv[0]);
       if (!lpUnit)
         return JS_UNDEFINED;
 
