@@ -59,8 +59,6 @@ class Profile {
     init(pt, ip, "", _charname, "", 0, 5000, 5000);
   }
 
-  friend JSAPI_PROP(profile_getProperty);
-
   DWORD login(const char** error);
 
   static bool ProfileExists(const char* profile);

@@ -48,16 +48,6 @@ std::optional<std::string> JS_CStringToStd(JSContext* ctx, JSValue val) {
   return s;
 }
 
-std::optional<std::wstring> JS_ToWString(JSContext* ctx, JSValue val) {
-  const char* str = JS_ToCString(ctx, val);
-  if (!str) {
-    return std::nullopt;
-  }
-  std::wstring ret = AnsiToWide(str);
-  JS_FreeCString(ctx, str);
-  return ret;
-}
-
 // TODO(ejt): this function is a mess after throwing the old 'reportError' in here
 void JS_ReportPendingException(JSContext* ctx) {
   std::optional<std::string> what;
@@ -113,7 +103,3 @@ void JS_ReportPendingException(JSContext* ctx) {
   else
     Console::ShowBuffer();
 }
-
-// JSBool JSVAL_IS_OBJECT(JSValue v) {
-//   return !JSVAL_IS_PRIMITIVE(v);
-// }

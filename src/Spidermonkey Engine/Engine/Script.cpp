@@ -381,7 +381,7 @@ bool Script::Initialize() {
     Log("failed to build object 'me'");
     return false;
   }
-  JS_SetPropertyFunctionList(m_context, meObject, FUNCLIST(UnitWrap::me_proto_funcs));
+  JS_SetPropertyFunctionList(m_context, meObject, UnitWrap::me_proto_funcs, _countof(UnitWrap::me_proto_funcs));
   JS_SetPropertyStr(m_context, m_globalObject, "me", meObject);
 
   // compile script file
