@@ -164,10 +164,14 @@ JSAPI_FUNC(my_getDialogLines) {
     pReturnArray = JS_NewArray(ctx);
 
     for (i = 0; i < pTdi->numLines; ++i) {
-      line = BuildObject(ctx, dialogLine_class_id, EMPTY_FUNCLIST, &pTdi->dialogLines[i]);
+      line = JS_NewObject(ctx);
+      if (JS_IsException(line)) {
+        JS_FreeValue(ctx, pReturnArray);
+        return JS_EXCEPTION;
+      }
+      JS_SetPropertyStr(ctx, line, "index", JS_NewUint32(ctx, i));
       JS_SetPropertyStr(ctx, line, "text", JS_NewString(ctx, pTdi->dialogLines[i].text));
       JS_SetPropertyStr(ctx, line, "selectable", JS_NewBool(ctx, pTdi->dialogLines[i].bMaybeSelectable));
-
       JS_SetPropertyStr(ctx, line, "handler", JS_NewCFunction(ctx, my_clickDialog, "handler", 0));
       JS_SetPropertyUint32(ctx, pReturnArray, i, line);
     }
@@ -177,9 +181,27 @@ JSAPI_FUNC(my_getDialogLines) {
 }
 
 JSAPI_FUNC(my_clickDialog) {
+  D2NPCMessageTableStrc* pTdi;
   D2NPCMessageStrc* tdl;
+  JSValue index_value;
+  uint32_t index;
 
-  tdl = (D2NPCMessageStrc*)JS_GetOpaque2(ctx, this_val, dialogLine_class_id);
+  if (!JS_IsObject(this_val)) {
+    return JS_ThrowTypeError(ctx, "this_val is not an object");
+  }
+  index_value = JS_GetPropertyStr(ctx, this_val, "index");
+  if (JS_IsUndefined(index_value) || !JS_IsNumber(index_value)) {
+    return JS_ThrowTypeError(ctx, "index not defined or wrong type");
+  }
+  index;
+  if (JS_ToUint32(ctx, &index, index_value)) {
+    return JS_EXCEPTION;
+  }
+  pTdi = *D2CLIENT_pTransactionDialogsInfo;
+  if (!pTdi || index > pTdi->numLines) {
+    return JS_ThrowRangeError(ctx, "index out of range");
+  }
+  tdl = &pTdi->dialogLines[index];
 
   if (tdl != NULL && tdl->bMaybeSelectable)
     tdl->handler();

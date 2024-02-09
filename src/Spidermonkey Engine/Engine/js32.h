@@ -76,13 +76,6 @@ struct JSClassSpec {
     return JS_ThrowReferenceError(ctx, "Invalid Operation"); \
   }
 
-// NOTE(ejt): This is a left-over function from old D2BS
-// Eventually this function will be removed in favor of proper object creation but there is a problem with how Kolbot uses bound classes.
-// Kolbot validates certain objects by checking if they have a function/property not inherited from prototype which means relying only on constructing
-// new objects using its prototype is not possible yet.
-// Questions? Ask ejt
-JSValue BuildObject(JSContext* ctx, JSClassID class_id, JSCFunctionListEntry* own_funcs, size_t num_own_funcs, void* opaque = NULL, JSValue new_target = JS_UNDEFINED);
-
 JSValue JS_CompileFile(JSContext* ctx, JSValue globalObject, std::string fileName);
 
 template <typename... Args>
