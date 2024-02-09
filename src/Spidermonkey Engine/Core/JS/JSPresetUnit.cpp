@@ -20,6 +20,9 @@ JSValue PresetUnitWrap::Instantiate(JSContext* ctx, JSValue new_target, D2Preset
     return obj;
   }
 
+  // BUG(ejt): ask ejt
+  JS_SetPropertyFunctionList(ctx, obj, m_proto_funcs, _countof(m_proto_funcs));
+
   PresetUnitWrap* wrap = new PresetUnitWrap(ctx, preset, room, level);
   if (!wrap) {
     JS_FreeValue(ctx, obj);
