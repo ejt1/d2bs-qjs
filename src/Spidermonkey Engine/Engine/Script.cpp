@@ -9,6 +9,7 @@
 #include "Engine.h"
 #include "JSGlobalFuncs.h"
 #include "Console.h"
+#include "JSTimer.h"
 #include "Bindings.h"
 
 #include <chrono>
@@ -51,20 +52,13 @@ Script::~Script(void) {
   assert(!m_runtime);
   assert(!m_context);
 
-  // if (JS_IsInRequest(m_runtime))
-  //   JS_EndRequest(m_context);
-
   EnterCriticalSection(&m_lock);
-  // JS_DestroyContext(m_context);
-  // JS_DestroyRuntime(m_runtime);
 
-  // m_context = NULL;
-  // m_globalObject = NULL;
-  // m_script = NULL;
   CloseHandle(m_eventSignal);
   m_includes.clear();
   if (m_threadState.handle != INVALID_HANDLE_VALUE)
     CloseHandle(m_threadState.handle);
+
   LeaveCriticalSection(&m_lock);
   DeleteCriticalSection(&m_lock);
 }
@@ -323,9 +317,13 @@ void Script::BlockThread(DWORD delay) {
   }
 
   while (amt > 0) {  // had a script deadlock here, make sure were positve with amt
+    if (m_scriptState == kScriptStateRequestStop) {
+      return;
+    }
     WaitForSingleObjectEx(m_eventSignal, amt, true);
     ResetEvent(m_eventSignal);
-    if (!ProcessAllEvents()) {
+
+    if (!RunEventLoop()) {
       break;
     }
 
@@ -334,9 +332,9 @@ void Script::BlockThread(DWORD delay) {
 }
 
 bool Script::Initialize() {
+  uv_loop_init(&m_loop);
   m_threadState.script = this;
-  m_threadState.loop = static_cast<uv_loop_t*>(malloc(sizeof(uv_loop_t)));
-  uv_loop_init(m_threadState.loop);
+  m_threadState.loop = &m_loop;
 
   m_runtime = JS_NewRuntime();
   JS_SetRuntimeOpaque(m_runtime, &m_threadState);
@@ -407,9 +405,25 @@ bool Script::Initialize() {
   return true;
 }
 
+// TODO(ejt): this is kinda hacky so change this in the future
+static void __walk_loop(uv_handle_t* handle, void* /*arg*/) {
+  // NOTE(ejt): as of writing this, the only uv timers are TimerWrap*
+  // if this changes in the future fix this
+  std::vector<TimerWrap*> wraps;
+  if (handle->type == uv_handle_type::UV_TIMER) {
+    TimerWrap* wrap = static_cast<TimerWrap*>(handle->data);
+    if (wrap) {
+      wrap->Unref();
+    }
+  }
+}
+
 void Script::Cleanup() {
   PurgeEventList();
   Genhook::Clean(this);
+
+  uv_walk(&m_loop, __walk_loop, nullptr);
+  uv_loop_close(&m_loop);
 
   if (m_context) {
     JS_FreeValue(m_context, m_script);
@@ -422,10 +436,6 @@ void Script::Cleanup() {
   if (m_runtime) {
     JS_FreeRuntime(m_runtime);
     m_runtime = nullptr;
-  }
-  if (m_threadState.loop) {
-    uv_loop_close(m_threadState.loop);
-    free(m_threadState.loop);
   }
   m_scriptState = kScriptStateStopped;
 
@@ -480,6 +490,19 @@ bool Script::RunEventLoop() {
   }
   if (pause)
     SetPauseState(false);
+
+  ThreadState* ts = static_cast<ThreadState*>(JS_GetRuntimeOpaque(m_runtime));
+  uv_run(&m_loop, UV_RUN_NOWAIT);
+  JSContext* ctx;
+  for (;;) {
+    int r = JS_ExecutePendingJob(m_runtime, &ctx);
+    if (r <= 0) {
+      if (r < 0) {
+        JS_ReportPendingException(ctx);
+      }
+      break;
+    }
+  }
 
   // run loop until there are no more events or script is interrupted
   return ProcessAllEvents();
@@ -824,10 +847,6 @@ bool Script::ProcessAllEvents() {
 int Script::InterruptHandler(JSRuntime* rt, void* /*opaque*/) {
   ThreadState* ts = (ThreadState*)JS_GetRuntimeOpaque(rt);
   Script* script = ts->script;
-  uv_loop_t* loop = ts->loop;
-
-  // run loop once without waiting for now, could run a certain amount of time if handles/requests are piling up
-  uv_run(loop, UV_RUN_NOWAIT);
 
   if (!script->RunEventLoop()) {
     return 1;

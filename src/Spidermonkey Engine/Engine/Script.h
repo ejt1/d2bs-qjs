@@ -114,6 +114,7 @@ class Script {
   std::atomic<ScriptState> m_scriptState;
 
   ThreadState m_threadState;
+  uv_loop_t m_loop;
   JSRuntime* m_runtime;
   JSContext* m_context;
   JSValue m_globalObject;

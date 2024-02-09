@@ -76,6 +76,8 @@ set(D2BS_SRCS
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSScript.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSSocket.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSUnit.cpp"
+
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JSTimer.cc"
   
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Engine/Bindings.cc"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Engine/js32.cpp"

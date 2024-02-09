@@ -52,65 +52,6 @@ JSAPI_FUNC(my_print) {
   return JS_NULL;
 }
 
-// TODO(ejt): setTimeout, setInterval and clearInterval is not currently used by kolbot (it overrides it).
-// The plan is to use libuv timers once we get to adding libuv, for now just throw an error.
-JSAPI_FUNC(my_setTimeout) {
-  JS_ThrowInternalError(ctx, "setTimeout temporarily disabled during development");
-  return JS_EXCEPTION;
-
-  // JS_SET_RVAL(cx, vp, JSVAL_NULL);
-
-  // if (argc < 2 || !JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1]))
-  //   JS_ReportError(cx, "invalid params passed to setTimeout");
-
-  // if (JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[0]) && JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1])) {
-  //   Script* self = (Script*)JS_GetContextOpaque(cx);
-  //   int freq = JSVAL_TO_INT(JS_ARGV(cx, vp)[1]);
-  //   self->AddEventListener("setTimeout", JS_ARGV(cx, vp)[0]);
-  //   Event* evt = new Event;
-  //   evt->owner = self;
-  //   evt->name = "setTimeout";
-  //   evt->arg3 = new JSValue(JS_ARGV(cx, vp)[0]);
-  //   JS_SET_RVAL(cx, vp, INT_TO_JSVAL(sScriptEngine->AddDelayedEvent(evt, freq)));
-  // }
-
-  // return JS_TRUE;
-}
-
-JSAPI_FUNC(my_setInterval) {
-  JS_ThrowInternalError(ctx, "setInterval temporarily disabled during development");
-  return JS_EXCEPTION;
-
-  // JS_SET_RVAL(cx, vp, JSVAL_NULL);
-
-  // if (argc < 2 || !JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1]))
-  //   JS_ReportError(cx, "invalid params passed to setInterval");
-
-  // if (JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[0]) && JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1])) {
-  //   Script* self = (Script*)JS_GetContextOpaque(cx);
-  //   int freq = JSVAL_TO_INT(JS_ARGV(cx, vp)[1]);
-  //   self->AddEventListener("setInterval", JS_ARGV(cx, vp)[0]);
-  //   Event* evt = new Event;
-  //   evt->owner = self;
-  //   evt->name = "setInterval";
-  //   evt->arg3 = new JSValue(JS_ARGV(cx, vp)[0]);
-  //   JS_SET_RVAL(cx, vp, INT_TO_JSVAL(sScriptEngine->AddDelayedEvent(evt, freq)));
-  // }
-
-  // return JS_TRUE;
-}
-JSAPI_FUNC(my_clearInterval) {
-  JS_ThrowInternalError(ctx, "clearInterval temporarily disabled during development");
-  return JS_EXCEPTION;
-
-  // JS_SET_RVAL(cx, vp, JSVAL_NULL);
-  // if (argc != 1 || !JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[0]))
-  //   JS_ReportError(cx, "invalid params passed to clearInterval");
-
-  // sScriptEngine->RemoveDelayedEvent(JSVAL_TO_INT(JS_ARGV(cx, vp)[0]));
-  // return JS_TRUE;
-}
-
 JSAPI_FUNC(my_delay) {
   uint32_t nDelay = 0;
   if (JS_ToUint32(ctx, &nDelay, argv[0])) {
