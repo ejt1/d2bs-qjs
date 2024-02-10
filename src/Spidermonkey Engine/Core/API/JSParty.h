@@ -2,38 +2,52 @@
 
 #include "js32.h"
 
-CLASS_CTOR(party);
+#include "Game/D2Roster.h" // D2RosterUnitStrc
 
-JSAPI_PROP(party_getProperty);
+class PartyWrap {
+ public:
+  static JSValue Instantiate(JSContext* ctx, JSValue new_target, D2RosterUnitStrc* unit);
+  static void Initialize(JSContext* ctx, JSValue target);
 
-JSAPI_FUNC(party_getNext);
+ private:
+  PartyWrap(JSContext* ctx, D2RosterUnitStrc* unit);
 
-JSAPI_FUNC(my_getParty);
+  // constructor
+  static JSValue New(JSContext* ctx, JSValue new_target, int argc, JSValue* argv);
 
-enum party_tinyid {
-  PARTY_AREA,
-  PARTY_X,
-  PARTY_Y,
-  PARTY_GID,
-  PARTY_LIFE,
-  PARTY_NAME,
-  PARTY_FLAG,
-  PARTY_ID,
-  PARTY_CLASSID,
-  PARTY_LEVEL,
-};
+  // properties
+  static JSValue GetX(JSContext* ctx, JSValue this_val);
+  static JSValue GetY(JSContext* ctx, JSValue this_val);
+  static JSValue GetArea(JSContext* ctx, JSValue this_val);
+  static JSValue GetGid(JSContext* ctx, JSValue this_val);
+  static JSValue GetLife(JSContext* ctx, JSValue this_val);
+  static JSValue GetPartyFlag(JSContext* ctx, JSValue this_val);
+  static JSValue GetPartyId(JSContext* ctx, JSValue this_val);
+  static JSValue GetName(JSContext* ctx, JSValue this_val);
+  static JSValue GetClassId(JSContext* ctx, JSValue this_val);
+  static JSValue GetLevel(JSContext* ctx, JSValue this_val);
 
-static JSCFunctionListEntry party_proto_funcs[] = {
-    JS_CGETSET_MAGIC_DEF("x", party_getProperty, nullptr, PARTY_X),
-    JS_CGETSET_MAGIC_DEF("y", party_getProperty, nullptr, PARTY_Y),
-    JS_CGETSET_MAGIC_DEF("area", party_getProperty, nullptr, PARTY_AREA),
-    JS_CGETSET_MAGIC_DEF("gid", party_getProperty, nullptr, PARTY_GID),
-    JS_CGETSET_MAGIC_DEF("life", party_getProperty, nullptr, PARTY_LIFE),
-    JS_CGETSET_MAGIC_DEF("partyflag", party_getProperty, nullptr, PARTY_FLAG),
-    JS_CGETSET_MAGIC_DEF("partyid", party_getProperty, nullptr, PARTY_ID),
-    JS_CGETSET_MAGIC_DEF("name", party_getProperty, nullptr, PARTY_NAME),
-    JS_CGETSET_MAGIC_DEF("classid", party_getProperty, nullptr, PARTY_CLASSID),
-    JS_CGETSET_MAGIC_DEF("level", party_getProperty, nullptr, PARTY_LEVEL),
+  // functions
+  static JSValue GetNext(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
 
-    JS_FS("getNext", party_getNext, 0, FUNCTION_FLAGS),
+  // globals
+  static JSValue GetParty(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+
+  static inline JSClassID m_class_id = 0;
+  static inline JSCFunctionListEntry m_proto_funcs[] = {
+      JS_CGETSET_DEF("x", GetX, nullptr),
+      JS_CGETSET_DEF("y", GetY, nullptr),
+      JS_CGETSET_DEF("area", GetArea, nullptr),
+      JS_CGETSET_DEF("gid", GetGid, nullptr),
+      JS_CGETSET_DEF("life", GetLife, nullptr),
+      JS_CGETSET_DEF("partyflag", GetPartyFlag, nullptr),
+      JS_CGETSET_DEF("partyid", GetPartyId, nullptr),
+      JS_CGETSET_DEF("name", GetName, nullptr),
+      JS_CGETSET_DEF("classid", GetClassId, nullptr),
+      JS_CGETSET_DEF("level", GetLevel, nullptr),
+
+      JS_FS("getNext", GetNext, 0, FUNCTION_FLAGS),
+  };
+
+  D2RosterUnitStrc* pPresetUnit;
 };

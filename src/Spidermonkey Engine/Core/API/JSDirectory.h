@@ -1,41 +1,36 @@
-#ifndef __JSDIRECTORY_H__
-#define __JSDIRECTORY_H__
-
-// TODO: Rewrite this mess of crap too
+#pragma once
 
 #include "js32.h"
-#include <cstdlib>
-#include <cstring>
 
-CLASS_CTOR(dir);
-CLASS_FINALIZER(dir);
-
-JSAPI_PROP(dir_getProperty);
-
-JSAPI_FUNC(dir_getFiles);
-JSAPI_FUNC(dir_getFolders);
-JSAPI_FUNC(dir_create);
-JSAPI_FUNC(dir_delete);
-
-JSAPI_FUNC(my_openDir);
-
-class JSDirectory {
+class DirectoryWrap {
  public:
-  char name[_MAX_FNAME];
-  JSDirectory(const char* newname) {
-    strcpy_s(name, _MAX_FNAME, newname);
-  }
+  static JSValue Instantiate(JSContext* ctx, JSValue new_target, const char* name);
+  static void Initialize(JSContext* ctx, JSValue target);
+
+ private:
+  DirectoryWrap(JSContext* ctx, const char* name);
+
+  // properties
+  static JSValue GetName(JSContext* ctx, JSValue this_val);
+
+  // functions
+  static JSValue Create(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+  static JSValue Delete(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+  static JSValue GetFiles(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+  static JSValue GetFolders(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+
+  // globals
+  static JSValue OpenDirectory(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+
+  static inline JSClassID m_class_id = 0;
+  static inline JSCFunctionListEntry m_proto_funcs[] = {
+      JS_CGETSET_DEF("name", GetName, nullptr),
+
+      JS_FS("create", Create, 1, FUNCTION_FLAGS),          //
+      JS_FS("remove", Delete, 1, FUNCTION_FLAGS),          //
+      JS_FS("getFiles", GetFiles, 1, FUNCTION_FLAGS),      //
+      JS_FS("getFolders", GetFolders, 1, FUNCTION_FLAGS),  //
+  };
+
+  char szName[_MAX_PATH];
 };
-
-enum { DIR_NAME };
-
-static JSCFunctionListEntry dir_proto_funcs[] = {
-    JS_CGETSET_MAGIC_DEF("name", dir_getProperty, nullptr, DIR_NAME),
-
-    JS_FS("create", dir_create, 1, FUNCTION_FLAGS),
-    JS_FS("remove", dir_delete, 1, FUNCTION_FLAGS),
-    JS_FS("getFiles", dir_getFiles, 1, FUNCTION_FLAGS),
-    JS_FS("getFolders", dir_getFolders, 1, FUNCTION_FLAGS),
-};
-
-#endif

@@ -227,7 +227,7 @@ LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* ptrs) {
                     nullptr);
 
   CloseHandle(hFile);
-  std::terminate();
+  quick_exit(0);
 }
 
 void InitCommandLine() {

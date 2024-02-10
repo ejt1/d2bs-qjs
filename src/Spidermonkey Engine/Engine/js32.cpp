@@ -11,30 +11,6 @@ JSValue JS_NewString(JSContext* ctx, const wchar_t* str) {
   return JS_NewString(ctx, utf8.c_str());
 }
 
-JSValue BuildObject(JSContext* ctx, JSClassID class_id, JSCFunctionListEntry* own_funcs, size_t num_own_funcs, void* opaque, JSValue new_target) {
-  JSValue proto;
-  if (JS_IsUndefined(new_target)) {
-    proto = JS_GetClassProto(ctx, class_id);
-  } else {
-    proto = JS_GetPropertyStr(ctx, new_target, "prototype");
-    if (JS_IsException(proto)) {
-      return JS_EXCEPTION;
-    }
-  }
-  JSValue obj = JS_NewObjectProtoClass(ctx, proto, class_id);
-  JS_FreeValue(ctx, proto);
-  if (JS_IsException(obj)) {
-    return obj;
-  }
-
-  JS_SetPropertyFunctionList(ctx, obj, own_funcs, num_own_funcs);
-  if (opaque) {
-    JS_SetOpaque(obj, opaque);
-  }
-
-  return obj;
-}
-
 JSValue JS_CompileFile(JSContext* ctx, JSValue /*globalObject*/, std::string fileName) {
   std::ifstream t(fileName.c_str(), std::ios::binary);
   std::string str;
@@ -70,16 +46,6 @@ std::optional<std::string> JS_CStringToStd(JSContext* ctx, JSValue val) {
   std::string s(ptr, len);
   JS_FreeCString(ctx, ptr);
   return s;
-}
-
-std::optional<std::wstring> JS_ToWString(JSContext* ctx, JSValue val) {
-  const char* str = JS_ToCString(ctx, val);
-  if (!str) {
-    return std::nullopt;
-  }
-  std::wstring ret = AnsiToWide(str);
-  JS_FreeCString(ctx, str);
-  return ret;
 }
 
 // TODO(ejt): this function is a mess after throwing the old 'reportError' in here
@@ -137,7 +103,3 @@ void JS_ReportPendingException(JSContext* ctx) {
   else
     Console::ShowBuffer();
 }
-
-// JSBool JSVAL_IS_OBJECT(JSValue v) {
-//   return !JSVAL_IS_PRIMITIVE(v);
-// }

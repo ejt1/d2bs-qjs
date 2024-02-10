@@ -3,40 +3,48 @@
 #include "js32.h"
 #include "Script.h"
 
-#include <windows.h>
+class ScriptWrap {
+ public:
+  static JSValue Instantiate(JSContext* ctx, JSValue new_target, Script* script);
+  static void Initialize(JSContext* ctx, JSValue target);
 
-CLASS_CTOR(script);
+ private:
+  ScriptWrap(JSContext* ctx, Script* script);
 
-JSAPI_PROP(script_getProperty);
+  // properties
+  static JSValue GetName(JSContext* ctx, JSValue this_val);
+  static JSValue GetType(JSContext* ctx, JSValue this_val);
+  static JSValue GetRunning(JSContext* ctx, JSValue this_val);
+  static JSValue GetThreadId(JSContext* ctx, JSValue this_val);
+  static JSValue GetMemory(JSContext* ctx, JSValue this_val);
 
-JSAPI_FUNC(script_getNext);
-JSAPI_FUNC(script_stop);
-JSAPI_FUNC(script_send);
-JSAPI_FUNC(script_pause);
-JSAPI_FUNC(script_resume);
-JSAPI_FUNC(script_join);
-JSAPI_FUNC(my_getScript);
-JSAPI_FUNC(my_getScripts);
+  // functions
+  static JSValue GetNext(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+  static JSValue Pause(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+  static JSValue Resume(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+  static JSValue Stop(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+  static JSValue Join(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+  static JSValue Send(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
 
-enum script_tinyid {
-  SCRIPT_FILENAME,
-  SCRIPT_GAMETYPE,
-  SCRIPT_RUNNING,
-  SCRIPT_THREADID,
-  SCRIPT_MEMORY,
-};
+  // global functions
+  static JSValue GetScript(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+  static JSValue GetScripts(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
 
-static JSCFunctionListEntry script_proto_funcs[] = {
-    JS_CGETSET_MAGIC_DEF("name", script_getProperty, nullptr, SCRIPT_FILENAME),      //
-    JS_CGETSET_MAGIC_DEF("type", script_getProperty, nullptr, SCRIPT_GAMETYPE),      //
-    JS_CGETSET_MAGIC_DEF("running", script_getProperty, nullptr, SCRIPT_RUNNING),    //
-    JS_CGETSET_MAGIC_DEF("threadid", script_getProperty, nullptr, SCRIPT_THREADID),  //
-    JS_CGETSET_MAGIC_DEF("memory", script_getProperty, nullptr, SCRIPT_MEMORY),
+  static inline JSClassID m_class_id = 0;
+  static inline JSCFunctionListEntry m_proto_funcs[] = {
+      JS_CGETSET_DEF("name", GetName, nullptr),          //
+      JS_CGETSET_DEF("type", GetType, nullptr),          //
+      JS_CGETSET_DEF("running", GetRunning, nullptr),    //
+      JS_CGETSET_DEF("threadid", GetThreadId, nullptr),  //
+      JS_CGETSET_DEF("memory", GetMemory, nullptr),      //
 
-    JS_FS("getNext", script_getNext, 0, FUNCTION_FLAGS),  //
-    JS_FS("pause", script_pause, 0, FUNCTION_FLAGS),      //
-    JS_FS("resume", script_resume, 0, FUNCTION_FLAGS),    //
-    JS_FS("stop", script_stop, 0, FUNCTION_FLAGS),        //
-    JS_FS("join", script_join, 0, FUNCTION_FLAGS),        //
-    JS_FS("send", script_send, 1, FUNCTION_FLAGS),
+      JS_FS("getNext", GetNext, 0, FUNCTION_FLAGS),  //
+      JS_FS("pause", Pause, 0, FUNCTION_FLAGS),      //
+      JS_FS("resume", Resume, 0, FUNCTION_FLAGS),    //
+      JS_FS("stop", Stop, 0, FUNCTION_FLAGS),        //
+      JS_FS("join", Join, 0, FUNCTION_FLAGS),        //
+      JS_FS("send", Send, 1, FUNCTION_FLAGS),
+  };
+
+  Script* m_script;
 };

@@ -3,6 +3,8 @@
 #include "ScreenHook.h"
 #include "Globals.h"
 
+#include <uv.h>
+
 class Engine final {
  public:
   Engine();
@@ -44,5 +46,6 @@ class Engine final {
   static void HandleGameDrawMenu();
 
   HMODULE m_hModule;
+  uv_loop_t* m_loop;
   std::unique_ptr<ScriptEngine> m_pScriptEngine;
 };

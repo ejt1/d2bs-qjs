@@ -1,56 +1,197 @@
 #include "JSPresetUnit.h"
 
-#include "CriticalSections.h"
-#include "JSPresetUnit.h"
-#include "D2Helpers.h"
-#include "JSGlobalClasses.h"
+#include "Bindings.h"
+#include "CriticalSections.h"  // AutoCriticalRoom
+#include "D2Helpers.h"         // WaitForGameReady
 
-EMPTY_CTOR(presetunit)
-
-CLASS_FINALIZER(presetunit) {
-  JSPresetUnit* pUnit = (JSPresetUnit*)JS_GetOpaque3(val);
-
-  if (pUnit) {
-    JS_SetOpaque(val, NULL);
-    delete pUnit;
+JSValue PresetUnitWrap::Instantiate(JSContext* ctx, JSValue new_target, D2PresetUnitStrc* preset, D2DrlgRoomStrc* room, uint32_t level) {
+  JSValue proto;
+  if (JS_IsUndefined(new_target)) {
+    proto = JS_GetClassProto(ctx, m_class_id);
+  } else {
+    proto = JS_GetPropertyStr(ctx, new_target, "prototype");
+    if (JS_IsException(proto)) {
+      return JS_EXCEPTION;
+    }
   }
+  JSValue obj = JS_NewObjectProtoClass(ctx, proto, m_class_id);
+  JS_FreeValue(ctx, proto);
+  if (JS_IsException(obj)) {
+    return obj;
+  }
+
+  // BUG(ejt): ask ejt
+  JS_SetPropertyFunctionList(ctx, obj, m_proto_funcs, _countof(m_proto_funcs));
+
+  PresetUnitWrap* wrap = new PresetUnitWrap(ctx, preset, room, level);
+  if (!wrap) {
+    JS_FreeValue(ctx, obj);
+    return JS_ThrowOutOfMemory(ctx);
+  }
+  JS_SetOpaque(obj, wrap);
+
+  return obj;
 }
 
-JSAPI_PROP(presetunit_getProperty) {
-  JSPresetUnit* pUnit = (JSPresetUnit*)JS_GetOpaque3(this_val);
+void PresetUnitWrap::Initialize(JSContext* ctx, JSValue target) {
+  JSClassDef def{};
+  def.class_name = "PresetUnit";
+  def.finalizer = [](JSRuntime* /*rt*/, JSValue val) {
+    PresetUnitWrap* wrap = static_cast<PresetUnitWrap*>(JS_GetOpaque(val, m_class_id));
+    if (wrap) {
+      delete wrap;
+    }
+  };
 
-  if (!pUnit)
-    return JS_UNDEFINED;
-
-  switch (magic) {
-    case PUNIT_TYPE:
-      return JS_NewUint32(ctx, pUnit->dwType);
-      break;
-    case PUNIT_ROOMX:
-      return JS_NewUint32(ctx, pUnit->dwRoomX);
-      break;
-    case PUNIT_ROOMY:
-      return JS_NewUint32(ctx, pUnit->dwRoomY);
-      break;
-    case PUNIT_X:
-      return JS_NewUint32(ctx, pUnit->dwPosX);
-      break;
-    case PUNIT_Y:
-      return JS_NewUint32(ctx, pUnit->dwPosY);
-      break;
-    case PUNIT_ID:
-      return JS_NewUint32(ctx, pUnit->dwId);
-      break;
-    case PUINT_LEVEL:
-      return JS_NewUint32(ctx, pUnit->dwLevel);
-    default:
-      break;
+  if (m_class_id == 0) {
+    JS_NewClassID(&m_class_id);
   }
+  JS_NewClass(JS_GetRuntime(ctx), m_class_id, &def);
 
+  JSValue proto = JS_NewObject(ctx);
+  JS_SetPropertyFunctionList(ctx, proto, m_proto_funcs, _countof(m_proto_funcs));
+
+  JSValue obj = JS_NewCFunction2(ctx, New, "PresetUnit", 0, JS_CFUNC_constructor, 0);
+  JS_SetConstructor(ctx, obj, proto);
+
+  JS_SetClassProto(ctx, m_class_id, proto);
+  JS_SetPropertyStr(ctx, target, "PresetUnit", obj);
+
+  // globals
+  JS_SetPropertyStr(ctx, target, "getPresetUnit", JS_NewCFunction(ctx, GetPresetUnit, "getPresetUnit", 0));
+  JS_SetPropertyStr(ctx, target, "getPresetUnits", JS_NewCFunction(ctx, GetPresetUnits, "getPresetUnits", 0));
+}
+
+PresetUnitWrap::PresetUnitWrap(JSContext* /*ctx*/, D2PresetUnitStrc* preset, D2DrlgRoomStrc* room, uint32_t level)
+    : dwPosX(preset->dwPosX), dwPosY(preset->dwPosY), dwRoomX(room->dwPosX), dwRoomY(room->dwPosY), dwType(preset->dwType), dwId(preset->dwTxtFileNo), dwLevel(level) {
+}
+
+JSValue PresetUnitWrap::New(JSContext* /*ctx*/, JSValue /*new_target*/, int /*argc*/, JSValue* /*argv*/) {
+  // TODO(ejt): empty constructor for compatibility with kolbot
   return JS_UNDEFINED;
 }
 
-JSAPI_FUNC(my_getPresetUnits) {
+// properties
+JSValue PresetUnitWrap::GetType(JSContext* ctx, JSValue this_val) {
+  PresetUnitWrap* wrap = static_cast<PresetUnitWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  return JS_NewUint32(ctx, wrap->dwType);
+}
+
+JSValue PresetUnitWrap::GetRoomX(JSContext* ctx, JSValue this_val) {
+  PresetUnitWrap* wrap = static_cast<PresetUnitWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  return JS_NewUint32(ctx, wrap->dwRoomX);
+}
+
+JSValue PresetUnitWrap::GetRoomY(JSContext* ctx, JSValue this_val) {
+  PresetUnitWrap* wrap = static_cast<PresetUnitWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  return JS_NewUint32(ctx, wrap->dwRoomY);
+}
+
+JSValue PresetUnitWrap::GetX(JSContext* ctx, JSValue this_val) {
+  PresetUnitWrap* wrap = static_cast<PresetUnitWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  return JS_NewUint32(ctx, wrap->dwPosX);
+}
+
+JSValue PresetUnitWrap::GetY(JSContext* ctx, JSValue this_val) {
+  PresetUnitWrap* wrap = static_cast<PresetUnitWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  return JS_NewUint32(ctx, wrap->dwPosY);
+}
+
+JSValue PresetUnitWrap::GetId(JSContext* ctx, JSValue this_val) {
+  PresetUnitWrap* wrap = static_cast<PresetUnitWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  return JS_NewUint32(ctx, wrap->dwId);
+}
+
+JSValue PresetUnitWrap::GetLevel(JSContext* ctx, JSValue this_val) {
+  PresetUnitWrap* wrap = static_cast<PresetUnitWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  return JS_NewUint32(ctx, wrap->dwLevel);
+}
+
+JSValue PresetUnitWrap::GetPresetUnit(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
+  if (!WaitForGameReady())
+    THROW_WARNING(ctx, "Game not ready");
+
+  if (argc < 1) {
+    return JS_FALSE;
+  }
+
+  uint32_t levelId;
+  JS_ToUint32(ctx, &levelId, argv[0]);
+
+  D2DrlgLevelStrc* pLevel = D2DrlgLevelStrc::FindLevelFromLevelId(levelId);
+  if (!pLevel)
+    THROW_ERROR(ctx, "getPresetUnits failed, couldn't access the level!");
+
+  uint32_t nClassId = NULL;
+  uint32_t nType = NULL;
+
+  if (argc >= 2)
+    JS_ToUint32(ctx, &nType, argv[1]);
+  if (argc >= 3)
+    JS_ToUint32(ctx, &nClassId, argv[2]);
+
+  AutoCriticalRoom cRoom;
+
+  bool bAddedRoom = false;
+
+  for (D2DrlgRoomStrc* pRoom = pLevel->pRoom2First; pRoom; pRoom = pRoom->pRoom2Next) {
+    bAddedRoom = false;
+
+    if (!pRoom->pRoom1) {
+      D2COMMON_AddRoomData(D2CLIENT_GetPlayerUnit()->pAct, pLevel->dwLevelNo, pRoom->dwPosX, pRoom->dwPosY, D2CLIENT_GetPlayerUnit()->pPath->pRoom1);
+      bAddedRoom = true;
+    }
+
+    for (D2PresetUnitStrc* pUnit = pRoom->pPreset; pUnit; pUnit = pUnit->pPresetNext) {
+      // Does it fit?
+      if ((nType == NULL || pUnit->dwType == nType) && (nClassId == NULL || pUnit->dwTxtFileNo == nClassId)) {
+        // Yes it fits! Return it
+        JSValue obj = PresetUnitWrap::Instantiate(ctx, JS_UNDEFINED, pUnit, pRoom, levelId);
+        if (JS_IsException(obj)) {
+          THROW_ERROR(ctx, "Failed to create presetunit object");
+        }
+        return obj;
+      }
+    }
+
+    if (bAddedRoom) {
+      D2COMMON_RemoveRoomData(D2CLIENT_GetPlayerUnit()->pAct, pLevel->dwLevelNo, pRoom->dwPosX, pRoom->dwPosY, D2CLIENT_GetPlayerUnit()->pPath->pRoom1);
+      bAddedRoom = false;
+    }
+  }
+
+  return JS_FALSE;
+}
+
+JSValue PresetUnitWrap::GetPresetUnits(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
@@ -76,7 +217,7 @@ JSAPI_FUNC(my_getPresetUnits) {
   AutoCriticalRoom cRoom;
 
   bool bAddedRoom = FALSE;
-  DWORD dwArrayCount = NULL;
+  uint32_t dwArrayCount = NULL;
 
   JSValue pReturnArray = JS_NewArray(ctx);
   for (D2DrlgRoomStrc* pRoom = pLevel->pRoom2First; pRoom; pRoom = pRoom->pRoom2Next) {
@@ -90,24 +231,13 @@ JSAPI_FUNC(my_getPresetUnits) {
     for (D2PresetUnitStrc* pUnit = pRoom->pPreset; pUnit; pUnit = pUnit->pPresetNext) {
       // Does it fit?
       if ((nType == NULL || pUnit->dwType == nType) && (nClassId == NULL || pUnit->dwTxtFileNo == nClassId)) {
-        JSPresetUnit* mypUnit = new JSPresetUnit;
-
-        mypUnit->dwPosX = pUnit->dwPosX;
-        mypUnit->dwPosY = pUnit->dwPosY;
-        mypUnit->dwRoomX = pRoom->dwPosX;
-        mypUnit->dwRoomY = pRoom->dwPosY;
-        mypUnit->dwType = pUnit->dwType;
-        mypUnit->dwId = pUnit->dwTxtFileNo;
-        mypUnit->dwLevel = levelId;
-
-        JSValue unit = BuildObject(ctx, presetunit_class_id, FUNCLIST(presetunit_proto_funcs), mypUnit);
-        if (JS_IsException(unit)) {
-          delete mypUnit;
+        JSValue obj = PresetUnitWrap::Instantiate(ctx, JS_UNDEFINED, pUnit, pRoom, levelId);
+        if (JS_IsException(obj)) {
           JS_FreeValue(ctx, pReturnArray);
           THROW_ERROR(ctx, "Failed to build object?");
         }
 
-        JS_SetPropertyUint32(ctx, pReturnArray, dwArrayCount, unit);
+        JS_SetPropertyUint32(ctx, pReturnArray, dwArrayCount, obj);
 
         dwArrayCount++;
       }
@@ -122,69 +252,4 @@ JSAPI_FUNC(my_getPresetUnits) {
   return pReturnArray;
 }
 
-JSAPI_FUNC(my_getPresetUnit) {
-  if (!WaitForGameReady())
-    THROW_WARNING(ctx, "Game not ready");
-
-  if (argc < 1) {
-    return JS_FALSE;
-  }
-
-  uint32_t levelId;
-  JS_ToUint32(ctx, &levelId, argv[0]);
-
-  D2DrlgLevelStrc* pLevel = D2DrlgLevelStrc::FindLevelFromLevelId(levelId);
-  if (!pLevel)
-    THROW_ERROR(ctx, "getPresetUnits failed, couldn't access the level!");
-
-  uint32_t nClassId = NULL;
-  uint32_t nType = NULL;
-
-  if (argc >= 2)
-    JS_ToUint32(ctx, &nType, argv[1]);
-  if (argc >= 3)
-    JS_ToUint32(ctx, &nClassId, argv[2]);
-
-  AutoCriticalRoom cRoom;
-
-  bool bAddedRoom = FALSE;
-
-  for (D2DrlgRoomStrc* pRoom = pLevel->pRoom2First; pRoom; pRoom = pRoom->pRoom2Next) {
-    bAddedRoom = FALSE;
-
-    if (!pRoom->pRoom1) {
-      D2COMMON_AddRoomData(D2CLIENT_GetPlayerUnit()->pAct, pLevel->dwLevelNo, pRoom->dwPosX, pRoom->dwPosY, D2CLIENT_GetPlayerUnit()->pPath->pRoom1);
-      bAddedRoom = TRUE;
-    }
-
-    for (D2PresetUnitStrc* pUnit = pRoom->pPreset; pUnit; pUnit = pUnit->pPresetNext) {
-      // Does it fit?
-      if ((nType == NULL || pUnit->dwType == nType) && (nClassId == NULL || pUnit->dwTxtFileNo == nClassId)) {
-        // Yes it fits! Return it
-        JSPresetUnit* mypUnit = new JSPresetUnit;
-
-        mypUnit->dwPosX = pUnit->dwPosX;
-        mypUnit->dwPosY = pUnit->dwPosY;
-        mypUnit->dwRoomX = pRoom->dwPosX;
-        mypUnit->dwRoomY = pRoom->dwPosY;
-        mypUnit->dwType = pUnit->dwType;
-        mypUnit->dwId = pUnit->dwTxtFileNo;
-        mypUnit->dwLevel = levelId;
-
-        JSValue obj = BuildObject(ctx, presetunit_class_id, FUNCLIST(presetunit_proto_funcs), mypUnit);
-        if (JS_IsException(obj)) {
-          delete mypUnit;
-          THROW_ERROR(ctx, "Failed to create presetunit object");
-        }
-        return obj;
-      }
-    }
-
-    if (bAddedRoom) {
-      D2COMMON_RemoveRoomData(D2CLIENT_GetPlayerUnit()->pAct, pLevel->dwLevelNo, pRoom->dwPosX, pRoom->dwPosY, D2CLIENT_GetPlayerUnit()->pPath->pRoom1);
-      bAddedRoom = FALSE;
-    }
-  }
-
-  return JS_FALSE;
-}
+D2BS_BINDING_INTERNAL(PresetUnitWrap, PresetUnitWrap::Initialize)

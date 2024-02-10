@@ -143,7 +143,7 @@ void Genhook::Clean(Script* owner) {
   while (it != visible.end()) {
     if ((*it)->owner->IsAborted()) {
       // Genhook* i = *it;
-      //delete *it;
+      // delete *it;
       it = visible.erase(it);
       //	delete(i);
     } else
@@ -154,7 +154,7 @@ void Genhook::Clean(Script* owner) {
   while (it != invisible.end()) {
     if ((*it)->owner == owner) {
       // Genhook* i = *it;
-      //delete *it;
+      // delete *it;
       it = invisible.erase(it);
       // delete(i);
 
@@ -199,51 +199,16 @@ bool Genhook::Click(int button, POINT* loc) {
   if (!IsInRange(loc))
     return false;
 
-  bool block = false;
-  if (owner && JS_IsFunction(owner->GetContext(), clicked)) {
-    Event* evt = new Event;
-    // evt->owner = owner;
-    evt->argc = 3;
-    evt->name = "ScreenHookClick";
-    evt->arg1 = new DWORD((DWORD)button);
-    evt->arg2 = new DWORD((DWORD)loc->x);
-    evt->arg3 = new DWORD((DWORD)loc->y);
-    evt->arg4 = new DWORD(false);
-
-    ResetEvent(Vars.eventSignal);
-    evt->functions.push_back(JS_DupValue(owner->GetContext(), clicked));
-    owner->FireEvent(evt);
-
-    if (WaitForSingleObject(Vars.eventSignal, 3000) == WAIT_TIMEOUT)
-      return false;
-    bool* global = (bool*)evt->arg4;
-    block = *global;
-    delete evt->arg1;
-    delete evt->arg2;
-    delete evt->arg3;
-    delete evt->arg4;
-    JS_FreeValue(owner->GetContext(), clicked);
-    delete evt;
-  }
-  return block;
+  return GenhookClickEvent(owner, button, loc, clicked);
 }
 
 void Genhook::Hover(POINT* loc) {
   if (!IsInRange(loc))
     return;
 
-  if (owner && JS_IsFunction(owner->GetContext(), hovered)) {
-    Event* evt = new Event;
-    // evt->owner = owner;
-    evt->argc = 2;
-    evt->functions.push_back(JS_DupValue(owner->GetContext(), hovered));
-    evt->name = "ScreenHookHover";
-    evt->arg1 = new DWORD((DWORD)loc->x);
-    evt->arg2 = new DWORD((DWORD)loc->y);
-
-    owner->FireEvent(evt);
-  }
+  return GenhookHoverEvent(owner, loc, hovered);
 }
+
 void Genhook::SetClickHandler(JSValue handler) {
   if (!owner)
     return;
@@ -281,7 +246,7 @@ void Genhook::SetHoverHandler(JSValue handler) {
     }
     hovered = JS_DupValue(cx, handler);
   }
-   Unlock();
+  Unlock();
 }
 
 void TextHook::Draw(void) {

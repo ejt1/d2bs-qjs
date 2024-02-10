@@ -14,22 +14,32 @@
   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
-#include <cstdio>
-#include <io.h>
-#include <errno.h>
-#include <windows.h>
-#include <Shlwapi.h>
-
-#include <assert.h>
-
 #include "JSFileTools.h"
-#include "Engine.h"
+
+#include "Bindings.h"
 #include "File.h"
-#include "Helpers.h"
+#include "Globals.h"
 
-EMPTY_CTOR(filetools)
+void FileToolsWrap::Initialize(JSContext* ctx, JSValue target) {
+  JSClassDef def{};
+  def.class_name = "FileTools";
 
-JSAPI_FUNC(filetools_remove) {
+  if (m_class_id == 0) {
+    JS_NewClassID(&m_class_id);
+  }
+  JS_NewClass(JS_GetRuntime(ctx), m_class_id, &def);
+
+  // should prototypes be created for classes that does not define anything on it?
+  JSValue proto = JS_NewObject(ctx);
+
+  JSValue obj = JS_NewObjectProtoClass(ctx, proto, m_class_id);
+  JS_SetPropertyFunctionList(ctx, obj, m_static_funcs, _countof(m_static_funcs));
+  JS_SetClassProto(ctx, m_class_id, proto);
+  JS_SetPropertyStr(ctx, target, "FileTools", obj);
+}
+
+// static functions
+JSValue FileToolsWrap::Remove(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
   if (argc < 1 || !JS_IsString(argv[0]))
     THROW_ERROR(ctx, "You must supply a file name");
 
@@ -49,7 +59,7 @@ JSAPI_FUNC(filetools_remove) {
   return JS_UNDEFINED;
 }
 
-JSAPI_FUNC(filetools_rename) {
+JSValue FileToolsWrap::Rename(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
   if (argc < 1 || !JS_IsString(argv[0]))
     THROW_ERROR(ctx, "You must supply an original file name");
   if (argc < 2 || !JS_IsString(argv[1]))
@@ -85,7 +95,7 @@ JSAPI_FUNC(filetools_rename) {
   return JS_UNDEFINED;
 }
 
-JSAPI_FUNC(filetools_copy) {
+JSValue FileToolsWrap::Copy(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
   if (argc < 1 || !JS_IsString(argv[0]))
     THROW_ERROR(ctx, "You must supply an original file name");
   if (argc < 2 || !JS_IsString(argv[1]))
@@ -154,7 +164,7 @@ JSAPI_FUNC(filetools_copy) {
   return JS_UNDEFINED;
 }
 
-JSAPI_FUNC(filetools_exists) {
+JSValue FileToolsWrap::Exists(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
   if (argc < 1 || !JS_IsString(argv[0]))
     THROW_ERROR(ctx, "Invalid file name");
 
@@ -174,7 +184,7 @@ JSAPI_FUNC(filetools_exists) {
   return JS_NewBool(ctx, !(_access(fullpath, 0) != 0 && errno == ENOENT));
 }
 
-JSAPI_FUNC(filetools_readText) {
+JSValue FileToolsWrap::ReadText(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
   if (argc < 1 || !JS_IsString(argv[0]))
     THROW_ERROR(ctx, "You must supply a file name");
 
@@ -223,7 +233,7 @@ JSAPI_FUNC(filetools_readText) {
   return rval;
 }
 
-JSAPI_FUNC(filetools_writeText) {
+JSValue FileToolsWrap::WriteText(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
   if (argc < 1 || !JS_IsString(argv[0]))
     THROW_ERROR(ctx, "You must supply a file name");
 
@@ -257,7 +267,7 @@ JSAPI_FUNC(filetools_writeText) {
   return JS_NewBool(ctx, result);
 }
 
-JSAPI_FUNC(filetools_appendText) {
+JSValue FileToolsWrap::AppendText(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
   if (argc < 1 || !JS_IsString(argv[0]))
     THROW_ERROR(ctx, "You must supply a file name");
 
@@ -290,3 +300,5 @@ JSAPI_FUNC(filetools_appendText) {
 
   return JS_NewBool(ctx, result);
 }
+
+D2BS_BINDING_INTERNAL(FileToolsWrap, FileToolsWrap::Initialize)

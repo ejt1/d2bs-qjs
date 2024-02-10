@@ -1,173 +1,365 @@
-// #include "Control.h"
 #include "JSControl.h"
-#include "Helpers.h"
-#include "D2Helpers.h"
 
-EMPTY_CTOR(control)
+#include "Bindings.h"
+#include "D2Helpers.h" // ClientState
 
-CLASS_FINALIZER(control) {
-  JSControl* pData = ((JSControl*)JS_GetOpaque3(val));
-
-  if (pData) {
-    JS_SetOpaque(val, NULL);
-    delete pData;
+JSValue ControlWrap::Instantiate(JSContext* ctx, JSValue new_target, D2WinControlStrc* control) {
+  JSValue proto;
+  if (JS_IsUndefined(new_target)) {
+    proto = JS_GetClassProto(ctx, m_class_id);
+  } else {
+    proto = JS_GetPropertyStr(ctx, new_target, "prototype");
+    if (JS_IsException(proto)) {
+      return JS_EXCEPTION;
+    }
   }
+  JSValue obj = JS_NewObjectProtoClass(ctx, proto, m_class_id);
+  JS_FreeValue(ctx, proto);
+  if (JS_IsException(obj)) {
+    return obj;
+  }
+
+  ControlWrap* wrap = new ControlWrap(ctx, control);
+  if (!wrap) {
+    JS_FreeValue(ctx, obj);
+    return JS_ThrowOutOfMemory(ctx);
+  }
+  JS_SetOpaque(obj, wrap);
+
+  // NOTE(ejt): if exception with Control.hasOwnProperty enable this again
+  //JS_SetPropertyFunctionList(ctx, obj, m_proto_funcs, _countof(m_proto_funcs));
+
+  return obj;
 }
 
-JSAPI_PROP(control_getProperty) {
-  if (ClientState() != ClientStateMenu)
-    return JS_EXCEPTION;
+void ControlWrap::Initialize(JSContext* ctx, JSValue target) {
+  JSClassDef def{};
+  def.class_name = "Control";
+  def.finalizer = [](JSRuntime* /*rt*/, JSValue val) {
+    ControlWrap* wrap = static_cast<ControlWrap*>(JS_GetOpaque(val, m_class_id));
+    if (wrap) {
+      delete wrap;
+    }
+  };
 
-  JSControl* pData = ((JSControl*)JS_GetOpaque3(this_val));
-  if (!pData)
-    return JS_EXCEPTION;
+  if (m_class_id == 0) {
+    JS_NewClassID(&m_class_id);
+  }
+  JS_NewClass(JS_GetRuntime(ctx), m_class_id, &def);
 
-  D2WinControlStrc* ctrl = findControl(pData->dwType, (const char*)NULL, -1, pData->dwX, pData->dwY, pData->dwSizeX, pData->dwSizeY);
-  if (!ctrl)
-    return JS_EXCEPTION;
+  JSValue proto = JS_NewObject(ctx);
+  JS_SetPropertyFunctionList(ctx, proto, m_proto_funcs, _countof(m_proto_funcs));
 
-  switch (magic) {
-    case CONTROL_TEXT:
-      if (ctrl->TextBox.dwIsCloaked != 33) {
-        return JS_NewString(ctx, ctrl->dwType == 6 ? ctrl->Button.wText2 : ctrl->TextBox.wText);
-      }
-      break;
-    case CONTROL_X:
-      return JS_NewFloat64(ctx, (double)ctrl->dwPosX);
-      // JS_NewNumberValue(cx, ctrl->dwPosX, vp);
-      break;
-    case CONTROL_Y:
-      return JS_NewFloat64(ctx, (double)ctrl->dwPosY);
-      break;
-    case CONTROL_XSIZE:
-      return JS_NewFloat64(ctx, (double)ctrl->dwSizeX);
-      break;
-    case CONTROL_YSIZE:
-      return JS_NewFloat64(ctx, (double)ctrl->dwSizeY);
-      break;
-    case CONTROL_STATE:
-      return JS_NewFloat64(ctx, (double)(ctrl->dwDisabled - 2));
-      break;
-    case CONTROL_MAXLENGTH:
-      // JS_NewNumberValue(cx, ctrl->dwMaxLength, vp);
-      break;
-    case CONTROL_TYPE:
-      return JS_NewFloat64(ctx, (double)ctrl->dwType);
-      break;
-    case CONTROL_VISIBLE:
-      // nothing to do yet because we don't know what to do
-      break;
-    case CONTROL_CURSORPOS:
-      return JS_NewFloat64(ctx, (double)ctrl->TextBox.dwCursorPos);
-      break;
-    case CONTROL_SELECTSTART:
-      return JS_NewFloat64(ctx, (double)ctrl->dwSelectStart);
-      break;
-    case CONTROL_SELECTEND:
-      return JS_NewFloat64(ctx, (double)ctrl->dwSelectEnd);
-      break;
-    case CONTROL_PASSWORD:
-      return JS_NewBool(ctx, !!(ctrl->TextBox.dwIsCloaked == 33));
-      break;
-    case CONTROL_DISABLED:
-      return JS_NewFloat64(ctx, (double)ctrl->dwDisabled);
-      break;
+  JSValue obj = JS_NewObjectProtoClass(ctx, proto, m_class_id);
+  JS_SetClassProto(ctx, m_class_id, proto);
+  JS_SetPropertyStr(ctx, target, "Control", obj);
+
+  JS_SetPropertyStr(ctx, target, "getControl", JS_NewCFunction(ctx, GetControl, "getControl", 0));
+  JS_SetPropertyStr(ctx, target, "getControls", JS_NewCFunction(ctx, GetControls, "getControls", 0));
+}
+
+ControlWrap::ControlWrap(JSContext* /*ctx*/, D2WinControlStrc* control)
+    : dwType(control->dwType), dwX(control->dwPosX), dwY(control->dwPosY), dwSizeX(control->dwSizeX), dwSizeY(control->dwSizeY) {
+}
+
+// properties
+JSValue ControlWrap::GetText(JSContext* ctx, JSValue this_val) {
+  ControlWrap* wrap = static_cast<ControlWrap*>(JS_GetOpaque3(this_val));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  D2WinControlStrc* ctrl = findControl(wrap->dwType, (const char*)NULL, -1, wrap->dwX, wrap->dwY, wrap->dwSizeX, wrap->dwSizeY);
+  if (!ctrl) {
+    return JS_EXCEPTION;
+  }
+
+  if (ctrl->TextBox.dwIsCloaked != 33) {
+    return JS_NewString(ctx, ctrl->dwType == 6 ? ctrl->Button.wText2 : ctrl->TextBox.wText);
   }
   return JS_UNDEFINED;
 }
 
-JSAPI_STRICT_PROP(control_setProperty) {
-  if (ClientState() != ClientStateMenu)
+JSValue ControlWrap::SetText(JSContext* ctx, JSValue this_val, JSValue val) {
+  ControlWrap* wrap = static_cast<ControlWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
     return JS_EXCEPTION;
-
-  JSControl* pData = ((JSControl*)JS_GetOpaque3(this_val));
-  if (!pData)
-    return JS_EXCEPTION;
-
-  D2WinControlStrc* ctrl = findControl(pData->dwType, (const char*)NULL, -1, pData->dwX, pData->dwY, pData->dwSizeX, pData->dwSizeY);
-  if (!ctrl)
-    return JS_EXCEPTION;
-
-  switch (magic) {
-    case CONTROL_TEXT:
-      if (ctrl->dwType == 1 && JS_IsString(val)) {
-        const char* szText = JS_ToCString(ctx, val);
-        if (!szText) {
-          return JS_UNDEFINED;
-        }
-        setControlText(ctrl, szText);
-        JS_FreeCString(ctx, szText);
-      }
-      break;
-    case CONTROL_STATE:
-      if (JS_IsNumber(val)) {
-        int32_t nState;
-        if (JS_ToInt32(ctx, &nState, val) || nState < 0 || nState > 3) {
-          THROW_ERROR(ctx, "Invalid state value");
-        }
-        memset((void*)&ctrl->dwDisabled, (nState + 2), sizeof(DWORD));
-      }
-      break;
-    case CONTROL_CURSORPOS:
-      if (JS_IsNumber(val)) {
-        uint32_t dwPos;
-        if (JS_ToUint32(ctx, &dwPos, val)) {
-          THROW_ERROR(ctx, "Invalid cursor position value");
-        }
-        memset((void*)&ctrl->TextBox.dwCursorPos, dwPos, sizeof(DWORD));
-      }
-      break;
-    case CONTROL_DISABLED:
-      if (JS_IsNumber(val)) {
-        uint32_t dwDisabled;
-        if (JS_ToUint32(ctx, &dwDisabled, val)) {
-          THROW_ERROR(ctx, "Invalid disabled value");
-        }
-        memset((void*)&ctrl->dwDisabled, dwDisabled, sizeof(DWORD));
-      }
-      break;
   }
 
+  D2WinControlStrc* ctrl = findControl(wrap->dwType, (const char*)NULL, -1, wrap->dwX, wrap->dwY, wrap->dwSizeX, wrap->dwSizeY);
+  if (!ctrl) {
+    return JS_EXCEPTION;
+  }
+
+  if (ctrl->dwType == 1 && JS_IsString(val)) {
+    const char* szText = JS_ToCString(ctx, val);
+    if (!szText) {
+      return JS_EXCEPTION;
+    }
+    setControlText(ctrl, szText);
+    JS_FreeCString(ctx, szText);
+  }
   return JS_UNDEFINED;
 }
 
-JSAPI_FUNC(control_getNext) {
+JSValue ControlWrap::GetX(JSContext* ctx, JSValue this_val) {
+  ControlWrap* wrap = static_cast<ControlWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  D2WinControlStrc* ctrl = findControl(wrap->dwType, (const char*)NULL, -1, wrap->dwX, wrap->dwY, wrap->dwSizeX, wrap->dwSizeY);
+  if (!ctrl) {
+    return JS_EXCEPTION;
+  }
+
+  return JS_NewFloat64(ctx, (double)ctrl->dwPosX);
+}
+
+JSValue ControlWrap::GetY(JSContext* ctx, JSValue this_val) {
+  ControlWrap* wrap = static_cast<ControlWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  D2WinControlStrc* ctrl = findControl(wrap->dwType, (const char*)NULL, -1, wrap->dwX, wrap->dwY, wrap->dwSizeX, wrap->dwSizeY);
+  if (!ctrl) {
+    return JS_EXCEPTION;
+  }
+
+  return JS_NewFloat64(ctx, (double)ctrl->dwPosY);
+}
+
+JSValue ControlWrap::GetSizeX(JSContext* ctx, JSValue this_val) {
+  ControlWrap* wrap = static_cast<ControlWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  D2WinControlStrc* ctrl = findControl(wrap->dwType, (const char*)NULL, -1, wrap->dwX, wrap->dwY, wrap->dwSizeX, wrap->dwSizeY);
+  if (!ctrl) {
+    return JS_EXCEPTION;
+  }
+
+  return JS_NewFloat64(ctx, (double)ctrl->dwSizeX);
+}
+
+JSValue ControlWrap::GetSizeY(JSContext* ctx, JSValue this_val) {
+  ControlWrap* wrap = static_cast<ControlWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  D2WinControlStrc* ctrl = findControl(wrap->dwType, (const char*)NULL, -1, wrap->dwX, wrap->dwY, wrap->dwSizeX, wrap->dwSizeY);
+  if (!ctrl) {
+    return JS_EXCEPTION;
+  }
+
+  return JS_NewFloat64(ctx, (double)ctrl->dwSizeY);
+}
+
+JSValue ControlWrap::GetState(JSContext* ctx, JSValue this_val) {
+  ControlWrap* wrap = static_cast<ControlWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  D2WinControlStrc* ctrl = findControl(wrap->dwType, (const char*)NULL, -1, wrap->dwX, wrap->dwY, wrap->dwSizeX, wrap->dwSizeY);
+  if (!ctrl) {
+    return JS_EXCEPTION;
+  }
+
+  return JS_NewFloat64(ctx, (double)(ctrl->dwDisabled - 2));
+}
+
+JSValue ControlWrap::SetState(JSContext* ctx, JSValue this_val, JSValue val) {
+  ControlWrap* wrap = static_cast<ControlWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  D2WinControlStrc* ctrl = findControl(wrap->dwType, (const char*)NULL, -1, wrap->dwX, wrap->dwY, wrap->dwSizeX, wrap->dwSizeY);
+  if (!ctrl) {
+    return JS_EXCEPTION;
+  }
+
+  if (JS_IsNumber(val)) {
+    int32_t nState;
+    if (JS_ToInt32(ctx, &nState, val) || nState < 0 || nState > 3) {
+      THROW_ERROR(ctx, "Invalid state value");
+    }
+    memset((void*)&ctrl->dwDisabled, (nState + 2), sizeof(uint32_t));
+  }
+  return JS_UNDEFINED;
+}
+
+JSValue ControlWrap::GetPassword(JSContext* ctx, JSValue this_val) {
+  ControlWrap* wrap = static_cast<ControlWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  D2WinControlStrc* ctrl = findControl(wrap->dwType, (const char*)NULL, -1, wrap->dwX, wrap->dwY, wrap->dwSizeX, wrap->dwSizeY);
+  if (!ctrl) {
+    return JS_EXCEPTION;
+  }
+
+  return JS_NewBool(ctx, !!(ctrl->TextBox.dwIsCloaked == 33));
+}
+
+JSValue ControlWrap::GetType(JSContext* ctx, JSValue this_val) {
+  ControlWrap* wrap = static_cast<ControlWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  D2WinControlStrc* ctrl = findControl(wrap->dwType, (const char*)NULL, -1, wrap->dwX, wrap->dwY, wrap->dwSizeX, wrap->dwSizeY);
+  if (!ctrl) {
+    return JS_EXCEPTION;
+  }
+
+  return JS_NewFloat64(ctx, (double)ctrl->dwType);
+}
+
+JSValue ControlWrap::GetCursorPos(JSContext* ctx, JSValue this_val) {
+  ControlWrap* wrap = static_cast<ControlWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  D2WinControlStrc* ctrl = findControl(wrap->dwType, (const char*)NULL, -1, wrap->dwX, wrap->dwY, wrap->dwSizeX, wrap->dwSizeY);
+  if (!ctrl) {
+    return JS_EXCEPTION;
+  }
+
+  return JS_NewFloat64(ctx, (double)ctrl->TextBox.dwCursorPos);
+}
+
+JSValue ControlWrap::SetCursorPos(JSContext* ctx, JSValue this_val, JSValue val) {
+  ControlWrap* wrap = static_cast<ControlWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  D2WinControlStrc* ctrl = findControl(wrap->dwType, (const char*)NULL, -1, wrap->dwX, wrap->dwY, wrap->dwSizeX, wrap->dwSizeY);
+  if (!ctrl) {
+    return JS_EXCEPTION;
+  }
+
+  if (JS_IsNumber(val)) {
+    uint32_t dwPos;
+    if (JS_ToUint32(ctx, &dwPos, val)) {
+      THROW_ERROR(ctx, "Invalid cursor position value");
+    }
+    memset((void*)&ctrl->TextBox.dwCursorPos, dwPos, sizeof(uint32_t));
+  }
+  return JS_UNDEFINED;
+}
+
+JSValue ControlWrap::GetSelectStart(JSContext* ctx, JSValue this_val) {
+  ControlWrap* wrap = static_cast<ControlWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  D2WinControlStrc* ctrl = findControl(wrap->dwType, (const char*)NULL, -1, wrap->dwX, wrap->dwY, wrap->dwSizeX, wrap->dwSizeY);
+  if (!ctrl) {
+    return JS_EXCEPTION;
+  }
+
+  return JS_NewFloat64(ctx, (double)ctrl->dwSelectStart);
+}
+
+JSValue ControlWrap::GetSelectEnd(JSContext* ctx, JSValue this_val) {
+  ControlWrap* wrap = static_cast<ControlWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  D2WinControlStrc* ctrl = findControl(wrap->dwType, (const char*)NULL, -1, wrap->dwX, wrap->dwY, wrap->dwSizeX, wrap->dwSizeY);
+  if (!ctrl) {
+    return JS_EXCEPTION;
+  }
+
+  return JS_NewFloat64(ctx, (double)ctrl->dwSelectEnd);
+}
+
+JSValue ControlWrap::GetDisabled(JSContext* ctx, JSValue this_val) {
+  ControlWrap* wrap = static_cast<ControlWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  D2WinControlStrc* ctrl = findControl(wrap->dwType, (const char*)NULL, -1, wrap->dwX, wrap->dwY, wrap->dwSizeX, wrap->dwSizeY);
+  if (!ctrl) {
+    return JS_EXCEPTION;
+  }
+
+  return JS_NewFloat64(ctx, (double)ctrl->dwDisabled);
+}
+
+JSValue ControlWrap::SetDisabled(JSContext* ctx, JSValue this_val, JSValue val) {
+  ControlWrap* wrap = static_cast<ControlWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  D2WinControlStrc* ctrl = findControl(wrap->dwType, (const char*)NULL, -1, wrap->dwX, wrap->dwY, wrap->dwSizeX, wrap->dwSizeY);
+  if (!ctrl) {
+    return JS_EXCEPTION;
+  }
+
+  if (JS_IsNumber(val)) {
+    uint32_t dwDisabled;
+    if (JS_ToUint32(ctx, &dwDisabled, val)) {
+      THROW_ERROR(ctx, "Invalid disabled value");
+    }
+    memset((void*)&ctrl->dwDisabled, dwDisabled, sizeof(uint32_t));
+  }
+  return JS_UNDEFINED;
+}
+
+// functions
+JSValue ControlWrap::GetNext(JSContext* ctx, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
   if (ClientState() != ClientStateMenu)
     return JS_UNDEFINED;
 
-  JSControl* pData = ((JSControl*)JS_GetOpaque3(this_val));
-  if (!pData)
-    return JS_UNDEFINED;
+  ControlWrap* wrap = static_cast<ControlWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
 
-  D2WinControlStrc* pControl = findControl(pData->dwType, (const char*)NULL, -1, pData->dwX, pData->dwY, pData->dwSizeX, pData->dwSizeY);
+  D2WinControlStrc* pControl = findControl(wrap->dwType, (const char*)NULL, -1, wrap->dwX, wrap->dwY, wrap->dwSizeX, wrap->dwSizeY);
   if (pControl && pControl->pNext)
     pControl = pControl->pNext;
   else
     pControl = NULL;
 
   if (pControl) {
-    pData->pControl = pControl;
-    pData->dwType = pData->pControl->dwType;
-    pData->dwX = pData->pControl->dwPosX;
-    pData->dwY = pData->pControl->dwPosY;
-    pData->dwSizeX = pData->pControl->dwSizeX;
-    pData->dwSizeY = pData->pControl->dwSizeY;
-    // BUG(ejt): possible value leak
-    JS_SetOpaque(this_val, pData);
+    // TODO(ejt): want to use this way of returning a new object for the next control
+    // however kolbot reuses this_val which is because legacy did what we're about to do
+    // replace opaque and return this_val...
+    // return ControlWrap::Instantiate(ctx, JS_UNDEFINED, pControl);
+    wrap->dwType = pControl->dwType;
+    wrap->dwX = pControl->dwPosX;
+    wrap->dwY = pControl->dwPosY;
+    wrap->dwSizeX = pControl->dwSizeX;
+    wrap->dwSizeY = pControl->dwSizeY;
     return JS_DupValue(ctx, this_val);
   }
   return JS_FALSE;
 }
 
-JSAPI_FUNC(control_click) {
+JSValue ControlWrap::Click(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
   if (ClientState() != ClientStateMenu)
     return JS_UNDEFINED;
 
-  JSControl* pData = ((JSControl*)JS_GetOpaque3(this_val));
-  if (!pData)
-    return JS_UNDEFINED;
+  ControlWrap* wrap = static_cast<ControlWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
 
-  D2WinControlStrc* pControl = findControl(pData->dwType, (const char*)NULL, -1, pData->dwX, pData->dwY, pData->dwSizeX, pData->dwSizeY);
+  D2WinControlStrc* pControl = findControl(wrap->dwType, (const char*)NULL, -1, wrap->dwX, wrap->dwY, wrap->dwSizeX, wrap->dwSizeY);
   if (!pControl) {
     return JS_NewInt32(ctx, 0);
   }
@@ -184,40 +376,16 @@ JSAPI_FUNC(control_click) {
   return JS_TRUE;
 }
 
-JSAPI_FUNC(control_setText) {
+JSValue ControlWrap::FreeGetText(JSContext* ctx, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
   if (ClientState() != ClientStateMenu)
     return JS_UNDEFINED;
 
-  JSControl* pData = ((JSControl*)JS_GetOpaque3(this_val));
-  if (!pData)
-    return JS_UNDEFINED;
-
-  D2WinControlStrc* pControl = findControl(pData->dwType, (const char*)NULL, -1, pData->dwX, pData->dwY, pData->dwSizeX, pData->dwSizeY);
-  if (!pControl) {
-    return JS_NewInt32(ctx, 0);
+  ControlWrap* wrap = static_cast<ControlWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
   }
 
-  if (argc < 0 || !JS_IsString(argv[0]))
-    return JS_UNDEFINED;
-
-  const char* szText = JS_ToCString(ctx, argv[0]);
-  if (!szText) {
-    return JS_UNDEFINED;
-  }
-  setControlText(pControl, szText);
-  JS_FreeCString(ctx, szText);
-  return JS_UNDEFINED;
-}
-
-JSAPI_FUNC(control_getText) {
-  if (ClientState() != ClientStateMenu)
-    return JS_UNDEFINED;
-
-  JSControl* pData = ((JSControl*)JS_GetOpaque3(this_val));
-  if (!pData)
-    return JS_UNDEFINED;
-
-  D2WinControlStrc* pControl = findControl(pData->dwType, (const char*)NULL, -1, pData->dwX, pData->dwY, pData->dwSizeX, pData->dwSizeY);
+  D2WinControlStrc* pControl = findControl(wrap->dwType, (const char*)NULL, -1, wrap->dwX, wrap->dwY, wrap->dwSizeX, wrap->dwSizeY);
   if (!pControl) {
     return JS_NewInt32(ctx, 0);
   }
@@ -251,7 +419,33 @@ JSAPI_FUNC(control_getText) {
   return pReturnArray;
 }
 
-JSAPI_FUNC(my_getControl) {
+JSValue ControlWrap::FreeSetText(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
+  if (ClientState() != ClientStateMenu)
+    return JS_UNDEFINED;
+
+  ControlWrap* wrap = static_cast<ControlWrap*>(JS_GetOpaque(this_val, m_class_id));
+  if (!wrap) {
+    return JS_EXCEPTION;
+  }
+
+  D2WinControlStrc* pControl = findControl(wrap->dwType, (const char*)NULL, -1, wrap->dwX, wrap->dwY, wrap->dwSizeX, wrap->dwSizeY);
+  if (!pControl) {
+    return JS_NewInt32(ctx, 0);
+  }
+
+  if (argc < 0 || !JS_IsString(argv[0]))
+    return JS_UNDEFINED;
+
+  const char* szText = JS_ToCString(ctx, argv[0]);
+  if (!szText) {
+    return JS_UNDEFINED;
+  }
+  setControlText(pControl, szText);
+  JS_FreeCString(ctx, szText);
+  return JS_UNDEFINED;
+}
+
+JSValue ControlWrap::GetControl(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
   if (ClientState() != ClientStateMenu)
     return JS_UNDEFINED;
 
@@ -267,40 +461,26 @@ JSAPI_FUNC(my_getControl) {
   if (!pControl)
     return JS_UNDEFINED;
 
-  JSControl* data = new JSControl;
-  data->dwType = pControl->dwType;
-  data->dwX = pControl->dwPosX;
-  data->dwY = pControl->dwPosY;
-  data->dwSizeX = pControl->dwSizeX;
-  data->dwSizeY = pControl->dwSizeY;
-  data->pControl = pControl;
-
-  JSValue control = BuildObject(ctx, control_class_id, FUNCLIST(control_proto_funcs), data);
-  if (!control)
-    THROW_ERROR(ctx, "Failed to build control!");
-
-  return control;
+  return ControlWrap::Instantiate(ctx, JS_UNDEFINED, pControl);
 }
 
-JSAPI_FUNC(my_getControls) {
+JSValue ControlWrap::GetControls(JSContext* ctx, JSValue /*this_val*/, int /*argc*/, JSValue* /*argv*/) {
   if (ClientState() != ClientStateMenu)
     return JS_UNDEFINED;
 
-  DWORD dwArrayCount = NULL;
+  uint32_t dwArrayCount = NULL;
 
   JSValue pReturnArray = JS_NewArray(ctx);
   for (D2WinControlStrc* pControl = *D2WIN_FirstControl; pControl; pControl = pControl->pNext) {
-    JSControl* data = new JSControl;
-    data->dwType = pControl->dwType;
-    data->dwX = pControl->dwPosX;
-    data->dwY = pControl->dwPosY;
-    data->dwSizeX = pControl->dwSizeX;
-    data->dwSizeY = pControl->dwSizeY;
-    data->pControl = pControl;
-
-    JSValue res = BuildObject(ctx, control_class_id, FUNCLIST(control_proto_funcs), data);
-    JS_SetPropertyUint32(ctx, pReturnArray, dwArrayCount, res);
+    JSValue obj = ControlWrap::Instantiate(ctx, JS_UNDEFINED, pControl);
+    if (JS_IsException(obj)) {
+      JS_FreeValue(ctx, pReturnArray);
+      return JS_EXCEPTION;
+    }
+    JS_SetPropertyUint32(ctx, pReturnArray, dwArrayCount, obj);
     dwArrayCount++;
   }
   return pReturnArray;
 }
+
+D2BS_BINDING_INTERNAL(ControlWrap, ControlWrap::Initialize)

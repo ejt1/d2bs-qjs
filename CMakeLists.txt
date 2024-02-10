@@ -76,7 +76,10 @@ set(D2BS_SRCS
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSScript.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSSocket.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSUnit.cpp"
+
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JSTimer.cc"
   
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Engine/Bindings.cc"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Engine/js32.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Engine/Script.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Engine/ScriptEngine.cpp"
@@ -123,6 +126,8 @@ target_link_libraries(D2BS PRIVATE
 
   # vendor dependencies
   libquickjs
-  minhook)
+  minhook
+  # libuv
+  uv_a)
 
 install(TARGETS D2BS RUNTIME DESTINATION bin/d2bs)

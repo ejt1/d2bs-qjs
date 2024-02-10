@@ -1,36 +1,38 @@
-#ifndef __JSSOCKET_H__
-#define __JSSOCKET_H__
+#pragma once
 
 #include "js32.h"
 
-//////////////////////////////////////////////////////////////////
-// socket stuff
-//////////////////////////////////////////////////////////////////
+class SocketWrap {
+ public:
+  static JSValue Instantiate(JSContext* ctx, JSValue new_target);
+  static void Initialize(JSContext* ctx, JSValue target);
 
-CLASS_CTOR(socket);
-CLASS_FINALIZER(socket);
+ private:
+  SocketWrap(JSContext* ctx);
 
-JSAPI_PROP(socket_getProperty);
-JSAPI_STRICT_PROP(socket_setProperty);
+  // properties
+  static JSValue GetReadable(JSContext* ctx, JSValue this_val);
+  static JSValue GetWriteable(JSContext* ctx, JSValue this_val);
 
-JSAPI_FUNC(socket_open);
-JSAPI_FUNC(socket_close);
-JSAPI_FUNC(socket_send);
-JSAPI_FUNC(socket_read);
+  // functions
+  static JSValue Close(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+  static JSValue Send(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+  static JSValue Read(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
 
-enum { SOCKET_READABLE, SOCKET_WRITEABLE };
+  // static functions
+  static JSValue Open(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
 
-static JSCFunctionListEntry socket_proto_funcs[] = {
-    JS_FN("close", socket_close, 0, FUNCTION_FLAGS),
-    JS_FN("send", socket_send, 1, FUNCTION_FLAGS),
-    JS_FN("read", socket_read, 0, FUNCTION_FLAGS),
+  static inline JSClassID m_class_id = 0;
+  static inline JSCFunctionListEntry m_proto_funcs[] = {
+      JS_CGETSET_DEF("readable", GetReadable, nullptr),
+      JS_CGETSET_DEF("writeable", GetWriteable, nullptr),
 
-    JS_CGETSET_MAGIC_DEF("readable", socket_getProperty, nullptr, SOCKET_READABLE),
-    JS_CGETSET_MAGIC_DEF("writeable", socket_getProperty, nullptr, SOCKET_WRITEABLE),
+      JS_FN("close", Close, 0, FUNCTION_FLAGS),
+      JS_FN("send", Send, 1, FUNCTION_FLAGS),
+      JS_FN("read", Read, 0, FUNCTION_FLAGS),
+  };
+
+  static inline JSCFunctionListEntry m_static_funcs[] = {
+      JS_FN("open", Open, 2, FUNCTION_FLAGS),
+  };
 };
-
-static JSCFunctionListEntry socket_static_funcs[] = {
-    JS_FN("open", socket_open, 2, FUNCTION_FLAGS),
-};
-
-#endif

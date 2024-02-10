@@ -1,4 +1,3 @@
-#pragma comment(lib, "psapi.lib")  // Added to support GetProcessMemoryInfo()
 #pragma once
 
 // TODO(ejt): most of the content in here is only for migration purposes
@@ -51,38 +50,6 @@ inline static void js_sab_dup(void* /*opaque*/, void* ptr) {
 
 JSValue JS_NewString(JSContext* ctx, const wchar_t* str);
 
-struct JSClassSpec {
-  const char* name;
-  JSClassID* pclass_id;
-  JSValue (*ctor)(JSContext* ctx, JSValueConst new_target, int argc, JSValueConst* argv);
-  JSClassFinalizer* finalizer;
-  uint32_t argc;
-  JSCFunctionListEntry* proto_funcs;
-  int num_proto_funcs;
-  JSCFunctionListEntry* static_funcs;
-  int num_static_funcs;
-};
-
-#define FUNCLIST(list) list, _countof(list)
-#define EMPTY_FUNCLIST nullptr, 0
-
-#define CLASS_CTOR(name) \
-  JSValue name##_ctor([[maybe_unused]] JSContext* ctx, [[maybe_unused]] JSValueConst new_target, [[maybe_unused]] int argc, [[maybe_unused]] JSValueConst* argv)
-
-#define CLASS_FINALIZER(name) void name##_finalizer([[maybe_unused]] JSRuntime* rt, [[maybe_unused]] JSValue val)
-
-#define EMPTY_CTOR(name)                                     \
-  CLASS_CTOR(name) {                                         \
-    return JS_ThrowReferenceError(ctx, "Invalid Operation"); \
-  }
-
-// NOTE(ejt): This is a left-over function from old D2BS
-// Eventually this function will be removed in favor of proper object creation but there is a problem with how Kolbot uses bound classes.
-// Kolbot validates certain objects by checking if they have a function/property not inherited from prototype which means relying only on constructing
-// new objects using its prototype is not possible yet.
-// Questions? Ask ejt
-JSValue BuildObject(JSContext* ctx, JSClassID class_id, JSCFunctionListEntry* own_funcs, size_t num_own_funcs, void* opaque = NULL, JSValue new_target = JS_UNDEFINED);
-
 JSValue JS_CompileFile(JSContext* ctx, JSValue globalObject, std::string fileName);
 
 template <typename... Args>
@@ -106,9 +73,5 @@ void JS_ReportPendingException(JSContext* ctx);
 #define JSAPI_FUNC(name) \
   JSValue name##([[maybe_unused]] JSContext * ctx, [[maybe_unused]] JSValueConst this_val, [[maybe_unused]] int argc, [[maybe_unused]] JSValueConst* argv)
 
-#define JSAPI_PROP(name) JSValue name##([[maybe_unused]] JSContext * ctx, [[maybe_unused]] JSValueConst this_val, [[maybe_unused]] int magic)
-#define JSAPI_STRICT_PROP(name) \
-  JSValue name##([[maybe_unused]] JSContext * ctx, [[maybe_unused]] JSValueConst this_val, [[maybe_unused]] JSValueConst val, [[maybe_unused]] int magic)
-//
 #define JS_FN(name, func, length, flags) JS_CFUNC_DEF(name, length, func)
 #define JS_FS(name, func, length, flags) JS_CFUNC_DEF(name, length, func)

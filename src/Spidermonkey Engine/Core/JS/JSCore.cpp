@@ -52,65 +52,6 @@ JSAPI_FUNC(my_print) {
   return JS_NULL;
 }
 
-// TODO(ejt): setTimeout, setInterval and clearInterval is not currently used by kolbot (it overrides it).
-// The plan is to use libuv timers once we get to adding libuv, for now just throw an error.
-JSAPI_FUNC(my_setTimeout) {
-  JS_ThrowInternalError(ctx, "setTimeout temporarily disabled during development");
-  return JS_EXCEPTION;
-
-  // JS_SET_RVAL(cx, vp, JSVAL_NULL);
-
-  // if (argc < 2 || !JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1]))
-  //   JS_ReportError(cx, "invalid params passed to setTimeout");
-
-  // if (JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[0]) && JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1])) {
-  //   Script* self = (Script*)JS_GetContextOpaque(cx);
-  //   int freq = JSVAL_TO_INT(JS_ARGV(cx, vp)[1]);
-  //   self->RegisterEvent("setTimeout", JS_ARGV(cx, vp)[0]);
-  //   Event* evt = new Event;
-  //   evt->owner = self;
-  //   evt->name = "setTimeout";
-  //   evt->arg3 = new JSValue(JS_ARGV(cx, vp)[0]);
-  //   JS_SET_RVAL(cx, vp, INT_TO_JSVAL(sScriptEngine->AddDelayedEvent(evt, freq)));
-  // }
-
-  // return JS_TRUE;
-}
-
-JSAPI_FUNC(my_setInterval) {
-  JS_ThrowInternalError(ctx, "setInterval temporarily disabled during development");
-  return JS_EXCEPTION;
-
-  // JS_SET_RVAL(cx, vp, JSVAL_NULL);
-
-  // if (argc < 2 || !JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1]))
-  //   JS_ReportError(cx, "invalid params passed to setInterval");
-
-  // if (JSVAL_IS_FUNCTION(cx, JS_ARGV(cx, vp)[0]) && JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[1])) {
-  //   Script* self = (Script*)JS_GetContextOpaque(cx);
-  //   int freq = JSVAL_TO_INT(JS_ARGV(cx, vp)[1]);
-  //   self->RegisterEvent("setInterval", JS_ARGV(cx, vp)[0]);
-  //   Event* evt = new Event;
-  //   evt->owner = self;
-  //   evt->name = "setInterval";
-  //   evt->arg3 = new JSValue(JS_ARGV(cx, vp)[0]);
-  //   JS_SET_RVAL(cx, vp, INT_TO_JSVAL(sScriptEngine->AddDelayedEvent(evt, freq)));
-  // }
-
-  // return JS_TRUE;
-}
-JSAPI_FUNC(my_clearInterval) {
-  JS_ThrowInternalError(ctx, "clearInterval temporarily disabled during development");
-  return JS_EXCEPTION;
-
-  // JS_SET_RVAL(cx, vp, JSVAL_NULL);
-  // if (argc != 1 || !JSVAL_IS_NUMBER(JS_ARGV(cx, vp)[0]))
-  //   JS_ReportError(cx, "invalid params passed to clearInterval");
-
-  // sScriptEngine->RemoveDelayedEvent(JSVAL_TO_INT(JS_ARGV(cx, vp)[0]));
-  // return JS_TRUE;
-}
-
 JSAPI_FUNC(my_delay) {
   uint32_t nDelay = 0;
   if (JS_ToUint32(ctx, &nDelay, argv[0])) {
@@ -379,7 +320,7 @@ JSAPI_FUNC(my_addEventListener) {
     const char* evtName = JS_ToCString(ctx, argv[0]);
     if (evtName && strlen(evtName)) {
       Script* self = (Script*)JS_GetContextOpaque(ctx);
-      self->RegisterEvent(evtName, argv[1]);
+      self->AddEventListener(evtName, argv[1]);
     } else {
       THROW_ERROR(ctx, "Event name is invalid!");
     }
@@ -393,7 +334,7 @@ JSAPI_FUNC(my_removeEventListener) {
     const char* evtName = JS_ToCString(ctx, argv[0]);
     if (evtName && strlen(evtName)) {
       Script* self = (Script*)JS_GetContextOpaque(ctx);
-      self->UnregisterEvent(evtName, argv[1]);
+      self->RemoveEventListener(evtName, argv[1]);
     } else {
       THROW_ERROR(ctx, "Event name is invalid!");
     }
@@ -406,7 +347,7 @@ JSAPI_FUNC(my_clearEvent) {
   if (JS_IsString(argv[0])) {
     Script* self = (Script*)JS_GetContextOpaque(ctx);
     const char* evt = JS_ToCString(ctx, argv[0]);
-    self->ClearEvent(evt);
+    self->RemoveAllListeners(evt);
     JS_FreeCString(ctx, evt);
   }
   return JS_UNDEFINED;
@@ -414,7 +355,7 @@ JSAPI_FUNC(my_clearEvent) {
 
 JSAPI_FUNC(my_clearAllEvents) {
   Script* self = (Script*)JS_GetContextOpaque(ctx);
-  self->ClearAllEvents();
+  self->RemoveAllEventListeners();
   return JS_UNDEFINED;
 }
 
@@ -443,7 +384,7 @@ JSAPI_FUNC(my_scriptBroadcast) {
   if (argc < 1)
     THROW_ERROR(ctx, "You must specify something to broadcast");
 
-  ScriptBroadcastEvent(ctx, argc, argv);
+  ScriptBroadcastEvent(ctx, argv);
   return JS_NULL;
 }
 

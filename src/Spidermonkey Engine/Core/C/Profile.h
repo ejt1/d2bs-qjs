@@ -6,7 +6,7 @@
 enum ProfileType { PROFILETYPE_INVALID, PROFILETYPE_SINGLEPLAYER, PROFILETYPE_BATTLENET, PROFILETYPE_OPEN_BATTLENET, PROFILETYPE_TCPIP_HOST, PROFILETYPE_TCPIP_JOIN };
 
 class Profile {
- protected:
+ public:
   ProfileType type;
   union {
     char ip[16];
@@ -58,8 +58,6 @@ class Profile {
   Profile(ProfileType pt, const char* _charname, const char* ip) {
     init(pt, ip, "", _charname, "", 0, 5000, 5000);
   }
-
-  friend JSAPI_PROP(profile_getProperty);
 
   DWORD login(const char** error);
 

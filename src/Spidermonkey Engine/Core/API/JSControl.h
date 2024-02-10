@@ -1,66 +1,68 @@
 #pragma once
 
 #include "Control.h"
-
 #include "js32.h"
 
-#include <windows.h>
+class ControlWrap {
+ public:
+  static JSValue Instantiate(JSContext* ctx, JSValue new_target, D2WinControlStrc* control);
+  static void Initialize(JSContext* ctx, JSValue target);
 
-CLASS_CTOR(control);
-CLASS_FINALIZER(control);
+ private:
+  ControlWrap(JSContext* ctx, D2WinControlStrc* control);
 
-JSAPI_PROP(control_getProperty);
-JSAPI_STRICT_PROP(control_setProperty);
+  // properties
+  static JSValue GetText(JSContext* ctx, JSValue this_val);
+  static JSValue SetText(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetX(JSContext* ctx, JSValue this_val);
+  static JSValue GetY(JSContext* ctx, JSValue this_val);
+  static JSValue GetSizeX(JSContext* ctx, JSValue this_val);
+  static JSValue GetSizeY(JSContext* ctx, JSValue this_val);
+  static JSValue GetState(JSContext* ctx, JSValue this_val);
+  static JSValue SetState(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetPassword(JSContext* ctx, JSValue this_val);
+  static JSValue GetType(JSContext* ctx, JSValue this_val);
+  static JSValue GetCursorPos(JSContext* ctx, JSValue this_val);
+  static JSValue SetCursorPos(JSContext* ctx, JSValue this_val, JSValue val);
+  static JSValue GetSelectStart(JSContext* ctx, JSValue this_val);
+  static JSValue GetSelectEnd(JSContext* ctx, JSValue this_val);
+  static JSValue GetDisabled(JSContext* ctx, JSValue this_val);
+  static JSValue SetDisabled(JSContext* ctx, JSValue this_val, JSValue val);
 
-JSAPI_FUNC(control_getNext);
-JSAPI_FUNC(control_click);
-JSAPI_FUNC(control_setText);
-JSAPI_FUNC(control_getText);
+  // functions
+  static JSValue GetNext(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+  static JSValue Click(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+  static JSValue FreeGetText(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+  static JSValue FreeSetText(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
 
-struct JSControl {
-  DWORD _dwPrivate;
-  D2WinControlStrc* pControl;
+  // globals
+  static JSValue GetControl(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+  static JSValue GetControls(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
 
-  DWORD dwType;
-  DWORD dwX;
-  DWORD dwY;
-  DWORD dwSizeX;
-  DWORD dwSizeY;
-};
+  static inline JSClassID m_class_id = 0;
+  static inline JSCFunctionListEntry m_proto_funcs[] = {
+      JS_CGETSET_DEF("text", GetText, SetText),
+      JS_CGETSET_DEF("x", GetX, nullptr),
+      JS_CGETSET_DEF("y", GetY, nullptr),
+      JS_CGETSET_DEF("xsize", GetSizeX, nullptr),
+      JS_CGETSET_DEF("ysize", GetSizeY, nullptr),
+      JS_CGETSET_DEF("state", GetState, SetState),
+      JS_CGETSET_DEF("password", GetPassword, nullptr),
+      JS_CGETSET_DEF("type", GetType, nullptr),
+      JS_CGETSET_DEF("cursorpos", GetCursorPos, SetCursorPos),
+      JS_CGETSET_DEF("selectstart", GetSelectStart, nullptr),
+      JS_CGETSET_DEF("selectend", GetSelectEnd, nullptr),
+      JS_CGETSET_DEF("disabled", GetDisabled, SetDisabled),
 
-enum control_tinyid {
-  CONTROL_TEXT,
-  CONTROL_X,
-  CONTROL_Y,
-  CONTROL_XSIZE,
-  CONTROL_YSIZE,
-  CONTROL_STATE,
-  CONTROL_MAXLENGTH,
-  CONTROL_TYPE,
-  CONTROL_VISIBLE,
-  CONTROL_CURSORPOS,
-  CONTROL_SELECTSTART,
-  CONTROL_SELECTEND,
-  CONTROL_PASSWORD,
-  CONTROL_DISABLED
-};
+      JS_FS("getNext", GetNext, 0, FUNCTION_FLAGS),
+      JS_FS("click", Click, 0, FUNCTION_FLAGS),
+      JS_FS("getText", FreeGetText, 0, FUNCTION_FLAGS),
+      JS_FS("setText", FreeSetText, 1, FUNCTION_FLAGS),
+  };
 
-static JSCFunctionListEntry control_proto_funcs[] = {
-    JS_CGETSET_MAGIC_DEF("text", control_getProperty, control_setProperty, CONTROL_TEXT),
-    JS_CGETSET_MAGIC_DEF("x", control_getProperty, nullptr, CONTROL_X),
-    JS_CGETSET_MAGIC_DEF("y", control_getProperty, nullptr, CONTROL_Y),
-    JS_CGETSET_MAGIC_DEF("xsize", control_getProperty, nullptr, CONTROL_XSIZE),
-    JS_CGETSET_MAGIC_DEF("ysize", control_getProperty, nullptr, CONTROL_YSIZE),
-    JS_CGETSET_MAGIC_DEF("state", control_getProperty, control_setProperty, CONTROL_STATE),
-    JS_CGETSET_MAGIC_DEF("password", control_getProperty, nullptr, CONTROL_PASSWORD),
-    JS_CGETSET_MAGIC_DEF("type", control_getProperty, nullptr, CONTROL_TYPE),
-    JS_CGETSET_MAGIC_DEF("cursorpos", control_getProperty, control_setProperty, CONTROL_CURSORPOS),
-    JS_CGETSET_MAGIC_DEF("selectstart", control_getProperty, nullptr, CONTROL_SELECTSTART),
-    JS_CGETSET_MAGIC_DEF("selectend", control_getProperty, nullptr, CONTROL_SELECTEND),
-    JS_CGETSET_MAGIC_DEF("disabled", control_getProperty, control_setProperty, CONTROL_DISABLED),
-
-    JS_FS("getNext", control_getNext, 0, FUNCTION_FLAGS),
-    JS_FS("click", control_click, 0, FUNCTION_FLAGS),
-    JS_FS("setText", control_setText, 1, FUNCTION_FLAGS),
-    JS_FS("getText", control_getText, 0, FUNCTION_FLAGS),
+  uint32_t dwType;
+  uint32_t dwX;
+  uint32_t dwY;
+  uint32_t dwSizeX;
+  uint32_t dwSizeY;
 };

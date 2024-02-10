@@ -11,13 +11,12 @@
 #include "Helpers.h"
 
 // internal ForEachScript helper functions
-bool __fastcall DisposeScript(Script* script, void*, uint32_t) {
+bool __fastcall DisposeScript(Script* script, void*) {
   sScriptEngine->DisposeScript(script);
   return true;
 }
 
-bool __fastcall StopScript(Script* script, void* argv, uint32_t /*argc*/) {
-  script->TriggerOperationCallback();
+bool __fastcall StopScript(Script* script, void* argv) {
   if (script->GetMode() != kScriptModeCommand)
     script->Stop(*(bool*)(argv));
   return true;
@@ -57,7 +56,7 @@ void ScriptEngine::Shutdown(void) {
   m_console->Stop(true);
 
   // clear all scripts now that they're stopped
-  ForEachScript(::DisposeScript, NULL, 0);
+  ForEachScript(::DisposeScript, NULL);
 
   if (!m_scripts.empty())
     m_scripts.clear();
@@ -98,7 +97,7 @@ void ScriptEngine::FlushCache(void) {
 
   isFlushing = true;
 
-  ForEachScript(::DisposeScript, NULL, 0);
+  ForEachScript(::DisposeScript, NULL);
 
   isFlushing = false;
 
@@ -127,9 +126,9 @@ void ScriptEngine::DisposeScript(Script* script) {
     delete script;
   else {
     // bad things happen if we delete from another thread
-    Event* evt = new Event;
+    std::shared_ptr<Event> evt = std::make_shared<Event>();
     evt->name = "DisposeMe";
-    script->FireEvent(evt);
+    script->DispatchEvent(evt);
   }
 }
 
@@ -143,7 +142,7 @@ void ScriptEngine::UnLockScriptList(const char* /*loc*/) {
   LeaveCriticalSection(&m_scriptListLock);
 }
 
-bool ScriptEngine::ForEachScript(ScriptCallback callback, void* argv, uint32_t argc) {
+bool ScriptEngine::ForEachScript(ScriptCallback callback, void* argv) {
   if (callback == NULL || m_scripts.size() < 1)
     return false;
   bool block = false;
@@ -159,7 +158,7 @@ bool ScriptEngine::ForEachScript(ScriptCallback callback, void* argv, uint32_t a
   int count = list.size();
   // damn std::iterator not supporting manipulating the list...
   for (int i = 0; i < count; i++) {
-    if (callback(list[i], argv, argc))
+    if (callback(list[i], argv))
       block = true;
   }
 
@@ -181,14 +180,14 @@ unsigned int ScriptEngine::GetCount(bool active, bool unexecuted) {
 }
 
 void ScriptEngine::StopAll(bool forceStop) {
-  ForEachScript(StopScript, &forceStop, 1);
+  ForEachScript(StopScript, &forceStop);
 }
 
 void ScriptEngine::UpdateConsole() {
   m_console->UpdatePlayerGid();
 }
 
-bool __fastcall StopIngameScript(Script* script, void*, uint32_t) {
+bool __fastcall StopIngameScript(Script* script, void*) {
   if (script->GetMode() == kScriptModeGame)
     script->Stop(true);
   return true;

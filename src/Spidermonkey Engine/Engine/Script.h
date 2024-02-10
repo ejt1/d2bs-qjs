@@ -10,6 +10,8 @@
 #include "JSUnit.h"
 #include "Events.h"
 
+#include <uv.h>
+
 typedef std::map<std::string, bool> IncludeList;
 typedef std::map<std::string, FunctionList> FunctionMap;
 
@@ -21,6 +23,13 @@ enum ScriptState {
   kScriptStateRunning,
   kScriptStateRequestStop,
   kScriptStateStopped,
+};
+
+struct ThreadState {
+  class Script* script;
+  uv_loop_t* loop;
+  DWORD id;
+  HANDLE handle;
 };
 
 class Script {
@@ -45,11 +54,6 @@ class Script {
   bool IsAborted(void);
   void RunCommand(const char* command);
 
-  inline void TriggerOperationCallback(void) {
-    //if (m_hasActiveCX)
-    //  JS_TriggerOperationCallback(m_runtime);
-  }
-
   inline void SetPauseState(bool reallyPaused) {
     m_isReallyPaused = reallyPaused;
   }
@@ -72,7 +76,8 @@ class Script {
     return m_scriptMode;
   }
 
-  DWORD GetThreadId(void);
+  ThreadState* GetThreadState();
+  DWORD GetThreadId();
 
   // UGLY HACK to fix up the player gid on game join for cached scripts/oog scripts
   void UpdatePlayerGid(void);
@@ -80,31 +85,26 @@ class Script {
   bool IsIncluded(const char* file);
   bool Include(const char* file);
 
-  bool IsListenerRegistered(const char* evtName);
-  void RegisterEvent(const char* evtName, JSValue evtFunc);
-  bool IsRegisteredEvent(const char* evtName, JSValue evtFunc);
-  void UnregisterEvent(const char* evtName, JSValue evtFunc);
-  void ClearEvent(const char* evtName);
-  void ClearAllEvents(void);
-  void FireEvent(Event*);
+  size_t GetListenerCount(const char* evtName, JSValue evtFunc = JS_UNDEFINED);
+  void AddEventListener(const char* evtName, JSValue evtFunc);
+  void RemoveEventListener(const char* evtName, JSValue evtFunc);
+  void RemoveAllListeners(const char* evtName);
+  void RemoveAllEventListeners();
+  void DispatchEvent(std::shared_ptr<Event> evt);
 
-  void ClearEventList();
   // blocks the executing thread for X milliseconds, keeping the event loop running during this time
   void BlockThread(DWORD delay);
-  void ExecuteEvent(char* evtName, int argc, const JSValue* argv, bool* block = nullptr);
-  //void ExecuteEvent(char* evtName, const JS::AutoValueVector& args, bool* block = nullptr);
-
-  void OnDestroyContext();
-
-  // public because PacketEventCallback calls this directly
-  bool HandleEvent(Event* evt, bool clearList);
+  bool HandleEvent(std::shared_ptr<Event> evt, bool clearList);
 
  private:
   bool Initialize();
   void Cleanup();
 
   void RunMain();
+
   bool RunEventLoop();
+  void PurgeEventList();
+  void ExecuteEvent(char* evtName, int argc, const JSValue* argv, bool* block = nullptr);
   bool ProcessAllEvents();
 
   static int InterruptHandler(JSRuntime* rt, void* opaque);
@@ -113,23 +113,17 @@ class Script {
   ScriptMode m_scriptMode;
   std::atomic<ScriptState> m_scriptState;
 
+  ThreadState m_threadState;
+  uv_loop_t m_loop;
   JSRuntime* m_runtime;
   JSContext* m_context;
   JSValue m_globalObject;
   JSValue m_script;
-  JSUnit* m_me;
-  uint32_t m_argc;
-  //JSAutoStructuredCloneBuffer** m_argv;
-  DWORD m_LastGC;
-  // wtf is this trying to do anyway, why not just check m_context or m_runtime?
-  bool m_hasActiveCX;  // hack to get away from JS_IsRunning
-
-  DWORD m_threadId;
-  HANDLE m_threadHandle;
+  UnitWrap::UnitData* m_me;
 
   FunctionMap m_functions;
   HANDLE m_eventSignal;
-  std::list<Event*> m_EventList;
+  std::list<std::shared_ptr<Event>> m_EventList;
 
   bool m_isPaused, m_isReallyPaused;
 
