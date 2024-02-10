@@ -1633,7 +1633,9 @@ Attack.pwnDia = function () {
         if (me.mp > manaStatic + manaTP + manaTP
           && diabloMissiles.length < 3 && !dia.attacking
           && dia.hpPercent > Config.CastStatic) {
-          let [x, y] = me;
+          //let [x, y] = me; // BUG(ejt): TypeError: value is not iterable
+          let x = me.x;
+          let y = me.y;
           ClassAttack.switchCurse(dia, true); // curse him if we can
           // re-check his mode
           if (!dia.attacking) {
