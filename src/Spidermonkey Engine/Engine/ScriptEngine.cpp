@@ -126,7 +126,7 @@ void ScriptEngine::DisposeScript(Script* script) {
     delete script;
   else {
     // bad things happen if we delete from another thread
-    Event* evt = new Event;
+    std::shared_ptr<Event> evt = std::make_shared<Event>();
     evt->name = "DisposeMe";
     script->DispatchEvent(evt);
   }

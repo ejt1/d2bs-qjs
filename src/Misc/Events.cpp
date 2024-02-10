@@ -1,14 +1,14 @@
 #include "ScriptEngine.h"
 #include "Engine.h"
 
-#include "Core.h" // Print
+#include "Core.h"  // Print
 
 bool __fastcall LifeEventCallback(Script* script, void* argv) {
   SingleArgHelper* helper = (SingleArgHelper*)argv;
   if (script->IsRunning() && script->GetListenerCount("melife") > 0) {
-    Event* evt = new Event;
+    std::shared_ptr<HealthManaEvent> evt = std::make_shared<HealthManaEvent>();
     evt->name = "melife";
-    evt->arg1 = new DWORD(helper->arg1);
+    evt->value = helper->arg1;
 
     script->DispatchEvent(evt);
   }
@@ -23,9 +23,9 @@ void LifeEvent(DWORD dwLife) {
 bool __fastcall ManaEventCallback(Script* script, void* argv) {
   SingleArgHelper* helper = (SingleArgHelper*)argv;
   if (script->IsRunning() && script->GetListenerCount("memana") > 0) {
-    Event* evt = new Event;
+    std::shared_ptr<HealthManaEvent> evt = std::make_shared<HealthManaEvent>();
     evt->name = "memana";
-    evt->arg1 = new DWORD(helper->arg1);
+    evt->value = helper->arg1;
 
     script->DispatchEvent(evt);
   }
@@ -41,30 +41,27 @@ bool __fastcall KeyEventCallback(Script* script, void* argv) {
   KeyEventHelper* helper = (KeyEventHelper*)argv;
   const char* name = (helper->up ? "keyup" : "keydown");
   if (script->IsRunning() && script->GetListenerCount(name) > 0) {
-    Event* evt = new Event;
+    std::shared_ptr<KeyEvent> evt = std::make_shared<KeyEvent>();
     evt->name = name;
-    evt->arg1 = new DWORD((DWORD)helper->key);
+    evt->key = static_cast<uint32_t>(helper->key);
 
     script->DispatchEvent(evt);
   }
   bool block = false;
   name = (helper->up ? "keyupblocker" : "keydownblocker");
   if (script->IsRunning() && script->GetListenerCount(name) > 0) {
-    Event* evt = new Event;
+    std::shared_ptr<KeyEvent> evt = std::make_shared<KeyEvent>();
     evt->name = name;
-    evt->arg1 = new DWORD((DWORD)helper->key);
-    evt->arg4 = new DWORD(false);
-    ResetEvent(Vars.eventSignal);
-    script->DispatchEvent(evt);
+    evt->key = static_cast<uint32_t>(helper->key);
 
-    if (WaitForSingleObject(Vars.eventSignal, 1000) == WAIT_TIMEOUT)
-      return false;
+    {
+      ResetEvent(Vars.eventSignal);
+      script->DispatchEvent(evt);
+      if (WaitForSingleObject(Vars.eventSignal, 1000) == WAIT_TIMEOUT)
+        return false;
+    }
 
-    bool* global = (bool*)evt->arg4;
-    block = *global;
-    delete evt->arg1;
-    delete evt->arg4;
-    delete evt;
+    block = evt->block;
   }
 
   return block;
@@ -78,9 +75,9 @@ bool KeyDownUpEvent(WPARAM key, BYTE bUp) {
 bool __fastcall PlayerAssignCallback(Script* script, void* argv) {
   SingleArgHelper* helper = (SingleArgHelper*)argv;
   if (script->IsRunning() && script->GetListenerCount("playerassign") > 0) {
-    Event* evt = new Event;
+    std::shared_ptr<PlayerAssignedEvent> evt = std::make_shared<PlayerAssignedEvent>();
     evt->name = "playerassign";
-    evt->arg1 = new DWORD((DWORD)helper->arg1);
+    evt->id = helper->arg1;
 
     script->DispatchEvent(evt);
   }
@@ -95,12 +92,12 @@ void PlayerAssignEvent(DWORD dwUnitId) {
 bool __fastcall MouseClickCallback(Script* script, void* argv) {
   QuadArgHelper* helper = (QuadArgHelper*)argv;
   if (script->IsRunning() && script->GetListenerCount("mouseclick") > 0) {
-    Event* evt = new Event;
+    std::shared_ptr<MouseEvent> evt = std::make_shared<MouseEvent>();
     evt->name = "mouseclick";
-    evt->arg1 = new DWORD(helper->arg1);
-    evt->arg2 = new DWORD(helper->arg2);
-    evt->arg3 = new DWORD(helper->arg3);
-    evt->arg4 = new DWORD(helper->arg4);
+    evt->x = helper->arg2;
+    evt->y = helper->arg3;
+    evt->button = helper->arg1;
+    evt->state = helper->arg4;
 
     script->DispatchEvent(evt);
   }
@@ -115,10 +112,10 @@ void MouseClickEvent(int button, POINT pt, bool bUp) {
 bool __fastcall MouseMoveCallback(Script* script, void* argv) {
   DoubleArgHelper* helper = (DoubleArgHelper*)argv;
   if (script->IsRunning() && script->GetListenerCount("mousemove") > 0) {
-    Event* evt = new Event;
+    std::shared_ptr<MouseEvent> evt = std::make_shared<MouseEvent>();
     evt->name = "mousemove";
-    evt->arg1 = new DWORD(helper->arg1);
-    evt->arg2 = new DWORD(helper->arg2);
+    evt->x = helper->arg1;
+    evt->y = helper->arg2;
 
     script->DispatchEvent(evt);
   }
@@ -144,7 +141,7 @@ bool ScriptMessageEvent(JSContext* ctx, Script* script, JSValue obj) {
       return false;
     }
 
-    Event* evt = new Event;
+    std::shared_ptr<ScriptMsgEvent> evt = std::make_shared<ScriptMsgEvent>();
     evt->name = "scriptmsg";
 
     // write data
@@ -194,10 +191,10 @@ void ScriptBroadcastEvent(JSContext* cx, JSValue* args) {
 bool __fastcall ChatEventCallback(Script* script, void* argv) {
   ChatEventHelper* helper = (ChatEventHelper*)argv;
   if (script->IsRunning() && script->GetListenerCount(helper->name) > 0) {
-    Event* evt = new Event;
+    std::shared_ptr<ChatMessageEvent> evt = std::make_shared<ChatMessageEvent>();
     evt->name = helper->name;
-    evt->arg1 = _strdup(helper->nick);
-    evt->arg2 = _strdup(helper->msg);
+    evt->nickname = helper->nick ? helper->nick : "";
+    evt->msg = helper->msg ? helper->msg : "";
 
     script->DispatchEvent(evt);
   }
@@ -206,22 +203,19 @@ bool __fastcall ChatEventCallback(Script* script, void* argv) {
   bool block = false;
 
   if (script->IsRunning() && script->GetListenerCount(evtname.c_str()) > 0) {
-    Event* evt = new Event;
+    std::shared_ptr<ChatMessageEvent> evt = std::make_shared<ChatMessageEvent>();
     evt->name = evtname;
-    evt->arg1 = _strdup(helper->nick);
-    evt->arg2 = _strdup(helper->msg);
-    evt->arg4 = new DWORD(false);
-    ResetEvent(Vars.eventSignal);
-    script->DispatchEvent(evt);
+    evt->nickname = helper->nick ? helper->nick : "";
+    evt->msg = helper->msg ? helper->msg : "";
 
-    if (WaitForSingleObject(Vars.eventSignal, 500) == WAIT_TIMEOUT)
-      return false;
+    {
+      ResetEvent(Vars.eventSignal);
+      script->DispatchEvent(evt);
+      if (WaitForSingleObject(Vars.eventSignal, 500) == WAIT_TIMEOUT)
+        return false;
+    }
 
-    block = (*(DWORD*)evt->arg4);
-    free(evt->arg1);
-    free(evt->arg2);
-    delete evt->arg4;
-    delete evt;
+    block = evt->block;
   }
   return block;
 }
@@ -244,10 +238,10 @@ bool WhisperEvent(const char* lpszNick, const char* lpszMsg) {
 bool __fastcall CopyDataCallback(Script* script, void* argv) {
   CopyDataHelper* helper = (CopyDataHelper*)argv;
   if (script->IsRunning() && script->GetListenerCount("copydata") > 0) {
-    Event* evt = new Event;
+    std::shared_ptr<CopyDataMessageEvent> evt = std::make_shared<CopyDataMessageEvent>();
     evt->name = "copydata";
-    evt->arg1 = new DWORD(helper->mode);
-    evt->arg2 = _strdup(helper->msg);
+    evt->mode = helper->mode;
+    evt->msg = helper->msg ? helper->msg : "";
 
     script->DispatchEvent(evt);
   }
@@ -262,12 +256,12 @@ void CopyDataEvent(DWORD dwMode, const char* lpszMsg) {
 bool __fastcall ItemEventCallback(Script* script, void* argv) {
   ItemEventHelper* helper = (ItemEventHelper*)argv;
   if (script->IsRunning() && script->GetListenerCount("itemaction") > 0) {
-    Event* evt = new Event;
+    std::shared_ptr<ItemEvent> evt = std::make_shared<ItemEvent>();
     evt->name = "itemaction";
-    evt->arg1 = new DWORD(helper->id);
-    evt->arg2 = _strdup(helper->code);
-    evt->arg3 = new DWORD(helper->mode);
-    evt->arg4 = new bool(helper->global);
+    evt->id = helper->id;
+    evt->code = helper->code;
+    evt->mode = helper->mode;
+    evt->global = helper->global;
 
     script->DispatchEvent(evt);
   }
@@ -282,13 +276,13 @@ void ItemActionEvent(DWORD GID, char* Code, BYTE Mode, bool Global) {
 bool __fastcall GameActionEventCallback(Script* script, void* argv) {
   GameActionEventHelper* helper = (GameActionEventHelper*)argv;
   if (script->IsRunning() && script->GetListenerCount("gameevent") > 0) {
-    Event* evt = new Event;
+    std::shared_ptr<GameEvent> evt = std::make_shared<GameEvent>();
     evt->name = "gameevent";
-    evt->arg1 = new BYTE(helper->mode);
-    evt->arg2 = new DWORD(helper->param1);
-    evt->arg3 = new DWORD(helper->param2);
-    evt->arg4 = _strdup(helper->name1);
-    evt->arg5 = _strdup(helper->name2);
+    evt->mode = helper->mode;
+    evt->param1 = helper->param1;
+    evt->param2 = helper->param2;
+    evt->name1 = helper->name1 ? helper->name1 : "";
+    evt->name2 = helper->name2 ? helper->name2 : "";
 
     script->DispatchEvent(evt);
   }
@@ -304,17 +298,15 @@ bool __fastcall PacketEventCallback(Script* script, void* argv) {
   PacketEventHelper* helper = (PacketEventHelper*)argv;
 
   if (script->IsRunning() && script->GetListenerCount(helper->name) > 0) {
-    Event* evt = new Event;
+    std::shared_ptr<PacketEvent> evt = std::make_shared<PacketEvent>();
     evt->name = helper->name;
-    evt->arg1 = new BYTE[helper->dwSize];
-    evt->arg2 = new DWORD(helper->dwSize);
-    evt->arg4 = new DWORD(false);
-    memcpy(evt->arg1, helper->pPacket, helper->dwSize);
+    evt->bytes.resize(helper->dwSize);
+    memcpy(evt->bytes.data(), helper->pPacket, helper->dwSize);
 
     // TODO(ejt): this is a mess but can't fix until scripting is single-threaded
-    if (GetCurrentThreadId() == script->GetThreadId())
+    if (GetCurrentThreadId() == script->GetThreadId()) {
       script->HandleEvent(evt, false);
-    else {
+    } else {
       ResetEvent(Vars.eventSignal);
       script->DispatchEvent(evt);
       static DWORD result;
@@ -328,12 +320,7 @@ bool __fastcall PacketEventCallback(Script* script, void* argv) {
         return false;
     }
 
-    bool retval = (*(DWORD*)evt->arg4);
-    delete[] evt->arg1;
-    delete evt->arg2;
-    delete evt->arg4;
-    delete evt;
-    return retval;
+    return evt->block;
   }
 
   return false;
@@ -357,39 +344,32 @@ bool RealmPacketEvent(BYTE* pPacket, DWORD dwSize) {
 bool GenhookClickEvent(Script* script, int button, POINT* loc, JSValue func) {
   bool block = false;
   if (script && JS_IsFunction(script->GetContext(), func)) {
-    Event* evt = new Event;
+    std::shared_ptr<GenHookEvent> evt = std::make_shared<GenHookEvent>();
     evt->name = "ScreenHookClick";
-    evt->arg1 = new DWORD((DWORD)button);
-    evt->arg2 = new DWORD((DWORD)loc->x);
-    evt->arg3 = new DWORD((DWORD)loc->y);
-    evt->arg4 = new DWORD(false);
+    evt->x = loc->x;
+    evt->y = loc->y;
+    evt->button = button;
+    evt->callback = JS_DupValue(script->GetContext(), func);
 
-    ResetEvent(Vars.eventSignal);
-    evt->functions.push_back(JS_DupValue(script->GetContext(), func));
-    script->DispatchEvent(evt);
+    {
+      ResetEvent(Vars.eventSignal);
+      script->DispatchEvent(evt);
+      if (WaitForSingleObject(Vars.eventSignal, 3000) == WAIT_TIMEOUT)
+        return false;
+    }
 
-    if (WaitForSingleObject(Vars.eventSignal, 3000) == WAIT_TIMEOUT)
-      return false;
-    bool* global = (bool*)evt->arg4;
-    block = *global;
-    delete evt->arg1;
-    delete evt->arg2;
-    delete evt->arg3;
-    delete evt->arg4;
-    JS_FreeValue(script->GetContext(), func);
-    delete evt;
+    block = evt->block;
   }
   return block;
 }
 
 void GenhookHoverEvent(Script* script, POINT* loc, JSValue func) {
   if (script && JS_IsFunction(script->GetContext(), func)) {
-    Event* evt = new Event;
-    // evt->owner = owner;
-    evt->functions.push_back(JS_DupValue(script->GetContext(), func));
+    std::shared_ptr<GenHookEvent> evt = std::make_shared<GenHookEvent>();
     evt->name = "ScreenHookHover";
-    evt->arg1 = new DWORD((DWORD)loc->x);
-    evt->arg2 = new DWORD((DWORD)loc->y);
+    evt->x = loc->x;
+    evt->y = loc->y;
+    evt->callback = JS_DupValue(script->GetContext(), func);
 
     script->DispatchEvent(evt);
   }

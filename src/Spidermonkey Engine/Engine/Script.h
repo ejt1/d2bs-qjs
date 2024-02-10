@@ -90,11 +90,11 @@ class Script {
   void RemoveEventListener(const char* evtName, JSValue evtFunc);
   void RemoveAllListeners(const char* evtName);
   void RemoveAllEventListeners();
-  void DispatchEvent(Event* evt);
+  void DispatchEvent(std::shared_ptr<Event> evt);
 
   // blocks the executing thread for X milliseconds, keeping the event loop running during this time
   void BlockThread(DWORD delay);
-  bool HandleEvent(Event* evt, bool clearList);
+  bool HandleEvent(std::shared_ptr<Event> evt, bool clearList);
 
  private:
   bool Initialize();
@@ -123,7 +123,7 @@ class Script {
 
   FunctionMap m_functions;
   HANDLE m_eventSignal;
-  std::list<Event*> m_EventList;
+  std::list<std::shared_ptr<Event>> m_EventList;
 
   bool m_isPaused, m_isReallyPaused;
 

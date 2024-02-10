@@ -2,28 +2,87 @@
 
 #include "js32.h"
 
+#include <condition_variable>
+#include <mutex>
 #include <windows.h>
 
 class Script;
 typedef std::list<JSValue> FunctionList;
 
 struct Event {
-  Event()
-      :  arg1(nullptr), arg2(nullptr), arg3(nullptr), arg4(nullptr), arg5(nullptr), data(nullptr), data_len(0), sab_tab(nullptr), sab_tab_len(0){};
-  FunctionList functions;
-  std::string name;
-  void* arg1;
-  void* arg2;
-  void* arg3;
-  void* arg4;
-  void* arg5;
+  Event() : block(false){};
+  virtual ~Event() {
+  }
 
-  // new
+  std::string name;
+  bool block;
+};
+
+struct HealthManaEvent : Event {
+  uint32_t value;
+};
+
+struct KeyEvent : Event {
+  uint32_t key;
+};
+
+struct PlayerAssignedEvent : Event {
+  uint32_t id;
+};
+
+struct MouseEvent : Event {
+  uint32_t x;
+  uint32_t y;
+  uint32_t button;
+  uint32_t state;
+};
+
+struct ScriptMsgEvent : Event {
   uint8_t* data;
   size_t data_len;
 
   uint8_t** sab_tab;
   size_t sab_tab_len;
+};
+
+struct ChatMessageEvent : Event {
+  std::string nickname;
+  std::string msg;
+};
+
+struct CopyDataMessageEvent : Event {
+  uint32_t mode;
+  std::string msg;
+};
+
+struct ItemEvent : Event {
+  uint32_t id;
+  std::string code;  // could be char[4] too
+  uint16_t mode;
+  bool global;  // ?
+};
+
+struct GameEvent : Event {
+  uint8_t mode;
+  uint32_t param1;
+  uint32_t param2;
+  std::string name1;
+  std::string name2;
+};
+
+struct PacketEvent : Event {
+  std::vector<uint8_t> bytes;
+};
+
+struct GenHookEvent : Event {
+  uint32_t x;
+  uint32_t y;
+  uint32_t button;
+  JSValue callback;
+};
+
+struct CommandEvent : Event {
+  std::string command;
 };
 
 bool ChatEvent(const char* lpszNick, const char* lpszMsg);

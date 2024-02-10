@@ -151,9 +151,9 @@ bool Script::IsAborted() {
 }
 
 void Script::RunCommand(const char* command) {
-  Event* evt = new Event;
+  std::shared_ptr<CommandEvent> evt = std::make_shared<CommandEvent>();
   evt->name = "Command";
-  evt->arg1 = _strdup(command);
+  evt->command = command;
   DispatchEvent(evt);
 }
 
@@ -302,7 +302,7 @@ void Script::RemoveAllEventListeners() {
   LeaveCriticalSection(&m_lock);
 }
 
-void Script::DispatchEvent(Event* evt) {
+void Script::DispatchEvent(std::shared_ptr<Event> evt) {
   EnterCriticalSection(&Vars.cEventSection);
   m_EventList.push_front(evt);
   LeaveCriticalSection(&Vars.cEventSection);
@@ -491,7 +491,6 @@ bool Script::RunEventLoop() {
   if (pause)
     SetPauseState(false);
 
-  ThreadState* ts = static_cast<ThreadState*>(JS_GetRuntimeOpaque(m_runtime));
   uv_run(&m_loop, UV_RUN_NOWAIT);
   JSContext* ctx;
   for (;;) {
@@ -511,7 +510,7 @@ bool Script::RunEventLoop() {
 void Script::PurgeEventList() {
   while (m_EventList.size() > 0) {
     EnterCriticalSection(&Vars.cEventSection);
-    Event* evt = m_EventList.back();
+    std::shared_ptr<Event> evt = m_EventList.back();
     m_EventList.pop_back();
     LeaveCriticalSection(&Vars.cEventSection);
     HandleEvent(evt, true);  // clean list and pop events
@@ -535,21 +534,17 @@ void Script::ExecuteEvent(char* evtName, int argc, const JSValue* argv, bool* bl
   }
 }
 
-bool Script::HandleEvent(Event* evt, bool clearList) {
+bool Script::HandleEvent(std::shared_ptr<Event> evt, bool clearList) {
   char* evtName = (char*)evt->name.c_str();
 
   if (strcmp(evtName, "itemaction") == 0) {
     if (!clearList) {
-      DWORD* gid = (DWORD*)evt->arg1;
-      char* code = (char*)evt->arg2;
-      DWORD* mode = (DWORD*)evt->arg3;
-      bool* global = (bool*)evt->arg4;
-
+      std::shared_ptr<ItemEvent> itemEvt = std::dynamic_pointer_cast<ItemEvent>(evt);
       JSValue args[] = {
-          JS_NewUint32(m_context, *gid),
-          JS_NewUint32(m_context, *mode),
-          JS_NewString(m_context, code),
-          JS_NewBool(m_context, *global),
+          JS_NewUint32(m_context, itemEvt->id),
+          JS_NewUint32(m_context, itemEvt->mode),
+          JS_NewString(m_context, itemEvt->code.c_str()),
+          JS_NewBool(m_context, itemEvt->global),
       };
 
       ExecuteEvent(evtName, _countof(args), args);
@@ -558,21 +553,18 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
         JS_FreeValue(m_context, args[i]);
       }
     }
-    delete evt->arg1;
-    free(evt->arg2);
-    delete evt->arg3;
-    delete evt->arg4;
-    delete evt;
+
     return true;
   }
   if (strcmp(evtName, "gameevent") == 0) {
     if (!clearList) {
+      std::shared_ptr<GameEvent> gameEvt = std::dynamic_pointer_cast<GameEvent>(evt);
       JSValue args[] = {
-          JS_NewUint32(m_context, *(BYTE*)evt->arg1),
-          JS_NewUint32(m_context, *(DWORD*)evt->arg2),
-          JS_NewUint32(m_context, *(DWORD*)evt->arg3),
-          evt->arg4 ? JS_NewString(m_context, (const char*)evt->arg4) : JS_UNDEFINED,
-          evt->arg5 ? JS_NewString(m_context, (const char*)evt->arg5) : JS_UNDEFINED,
+          JS_NewUint32(m_context, gameEvt->mode),
+          JS_NewUint32(m_context, gameEvt->param1),
+          JS_NewUint32(m_context, gameEvt->param2),
+          !gameEvt->name1.empty() ? JS_NewString(m_context, gameEvt->name1.c_str()) : JS_UNDEFINED,
+          !gameEvt->name2.empty() ? JS_NewString(m_context, gameEvt->name2.c_str()) : JS_UNDEFINED,
       };
 
       ExecuteEvent(evtName, _countof(args), args);
@@ -581,19 +573,15 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
         JS_FreeValue(m_context, args[i]);
       }
     }
-    delete evt->arg1;
-    delete evt->arg2;
-    delete evt->arg3;
-    free(evt->arg4);
-    free(evt->arg5);
-    delete evt;
+
     return true;
   }
   if (strcmp(evtName, "copydata") == 0) {
     if (!clearList) {
+      std::shared_ptr<CopyDataMessageEvent> dataEvt = std::dynamic_pointer_cast<CopyDataMessageEvent>(evt);
       JSValue args[] = {
-          JS_NewUint32(m_context, *(DWORD*)evt->arg1),
-          evt->arg2 ? JS_NewString(m_context, (const char*)evt->arg2) : JS_UNDEFINED,
+          JS_NewUint32(m_context, dataEvt->mode),
+          !dataEvt->msg.empty() ? JS_NewString(m_context, dataEvt->msg.c_str()) : JS_UNDEFINED,
       };
 
       ExecuteEvent(evtName, _countof(args), args);
@@ -602,18 +590,17 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
         JS_FreeValue(m_context, args[i]);
       }
     }
-    delete evt->arg1;
-    free(evt->arg2);
-    delete evt;
+
     return true;
   }
   if (strcmp(evtName, "chatmsg") == 0 || strcmp(evtName, "chatinput") == 0 || strcmp(evtName, "whispermsg") == 0 || strcmp(evtName, "chatmsgblocker") == 0 ||
       strcmp(evtName, "chatinputblocker") == 0 || strcmp(evtName, "whispermsgblocker") == 0) {
     bool block = false;
     if (!clearList) {
+      std::shared_ptr<ChatMessageEvent> chatEvt = std::dynamic_pointer_cast<ChatMessageEvent>(evt);
       JSValue args[] = {
-          evt->arg1 ? JS_NewString(m_context, (const char*)evt->arg1) : JS_UNDEFINED,
-          evt->arg2 ? JS_NewString(m_context, (const char*)evt->arg2) : JS_UNDEFINED,
+          !chatEvt->nickname.empty() ? JS_NewString(m_context, chatEvt->nickname.c_str()) : JS_UNDEFINED,
+          !chatEvt->msg.empty() ? JS_NewString(m_context, chatEvt->msg.c_str()) : JS_UNDEFINED,
       };
 
       ExecuteEvent(evtName, _countof(args), args, &block);
@@ -623,20 +610,17 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
       }
     }
     if (strcmp(evtName, "chatmsgblocker") == 0 || strcmp(evtName, "chatinputblocker") == 0 || strcmp(evtName, "whispermsgblocker") == 0) {
-      *(DWORD*)evt->arg4 = block;
+      evt->block = block;
       SetEvent(Vars.eventSignal);
-    } else {
-      free(evt->arg1);
-      free(evt->arg2);
-      delete evt;
     }
     return true;
   }
   if (strcmp(evtName, "mousemove") == 0) {
     if (!clearList) {
+      std::shared_ptr<MouseEvent> mouseEvt = std::dynamic_pointer_cast<MouseEvent>(evt);
       JSValue args[] = {
-          JS_NewUint32(m_context, *(DWORD*)evt->arg1),
-          JS_NewUint32(m_context, *(DWORD*)evt->arg2),
+          JS_NewUint32(m_context, mouseEvt->x),
+          JS_NewUint32(m_context, mouseEvt->y),
       };
 
       ExecuteEvent(evtName, _countof(args), args);
@@ -645,16 +629,15 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
         JS_FreeValue(m_context, args[i]);
       }
     }
-    delete evt->arg1;
-    delete evt->arg2;
-    delete evt;
+
     return true;
   }
   if (strcmp(evtName, "ScreenHookHover") == 0) {
+    std::shared_ptr<GenHookEvent> genHookEvt = std::dynamic_pointer_cast<GenHookEvent>(evt);
     if (!clearList) {
       JSValue args[] = {
-          JS_NewUint32(m_context, *(DWORD*)evt->arg1),
-          JS_NewUint32(m_context, *(DWORD*)evt->arg2),
+          JS_NewUint32(m_context, genHookEvt->x),
+          JS_NewUint32(m_context, genHookEvt->y),
       };
 
       ExecuteEvent(evtName, _countof(args), args);
@@ -663,18 +646,18 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
         JS_FreeValue(m_context, args[i]);
       }
     }
-    delete evt->arg1;
-    delete evt->arg2;
-    delete evt;
+    JS_FreeValue(m_context, genHookEvt->callback);
+
     return true;
   }
   if (strcmp(evtName, "mouseclick") == 0) {
     if (!clearList) {
+      std::shared_ptr<MouseEvent> mouseEvt = std::dynamic_pointer_cast<MouseEvent>(evt);
       JSValue args[] = {
-          JS_NewUint32(m_context, *(DWORD*)evt->arg1),
-          JS_NewUint32(m_context, *(DWORD*)evt->arg2),
-          JS_NewUint32(m_context, *(DWORD*)evt->arg3),
-          JS_NewUint32(m_context, *(DWORD*)evt->arg4),
+          JS_NewUint32(m_context, mouseEvt->button),
+          JS_NewUint32(m_context, mouseEvt->x),
+          JS_NewUint32(m_context, mouseEvt->y),
+          JS_NewUint32(m_context, mouseEvt->state),
       };
 
       ExecuteEvent(evtName, _countof(args), args);
@@ -683,19 +666,47 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
         JS_FreeValue(m_context, args[i]);
       }
     }
-    delete evt->arg1;
-    delete evt->arg2;
-    delete evt->arg3;
-    delete evt->arg4;
-    delete evt;
+
     return true;
   }
-  if (strcmp(evtName, "keyup") == 0 || strcmp(evtName, "keydownblocker") == 0 || strcmp(evtName, "keydown") == 0 || strcmp(evtName, "memana") == 0 ||
-      strcmp(evtName, "melife") == 0 || strcmp(evtName, "playerassign") == 0) {
+  if (strcmp(evtName, "melife") == 0 || strcmp(evtName, "memana") == 0) {
+    if (!clearList) {
+      std::shared_ptr<HealthManaEvent> hpmpEvt = std::dynamic_pointer_cast<HealthManaEvent>(evt);
+      JSValue args[] = {
+          JS_NewUint32(m_context, hpmpEvt->value),
+      };
+
+      ExecuteEvent(evtName, _countof(args), args);
+
+      for (size_t i = 0; i < _countof(args); ++i) {
+        JS_FreeValue(m_context, args[i]);
+      }
+    }
+
+    return true;
+  }
+  if (strcmp(evtName, "playerassign") == 0) {
+    if (!clearList) {
+      std::shared_ptr<PlayerAssignedEvent> assignEvt = std::dynamic_pointer_cast<PlayerAssignedEvent>(evt);
+      JSValue args[] = {
+          JS_NewUint32(m_context, assignEvt->id),
+      };
+
+      ExecuteEvent(evtName, _countof(args), args);
+
+      for (size_t i = 0; i < _countof(args); ++i) {
+        JS_FreeValue(m_context, args[i]);
+      }
+    }
+
+    return true;
+  }
+  if (strcmp(evtName, "keyup") == 0 || strcmp(evtName, "keydownblocker") == 0 || strcmp(evtName, "keydown") == 0) {
     bool block = false;
     if (!clearList) {
+      std::shared_ptr<KeyEvent> keyEvt = std::dynamic_pointer_cast<KeyEvent>(evt);
       JSValue args[] = {
-          JS_NewUint32(m_context, *(DWORD*)evt->arg1),
+          JS_NewUint32(m_context, keyEvt->key),
       };
 
       ExecuteEvent(evtName, _countof(args), args, &block);
@@ -705,45 +716,42 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
       }
     }
     if (strcmp(evtName, "keydownblocker") == 0) {
-      *(DWORD*)evt->arg4 = block;
+      evt->block = block;
       SetEvent(Vars.eventSignal);
-    } else {
-      delete evt->arg1;
-      delete evt;
     }
     return true;
   }
   if (strcmp(evtName, "ScreenHookClick") == 0) {
+    std::shared_ptr<GenHookEvent> genHookEvt = std::dynamic_pointer_cast<GenHookEvent>(evt);
     bool block = false;
     if (!clearList) {
       JSValue args[] = {
-          JS_NewUint32(m_context, *(DWORD*)evt->arg1),
-          JS_NewUint32(m_context, *(DWORD*)evt->arg2),
-          JS_NewUint32(m_context, *(DWORD*)evt->arg3),
+          JS_NewUint32(m_context, genHookEvt->x),
+          JS_NewUint32(m_context, genHookEvt->y),
+          JS_NewUint32(m_context, genHookEvt->button),
       };
 
       JSValue rval;
       // diffrent function source for hooks
-      for (FunctionList::iterator it = evt->functions.begin(); it != evt->functions.end(); it++) {
-        rval = JS_Call(m_context, m_globalObject, *it, _countof(args), args);
-        block |= static_cast<bool>(JS_IsBool(rval) && JS_ToBool(m_context, rval));
-      }
+      rval = JS_Call(m_context, m_globalObject, genHookEvt->callback, _countof(args), args);
+      block |= static_cast<bool>(JS_IsBool(rval) && JS_ToBool(m_context, rval));
 
       for (size_t i = 0; i < _countof(args); ++i) {
         JS_FreeValue(m_context, args[i]);
       }
     }
-    *(DWORD*)evt->arg4 = block;
+    JS_FreeValue(m_context, genHookEvt->callback);
+    evt->block = block;
     SetEvent(Vars.eventSignal);
 
     return true;
   }
   if (strcmp(evtName, "Command") == 0) {
-    const char* cmd = (const char*)evt->arg1;
+    std::shared_ptr<CommandEvent> cmdEvt = std::dynamic_pointer_cast<CommandEvent>(evt);
     std::string test;
 
     test.append("try{ ");
-    test.append(cmd);
+    test.append(cmdEvt->command);
     test.append(" } catch (error){print(error)}");
 
     JSValue rval = JS_Eval(m_context, test.data(), test.length(), "Command Line", JS_EVAL_TYPE_GLOBAL);
@@ -757,57 +765,39 @@ bool Script::HandleEvent(Event* evt, bool clearList) {
     } else {
       JS_ReportPendingException(m_context);
     }
-    free(evt->arg1);
-    delete evt;
   }
   if (strcmp(evtName, "scriptmsg") == 0) {
+    std::shared_ptr<ScriptMsgEvent> msgEvt = std::dynamic_pointer_cast<ScriptMsgEvent>(evt);
     if (!clearList) {
-      JSValue data_obj = JS_ReadObject(m_context, evt->data, evt->data_len, JS_READ_OBJ_SAB | JS_READ_OBJ_REFERENCE);
+      JSValue data_obj = JS_ReadObject(m_context, msgEvt->data, msgEvt->data_len, JS_READ_OBJ_SAB | JS_READ_OBJ_REFERENCE);
       ExecuteEvent(evtName, 1, &data_obj);
       JS_FreeValue(m_context, data_obj);
     }
 
     // decrease SAB reference count
-    for (size_t i = 0; i < evt->sab_tab_len; ++i) {
-      js_sab_free(NULL, evt->sab_tab[i]);
+    for (size_t i = 0; i < msgEvt->sab_tab_len; ++i) {
+      js_sab_free(NULL, msgEvt->sab_tab[i]);
     }
-    free(evt->data);
-    free(evt->sab_tab);
-    delete evt;
+    free(msgEvt->data);
+    free(msgEvt->sab_tab);
     return true;
   }
   if (strcmp(evtName, "gamepacket") == 0 || strcmp(evtName, "gamepacketsent") == 0 || strcmp(evtName, "realmpacket") == 0) {
     bool block = false;
     if (!clearList) {
-      BYTE* help = (BYTE*)evt->arg1;
-      DWORD* size = (DWORD*)evt->arg2;
+      std::shared_ptr<PacketEvent> packetEvt = std::dynamic_pointer_cast<PacketEvent>(evt);
 
       JSValue arr = JS_NewArray(m_context);
-      for (uint32_t i = 0; i < *size; i++) {
-        JS_SetPropertyUint32(m_context, arr, i, JS_NewUint32(m_context, help[i]));
+      for (size_t i = 0; i < packetEvt->bytes.size(); i++) {
+        JS_SetPropertyUint32(m_context, arr, i, JS_NewUint32(m_context, packetEvt->bytes[i]));
       }
 
       ExecuteEvent(evtName, 1, &arr, &block);
       JS_FreeValue(m_context, arr);
-      *(DWORD*)evt->arg4 = block;
-      SetEvent(Vars.eventSignal);
     }
 
-    // delete evt->arg1;
-    // delete evt->arg2;
-
-    return true;
-  }
-  if (strcmp(evtName, "setTimeout") == 0 || strcmp(evtName, "setInterval") == 0) {
-    if (!clearList) {
-      // JSAutoRequest request(m_context);
-      // JSValue dummy;
-      // ExecuteEvent(evtName, 0, &dummy);
-    }
-
-    // if (strcmp(evtName, "setTimeout") == 0) {
-    //   sScriptEngine->RemoveDelayedEvent(*(DWORD*)evt->arg1);
-    // }
+    evt->block = block;
+    SetEvent(Vars.eventSignal);
 
     return true;
   }
@@ -834,7 +824,7 @@ bool Script::ProcessAllEvents() {
       LeaveCriticalSection(&Vars.cEventSection);
       break;
     }
-    Event* evt = m_EventList.back();
+    std::shared_ptr<Event> evt = m_EventList.back();
     m_EventList.pop_back();
     LeaveCriticalSection(&Vars.cEventSection);
     HandleEvent(evt, false);
