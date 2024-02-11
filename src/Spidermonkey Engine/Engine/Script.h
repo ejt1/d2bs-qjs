@@ -30,6 +30,7 @@ struct ThreadState {
   uv_loop_t* loop;
   DWORD id;
   HANDLE handle;
+  std::chrono::steady_clock::time_point lastSpinTime;
 };
 
 class Script {
@@ -43,7 +44,7 @@ class Script {
   Script& operator=(const Script&) = delete;
 
   bool Start();
-  void Stop(bool force = false);
+  void Stop();
   void Run();
 
   void Join(void);
@@ -125,7 +126,7 @@ class Script {
   HANDLE m_eventSignal;
   std::list<std::shared_ptr<Event>> m_EventList;
 
-  bool m_isPaused, m_isReallyPaused;
+  std::atomic_bool m_isPaused, m_isReallyPaused;
 
   IncludeList m_includes, m_inProgress;
 

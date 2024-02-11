@@ -78,7 +78,7 @@ bool Script::Start() {
   return false;
 }
 
-void Script::Stop(bool force) {
+void Script::Stop() {
   // make sure the script is actually running
   if (m_scriptState != kScriptStateRunning)
     return;
@@ -96,12 +96,10 @@ void Script::Stop(bool force) {
   // trigger call back so script ends
   SetEvent(m_eventSignal);
 
-  // normal wait: 500ms, forced wait: 300ms, really forced wait: 100ms
-  int maxCount = (force ? 10 : 30);
   if (GetCurrentThreadId() != GetThreadId()) {
     for (int i = 0; m_scriptState != kScriptStateStopped; i++) {
       // if we pass the time frame, just ignore the wait because the thread will end forcefully anyway
-      if (i >= maxCount)
+      if (i >= 30)
         break;
       Sleep(10);
     }
@@ -127,13 +125,13 @@ void Script::Join() {
 }
 
 void Script::Pause(void) {
-  if (!(m_scriptState == kScriptStateRunning) && !m_isPaused)
+  if (m_scriptState == kScriptStateRunning && !m_isPaused)
     m_isPaused = true;
   SetEvent(m_eventSignal);
 }
 
 void Script::Resume(void) {
-  if (!(m_scriptState == kScriptStateRunning) && m_isPaused)
+  if (m_scriptState == kScriptStateRunning && m_isPaused)
     m_isPaused = false;
   SetEvent(m_eventSignal);
 }
@@ -143,7 +141,7 @@ bool Script::IsUninitialized() {
 }
 
 bool Script::IsRunning(void) {
-  return /*m_context && */ !(m_scriptState != kScriptStateRunning || m_isPaused);
+  return m_scriptState == kScriptStateRunning && !m_isPaused;
 }
 
 bool Script::IsAborted() {
@@ -358,7 +356,6 @@ bool Script::Initialize() {
   // JS_SetPropertyStr(m_context, console, "error", JS_NewCFunction(m_context, my_print, "error", 1));
   // JS_SetPropertyStr(m_context, m_globalObject, "console", console);
 
-  // TODO(ejt): this is a solution to minimize changes during migration to quickjs, refactor this in the future
   JS_SetPropertyFunctionList(m_context, m_globalObject, global_funcs, _countof(global_funcs));
 
   RegisterBuiltinBindings(m_context);
@@ -399,8 +396,8 @@ bool Script::Initialize() {
     return false;
   }
 
-  // TODO(ejt): revisit these
   m_scriptState = kScriptStateRunning;
+  m_threadState.lastSpinTime = std::chrono::steady_clock::now();
 
   return true;
 }
@@ -408,7 +405,6 @@ bool Script::Initialize() {
 // TODO(ejt): this is kinda hacky so change this in the future
 static void __walk_loop(uv_handle_t* handle, void* /*arg*/) {
   // NOTE(ejt): as of writing this, the only uv timers are TimerWrap*
-  // if this changes in the future fix this
   std::vector<TimerWrap*> wraps;
   if (handle->type == uv_handle_type::UV_TIMER) {
     TimerWrap* wrap = static_cast<TimerWrap*>(handle->data);
@@ -491,6 +487,7 @@ bool Script::RunEventLoop() {
   if (pause)
     SetPauseState(false);
 
+  m_threadState.lastSpinTime = std::chrono::steady_clock::now();
   uv_run(&m_loop, UV_RUN_NOWAIT);
   JSContext* ctx;
   for (;;) {
@@ -838,6 +835,12 @@ int Script::InterruptHandler(JSRuntime* rt, void* /*opaque*/) {
   ThreadState* ts = (ThreadState*)JS_GetRuntimeOpaque(rt);
   Script* script = ts->script;
 
+  //auto t = std::chrono::steady_clock::now() - ts->lastSpinTime;
+  //auto tms = std::chrono::duration_cast<std::chrono::milliseconds>(t);
+  //if (tms.count() > 5000) {
+  //  // interrupt the script if it stalls for more than 5 seconds without yielding to event loop
+  //  return 1;
+  //}
   if (!script->RunEventLoop()) {
     return 1;
   }

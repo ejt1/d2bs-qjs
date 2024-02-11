@@ -16,9 +16,9 @@ bool __fastcall DisposeScript(Script* script, void*) {
   return true;
 }
 
-bool __fastcall StopScript(Script* script, void* argv) {
+bool __fastcall StopScript(Script* script, void* /*argv*/) {
   if (script->GetMode() != kScriptModeCommand)
-    script->Stop(*(bool*)(argv));
+    script->Stop();
   return true;
 }
 
@@ -53,7 +53,7 @@ void ScriptEngine::Shutdown(void) {
   // bring the engine down properly
   LockScriptList("Shutdown");
   StopAll(true);
-  m_console->Stop(true);
+  m_console->Stop(/*true*/);
 
   // clear all scripts now that they're stopped
   ForEachScript(::DisposeScript, NULL);
@@ -189,6 +189,6 @@ void ScriptEngine::UpdateConsole() {
 
 bool __fastcall StopIngameScript(Script* script, void*) {
   if (script->GetMode() == kScriptModeGame)
-    script->Stop(true);
+    script->Stop(/*true*/);
   return true;
 }
