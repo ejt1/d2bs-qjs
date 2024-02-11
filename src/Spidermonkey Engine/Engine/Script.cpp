@@ -833,11 +833,15 @@ bool Script::ProcessAllEvents() {
 // return != 0 if the JS code needs to be interrupted
 int Script::InterruptHandler(JSRuntime* rt, void* /*opaque*/) {
   ThreadState* ts = (ThreadState*)JS_GetRuntimeOpaque(rt);
+  Script* script = ts->script;
 
-  auto t = std::chrono::steady_clock::now() - ts->lastSpinTime;
-  auto tms = std::chrono::duration_cast<std::chrono::milliseconds>(t);
-  if (tms.count() > 5000) {
-    // interrupt the script if it stalls for more than 5 seconds without yielding to event loop
+  //auto t = std::chrono::steady_clock::now() - ts->lastSpinTime;
+  //auto tms = std::chrono::duration_cast<std::chrono::milliseconds>(t);
+  //if (tms.count() > 5000) {
+  //  // interrupt the script if it stalls for more than 5 seconds without yielding to event loop
+  //  return 1;
+  //}
+  if (!script->RunEventLoop()) {
     return 1;
   }
   return 0;
