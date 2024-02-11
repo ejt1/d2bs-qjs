@@ -30,6 +30,7 @@ struct ThreadState {
   uv_loop_t* loop;
   DWORD id;
   HANDLE handle;
+  std::chrono::steady_clock::time_point lastSpinTime;
 };
 
 class Script {
