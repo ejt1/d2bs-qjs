@@ -12,6 +12,7 @@
 #include "Localization.h"
 #include "MPQStats.h"
 #include "Script.h"
+#include "StringWrap.h"
 
 JSObject* UnitWrap::Instantiate(JSContext* ctx, UnitData* priv, bool isMe) {
   JS::RootedObject global(ctx, JS::CurrentGlobalOrNull(ctx));
@@ -1009,9 +1010,8 @@ bool UnitWrap::getNext(JSContext* ctx, JS::CallArgs& args) {
       return true;
     }
     if (args.length() > 0 && args[0].isString()) {
-      char* szText = JS_EncodeString(ctx, args[0].toString());
+      StringWrap szText(ctx, args[0]);
       strcpy_s(lpUnit->szName, 128, szText);
-      JS_free(ctx, szText);
     }
 
     if (args.length() > 0 && args[0].isNumber() && !args[1].isNull())
@@ -1044,9 +1044,8 @@ bool UnitWrap::getNext(JSContext* ctx, JS::CallArgs& args) {
     }
 
     if (args.length() > 0 && args[0].isString()) {
-      char* szText = JS_EncodeString(ctx, args[0].toString());
+      StringWrap szText(ctx, args[0]);
       strcpy_s(pmyUnit->szName, 128, szText);
-      JS_free(ctx, szText);
     }
 
     if (args.length() > 0 && args[0].isNumber() && !args[1].isNull())
@@ -1260,9 +1259,8 @@ bool UnitWrap::getItem(JSContext* ctx, JS::CallArgs& args) {
   char szName[128] = "";
 
   if (args.length() > 0 && args[0].isString()) {
-    char* szText = JS_EncodeString(ctx, args[0].toString());
+    StringWrap szText(ctx, args[0]);
     strcpy_s(szName, sizeof(szName), szText);
-    JS_free(ctx, szText);
   }
 
   if (args.length() > 0 && args[0].isNumber() && !args[0].isNull())
@@ -2181,9 +2179,8 @@ bool UnitWrap::setSkill(JSContext* ctx, JS::CallArgs& args) {
   }
 
   if (args[0].isString()) {
-    char* name = JS_EncodeString(ctx, args[0].toString());
+    StringWrap name(ctx, args[0]);
     pSkill = player->GetSkillFromSkillName(name);
-    JS_free(ctx, name);
   } else if (args[0].isNumber()) {
     uint32_t skillId;
     JS::ToUint32(ctx, args[0], &skillId);
@@ -2426,13 +2423,13 @@ bool UnitWrap::getUnit(JSContext* ctx, JS::CallArgs& args) {
   uint32_t nClassId = (uint32_t)-1;
   uint32_t nMode = (uint32_t)-1;
   uint32_t nUnitId = (uint32_t)-1;
-  char* szName = nullptr;
+  StringWrap szName;
 
   if (args.length() > 0 && args[0].isNumber())
     JS::ToInt32(ctx, args[0], &nType);
 
   if (args.length() > 1 && args[1].isString())
-    szName = JS_EncodeString(ctx, args[1].toString());
+    szName = std::move(StringWrap{ctx, args[1]});
 
   if (args.length() > 1 && args[1].isNumber() && !args[1].isNull())
     JS::ToUint32(ctx, args[1], &nClassId);
@@ -2455,9 +2452,6 @@ bool UnitWrap::getUnit(JSContext* ctx, JS::CallArgs& args) {
     pUnit = D2UnitStrc::FindUnit(szName ? szName : "", nClassId, nType, nMode, nUnitId);
 
   if (!pUnit) {
-    if (szName) {
-      JS_free(ctx, szName);
-    }
     args.rval().setUndefined();
     return true;
   }
@@ -2465,9 +2459,6 @@ bool UnitWrap::getUnit(JSContext* ctx, JS::CallArgs& args) {
   UnitData* pmyUnit = new UnitData;  // leaked?
 
   if (!pmyUnit) {
-    if (szName) {
-      JS_free(ctx, szName);
-    }
     args.rval().setUndefined();
     return true;
   }
@@ -2477,10 +2468,7 @@ bool UnitWrap::getUnit(JSContext* ctx, JS::CallArgs& args) {
   pmyUnit->dwMode = nMode;
   pmyUnit->dwType = pUnit->dwType;
   pmyUnit->dwUnitId = pUnit->dwUnitId;
-  strcpy_s(pmyUnit->szName, sizeof(pmyUnit->szName), szName ? szName : "");
-  if (szName) {
-    JS_free(ctx, szName);
-  }
+  strcpy_s(pmyUnit->szName, sizeof(pmyUnit->szName), szName ? szName.c_str() : "");
 
   JS::RootedObject newObject(ctx, UnitWrap::Instantiate(ctx, pmyUnit));
   if (!newObject) {

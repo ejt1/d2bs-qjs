@@ -231,7 +231,9 @@ void Console::Draw(void) {
     if (scrollIndex == 0 && lines.size() == lineCount && IsEnabled())  // handle index 0, top of console
       it++;
 
-    for (int i = lineCount - (int)IsEnabled(); i > 0 && it != lines.rend(); i--, it++) myDrawText(it->c_str(), charwidth, 4 + (i * charheight), 0, Vars.dwConsoleFont);
+    for (int i = lineCount - (int)IsEnabled(); i > 0 && it != lines.rend(); i--, it++) {
+      myDrawText(it->c_str(), charwidth, 4 + (i * charheight), 0, Vars.dwConsoleFont);
+    }
 
     if (IsEnabled()) {
       if (cmdsplit.size() > 0) {

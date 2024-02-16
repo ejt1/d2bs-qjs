@@ -3,6 +3,7 @@
 #include "Bindings.h"
 #include "D2Helpers.h"  // WaitForGameReady
 #include "JSUnit.h"     // JSUnit
+#include "StringWrap.h"
 
 JSObject* PartyWrap::Instantiate(JSContext* ctx, D2RosterUnitStrc* unit) {
   JS::RootedObject global(ctx, JS::CurrentGlobalOrNull(ctx));
@@ -201,11 +202,11 @@ bool PartyWrap::GetParty(JSContext* ctx, JS::CallArgs& args) {
   }
 
   if (args.length() == 1) {
-    char* nPlayerName = nullptr;
+    StringWrap nPlayerName;
     uint32_t nPlayerId = NULL;
 
     if (args.get(0).toString()) {
-      nPlayerName = JS_EncodeString(ctx, args[0].toString());
+      nPlayerName = std::move(StringWrap{ctx, args[0]});
     } else if (args.get(0).isNumber() && !JS::ToUint32(ctx, args[0], &nPlayerId)) {
       THROW_ERROR(ctx, "Unable to get ID");
     } else if (args.get(0).isObject()) {
@@ -231,10 +232,6 @@ bool PartyWrap::GetParty(JSContext* ctx, JS::CallArgs& args) {
         pRosterUnit = pScan;
         break;
       }
-    }
-
-    if (nPlayerName) {
-      JS_free(ctx, nPlayerName);
     }
 
     if (!bFound) {

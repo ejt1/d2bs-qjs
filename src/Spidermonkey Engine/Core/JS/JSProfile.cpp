@@ -1,6 +1,7 @@
 #include "JSProfile.h"
 
 #include "Bindings.h"
+#include "StringWrap.h"
 
 JSObject* ProfileWrap::Instantiate(JSContext* ctx, Profile* prof) {
   JS::RootedObject global(ctx, JS::CurrentGlobalOrNull(ctx));
@@ -82,57 +83,44 @@ bool ProfileWrap::New(JSContext* ctx, JS::CallArgs& args) {
     }
     // Profile(name) - get the named profile
     else if (args.length() == 1 && args[0].isString()) {
-      char* str1 = JS_EncodeString(ctx, args[0].toString());
+      StringWrap str1(ctx, args[0]);
       prof = new Profile(str1);
-      JS_free(ctx, str1);
     } else if (args.length() > 1 && args[0].isInt32()) {
       int32_t type = args[0].toInt32();
 
       // Profile(ProfileType.singlePlayer, charname, diff)
       if (args.length() == 3 && type == PROFILETYPE_SINGLEPLAYER) {
-        char* str1 = JS_EncodeString(ctx, args[1].toString());
+        StringWrap str1(ctx, args[1]);
         int32_t diff = args[2].toInt32();
         prof = new Profile(PROFILETYPE_SINGLEPLAYER, str1, static_cast<char>(diff));
-        JS_free(ctx, str1);
       }
       // Profile(ProfileType.battleNet, account, pass, charname, gateway)
       else if (args.length() == 5 && type == PROFILETYPE_BATTLENET) {
-        char* str1 = JS_EncodeString(ctx, args[1].toString());
-        char* str2 = JS_EncodeString(ctx, args[2].toString());
-        char* str3 = JS_EncodeString(ctx, args[3].toString());
-        char* str4 = JS_EncodeString(ctx, args[4].toString());
+        StringWrap str1(ctx, args[1]);
+        StringWrap str2(ctx, args[2]);
+        StringWrap str3(ctx, args[3]);
+        StringWrap str4(ctx, args[4]);
         prof = new Profile(PROFILETYPE_BATTLENET, str1, str2, str3, str4);
-        JS_free(ctx, str1);
-        JS_free(ctx, str2);
-        JS_free(ctx, str3);
-        JS_free(ctx, str4);
       }
       // Profile(ProfileType.openBattleNet, account, pass, charname, gateway)
       else if (args.length() == 5 && type == PROFILETYPE_OPEN_BATTLENET) {
-        char* str1 = JS_EncodeString(ctx, args[1].toString());
-        char* str2 = JS_EncodeString(ctx, args[2].toString());
-        char* str3 = JS_EncodeString(ctx, args[3].toString());
-        char* str4 = JS_EncodeString(ctx, args[4].toString());
+        StringWrap str1(ctx, args[1]);
+        StringWrap str2(ctx, args[2]);
+        StringWrap str3(ctx, args[3]);
+        StringWrap str4(ctx, args[4]);
         prof = new Profile(PROFILETYPE_OPEN_BATTLENET, str1, str2, str3, str4);
-        JS_free(ctx, str1);
-        JS_free(ctx, str2);
-        JS_free(ctx, str3);
-        JS_free(ctx, str4);
       }
       // Profile(ProfileType.tcpIpHost, charname, diff)
       else if (args.length() == 3 && type == PROFILETYPE_TCPIP_HOST) {
-        char* str1 = JS_EncodeString(ctx, args[1].toString());
+        StringWrap str1(ctx, args[1]);
         int32_t diff = args[2].toInt32();
         prof = new Profile(PROFILETYPE_TCPIP_HOST, str1, static_cast<char>(diff));
-        JS_free(ctx, str1);
       }
       // Profile(ProfileType.tcpIpJoin, charname, ip)
       else if (args.length() == 3 && type == PROFILETYPE_TCPIP_JOIN) {
-        char* str1 = JS_EncodeString(ctx, args[1].toString());
-        char* str2 = JS_EncodeString(ctx, args[2].toString());
-        prof = new Profile(PROFILETYPE_TCPIP_JOIN, str1, str2);
-        JS_free(ctx, str1);
-        JS_free(ctx, str2);
+        StringWrap str1(ctx, args[1]);
+        StringWrap str2(ctx, args[2]);
+        prof = new Profile(PROFILETYPE_TCPIP_JOIN, str1.c_str(), str2.c_str());
       } else {
         THROW_ERROR(ctx, "Invalid parameters.");
       }
