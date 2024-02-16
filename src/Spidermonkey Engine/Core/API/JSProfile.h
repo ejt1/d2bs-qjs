@@ -1,45 +1,52 @@
 #pragma once
 
-#include "js32.h"
+#include "JSBaseObject.h"
 #include "Profile.h"
 
-class ProfileWrap {
+class ProfileWrap : public BaseObject {
  public:
-  static JSValue Instantiate(JSContext* ctx, JSValue new_target, Profile* prof);
-  static void Initialize(JSContext* ctx, JSValue target);
+  static JSObject* Instantiate(JSContext* ctx, Profile* prof);
+  static void Initialize(JSContext* ctx, JS::HandleObject target);
 
  private:
-  ProfileWrap(JSContext* ctx, Profile* prof);
+  ProfileWrap(JSContext* ctx, JS::HandleObject obj, Profile* prof);
   virtual ~ProfileWrap();
 
+  static void finalize(JSFreeOp* fop, JSObject* obj);
+
   // constructor
-  static JSValue New(JSContext* ctx, JSValue new_target, int argc, JSValue* argv);
+  static bool New(JSContext* ctx, unsigned argc, JS::Value* vp);
 
   // properties
-  static JSValue GetType(JSContext* ctx, JSValue this_val);
-  static JSValue GetIP(JSContext* ctx, JSValue this_val);
-  static JSValue GetUsername(JSContext* ctx, JSValue this_val);
-  static JSValue GetGateway(JSContext* ctx, JSValue this_val);
-  static JSValue GetCharacter(JSContext* ctx, JSValue this_val);
-  static JSValue GetDifficulty(JSContext* ctx, JSValue this_val);
-  static JSValue GetMaxLoginTime(JSContext* ctx, JSValue this_val);
-  static JSValue GetMaxCharacterSelectTime(JSContext* ctx, JSValue this_val);
+  static bool GetType(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetIP(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetUsername(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetGateway(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetCharacter(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetDifficulty(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetMaxLoginTime(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetMaxCharacterSelectTime(JSContext* ctx, unsigned argc, JS::Value* vp);
 
   // functions
-  static JSValue Login(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+  static bool Login(JSContext* ctx, unsigned argc, JS::Value* vp);
 
-  static inline JSClassID m_class_id = 0;
-  static inline JSCFunctionListEntry m_proto_funcs[] = {
-      JS_CGETSET_DEF("type", GetType, nullptr),                                      //
-      JS_CGETSET_DEF("ip", GetIP, nullptr),                                          //
-      JS_CGETSET_DEF("username", GetUsername, nullptr),                              //
-      JS_CGETSET_DEF("gateway", GetGateway, nullptr),                                //
-      JS_CGETSET_DEF("character", GetCharacter, nullptr),                            //
-      JS_CGETSET_DEF("difficulty", GetDifficulty, nullptr),                          //
-      JS_CGETSET_DEF("maxLoginTime", GetMaxLoginTime, nullptr),                      //
-      JS_CGETSET_DEF("maxCharacterSelectTime", GetMaxCharacterSelectTime, nullptr),  //
-
-      JS_FS("login", Login, 0, FUNCTION_FLAGS),
+  static inline JSClassOps m_ops = {
+      .addProperty = nullptr,
+      .delProperty = nullptr,
+      .enumerate = nullptr,
+      .newEnumerate = nullptr,
+      .resolve = nullptr,
+      .mayResolve = nullptr,
+      .finalize = finalize,
+      .call = nullptr,
+      .hasInstance = nullptr,
+      .construct = nullptr,
+      .trace = nullptr,
+  };
+  static inline JSClass m_class = {
+      "Profile",
+      JSCLASS_HAS_RESERVED_SLOTS(kInternalFieldCount) | JSCLASS_FOREGROUND_FINALIZE,
+      &m_ops,
   };
 
   Profile* profile;

@@ -4,6 +4,7 @@
 #include "Console.h"
 
 #include <vector>
+#include <js/Value.h>
 
 bool Genhook::init = false;
 HookList Genhook::visible = HookList();
@@ -164,12 +165,12 @@ void Genhook::Clean(Script* owner) {
   LeaveCriticalSection(&globalSection);
 }
 
-Genhook::Genhook(Script* nowner, JSValue nself, uint32_t x, uint32_t y, ushort nopacity, bool nisAutomap, Align nalign, ScreenhookState ngameState)
+Genhook::Genhook(Script* nowner, JS::HandleObject nself, uint32_t x, uint32_t y, ushort nopacity, bool nisAutomap, Align nalign, ScreenhookState ngameState)
     : owner(nowner), isAutomap(nisAutomap), isVisible(true), alignment(nalign), opacity(nopacity), gameState(ngameState), zorder(1) {
   // InitializeCriticalSection(&hookSection);
-  clicked = JS_UNDEFINED;
-  hovered = JS_UNDEFINED;
-  self = nself;
+  clicked.init(nowner->GetContext());
+  hovered.init(nowner->GetContext());
+  self.init(nowner->GetContext(), nself);
   SetX(x);
   SetY(y);
   EnterCriticalSection(&globalSection);
@@ -209,14 +210,12 @@ void Genhook::Hover(POINT* loc) {
   return GenhookHoverEvent(owner, loc, hovered);
 }
 
-void Genhook::SetClickHandler(JSValue handler) {
+void Genhook::SetClickHandler(JS::HandleObject handler) {
   if (!owner)
-    return;
-  if (JS_IsUndefined(handler))
     return;
   Lock();
 
-  clicked = handler;
+  //clicked = handler;
   //	if(!JSVAL_IS_VOID(clicked))
   //	{
   //		if(JS_AddRoot(owner->GetContext(),&clicked) == JS_FALSE)
@@ -232,20 +231,13 @@ void Genhook::SetClickHandler(JSValue handler) {
   Unlock();
 }
 
-void Genhook::SetHoverHandler(JSValue handler) {
+void Genhook::SetHoverHandler(JS::HandleObject handler) {
   if (!owner)
-    return;
-  if (JS_IsUndefined(handler))
     return;
   Lock();
 
-  JSContext* cx = owner->GetContext();
-  if (JS_IsFunction(cx, handler)) {
-    if (JS_IsFunction(owner->GetContext(), hovered)) {
-      JS_FreeValue(owner->GetContext(), hovered);
-    }
-    hovered = JS_DupValue(cx, handler);
-  }
+  //hovered = handler;
+
   Unlock();
 }
 

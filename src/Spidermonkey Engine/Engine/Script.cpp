@@ -15,16 +15,30 @@
 #include <chrono>
 #include <cassert>
 
+const JSClassOps DefaultGlobalClassOps = {
+    nullptr,                         // addProperty
+    nullptr,                         // deleteProperty
+    nullptr,                         // enumerate
+    JS_NewEnumerateStandardClasses,  // newEnumerate
+    JS_ResolveStandardClass,         // resolve
+    JS_MayResolveStandardClass,      // mayResolve
+    nullptr,                         // finalize
+    nullptr,                         // call
+    nullptr,                         // hasInstance
+    nullptr,                         // construct
+    JS_GlobalObjectTraceHook         // trace
+};
+
 Script::Script(const char* file, ScriptMode mode /*, uint32_t argc, JSAutoStructuredCloneBuffer** argv*/)
-    : m_runtime(NULL),
-      m_context(NULL),
-      m_globalObject(JS_UNDEFINED),
-      m_script(JS_UNDEFINED),
+    : m_context(NULL),
+      m_globalObject(),
+      m_script(),
       m_isPaused(false),
       m_isReallyPaused(false),
       m_scriptMode(mode),
       m_scriptState(kScriptStateUninitialized),
-      m_threadState({}) {
+      m_threadState({}),
+      m_debugCaptureStackFrames(false) {
   InitializeCriticalSection(&m_lock);
   m_eventSignal = CreateEvent(nullptr, true, false, nullptr);
 
@@ -49,7 +63,6 @@ Script::Script(const char* file, ScriptMode mode /*, uint32_t argc, JSAutoStruct
 }
 
 Script::~Script(void) {
-  assert(!m_runtime);
   assert(!m_context);
 
   EnterCriticalSection(&m_lock);
@@ -108,10 +121,14 @@ void Script::Stop() {
 }
 
 void Script::Run(void) {
+  // NOTE(ejt): we're not sure script is alive after cleanup so save filename here
+  std::string filename = GetShortFilename();
+  Log("Starting thread for %s", filename.c_str());
   if (Initialize()) {
     RunMain();
   }
   Cleanup();
+  Log("Ending thread for %s", filename.c_str());
 }
 
 void Script::Join() {
@@ -208,34 +225,36 @@ bool Script::Include(const char* file) {
     return true;
   }
 
-  JSValue rval = JS_CompileFile(m_context, m_globalObject, fname);
-  if (!JS_IsException(rval)) {
-    m_inProgress[fname] = true;
-    rval = JS_EvalFunction(m_context, rval);
-    if (!JS_IsException(rval)) {
-      m_includes[fname] = true;
-    }
-    m_inProgress.erase(fname);
+  JS::RootedScript script(m_context, JS_CompileFile(m_context, m_globalObject, fname));
+  if (!script) {
+    JS_ReportPendingException(m_context);
+    LeaveCriticalSection(&m_lock);
+    free(fname);
+    return false;
   }
+
+  m_inProgress[fname] = true;
+  if (!JS_ExecuteScript(m_context, script)) {
+    JS_ReportPendingException(m_context);
+    LeaveCriticalSection(&m_lock);
+    free(fname);
+    return false;
+  }
+  m_includes[fname] = true;
+  m_inProgress.erase(fname);
 
   LeaveCriticalSection(&m_lock);
   free(fname);
 
-  if (JS_IsException(rval)) {
-    JS_ReportPendingException(m_context);
-    return false;
-  }
-
-  JS_FreeValue(m_context, rval);
   return true;
 }
 
-size_t Script::GetListenerCount(const char* evtName, JSValue evtFunc) {
+size_t Script::GetListenerCount(const char* evtName, JS::HandleValue evtFunc) {
   // idk old code had this check so keeping it just in case, but such validation is really the callers responsibility // ejt
   if (!evtName || strlen(evtName) == 0) {
     return 0;
   }
-  if (JS_IsUndefined(evtFunc)) {
+  if (evtFunc.isNullOrUndefined()) {
     return m_functions.count(evtName);
   }
 
@@ -254,22 +273,22 @@ size_t Script::GetListenerCount(const char* evtName, JSValue evtFunc) {
   return count;
 }
 
-void Script::AddEventListener(const char* evtName, JSValue evtFunc) {
+void Script::AddEventListener(const char* evtName, JS::HandleValue evtFunc) {
   EnterCriticalSection(&m_lock);
-  if (JS_IsFunction(m_context, evtFunc) && strlen(evtName) > 0) {
-    m_functions[evtName].push_back(JS_DupValue(m_context, evtFunc));
+  if (JS_ObjectIsFunction(m_context, evtFunc.toObjectOrNull()) && strlen(evtName) > 0) {
+    JS::PersistentRootedValue val(m_context, evtFunc);
+    m_functions[evtName].emplace_back(std::move(val));
   }
   LeaveCriticalSection(&m_lock);
 }
 
-void Script::RemoveEventListener(const char* evtName, JSValue evtFunc) {
+void Script::RemoveEventListener(const char* evtName, JS::HandleValue evtFunc) {
   if (strlen(evtName) < 1)
     return;
 
   EnterCriticalSection(&m_lock);
   for (FunctionList::iterator it = m_functions[evtName].begin(); it != m_functions[evtName].end(); it++) {
-    if (*it == evtFunc) {
-      JS_FreeValue(m_context, *it);
+    if (it->get() == evtFunc) {
       it = m_functions[evtName].erase(it);
       break;
     }
@@ -284,18 +303,12 @@ void Script::RemoveEventListener(const char* evtName, JSValue evtFunc) {
 
 void Script::RemoveAllListeners(const char* evtName) {
   EnterCriticalSection(&m_lock);
-  for (FunctionList::iterator it = m_functions[evtName].begin(); it != m_functions[evtName].end(); it++) {
-    JS_FreeValue(m_context, *it);
-  }
   m_functions[evtName].clear();
   LeaveCriticalSection(&m_lock);
 }
 
 void Script::RemoveAllEventListeners() {
   EnterCriticalSection(&m_lock);
-  for (FunctionMap::iterator it = m_functions.begin(); it != m_functions.end(); it++) {
-    RemoveAllListeners(it->first.c_str());
-  }
   m_functions.clear();
   LeaveCriticalSection(&m_lock);
 }
@@ -307,16 +320,18 @@ void Script::DispatchEvent(std::shared_ptr<Event> evt) {
   SetEvent(m_eventSignal);
 }
 
-void Script::BlockThread(DWORD delay) {
+bool Script::BlockThread(DWORD delay) {
   DWORD start = GetTickCount();
   int amt = delay - (GetTickCount() - start);
   if (m_scriptState == kScriptStateStopped) {
-    return;
+    Log("Script already stopped (In delay) %s", GetShortFilename());
+    return false;
   }
 
   while (amt > 0) {  // had a script deadlock here, make sure were positve with amt
     if (m_scriptState == kScriptStateRequestStop) {
-      return;
+      Log("Request stop (In delay) %s", GetShortFilename());
+      return false;
     }
     WaitForSingleObjectEx(m_eventSignal, amt, true);
     ResetEvent(m_eventSignal);
@@ -327,6 +342,7 @@ void Script::BlockThread(DWORD delay) {
 
     amt = delay - (GetTickCount() - start);
   }
+  return true;
 }
 
 bool Script::Initialize() {
@@ -334,20 +350,39 @@ bool Script::Initialize() {
   m_threadState.script = this;
   m_threadState.loop = &m_loop;
 
-  m_runtime = JS_NewRuntime();
-  JS_SetRuntimeOpaque(m_runtime, &m_threadState);
-  JS_SetInterruptHandler(m_runtime, InterruptHandler, this);
-  JS_SetMaxStackSize(m_runtime, 0);
-  JS_SetMemoryLimit(m_runtime, 100 * 1024 * 1024);
+  // m_runtime = JS_NewRuntime();
+  // JS_SetRuntimeOpaque(m_runtime, &m_threadState);
+  // JS_SetInterruptHandler(m_runtime, InterruptHandler, this);
+  // JS_SetMaxStackSize(m_runtime, 0);
+  // JS_SetMemoryLimit(m_runtime, 100 * 1024 * 1024);
 
-  m_context = JS_NewContext(m_runtime);
+  m_context = JS_NewContext(100 * 1024 * 1024);
+  JS_SetNativeStackQuota(m_context, 0);
   if (!m_context) {
     Log("Couldn't create the context");
     return false;
   }
-  JS_SetContextOpaque(m_context, this);
+  JS_SetContextPrivate(m_context, &m_threadState);
+  JS::SetWarningReporter(m_context, JS_LogReport);
+  // JS_AddInterruptCallback(m_context, InterruptHandler);
 
-  m_globalObject = JS_GetGlobalObject(m_context);
+  // TODO(ejt): replace this with JS::SetEnqueuePromiseJobCallback
+  // as we use libuv for event loop so promises should do that too
+  if (!js::UseInternalJobQueues(m_context)) {
+  }
+
+  if (!JS::InitSelfHostedCode(m_context)) {
+    Log("Error initializing selfhosted code");
+    return false;
+  }
+
+  JSAutoRequest request(m_context);
+  JS::CompartmentOptions global_options;
+  static JSClass kGlobalClass{"D2BSGlobal", JSCLASS_GLOBAL_FLAGS, &DefaultGlobalClassOps};
+  m_globalObject.init(m_context, JS_NewGlobalObject(m_context, &kGlobalClass, nullptr, JS::FireOnNewGlobalHook, global_options));
+
+  JSAutoCompartment ac(m_context, m_globalObject);
+  m_script.init(m_context);
 
   // JSValue console = JS_NewObject(m_context);
   // JS_SetPropertyStr(m_context, console, "trace", JS_NewCFunction(m_context, my_print, "trace", 1));
@@ -356,9 +391,11 @@ bool Script::Initialize() {
   // JS_SetPropertyStr(m_context, console, "error", JS_NewCFunction(m_context, my_print, "error", 1));
   // JS_SetPropertyStr(m_context, m_globalObject, "console", console);
 
-  JS_SetPropertyFunctionList(m_context, m_globalObject, global_funcs, _countof(global_funcs));
+  if (!JS_DefineFunctions(m_context, m_globalObject, global_funcs)) {
+    return false;
+  }
 
-  RegisterBuiltinBindings(m_context);
+  RegisterBuiltinBindings(m_context, m_globalObject);
 
   // define 'me' property
   m_me = new UnitWrap::UnitData;
@@ -371,27 +408,30 @@ bool Script::Initialize() {
   m_me->dwUnitId = player ? player->dwUnitId : NULL;
   m_me->dwPrivateType = PRIVATE_UNIT;
 
-  JSValue meObject = UnitWrap::Instantiate(m_context, JS_UNDEFINED, m_me);
-  if (JS_IsException(meObject)) {
+  JS::RootedObject meObject(m_context, UnitWrap::Instantiate(m_context, m_me, true));
+  if (!meObject) {
+    JS_ReportPendingException(m_context);
     Log("failed to build object 'me'");
     return false;
   }
-  JS_SetPropertyFunctionList(m_context, meObject, UnitWrap::me_proto_funcs, _countof(UnitWrap::me_proto_funcs));
-  JS_SetPropertyStr(m_context, m_globalObject, "me", meObject);
+  // JS_SetPropertyFunctionList(m_context, meObject, UnitWrap::me_proto_funcs, _countof(UnitWrap::me_proto_funcs));
+  JS_DefineProperty(m_context, m_globalObject, "me", meObject, JSPROP_ENUMERATE | JSPROP_PERMANENT);
 
   // compile script file
   if (m_scriptMode == kScriptModeCommand) {
     if (strlen(Vars.szConsole) > 0) {
       m_script = JS_CompileFile(m_context, m_globalObject, m_fileName);
     } else {
+      JS::CompileOptions opts(m_context);
+      opts.setFileAndLine("<eval>", 1);
       const char* cmd = "function main() {print('ÿc2D2BSÿc0 :: Started Console'); while (true){delay(10000)};}  ";
-      m_script = JS_Eval(m_context, cmd, strlen(cmd), "Command Line", JS_EVAL_TYPE_GLOBAL);
+      JS_CompileScript(m_context, cmd, strlen(cmd), opts, &m_script);
     }
   } else {
     m_script = JS_CompileFile(m_context, m_globalObject, m_fileName);
   }
 
-  if (JS_IsException(m_script)) {
+  if (!m_script) {
     JS_ReportPendingException(m_context);
     return false;
   }
@@ -403,36 +443,30 @@ bool Script::Initialize() {
 }
 
 // TODO(ejt): this is kinda hacky so change this in the future
-static void __walk_loop(uv_handle_t* handle, void* /*arg*/) {
+//static void __walk_loop(uv_handle_t* handle, void* /*arg*/) {
   // NOTE(ejt): as of writing this, the only uv timers are TimerWrap*
-  std::vector<TimerWrap*> wraps;
-  if (handle->type == uv_handle_type::UV_TIMER) {
-    TimerWrap* wrap = static_cast<TimerWrap*>(handle->data);
-    if (wrap) {
-      wrap->Unref();
-    }
-  }
-}
+  // std::vector<TimerWrap*> wraps;
+  // if (handle->type == uv_handle_type::UV_TIMER) {
+  //  TimerWrap* wrap = static_cast<TimerWrap*>(handle->data);
+  //  if (wrap) {
+  //    wrap->Unref();
+  //  }
+  //}
+//}
 
 void Script::Cleanup() {
   PurgeEventList();
   Genhook::Clean(this);
 
-  uv_walk(&m_loop, __walk_loop, nullptr);
-  uv_loop_close(&m_loop);
-
   if (m_context) {
-    JS_FreeValue(m_context, m_script);
-    m_script = JS_UNDEFINED;
-    JS_FreeValue(m_context, m_globalObject);
-    m_globalObject = JS_UNDEFINED;
-    JS_FreeContext(m_context);
+    Log("Destroying context for %s", GetShortFilename());
+    m_globalObject.reset();
+    m_script.reset();
+    JS_DestroyContext(m_context);
     m_context = nullptr;
   }
-  if (m_runtime) {
-    JS_FreeRuntime(m_runtime);
-    m_runtime = nullptr;
-  }
+
+  uv_loop_close(&m_loop);
   m_scriptState = kScriptStateStopped;
 
   // TODO(ejt): revisit this
@@ -441,38 +475,29 @@ void Script::Cleanup() {
 }
 
 void Script::RunMain() {
-  JSValue main;
+  JSAutoRequest ar(m_context);
+  JSAutoCompartment ac(m_context, m_globalObject);
+  JS::RootedValue main(m_context);
+  JS::RootedValue rval(m_context);
 
-  // args passed from load
-  // JS::AutoValueVector args(m_context);
-  // args.resize(m_argc);
-  // for (uint32_t i = 0; i < m_argc; i++) {
-  //  JSValue v;
-  //  m_argv[i]->read(m_context, &v);
-  //  args.append(v);
-  //}
-  m_script = JS_EvalFunction(m_context, m_script);
-  if (JS_IsException(m_script)) {
+  if (!JS_ExecuteScript(m_context, m_script)) {
     JS_ReportPendingException(m_context);
     return;
   }
-  main = JS_GetPropertyStr(m_context, m_globalObject, "main");
-  if (JS_IsException(main)) {
+  if (!JS_GetProperty(m_context, m_globalObject, "main", &main)) {
     JS_ReportPendingException(m_context);
     return;
   }
-  if (!JS_IsFunction(m_context, main)) {
-    JS_ThrowTypeError(m_context, "'main' is not a function");
+  if (!JS_CallFunctionValue(m_context, m_globalObject, main, JS::HandleValueArray::empty(), &rval)) {
     JS_ReportPendingException(m_context);
-    return;
   }
-  JSValue rval = JS_Call(m_context, main, JS_UNDEFINED, 0, nullptr);
-  JS_FreeValue(m_context, main);
-  if (JS_IsException(rval)) {
-    JS_ReportPendingException(m_context);
-    return;
+  if (!rval.isUndefined()) {
+    char* text = JS_EncodeString(m_context, JS::ToString(m_context, rval));
+    if (text) {
+      Log(text);
+      JS_free(m_context, text);
+    }
   }
-  JS_FreeValue(m_context, rval);
 }
 
 // return false to stop the script
@@ -489,16 +514,7 @@ bool Script::RunEventLoop() {
 
   m_threadState.lastSpinTime = std::chrono::steady_clock::now();
   uv_run(&m_loop, UV_RUN_NOWAIT);
-  JSContext* ctx;
-  for (;;) {
-    int r = JS_ExecutePendingJob(m_runtime, &ctx);
-    if (r <= 0) {
-      if (r < 0) {
-        JS_ReportPendingException(ctx);
-      }
-      break;
-    }
-  }
+  //js::RunJobs(m_context);
 
   // run loop until there are no more events or script is interrupted
   return ProcessAllEvents();
@@ -516,39 +532,33 @@ void Script::PurgeEventList() {
   RemoveAllEventListeners();
 }
 
-void Script::ExecuteEvent(char* evtName, int argc, const JSValue* argv, bool* block) {
-  for (const auto& root : m_functions[evtName]) {
-    JSValue rval;
-    rval = JS_Call(m_context, root, JS_UNDEFINED, argc, const_cast<JSValue*>(argv));
-    if (JS_IsException(rval)) {
+void Script::ExecuteEvent(char* evtName, const JS::AutoValueVector& args, bool* block) {
+  JS::RootedValue rval(m_context);
+  for (const auto& fun : m_functions[evtName]) {
+    if (!JS_CallFunctionValue(m_context, m_globalObject, fun, args, &rval)) {
       JS_ReportPendingException(m_context);
-      return;
+      continue;
     }
     if (block) {
-      *block |= static_cast<bool>(JS_IsBool(rval) && JS_ToBool(m_context, rval));
+      *block |= static_cast<bool>(rval.isBoolean() && rval.toBoolean());
     }
-    JS_FreeValue(m_context, rval);
   }
 }
 
 bool Script::HandleEvent(std::shared_ptr<Event> evt, bool clearList) {
+  JS::AutoValueVector args(m_context);
   char* evtName = (char*)evt->name.c_str();
 
   if (strcmp(evtName, "itemaction") == 0) {
     if (!clearList) {
       std::shared_ptr<ItemEvent> itemEvt = std::dynamic_pointer_cast<ItemEvent>(evt);
-      JSValue args[] = {
-          JS_NewUint32(m_context, itemEvt->id),
-          JS_NewUint32(m_context, itemEvt->mode),
-          JS_NewString(m_context, itemEvt->code.c_str()),
-          JS_NewBool(m_context, itemEvt->global),
-      };
+      args.resize(4);
+      args[0].set(JS_NumberValue(itemEvt->id));
+      args[1].set(JS_NumberValue(itemEvt->mode));
+      args[2].set(JS::StringValue(JS_NewStringCopyZ(m_context, itemEvt->code.c_str())));
+      args[3].set(JS::BooleanValue(itemEvt->global));
 
-      ExecuteEvent(evtName, _countof(args), args);
-
-      for (size_t i = 0; i < _countof(args); ++i) {
-        JS_FreeValue(m_context, args[i]);
-      }
+      ExecuteEvent(evtName, args);
     }
 
     return true;
@@ -556,19 +566,17 @@ bool Script::HandleEvent(std::shared_ptr<Event> evt, bool clearList) {
   if (strcmp(evtName, "gameevent") == 0) {
     if (!clearList) {
       std::shared_ptr<GameEvent> gameEvt = std::dynamic_pointer_cast<GameEvent>(evt);
-      JSValue args[] = {
-          JS_NewUint32(m_context, gameEvt->mode),
-          JS_NewUint32(m_context, gameEvt->param1),
-          JS_NewUint32(m_context, gameEvt->param2),
-          !gameEvt->name1.empty() ? JS_NewString(m_context, gameEvt->name1.c_str()) : JS_UNDEFINED,
-          !gameEvt->name2.empty() ? JS_NewString(m_context, gameEvt->name2.c_str()) : JS_UNDEFINED,
-      };
-
-      ExecuteEvent(evtName, _countof(args), args);
-
-      for (size_t i = 0; i < _countof(args); ++i) {
-        JS_FreeValue(m_context, args[i]);
+      args.resize(3);
+      args[0].set(JS_NumberValue(gameEvt->mode));
+      args[1].set(JS_NumberValue(gameEvt->param1));
+      args[2].set(JS_NumberValue(gameEvt->param2));
+      if (!gameEvt->name1.empty()) {
+        args.append(JS::StringValue(JS_NewStringCopyZ(m_context, gameEvt->name1.c_str())));
       }
+      if (!gameEvt->name2.empty()) {
+        args.append(JS::StringValue(JS_NewStringCopyZ(m_context, gameEvt->name2.c_str())));
+      }
+      ExecuteEvent(evtName, args);
     }
 
     return true;
@@ -576,16 +584,15 @@ bool Script::HandleEvent(std::shared_ptr<Event> evt, bool clearList) {
   if (strcmp(evtName, "copydata") == 0) {
     if (!clearList) {
       std::shared_ptr<CopyDataMessageEvent> dataEvt = std::dynamic_pointer_cast<CopyDataMessageEvent>(evt);
-      JSValue args[] = {
-          JS_NewUint32(m_context, dataEvt->mode),
-          !dataEvt->msg.empty() ? JS_NewString(m_context, dataEvt->msg.c_str()) : JS_UNDEFINED,
-      };
-
-      ExecuteEvent(evtName, _countof(args), args);
-
-      for (size_t i = 0; i < _countof(args); ++i) {
-        JS_FreeValue(m_context, args[i]);
+      args.resize(2);
+      args[0].set(JS_NumberValue(dataEvt->mode));
+      if (!dataEvt->msg.empty()) {
+        args[1].setString(JS_NewStringCopyZ(m_context, dataEvt->msg.c_str()));
+      } else {
+        args[1].setUndefined();
       }
+
+      ExecuteEvent(evtName, args);
     }
 
     return true;
@@ -595,16 +602,15 @@ bool Script::HandleEvent(std::shared_ptr<Event> evt, bool clearList) {
     bool block = false;
     if (!clearList) {
       std::shared_ptr<ChatMessageEvent> chatEvt = std::dynamic_pointer_cast<ChatMessageEvent>(evt);
-      JSValue args[] = {
-          !chatEvt->nickname.empty() ? JS_NewString(m_context, chatEvt->nickname.c_str()) : JS_UNDEFINED,
-          !chatEvt->msg.empty() ? JS_NewString(m_context, chatEvt->msg.c_str()) : JS_UNDEFINED,
-      };
-
-      ExecuteEvent(evtName, _countof(args), args, &block);
-
-      for (size_t i = 0; i < _countof(args); ++i) {
-        JS_FreeValue(m_context, args[i]);
+      args.resize(2);
+      if (!chatEvt->nickname.empty()) {
+        args[0].set(JS::StringValue(JS_NewStringCopyZ(m_context, chatEvt->nickname.c_str())));
       }
+      if (!chatEvt->msg.empty()) {
+        args[1].set(JS::StringValue(JS_NewStringCopyZ(m_context, chatEvt->msg.c_str())));
+      }
+
+      ExecuteEvent(evtName, args, &block);
     }
     if (strcmp(evtName, "chatmsgblocker") == 0 || strcmp(evtName, "chatinputblocker") == 0 || strcmp(evtName, "whispermsgblocker") == 0) {
       evt->block = block;
@@ -615,16 +621,11 @@ bool Script::HandleEvent(std::shared_ptr<Event> evt, bool clearList) {
   if (strcmp(evtName, "mousemove") == 0) {
     if (!clearList) {
       std::shared_ptr<MouseEvent> mouseEvt = std::dynamic_pointer_cast<MouseEvent>(evt);
-      JSValue args[] = {
-          JS_NewUint32(m_context, mouseEvt->x),
-          JS_NewUint32(m_context, mouseEvt->y),
-      };
+      args.resize(2);
+      args[0].setNumber(mouseEvt->x);
+      args[1].setNumber(mouseEvt->y);
 
-      ExecuteEvent(evtName, _countof(args), args);
-
-      for (size_t i = 0; i < _countof(args); ++i) {
-        JS_FreeValue(m_context, args[i]);
-      }
+      ExecuteEvent(evtName, args);
     }
 
     return true;
@@ -632,36 +633,25 @@ bool Script::HandleEvent(std::shared_ptr<Event> evt, bool clearList) {
   if (strcmp(evtName, "ScreenHookHover") == 0) {
     std::shared_ptr<GenHookEvent> genHookEvt = std::dynamic_pointer_cast<GenHookEvent>(evt);
     if (!clearList) {
-      JSValue args[] = {
-          JS_NewUint32(m_context, genHookEvt->x),
-          JS_NewUint32(m_context, genHookEvt->y),
-      };
+      args.resize(2);
+      args[0].setNumber(genHookEvt->x);
+      args[1].setNumber(genHookEvt->y);
 
-      ExecuteEvent(evtName, _countof(args), args);
-
-      for (size_t i = 0; i < _countof(args); ++i) {
-        JS_FreeValue(m_context, args[i]);
-      }
+      ExecuteEvent(evtName, args);
     }
-    JS_FreeValue(m_context, genHookEvt->callback);
 
     return true;
   }
   if (strcmp(evtName, "mouseclick") == 0) {
     if (!clearList) {
       std::shared_ptr<MouseEvent> mouseEvt = std::dynamic_pointer_cast<MouseEvent>(evt);
-      JSValue args[] = {
-          JS_NewUint32(m_context, mouseEvt->button),
-          JS_NewUint32(m_context, mouseEvt->x),
-          JS_NewUint32(m_context, mouseEvt->y),
-          JS_NewUint32(m_context, mouseEvt->state),
-      };
+      args.resize(4);
+      args[0].setNumber(mouseEvt->button);
+      args[1].setNumber(mouseEvt->x);
+      args[2].setNumber(mouseEvt->y);
+      args[3].setNumber(mouseEvt->state);
 
-      ExecuteEvent(evtName, _countof(args), args);
-
-      for (size_t i = 0; i < _countof(args); ++i) {
-        JS_FreeValue(m_context, args[i]);
-      }
+      ExecuteEvent(evtName, args);
     }
 
     return true;
@@ -669,15 +659,10 @@ bool Script::HandleEvent(std::shared_ptr<Event> evt, bool clearList) {
   if (strcmp(evtName, "melife") == 0 || strcmp(evtName, "memana") == 0) {
     if (!clearList) {
       std::shared_ptr<HealthManaEvent> hpmpEvt = std::dynamic_pointer_cast<HealthManaEvent>(evt);
-      JSValue args[] = {
-          JS_NewUint32(m_context, hpmpEvt->value),
-      };
+      args.resize(1);
+      args[0].setNumber(hpmpEvt->value);
 
-      ExecuteEvent(evtName, _countof(args), args);
-
-      for (size_t i = 0; i < _countof(args); ++i) {
-        JS_FreeValue(m_context, args[i]);
-      }
+      ExecuteEvent(evtName, args);
     }
 
     return true;
@@ -685,15 +670,10 @@ bool Script::HandleEvent(std::shared_ptr<Event> evt, bool clearList) {
   if (strcmp(evtName, "playerassign") == 0) {
     if (!clearList) {
       std::shared_ptr<PlayerAssignedEvent> assignEvt = std::dynamic_pointer_cast<PlayerAssignedEvent>(evt);
-      JSValue args[] = {
-          JS_NewUint32(m_context, assignEvt->id),
-      };
+      args.resize(1);
+      args[0].setNumber(assignEvt->id);
 
-      ExecuteEvent(evtName, _countof(args), args);
-
-      for (size_t i = 0; i < _countof(args); ++i) {
-        JS_FreeValue(m_context, args[i]);
-      }
+      ExecuteEvent(evtName, args);
     }
 
     return true;
@@ -702,15 +682,10 @@ bool Script::HandleEvent(std::shared_ptr<Event> evt, bool clearList) {
     bool block = false;
     if (!clearList) {
       std::shared_ptr<KeyEvent> keyEvt = std::dynamic_pointer_cast<KeyEvent>(evt);
-      JSValue args[] = {
-          JS_NewUint32(m_context, keyEvt->key),
-      };
+      args.resize(1);
+      args[0].setNumber(keyEvt->key);
 
-      ExecuteEvent(evtName, _countof(args), args, &block);
-
-      for (size_t i = 0; i < _countof(args); ++i) {
-        JS_FreeValue(m_context, args[i]);
-      }
+      ExecuteEvent(evtName, args, &block);
     }
     if (strcmp(evtName, "keydownblocker") == 0) {
       evt->block = block;
@@ -722,22 +697,19 @@ bool Script::HandleEvent(std::shared_ptr<Event> evt, bool clearList) {
     std::shared_ptr<GenHookEvent> genHookEvt = std::dynamic_pointer_cast<GenHookEvent>(evt);
     bool block = false;
     if (!clearList) {
-      JSValue args[] = {
-          JS_NewUint32(m_context, genHookEvt->x),
-          JS_NewUint32(m_context, genHookEvt->y),
-          JS_NewUint32(m_context, genHookEvt->button),
-      };
+      args.resize(3);
+      args[0].setNumber(genHookEvt->x);
+      args[1].setNumber(genHookEvt->y);
+      args[2].setNumber(genHookEvt->button);
 
-      JSValue rval;
+      JS::RootedValue rval(m_context);
       // diffrent function source for hooks
-      rval = JS_Call(m_context, m_globalObject, genHookEvt->callback, _countof(args), args);
-      block |= static_cast<bool>(JS_IsBool(rval) && JS_ToBool(m_context, rval));
-
-      for (size_t i = 0; i < _countof(args); ++i) {
-        JS_FreeValue(m_context, args[i]);
+      JS::RootedFunction fun(m_context, genHookEvt->callback);
+      if (!JS_CallFunction(m_context, m_globalObject, fun, args, &rval)) {
+        JS_ReportPendingException(m_context);
       }
+      block |= static_cast<bool>(rval.isBoolean() && rval.toBoolean());
     }
-    JS_FreeValue(m_context, genHookEvt->callback);
     evt->block = block;
     SetEvent(Vars.eventSignal);
 
@@ -746,51 +718,56 @@ bool Script::HandleEvent(std::shared_ptr<Event> evt, bool clearList) {
   if (strcmp(evtName, "Command") == 0) {
     std::shared_ptr<CommandEvent> cmdEvt = std::dynamic_pointer_cast<CommandEvent>(evt);
     std::string test;
-
+    if (cmdEvt->command == "stack") {
+      Log("Capturing stack...");
+      m_debugCaptureStackFrames = true;
+    }
     test.append("try{ ");
     test.append(cmdEvt->command);
     test.append(" } catch (error){print(error)}");
 
-    JSValue rval = JS_Eval(m_context, test.data(), test.length(), "Command Line", JS_EVAL_TYPE_GLOBAL);
-    if (!JS_IsException(rval)) {
-      if (!JS_IsNull(rval) && !JS_IsUndefined(rval)) {
-        const char* text = JS_ToCString(m_context, rval);
-        Print(text);
-        JS_FreeCString(m_context, text);
-      }
-      JS_FreeValue(m_context, rval);
-    } else {
+    JS::RootedValue rval(m_context);
+    JS::CompileOptions opts(m_context);
+    opts.setFileAndLine("<command line>", 1);
+    if (!JS::Evaluate(m_context, opts, test.data(), test.length(), &rval)) {
       JS_ReportPendingException(m_context);
+    } else if (!rval.isUndefined()) {
+      char* text = JS_EncodeString(m_context, JS::ToString(m_context, rval));
+      if (text) {
+        Print(text);
+        JS_free(m_context, text);
+      }
     }
   }
   if (strcmp(evtName, "scriptmsg") == 0) {
     std::shared_ptr<ScriptMsgEvent> msgEvt = std::dynamic_pointer_cast<ScriptMsgEvent>(evt);
     if (!clearList) {
-      JSValue data_obj = JS_ReadObject(m_context, msgEvt->data, msgEvt->data_len, JS_READ_OBJ_SAB | JS_READ_OBJ_REFERENCE);
-      ExecuteEvent(evtName, 1, &data_obj);
-      JS_FreeValue(m_context, data_obj);
-    }
+      // not sure if this is how we should use structured clone buffers
+      // it works and can't find documentation of how to do it properly
+      // so it will do for now unless it starts acting up
+      for (auto& buffer : msgEvt->buffers) {
+        JS::RootedValue val(m_context);
+        buffer.read(m_context, &val);
+        args.append(val);
+      }
 
-    // decrease SAB reference count
-    for (size_t i = 0; i < msgEvt->sab_tab_len; ++i) {
-      js_sab_free(NULL, msgEvt->sab_tab[i]);
+      ExecuteEvent(evtName, args);
     }
-    free(msgEvt->data);
-    free(msgEvt->sab_tab);
     return true;
   }
   if (strcmp(evtName, "gamepacket") == 0 || strcmp(evtName, "gamepacketsent") == 0 || strcmp(evtName, "realmpacket") == 0) {
     bool block = false;
     if (!clearList) {
       std::shared_ptr<PacketEvent> packetEvt = std::dynamic_pointer_cast<PacketEvent>(evt);
-
-      JSValue arr = JS_NewArray(m_context);
+      JS::RootedObject arr(m_context, JS_NewArrayObject(m_context, packetEvt->bytes.size()));
       for (size_t i = 0; i < packetEvt->bytes.size(); i++) {
-        JS_SetPropertyUint32(m_context, arr, i, JS_NewUint32(m_context, packetEvt->bytes[i]));
+        JS_SetElement(m_context, arr, i, packetEvt->bytes[i]);
       }
 
-      ExecuteEvent(evtName, 1, &arr, &block);
-      JS_FreeValue(m_context, arr);
+      args.resize(1);
+      args[0].setObject(*arr);
+
+      ExecuteEvent(evtName, args, &block);
     }
 
     evt->block = block;
@@ -808,10 +785,12 @@ bool Script::HandleEvent(std::shared_ptr<Event> evt, bool clearList) {
 bool Script::ProcessAllEvents() {
   for (;;) {
     if (m_scriptState == kScriptStateRequestStop) {
+      Log("Request stop %s", GetShortFilename());
       return false;
     }
 
     if (m_scriptMode == kScriptModeGame && ClientState() == ClientStateMenu) {
+      Log("Game mode mismatch %s", GetShortFilename());
       return false;
     }
 
@@ -830,41 +809,43 @@ bool Script::ProcessAllEvents() {
   return true;
 }
 
-// return != 0 if the JS code needs to be interrupted
-int Script::InterruptHandler(JSRuntime* rt, void* /*opaque*/) {
-  ThreadState* ts = (ThreadState*)JS_GetRuntimeOpaque(rt);
-  Script* script = ts->script;
-
-  //auto t = std::chrono::steady_clock::now() - ts->lastSpinTime;
-  //auto tms = std::chrono::duration_cast<std::chrono::milliseconds>(t);
-  //if (tms.count() > 5000) {
-  //  // interrupt the script if it stalls for more than 5 seconds without yielding to event loop
-  //  return 1;
-  //}
-  if (!script->RunEventLoop()) {
-    return 1;
-  }
-  return 0;
-}
+// return false if the JS code needs to be interrupted
+// bool Script::InterruptHandler(JSContext* ctx) {
+//  ThreadState* ts = (ThreadState*)JS_GetContextPrivate(ctx);
+//  Script* script = ts->script;
+//
+//  // auto t = std::chrono::steady_clock::now() - ts->lastSpinTime;
+//  // auto tms = std::chrono::duration_cast<std::chrono::milliseconds>(t);
+//  // if (tms.count() > 5000) {
+//  //   // interrupt the script if it stalls for more than 5 seconds without yielding to event loop
+//  //   return 1;
+//  // }
+//  if (!script->RunEventLoop()) {
+//    return false;
+//  }
+//  return true;
+//}
 
 #ifdef DEBUG
+#pragma pack(push, 8)
 typedef struct tagTHREADNAME_INFO {
-  DWORD dwType;      // must be 0x1000
-  LPCWSTR szName;    // pointer to name (in user addr space)
-  DWORD dwThreadID;  // thread ID (-1=caller thread)
-  DWORD dwFlags;     // reserved for future use, must be zero
+  DWORD dwType;      // Must be 0x1000.
+  LPCSTR szName;     // Pointer to name (in user addr space).
+  DWORD dwThreadID;  // Thread ID (-1=caller thread).
+  DWORD dwFlags;     // Reserved for future use, must be zero.
 } THREADNAME_INFO;
+#pragma pack(pop)
 
-void SetThreadName(DWORD dwThreadID, LPCWSTR szThreadName) {
-  THREADNAME_INFO info;
+void SetThreadName(DWORD dwThreadID, const char* threadName) {
+  THREADNAME_INFO info{};
   info.dwType = 0x1000;
-  info.szName = szThreadName;
+  info.szName = threadName;
   info.dwThreadID = dwThreadID;
   info.dwFlags = 0;
 
   __try {
-    RaiseException(0x406D1388, 0, sizeof(info) / sizeof(DWORD), (DWORD*)&info);
-  } __except (EXCEPTION_CONTINUE_EXECUTION) {
+    RaiseException(0x406D1388, 0, sizeof(info) / sizeof(ULONG_PTR), (ULONG_PTR*)&info);
+  } __except (EXCEPTION_EXECUTE_HANDLER) {
   }
 }
 #endif
@@ -874,7 +855,7 @@ DWORD WINAPI ScriptThread(LPVOID lpThreadParameter) {
   // TODO(ejt): necessary? script should ALWAYS be here otherwise it's a critical error!
   if (script) {
 #ifdef DEBUG
-    SetThreadName(0xFFFFFFFF, script->GetShortFilename());
+    SetThreadName(GetCurrentThreadId(), script->GetShortFilename());
 #endif
     script->Run();
   }

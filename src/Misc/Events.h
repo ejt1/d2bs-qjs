@@ -7,7 +7,9 @@
 #include <windows.h>
 
 class Script;
-typedef std::list<JSValue> FunctionList;
+
+// storing as persistently rooted value is probably not the best idea?
+typedef std::list<JS::PersistentRootedValue> FunctionList;
 
 struct Event {
   Event() : block(false){};
@@ -38,11 +40,7 @@ struct MouseEvent : Event {
 };
 
 struct ScriptMsgEvent : Event {
-  uint8_t* data;
-  size_t data_len;
-
-  uint8_t** sab_tab;
-  size_t sab_tab_len;
+  std::vector<JSAutoStructuredCloneBuffer> buffers;
 };
 
 struct ChatMessageEvent : Event {
@@ -78,7 +76,7 @@ struct GenHookEvent : Event {
   uint32_t x;
   uint32_t y;
   uint32_t button;
-  JSValue callback;
+  JSFunction* callback;
 };
 
 struct CommandEvent : Event {
@@ -96,14 +94,14 @@ bool KeyDownUpEvent(WPARAM bByte, BYTE bUp);
 void PlayerAssignEvent(DWORD dwUnitId);
 void MouseClickEvent(int button, POINT pt, bool bUp);
 void MouseMoveEvent(POINT pt);
-bool ScriptMessageEvent(JSContext* ctx, Script* script, JSValue obj);
-void ScriptBroadcastEvent(JSContext* cx, JSValue* argv);
+bool ScriptMessageEvent(JSContext* ctx, Script* script, unsigned argc, JS::Value* argv);
+void ScriptBroadcastEvent(JSContext* cx, unsigned argc, JS::Value* argv);
 void ItemActionEvent(DWORD GID, char* Code, BYTE Mode, bool Global);
 bool GamePacketEvent(BYTE* pPacket, DWORD dwSize);
 bool GamePacketSentEvent(BYTE* pPacket, DWORD dwSize);
 bool RealmPacketEvent(BYTE* pPacket, DWORD dwSize);
-bool GenhookClickEvent(Script* script, int button, POINT* loc, JSValue func);
-void GenhookHoverEvent(Script* script, POINT* loc, JSValue func);
+bool GenhookClickEvent(Script* script, int button, POINT* loc, JS::HandleObject func);
+void GenhookHoverEvent(Script* script, POINT* loc, JS::HandleObject func);
 
 struct ChatEventHelper {
   const char *name, *nick;
@@ -151,7 +149,8 @@ struct QuadArgHelper {
 
 struct BCastEventHelper {
   JSContext* cx;
-  JSValue* argv;
+  unsigned argc;
+  JS::Value* argv;
 };
 struct PacketEventHelper {
   const char* name;

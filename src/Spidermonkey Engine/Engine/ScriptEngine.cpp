@@ -4,11 +4,12 @@
 
 #include "ScriptEngine.h"
 #include "Core.h"
-#include "JSGlobalClasses.h"
 #include "JSUnit.h"
 #include "Engine.h"
 #include "Events.h"
 #include "Helpers.h"
+
+#include <js/Initialization.h>
 
 // internal ForEachScript helper functions
 bool __fastcall DisposeScript(Script* script, void*) {
@@ -24,9 +25,11 @@ bool __fastcall StopScript(Script* script, void* /*argv*/) {
 
 ScriptEngine::ScriptEngine() : m_console(NULL), m_lock({0}), m_scriptListLock({0}) {
   m_instance = this;
+  JS_Init();
 }
 
 ScriptEngine::~ScriptEngine() {
+  JS_ShutDown();
 }
 
 ScriptEngine* ScriptEngine::GetInstance() {

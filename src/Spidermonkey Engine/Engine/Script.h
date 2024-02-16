@@ -6,7 +6,6 @@
 #include <list>
 
 #include "js32.h"
-#include "JSGlobalClasses.h"
 #include "JSUnit.h"
 #include "Events.h"
 
@@ -69,10 +68,6 @@ class Script {
     return m_context;
   }
 
-  inline JSRuntime* GetRuntime(void) {
-    return m_runtime;
-  }
-
   inline ScriptMode GetMode(void) {
     return m_scriptMode;
   }
@@ -86,15 +81,15 @@ class Script {
   bool IsIncluded(const char* file);
   bool Include(const char* file);
 
-  size_t GetListenerCount(const char* evtName, JSValue evtFunc = JS_UNDEFINED);
-  void AddEventListener(const char* evtName, JSValue evtFunc);
-  void RemoveEventListener(const char* evtName, JSValue evtFunc);
+  size_t GetListenerCount(const char* evtName, JS::HandleValue evtFunc = JS::UndefinedHandleValue);
+  void AddEventListener(const char* evtName, JS::HandleValue evtFunc);
+  void RemoveEventListener(const char* evtName, JS::HandleValue evtFunc);
   void RemoveAllListeners(const char* evtName);
   void RemoveAllEventListeners();
   void DispatchEvent(std::shared_ptr<Event> evt);
 
   // blocks the executing thread for X milliseconds, keeping the event loop running during this time
-  void BlockThread(DWORD delay);
+  bool BlockThread(DWORD delay);
   bool HandleEvent(std::shared_ptr<Event> evt, bool clearList);
 
  private:
@@ -105,10 +100,10 @@ class Script {
 
   bool RunEventLoop();
   void PurgeEventList();
-  void ExecuteEvent(char* evtName, int argc, const JSValue* argv, bool* block = nullptr);
+  void ExecuteEvent(char* evtName, const JS::AutoValueVector& argv, bool* block = nullptr);
   bool ProcessAllEvents();
 
-  static int InterruptHandler(JSRuntime* rt, void* opaque);
+  //static bool InterruptHandler(JSContext* ctx);
 
   std::string m_fileName;
   ScriptMode m_scriptMode;
@@ -116,10 +111,11 @@ class Script {
 
   ThreadState m_threadState;
   uv_loop_t m_loop;
-  JSRuntime* m_runtime;
   JSContext* m_context;
-  JSValue m_globalObject;
-  JSValue m_script;
+  // TODO(ejt): is there a reason to keep a reference to global?
+  JS::PersistentRootedObject m_globalObject;
+  // TODO(ejt): is there a reason to keep a reference to script?
+  JS::PersistentRootedScript m_script;
   UnitWrap::UnitData* m_me;
 
   FunctionMap m_functions;
@@ -131,6 +127,7 @@ class Script {
   IncludeList m_includes, m_inProgress;
 
   CRITICAL_SECTION m_lock;
+  bool m_debugCaptureStackFrames;
 };
 
 struct RUNCOMMANDSTRUCT {

@@ -7,1725 +7,1690 @@
 
 #include "Bindings.h"
 
-JSValue FrameWrap::Instantiate(JSContext* ctx, JSValue new_target, FrameHook* frame) {
-  JSValue proto;
-  if (JS_IsUndefined(new_target)) {
-    proto = JS_GetClassProto(ctx, m_class_id);
-  } else {
-    proto = JS_GetPropertyStr(ctx, new_target, "prototype");
-    if (JS_IsException(proto)) {
-      return JS_EXCEPTION;
-    }
+JSObject* FrameWrap::Instantiate(JSContext* ctx, FrameHook* frame) {
+  JS::RootedObject global(ctx, JS::CurrentGlobalOrNull(ctx));
+  JS::RootedValue constructor_val(ctx);
+  if (!JS_GetProperty(ctx, global, "Frame", &constructor_val)) {
+    JS_ReportErrorASCII(ctx, "Could not find constructor object for Frame");
+    return nullptr;
   }
-  JSValue obj = JS_NewObjectProtoClass(ctx, proto, m_class_id);
-  JS_FreeValue(ctx, proto);
-  if (JS_IsException(obj)) {
-    return obj;
+  if (!constructor_val.isObject()) {
+    JS_ReportErrorASCII(ctx, "Frame is not a constructor");
+    return nullptr;
   }
+  JS::RootedObject constructor(ctx, &constructor_val.toObject());
 
-  FrameWrap* wrap = new FrameWrap(ctx, frame);
-  if (!wrap) {
-    JS_FreeValue(ctx, obj);
-    return JS_ThrowOutOfMemory(ctx);
+  JS::RootedObject obj(ctx, JS_New(ctx, constructor, JS::HandleValueArray::empty()));
+  if (!obj) {
+    JS_ReportErrorASCII(ctx, "Calling Frame constructor failed");
+    return nullptr;
   }
-  JS_SetOpaque(obj, wrap);
-
   return obj;
 }
 
-void FrameWrap::Initialize(JSContext* ctx, JSValue target) {
-  JSClassDef def{};
-  def.class_name = "Frame";
-  def.finalizer = [](JSRuntime* /*rt*/, JSValue val) {
-    FrameWrap* wrap = static_cast<FrameWrap*>(JS_GetOpaque(val, m_class_id));
-    if (wrap) {
-      delete wrap;
-    }
-  };
-
-  if (m_class_id == 0) {
-    JS_NewClassID(&m_class_id);
+void FrameWrap::Initialize(JSContext* ctx, JS::HandleObject target) {
+  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, New, 0, m_props, m_methods, nullptr, nullptr));
+  if (!proto) {
+    return;
   }
-  JS_NewClass(JS_GetRuntime(ctx), m_class_id, &def);
-
-  JSValue proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, proto, m_proto_funcs, _countof(m_proto_funcs));
-
-  JSValue obj = JS_NewCFunction2(ctx, New, "Frame", 0, JS_CFUNC_constructor, 0);
-  JS_SetConstructor(ctx, obj, proto);
-
-  JS_SetClassProto(ctx, m_class_id, proto);
-  JS_SetPropertyStr(ctx, target, "Frame", obj);
 }
 
-FrameWrap::FrameWrap(JSContext* /*ctx*/, FrameHook* frame) : pFrame(frame) {
+FrameWrap::FrameWrap(JSContext* ctx, JS::HandleObject obj, FrameHook* frame) : BaseObject(ctx, obj), pFrame(frame) {
 }
 
 FrameWrap::~FrameWrap() {
   Genhook::EnterGlobalSection();
-  delete pFrame;
+  if (pFrame) {
+    delete pFrame;
+    pFrame = nullptr;
+  }
   Genhook::LeaveGlobalSection();
 }
 
-JSValue FrameWrap::New(JSContext* ctx, JSValue new_target, int argc, JSValue* argv) {
-  Script* script = (Script*)JS_GetContextOpaque(ctx);
+void FrameWrap::finalize(JSFreeOp* fop, JSObject* obj) {
+  BaseObject* wrap = BaseObject::FromJSObject(obj);
+  if (wrap) {
+    delete wrap;
+  }
+}
+
+bool FrameWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ThreadState* ts = (ThreadState*)JS_GetContextPrivate(ctx);
+  Script* script = ts->script;
 
   uint32_t x = 0, y = 0, x2 = 0, y2 = 0;
   Align align = Left;
   bool automap = false;
-  JSValue click = JS_UNDEFINED, hover = JS_UNDEFINED;
+  JS::RootedObject click(ctx);
+  JS::RootedObject hover(ctx);
 
-  if (argc > 0 && JS_IsNumber(argv[0]))
-    JS_ToUint32(ctx, &x, argv[0]);
-  if (argc > 1 && JS_IsNumber(argv[1]))
-    JS_ToUint32(ctx, &y, argv[1]);
-  if (argc > 2 && JS_IsNumber(argv[2]))
-    JS_ToUint32(ctx, &x2, argv[2]);
-  if (argc > 3 && JS_IsNumber(argv[3]))
-    JS_ToUint32(ctx, &y2, argv[3]);
-  if (argc > 4 && JS_IsNumber(argv[4]))
-    JS_ToUint32(ctx, (uint32_t*)(&align), argv[4]);
-  if (argc > 5 && JS_IsBool(argv[5]))
-    automap = !!JS_ToBool(ctx, argv[5]);
-  if (argc > 6 && JS_IsFunction(ctx, argv[6]))
-    click = argv[6];
-  if (argc > 7 && JS_IsFunction(ctx, argv[7]))
-    hover = argv[7];
+  if (argc > 0 && args[0].isNumber())
+    JS::ToUint32(ctx, args[0], &x);
+  if (argc > 1 && args[1].isNumber())
+    JS::ToUint32(ctx, args[1], &y);
+  if (argc > 2 && args[2].isNumber())
+    JS::ToUint32(ctx, args[2], &x2);
+  if (argc > 3 && args[3].isNumber())
+    JS::ToUint32(ctx, args[3], &y2);
+  if (argc > 4 && args[4].isNumber())
+    JS::ToUint32(ctx, args[4], (uint32_t*)(&align));
+  if (argc > 5 && args[5].isBoolean())
+    automap = args[5].toBoolean();
+  if (argc > 6 && args[6].isObject() && JS_ObjectIsFunction(ctx, args[6].toObjectOrNull()))
+    click.set(args[6].toObjectOrNull());
+  if (argc > 7 && args[7].isObject() && JS_ObjectIsFunction(ctx, args[7].toObjectOrNull()))
+    hover.set(args[7].toObjectOrNull());
 
+  JS::RootedObject newObject(ctx, JS_NewObjectForConstructor(ctx, &m_class, args));
+  if (!newObject) {
+    THROW_ERROR(ctx, "failed to instantiate frame");
+  }
   // framehooks don't work out of game -- they just crash
-  FrameHook* pFrameHook = new FrameHook(script, JS_UNDEFINED, x, y, x2, y2, automap, align, IG);
+  FrameHook* pFrameHook = new FrameHook(script, newObject, x, y, x2, y2, automap, align, IG);
   if (!pFrameHook)
     THROW_ERROR(ctx, "Failed to create framehook");
 
-  JSValue hook = FrameWrap::Instantiate(ctx, new_target, pFrameHook);
-  if (JS_IsException(hook))
-    THROW_ERROR(ctx, "Failed to create frame object");
+  FrameWrap* wrap = new FrameWrap(ctx, newObject, pFrameHook);
+  if (!wrap) {
+    JS_ReportOutOfMemory(ctx);
+    return false;
+  }
 
-  pFrameHook->SetClickHandler(click);
-  pFrameHook->SetHoverHandler(hover);
-
-  return hook;
+  // pFrameHook->SetClickHandler(click);
+  // pFrameHook->SetHoverHandler(hover);
+  args.rval().setObject(*newObject);
+  return true;
 }
 
 // properties
-JSValue FrameWrap::GetX(JSContext* ctx, JSValue this_val) {
-  FrameWrap* wrap = static_cast<FrameWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool FrameWrap::GetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  FrameWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
-  return JS_NewUint32(ctx, pFramehook->GetX());
+  args.rval().setNumber(pFramehook->GetX());
+  return true;
 }
 
-JSValue FrameWrap::SetX(JSContext* ctx, JSValue this_val, JSValue val) {
-  FrameWrap* wrap = static_cast<FrameWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool FrameWrap::SetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  FrameWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
   uint32_t ival = 0;
-  if (!JS_IsNumber(val) || JS_ToUint32(ctx, &ival, val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isNumber() || !JS::ToUint32(ctx, args[0], &ival)) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
   pFramehook->SetX(ival);
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue FrameWrap::GetY(JSContext* ctx, JSValue this_val) {
-  FrameWrap* wrap = static_cast<FrameWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool FrameWrap::GetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  FrameWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
-  return JS_NewUint32(ctx, pFramehook->GetY());
+  args.rval().setNumber(pFramehook->GetY());
+  return true;
 }
 
-JSValue FrameWrap::SetY(JSContext* ctx, JSValue this_val, JSValue val) {
-  FrameWrap* wrap = static_cast<FrameWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool FrameWrap::SetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  FrameWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
   uint32_t ival = 0;
-  if (!JS_IsNumber(val) || JS_ToUint32(ctx, &ival, val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isNumber() || !JS::ToUint32(ctx, args[0], &ival)) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
   pFramehook->SetY(ival);
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue FrameWrap::GetSizeX(JSContext* ctx, JSValue this_val) {
-  FrameWrap* wrap = static_cast<FrameWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool FrameWrap::GetSizeX(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  FrameWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
-  return JS_NewUint32(ctx, pFramehook->GetXSize());
+  args.rval().setNumber(pFramehook->GetXSize());
+  return true;
 }
 
-JSValue FrameWrap::SetSizeX(JSContext* ctx, JSValue this_val, JSValue val) {
-  FrameWrap* wrap = static_cast<FrameWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool FrameWrap::SetSizeX(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  FrameWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
   uint32_t ival = 0;
-  if (!JS_IsNumber(val) || JS_ToUint32(ctx, &ival, val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isNumber() || !JS::ToUint32(ctx, args[0], &ival)) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
   pFramehook->SetXSize(ival);
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue FrameWrap::GetSizeY(JSContext* ctx, JSValue this_val) {
-  FrameWrap* wrap = static_cast<FrameWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool FrameWrap::GetSizeY(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  FrameWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
-  return JS_NewUint32(ctx, pFramehook->GetYSize());
+  args.rval().setNumber(pFramehook->GetYSize());
+  return true;
 }
 
-JSValue FrameWrap::SetSizeY(JSContext* ctx, JSValue this_val, JSValue val) {
-  FrameWrap* wrap = static_cast<FrameWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool FrameWrap::SetSizeY(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  FrameWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
   uint32_t ival = 0;
-  if (!JS_IsNumber(val) || JS_ToUint32(ctx, &ival, val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isNumber() || !JS::ToUint32(ctx, args[0], &ival)) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
   pFramehook->SetYSize(ival);
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue FrameWrap::GetVisible(JSContext* ctx, JSValue this_val) {
-  FrameWrap* wrap = static_cast<FrameWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool FrameWrap::GetVisible(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  FrameWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
-  return JS_NewBool(ctx, pFramehook->GetIsVisible());
+  args.rval().setBoolean(pFramehook->GetIsVisible());
+  return true;
 }
 
-JSValue FrameWrap::SetVisible(JSContext* ctx, JSValue this_val, JSValue val) {
-  FrameWrap* wrap = static_cast<FrameWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool FrameWrap::SetVisible(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  FrameWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
-  if (!JS_IsBool(val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isBoolean()) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
-  pFramehook->SetIsVisible(JS_ToBool(ctx, val));
-  return JS_UNDEFINED;
+  pFramehook->SetIsVisible(args[0].toBoolean());
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue FrameWrap::GetAlign(JSContext* ctx, JSValue this_val) {
-  FrameWrap* wrap = static_cast<FrameWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool FrameWrap::GetAlign(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  FrameWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
-  return JS_NewUint32(ctx, pFramehook->GetAlign());
+  args.rval().setNumber(static_cast<uint32_t>(pFramehook->GetAlign()));
+  return true;
 }
 
-JSValue FrameWrap::SetAlign(JSContext* ctx, JSValue this_val, JSValue val) {
-  FrameWrap* wrap = static_cast<FrameWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool FrameWrap::SetAlign(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  FrameWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
   uint32_t ival = 0;
-  if (!JS_IsNumber(val) || JS_ToUint32(ctx, &ival, val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isNumber() || !JS::ToUint32(ctx, args[0], &ival)) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
   pFramehook->SetAlign((Align)ival);
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue FrameWrap::GetZOrder(JSContext* ctx, JSValue this_val) {
-  FrameWrap* wrap = static_cast<FrameWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool FrameWrap::GetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  FrameWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
-  return JS_NewUint32(ctx, pFramehook->GetZOrder());
+  args.rval().setNumber(static_cast<uint32_t>(pFramehook->GetZOrder()));
+  return true;
 }
 
-JSValue FrameWrap::SetZOrder(JSContext* ctx, JSValue this_val, JSValue val) {
-  FrameWrap* wrap = static_cast<FrameWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool FrameWrap::SetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  FrameWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
   uint32_t ival = 0;
-  if (!JS_IsNumber(val) || JS_ToUint32(ctx, &ival, val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isNumber() || !JS::ToUint32(ctx, args[0], &ival)) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
   pFramehook->SetZOrder((ushort)ival);
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue FrameWrap::GetClick(JSContext* ctx, JSValue this_val) {
-  FrameWrap* wrap = static_cast<FrameWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool FrameWrap::GetClick(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  FrameWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
-  return JS_DupValue(ctx, pFramehook->GetClickHandler());
+  JS::RootedObject fun(ctx, pFramehook->GetClickHandler());
+  args.rval().setObject(*fun);
+  return true;
 }
 
-JSValue FrameWrap::SetClick(JSContext* /*ctx*/, JSValue this_val, JSValue val) {
-  FrameWrap* wrap = static_cast<FrameWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool FrameWrap::SetClick(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  FrameWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
-  pFramehook->SetClickHandler(val);
-  return JS_UNDEFINED;
+  JS::RootedObject fun(ctx, args[0].toObjectOrNull());
+  pFramehook->SetClickHandler(fun);
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue FrameWrap::GetHover(JSContext* ctx, JSValue this_val) {
-  FrameWrap* wrap = static_cast<FrameWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool FrameWrap::GetHover(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  FrameWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
-  return JS_DupValue(ctx, pFramehook->GetHoverHandler());
+  JS::RootedObject fun(ctx, pFramehook->GetHoverHandler());
+  args.rval().setObject(*fun);
+  return true;
 }
 
-JSValue FrameWrap::SetHover(JSContext* /*ctx*/, JSValue this_val, JSValue val) {
-  FrameWrap* wrap = static_cast<FrameWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool FrameWrap::SetHover(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  FrameWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
-  pFramehook->SetHoverHandler(val);
-  return JS_UNDEFINED;
+  JS::RootedObject fun(ctx, args[0].toObjectOrNull());
+  pFramehook->SetHoverHandler(fun);
+  args.rval().setUndefined();
+  return true;
 }
 
 // functions
-JSValue FrameWrap::Remove(JSContext* /*ctx*/, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
-  FrameWrap* wrap = static_cast<FrameWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
+bool FrameWrap::Remove(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  FrameWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
+  Genhook::EnterGlobalSection();
+  FrameHook* pFramehook = wrap->pFrame;
+  if (pFramehook) {
+    delete pFramehook;
+    wrap->pFrame = nullptr;
   }
-
-  return JS_UNDEFINED;
+  Genhook::LeaveGlobalSection();
+  args.rval().setUndefined();
+  return true;
 }
 
 D2BS_BINDING_INTERNAL(FrameWrap, FrameWrap::Initialize)
 
-JSValue BoxWrap::Instantiate(JSContext* ctx, JSValue new_target, BoxHook* box) {
-  JSValue proto;
-  if (JS_IsUndefined(new_target)) {
-    proto = JS_GetClassProto(ctx, m_class_id);
-  } else {
-    proto = JS_GetPropertyStr(ctx, new_target, "prototype");
-    if (JS_IsException(proto)) {
-      return JS_EXCEPTION;
-    }
+JSObject* BoxWrap::Instantiate(JSContext* ctx, BoxHook* box) {
+  JS::RootedObject global(ctx, JS::CurrentGlobalOrNull(ctx));
+  JS::RootedValue constructor_val(ctx);
+  if (!JS_GetProperty(ctx, global, "Box", &constructor_val)) {
+    JS_ReportErrorASCII(ctx, "Could not find constructor object for Box");
+    return nullptr;
   }
-  JSValue obj = JS_NewObjectProtoClass(ctx, proto, m_class_id);
-  JS_FreeValue(ctx, proto);
-  if (JS_IsException(obj)) {
-    return obj;
+  if (!constructor_val.isObject()) {
+    JS_ReportErrorASCII(ctx, "Box is not a constructor");
+    return nullptr;
   }
+  JS::RootedObject constructor(ctx, &constructor_val.toObject());
 
-  BoxWrap* wrap = new BoxWrap(ctx, box);
+  JS::RootedObject obj(ctx, JS_New(ctx, constructor, JS::HandleValueArray::empty()));
+  if (!obj) {
+    JS_ReportErrorASCII(ctx, "Calling Box constructor failed");
+    return nullptr;
+  }
+  BoxWrap* wrap = new BoxWrap(ctx, obj, box);
   if (!wrap) {
-    JS_FreeValue(ctx, obj);
-    return JS_ThrowOutOfMemory(ctx);
+    JS_ReportOutOfMemory(ctx);
+    return nullptr;
   }
-  JS_SetOpaque(obj, wrap);
-
   return obj;
 }
 
-void BoxWrap::Initialize(JSContext* ctx, JSValue target) {
-  JSClassDef def{};
-  def.class_name = "Box";
-  def.finalizer = [](JSRuntime* /*rt*/, JSValue val) {
-    BoxWrap* wrap = static_cast<BoxWrap*>(JS_GetOpaque(val, m_class_id));
-    if (wrap) {
-      delete wrap;
-    }
-  };
-
-  if (m_class_id == 0) {
-    JS_NewClassID(&m_class_id);
+void BoxWrap::Initialize(JSContext* ctx, JS::HandleObject target) {
+  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, New, 0, m_props, m_methods, nullptr, nullptr));
+  if (!proto) {
+    return;
   }
-  JS_NewClass(JS_GetRuntime(ctx), m_class_id, &def);
-
-  JSValue proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, proto, m_proto_funcs, _countof(m_proto_funcs));
-
-  JSValue obj = JS_NewCFunction2(ctx, New, "Box", 0, JS_CFUNC_constructor, 0);
-  JS_SetConstructor(ctx, obj, proto);
-
-  JS_SetClassProto(ctx, m_class_id, proto);
-  JS_SetPropertyStr(ctx, target, "Box", obj);
 }
 
-BoxWrap::BoxWrap(JSContext* /*ctx*/, BoxHook* box) : pBox(box) {
+BoxWrap::BoxWrap(JSContext* ctx, JS::HandleObject obj, BoxHook* box) : BaseObject(ctx, obj), pBox(box) {
 }
 
 BoxWrap::~BoxWrap() {
   Genhook::EnterGlobalSection();
-  delete pBox;
+  if (pBox) {
+    delete pBox;
+    pBox = nullptr;
+  }
   Genhook::LeaveGlobalSection();
 }
 
-JSValue BoxWrap::New(JSContext* ctx, JSValue new_target, int argc, JSValue* argv) {
-  Script* script = (Script*)JS_GetContextOpaque(ctx);
+void BoxWrap::finalize(JSFreeOp* fop, JSObject* obj) {
+  BaseObject* wrap = BaseObject::FromJSObject(obj);
+  if (wrap) {
+    delete wrap;
+  }
+}
+
+bool BoxWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ThreadState* ts = (ThreadState*)JS_GetContextPrivate(ctx);
+  Script* script = ts->script;
 
   ScreenhookState state = (script->GetMode() == kScriptModeMenu) ? OOG : IG;
   uint32_t x = 0, y = 0, x2 = 0, y2 = 0, color = 0, opacity = 0, align = Left;
   bool automap = false;
-  JSValue click = JS_UNDEFINED, hover = JS_UNDEFINED;
+  JS::RootedObject click(ctx);
+  JS::RootedObject hover(ctx);
 
-  if (argc > 0 && JS_IsNumber(argv[0]))
-    JS_ToUint32(ctx, &x, argv[0]);
-  if (argc > 1 && JS_IsNumber(argv[1]))
-    JS_ToUint32(ctx, &y, argv[1]);
-  if (argc > 2 && JS_IsNumber(argv[2]))
-    JS_ToUint32(ctx, &x2, argv[2]);
-  if (argc > 3 && JS_IsNumber(argv[3]))
-    JS_ToUint32(ctx, &y2, argv[3]);
-  if (argc > 4 && JS_IsNumber(argv[4]))
-    JS_ToUint32(ctx, &color, argv[4]);
-  if (argc > 5 && JS_IsNumber(argv[5]))
-    JS_ToUint32(ctx, &opacity, argv[5]);
-  if (argc > 6 && JS_IsNumber(argv[6]))
-    JS_ToUint32(ctx, &align, argv[6]);
-  if (argc > 7 && JS_IsBool(argv[7]))
-    automap = !!JS_ToBool(ctx, argv[7]);
-  if (argc > 8 && JS_IsFunction(ctx, argv[8]))
-    click = argv[8];
-  if (argc > 9 && JS_IsFunction(ctx, argv[9]))
-    hover = argv[9];
+  if (argc > 0 && args[0].isNumber())
+    JS::ToUint32(ctx, args[0], &x);
+  if (argc > 1 && args[1].isNumber())
+    JS::ToUint32(ctx, args[1], &y);
+  if (argc > 2 && args[2].isNumber())
+    JS::ToUint32(ctx, args[2], &x2);
+  if (argc > 3 && args[3].isNumber())
+    JS::ToUint32(ctx, args[3], &y2);
+  if (argc > 4 && args[4].isNumber())
+    JS::ToUint32(ctx, args[4], &color);
+  if (argc > 5 && args[5].isNumber())
+    JS::ToUint32(ctx, args[5], &opacity);
+  if (argc > 6 && args[6].isNumber())
+    JS::ToUint32(ctx, args[6], &align);
+  if (argc > 7 && args[7].isBoolean())
+    automap = args[7].toBoolean();
+  if (argc > 8 && args[8].isObject() && JS_ObjectIsFunction(ctx, args[8].toObjectOrNull()))
+    click.set(args[8].toObjectOrNull());
+  if (argc > 9 && args[9].isObject() && JS_ObjectIsFunction(ctx, args[9].toObjectOrNull()))
+    hover.set(args[9].toObjectOrNull());
 
-  BoxHook* pBoxHook = new BoxHook(script, JS_UNDEFINED, x, y, x2, y2, (ushort)color, (ushort)opacity, automap, (Align)align, state);
+  JS::RootedObject newObject(ctx, JS_NewObjectForConstructor(ctx, &m_class, args));
+  if (!newObject) {
+    THROW_ERROR(ctx, "failed to instantiate box");
+  }
+  BoxHook* pBoxHook = new BoxHook(script, newObject, x, y, x2, y2, (ushort)color, (ushort)opacity, automap, (Align)align, state);
   if (!pBoxHook)
     THROW_ERROR(ctx, "Unable to initalize a box class.");
 
-  JSValue hook = BoxWrap::Instantiate(ctx, new_target, pBoxHook);
+  BoxWrap* wrap = new BoxWrap(ctx, newObject, pBoxHook);
+  if (!wrap) {
+    JS_ReportOutOfMemory(ctx);
+    return false;
+  }
 
-  pBoxHook->SetClickHandler(click);
-  pBoxHook->SetHoverHandler(hover);
-
-  return hook;
+  // pBoxHook->SetClickHandler(click);
+  // pBoxHook->SetHoverHandler(hover);
+  args.rval().setObject(*newObject);
+  return true;
 }
 
 // properties
-JSValue BoxWrap::GetX(JSContext* ctx, JSValue this_val) {
-  BoxWrap* wrap = static_cast<BoxWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool BoxWrap::GetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  BoxWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
-  return JS_NewUint32(ctx, pBox->GetX());
+  args.rval().setNumber(pBox->GetX());
+  return true;
 }
 
-JSValue BoxWrap::SetX(JSContext* ctx, JSValue this_val, JSValue val) {
-  BoxWrap* wrap = static_cast<BoxWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool BoxWrap::SetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  BoxWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
   uint32_t ival = 0;
-  if (!JS_IsNumber(val) || JS_ToUint32(ctx, &ival, val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isNumber() || !JS::ToUint32(ctx, args[0], &ival)) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
   pBox->SetX(ival);
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue BoxWrap::GetY(JSContext* ctx, JSValue this_val) {
-  BoxWrap* wrap = static_cast<BoxWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool BoxWrap::GetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  BoxWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
-  return JS_NewUint32(ctx, pBox->GetY());
+  args.rval().setNumber(pBox->GetY());
+  return true;
 }
 
-JSValue BoxWrap::SetY(JSContext* ctx, JSValue this_val, JSValue val) {
-  BoxWrap* wrap = static_cast<BoxWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool BoxWrap::SetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  BoxWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
   uint32_t ival = 0;
-  if (!JS_IsNumber(val) || JS_ToUint32(ctx, &ival, val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isNumber() || !JS::ToUint32(ctx, args[0], &ival)) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
   pBox->SetY(ival);
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue BoxWrap::GetSizeX(JSContext* ctx, JSValue this_val) {
-  BoxWrap* wrap = static_cast<BoxWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool BoxWrap::GetSizeX(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  BoxWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
-  return JS_NewUint32(ctx, pBox->GetXSize());
+  args.rval().setNumber(pBox->GetXSize());
+  return true;
 }
 
-JSValue BoxWrap::SetSizeX(JSContext* ctx, JSValue this_val, JSValue val) {
-  BoxWrap* wrap = static_cast<BoxWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool BoxWrap::SetSizeX(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  BoxWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
   uint32_t ival = 0;
-  if (!JS_IsNumber(val) || JS_ToUint32(ctx, &ival, val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isNumber() || !JS::ToUint32(ctx, args[0], &ival)) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
   pBox->SetXSize(ival);
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue BoxWrap::GetSizeY(JSContext* ctx, JSValue this_val) {
-  BoxWrap* wrap = static_cast<BoxWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool BoxWrap::GetSizeY(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  BoxWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
-  return JS_NewUint32(ctx, pBox->GetYSize());
+  args.rval().setNumber(pBox->GetYSize());
+  return true;
 }
 
-JSValue BoxWrap::SetSizeY(JSContext* ctx, JSValue this_val, JSValue val) {
-  BoxWrap* wrap = static_cast<BoxWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool BoxWrap::SetSizeY(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  BoxWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
   uint32_t ival = 0;
-  if (!JS_IsNumber(val) || JS_ToUint32(ctx, &ival, val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isNumber() || !JS::ToUint32(ctx, args[0], &ival)) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
   pBox->SetYSize(ival);
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue BoxWrap::GetVisible(JSContext* ctx, JSValue this_val) {
-  BoxWrap* wrap = static_cast<BoxWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool BoxWrap::GetVisible(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  BoxWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
-  return JS_NewBool(ctx, pBox->GetIsVisible());
+  args.rval().setBoolean(pBox->GetIsVisible());
+  return true;
 }
 
-JSValue BoxWrap::SetVisible(JSContext* ctx, JSValue this_val, JSValue val) {
-  BoxWrap* wrap = static_cast<BoxWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool BoxWrap::SetVisible(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  BoxWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
-  if (!JS_IsBool(val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isBoolean()) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
-  pBox->SetIsVisible(JS_ToBool(ctx, val));
-  return JS_UNDEFINED;
+  pBox->SetIsVisible(args[0].toBoolean());
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue BoxWrap::GetAlign(JSContext* ctx, JSValue this_val) {
-  BoxWrap* wrap = static_cast<BoxWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool BoxWrap::GetAlign(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  BoxWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
-  return JS_NewUint32(ctx, pBox->GetAlign());
+  args.rval().setNumber(static_cast<uint32_t>(pBox->GetAlign()));
+  return true;
 }
 
-JSValue BoxWrap::SetAlign(JSContext* ctx, JSValue this_val, JSValue val) {
-  BoxWrap* wrap = static_cast<BoxWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool BoxWrap::SetAlign(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  BoxWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
   uint32_t ival = 0;
-  if (!JS_IsNumber(val) || JS_ToUint32(ctx, &ival, val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isNumber() || !JS::ToUint32(ctx, args[0], &ival)) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
   pBox->SetAlign((Align)ival);
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue BoxWrap::GetZOrder(JSContext* ctx, JSValue this_val) {
-  BoxWrap* wrap = static_cast<BoxWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool BoxWrap::GetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  BoxWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
-  return JS_NewUint32(ctx, pBox->GetZOrder());
+  args.rval().setNumber(static_cast<uint32_t>(pBox->GetZOrder()));
+  return true;
 }
 
-JSValue BoxWrap::SetZOrder(JSContext* ctx, JSValue this_val, JSValue val) {
-  BoxWrap* wrap = static_cast<BoxWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool BoxWrap::SetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  BoxWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
   uint32_t ival = 0;
-  if (!JS_IsNumber(val) || JS_ToUint32(ctx, &ival, val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isNumber() || !JS::ToUint32(ctx, args[0], &ival)) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
   pBox->SetZOrder((ushort)ival);
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue BoxWrap::GetClick(JSContext* ctx, JSValue this_val) {
-  BoxWrap* wrap = static_cast<BoxWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool BoxWrap::GetClick(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  BoxWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
-  return JS_DupValue(ctx, pBox->GetClickHandler());
+  JS::RootedObject fun(ctx, pBox->GetClickHandler());
+  args.rval().setObject(*fun);
+  return true;
 }
 
-JSValue BoxWrap::SetClick(JSContext* /*ctx*/, JSValue this_val, JSValue val) {
-  BoxWrap* wrap = static_cast<BoxWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool BoxWrap::SetClick(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  BoxWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
-  pBox->SetClickHandler(val);
-  return JS_UNDEFINED;
+  JS::RootedObject fun(ctx, args[0].toObjectOrNull());
+  pBox->SetClickHandler(fun);
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue BoxWrap::GetHover(JSContext* ctx, JSValue this_val) {
-  BoxWrap* wrap = static_cast<BoxWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool BoxWrap::GetHover(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  BoxWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
-  return JS_DupValue(ctx, pBox->GetHoverHandler());
+  JS::RootedObject fun(ctx, pBox->GetHoverHandler());
+  args.rval().setObject(*fun);
+  return true;
 }
 
-JSValue BoxWrap::SetHover(JSContext* /*ctx*/, JSValue this_val, JSValue val) {
-  BoxWrap* wrap = static_cast<BoxWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool BoxWrap::SetHover(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  BoxWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
-  pBox->SetHoverHandler(val);
-  return JS_UNDEFINED;
+  JS::RootedObject fun(ctx, args[0].toObjectOrNull());
+  pBox->SetHoverHandler(fun);
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue BoxWrap::GetColor(JSContext* ctx, JSValue this_val) {
-  BoxWrap* wrap = static_cast<BoxWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool BoxWrap::GetColor(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  BoxWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
-  return JS_NewUint32(ctx, pBox->GetColor());
+  args.rval().setNumber(static_cast<uint32_t>(pBox->GetColor()));
+  return true;
 }
 
-JSValue BoxWrap::SetColor(JSContext* ctx, JSValue this_val, JSValue val) {
-  BoxWrap* wrap = static_cast<BoxWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool BoxWrap::SetColor(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  BoxWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
   uint32_t ival = 0;
-  if (!JS_IsNumber(val) || JS_ToUint32(ctx, &ival, val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isNumber() || !JS::ToUint32(ctx, args[0], &ival)) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
   pBox->SetColor((ushort)ival);
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue BoxWrap::GetOpacity(JSContext* ctx, JSValue this_val) {
-  BoxWrap* wrap = static_cast<BoxWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool BoxWrap::GetOpacity(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  BoxWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
-  return JS_NewUint32(ctx, pBox->GetOpacity());
+  args.rval().setNumber(static_cast<uint32_t>(pBox->GetOpacity()));
+  return true;
 }
 
-JSValue BoxWrap::SetOpacity(JSContext* ctx, JSValue this_val, JSValue val) {
-  BoxWrap* wrap = static_cast<BoxWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool BoxWrap::SetOpacity(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  BoxWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
   uint32_t ival = 0;
-  if (!JS_IsNumber(val) || JS_ToUint32(ctx, &ival, val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isNumber() || !JS::ToUint32(ctx, args[0], &ival)) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
   pBox->SetOpacity((ushort)ival);
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
 // functions
-JSValue BoxWrap::Remove(JSContext* /*ctx*/, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
-  BoxWrap* wrap = static_cast<BoxWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
+bool BoxWrap::Remove(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  BoxWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
+  Genhook::EnterGlobalSection();
+  BoxHook* pBox = wrap->pBox;
+  if (pBox) {
+    delete pBox;
+    wrap->pBox = nullptr;
   }
-
-  return JS_UNDEFINED;
+  Genhook::LeaveGlobalSection();
+  args.rval().setUndefined();
+  return true;
 }
 
 D2BS_BINDING_INTERNAL(BoxWrap, BoxWrap::Initialize)
 
 // Line functions
 
-JSValue LineWrap::Instantiate(JSContext* ctx, JSValue new_target, LineHook* line) {
-  JSValue proto;
-  if (JS_IsUndefined(new_target)) {
-    proto = JS_GetClassProto(ctx, m_class_id);
-  } else {
-    proto = JS_GetPropertyStr(ctx, new_target, "prototype");
-    if (JS_IsException(proto)) {
-      return JS_EXCEPTION;
-    }
+JSObject* LineWrap::Instantiate(JSContext* ctx, LineHook* line) {
+  JS::RootedObject global(ctx, JS::CurrentGlobalOrNull(ctx));
+  JS::RootedValue constructor_val(ctx);
+  if (!JS_GetProperty(ctx, global, "Line", &constructor_val)) {
+    JS_ReportErrorASCII(ctx, "Could not find constructor object for Line");
+    return nullptr;
   }
-  JSValue obj = JS_NewObjectProtoClass(ctx, proto, m_class_id);
-  JS_FreeValue(ctx, proto);
-  if (JS_IsException(obj)) {
-    return obj;
+  if (!constructor_val.isObject()) {
+    JS_ReportErrorASCII(ctx, "Line is not a constructor");
+    return nullptr;
   }
+  JS::RootedObject constructor(ctx, &constructor_val.toObject());
 
-  LineWrap* wrap = new LineWrap(ctx, line);
+  JS::RootedObject obj(ctx, JS_New(ctx, constructor, JS::HandleValueArray::empty()));
+  if (!obj) {
+    JS_ReportErrorASCII(ctx, "Calling Line constructor failed");
+    return nullptr;
+  }
+  LineWrap* wrap = new LineWrap(ctx, obj, line);
   if (!wrap) {
-    JS_FreeValue(ctx, obj);
-    return JS_ThrowOutOfMemory(ctx);
+    JS_ReportOutOfMemory(ctx);
+    return nullptr;
   }
-  JS_SetOpaque(obj, wrap);
-
   return obj;
 }
 
-void LineWrap::Initialize(JSContext* ctx, JSValue target) {
-  JSClassDef def{};
-  def.class_name = "Line";
-  def.finalizer = [](JSRuntime* /*rt*/, JSValue val) {
-    LineWrap* wrap = static_cast<LineWrap*>(JS_GetOpaque(val, m_class_id));
-    if (wrap) {
-      delete wrap;
-    }
-  };
-
-  if (m_class_id == 0) {
-    JS_NewClassID(&m_class_id);
+void LineWrap::Initialize(JSContext* ctx, JS::HandleObject target) {
+  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, New, 0, m_props, m_methods, nullptr, nullptr));
+  if (!proto) {
+    return;
   }
-  JS_NewClass(JS_GetRuntime(ctx), m_class_id, &def);
-
-  JSValue proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, proto, m_proto_funcs, _countof(m_proto_funcs));
-
-  JSValue obj = JS_NewCFunction2(ctx, New, "Line", 0, JS_CFUNC_constructor, 0);
-  JS_SetConstructor(ctx, obj, proto);
-
-  JS_SetClassProto(ctx, m_class_id, proto);
-  JS_SetPropertyStr(ctx, target, "Line", obj);
 }
 
-LineWrap::LineWrap(JSContext* /*ctx*/, LineHook* line) : pLine(line) {
+LineWrap::LineWrap(JSContext* ctx, JS::HandleObject obj, LineHook* line) : BaseObject(ctx, obj), pLine(line) {
 }
 
 LineWrap::~LineWrap() {
   Genhook::EnterGlobalSection();
-  delete pLine;
+  if (pLine) {
+    delete pLine;
+    pLine = nullptr;
+  }
   Genhook::LeaveGlobalSection();
 }
 
-JSValue LineWrap::New(JSContext* ctx, JSValue new_target, int argc, JSValue* argv) {
-  Script* script = (Script*)JS_GetContextOpaque(ctx);
+void LineWrap::finalize(JSFreeOp* fop, JSObject* obj) {
+  BaseObject* wrap = BaseObject::FromJSObject(obj);
+  if (wrap) {
+    delete wrap;
+  }
+}
+
+bool LineWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ThreadState* ts = (ThreadState*)JS_GetContextPrivate(ctx);
+  Script* script = ts->script;
 
   ScreenhookState state = (script->GetMode() == kScriptModeMenu) ? OOG : IG;
   uint32_t x = 0, y = 0, x2 = 0, y2 = 0, color = 0;
   bool automap = false;
-  JSValue click = JS_UNDEFINED, hover = JS_UNDEFINED;
+  JS::RootedObject click(ctx);
+  JS::RootedObject hover(ctx);
 
-  if (argc > 0 && JS_IsNumber(argv[0]))
-    JS_ToUint32(ctx, &x, argv[0]);
-  if (argc > 1 && JS_IsNumber(argv[1]))
-    JS_ToUint32(ctx, &y, argv[1]);
-  if (argc > 2 && JS_IsNumber(argv[2]))
-    JS_ToUint32(ctx, &x2, argv[2]);
-  if (argc > 3 && JS_IsNumber(argv[3]))
-    JS_ToUint32(ctx, &y2, argv[3]);
-  if (argc > 4 && JS_IsNumber(argv[4]))
-    JS_ToUint32(ctx, &color, argv[4]);
-  if (argc > 5 && JS_IsBool(argv[5]))
-    automap = !!JS_ToBool(ctx, argv[5]);
-  if (argc > 6 && JS_IsFunction(ctx, argv[6]))
-    click = argv[6];
-  if (argc > 7 && JS_IsFunction(ctx, argv[7]))
-    hover = argv[7];
+  if (argc > 0 && args[0].isNumber())
+    JS::ToUint32(ctx, args[0], &x);
+  if (argc > 1 && args[1].isNumber())
+    JS::ToUint32(ctx, args[1], &y);
+  if (argc > 2 && args[2].isNumber())
+    JS::ToUint32(ctx, args[2], &x2);
+  if (argc > 3 && args[3].isNumber())
+    JS::ToUint32(ctx, args[3], &y2);
+  if (argc > 4 && args[4].isNumber())
+    JS::ToUint32(ctx, args[4], &color);
+  if (argc > 5 && args[5].isBoolean())
+    automap = args[5].toBoolean();
+  if (argc > 6 && args[6].isObject() && JS_ObjectIsFunction(ctx, args[6].toObjectOrNull()))
+    click.set(args[6].toObjectOrNull());
+  if (argc > 7 && args[7].isObject() && JS_ObjectIsFunction(ctx, args[7].toObjectOrNull()))
+    hover.set(args[7].toObjectOrNull());
 
-  LineHook* pLineHook = new LineHook(script, JS_UNDEFINED, x, y, x2, y2, static_cast<ushort>(color), automap, Left, state);
+  JS::RootedObject newObject(ctx, JS_NewObjectForConstructor(ctx, &m_class, args));
+  if (!newObject) {
+    THROW_ERROR(ctx, "failed to instantiate line");
+  }
+  LineHook* pLineHook = new LineHook(script, newObject, x, y, x2, y2, static_cast<ushort>(color), automap, Left, state);
   if (!pLineHook) {
     THROW_ERROR(ctx, "Unable to initalize a line class.");
   }
 
-  JSValue hook = LineWrap::Instantiate(ctx, new_target, pLineHook);
+  LineWrap* wrap = new LineWrap(ctx, newObject, pLineHook);
+  if (!wrap) {
+    JS_ReportOutOfMemory(ctx);
+    return false;
+  }
 
-  pLineHook->SetClickHandler(click);
-  pLineHook->SetHoverHandler(hover);
-
-  return hook;
+  // pLineHook->SetClickHandler(click);
+  // pLineHook->SetHoverHandler(hover);
+  args.rval().setObject(*newObject);
+  return true;
 }
 
 // properties
-JSValue LineWrap::GetX(JSContext* ctx, JSValue this_val) {
-  LineWrap* wrap = static_cast<LineWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool LineWrap::GetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  LineWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
-  return JS_NewUint32(ctx, pLine->GetX());
+  args.rval().setNumber(pLine->GetX());
+  return true;
 }
 
-JSValue LineWrap::SetX(JSContext* ctx, JSValue this_val, JSValue val) {
-  LineWrap* wrap = static_cast<LineWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool LineWrap::SetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  LineWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
   uint32_t ival = 0;
-  if (!JS_IsNumber(val) || JS_ToUint32(ctx, &ival, val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isNumber() || !JS::ToUint32(ctx, args[0], &ival)) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
   pLine->SetX(ival);
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue LineWrap::GetY(JSContext* ctx, JSValue this_val) {
-  LineWrap* wrap = static_cast<LineWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool LineWrap::GetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  LineWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
-  return JS_NewUint32(ctx, pLine->GetY());
+  args.rval().setNumber(pLine->GetY());
+  return true;
 }
 
-JSValue LineWrap::SetY(JSContext* ctx, JSValue this_val, JSValue val) {
-  LineWrap* wrap = static_cast<LineWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool LineWrap::SetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  LineWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
   uint32_t ival = 0;
-  if (!JS_IsNumber(val) || JS_ToUint32(ctx, &ival, val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isNumber() || !JS::ToUint32(ctx, args[0], &ival)) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
   pLine->SetY(ival);
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue LineWrap::GetX2(JSContext* ctx, JSValue this_val) {
-  LineWrap* wrap = static_cast<LineWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool LineWrap::GetX2(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  LineWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
-  return JS_NewUint32(ctx, pLine->GetX2());
+  args.rval().setNumber(pLine->GetX2());
+  return true;
 }
 
-JSValue LineWrap::SetX2(JSContext* ctx, JSValue this_val, JSValue val) {
-  LineWrap* wrap = static_cast<LineWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool LineWrap::SetX2(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  LineWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
   uint32_t ival = 0;
-  if (!JS_IsNumber(val) || JS_ToUint32(ctx, &ival, val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isNumber() || !JS::ToUint32(ctx, args[0], &ival)) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
   pLine->SetX2(ival);
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue LineWrap::GetY2(JSContext* ctx, JSValue this_val) {
-  LineWrap* wrap = static_cast<LineWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool LineWrap::GetY2(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  LineWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
-  return JS_NewUint32(ctx, pLine->GetY2());
+  args.rval().setNumber(pLine->GetY2());
+  return true;
 }
 
-JSValue LineWrap::SetY2(JSContext* ctx, JSValue this_val, JSValue val) {
-  LineWrap* wrap = static_cast<LineWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool LineWrap::SetY2(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  LineWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
   uint32_t ival = 0;
-  if (!JS_IsNumber(val) || JS_ToUint32(ctx, &ival, val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isNumber() || !JS::ToUint32(ctx, args[0], &ival)) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
   pLine->SetY2(ival);
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue LineWrap::GetVisible(JSContext* ctx, JSValue this_val) {
-  LineWrap* wrap = static_cast<LineWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool LineWrap::GetVisible(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  LineWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
-  return JS_NewBool(ctx, pLine->GetIsVisible());
+  args.rval().setBoolean(pLine->GetIsVisible());
+  return true;
 }
 
-JSValue LineWrap::SetVisible(JSContext* ctx, JSValue this_val, JSValue val) {
-  LineWrap* wrap = static_cast<LineWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool LineWrap::SetVisible(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  LineWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
-  if (!JS_IsBool(val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isBoolean()) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
-  pLine->SetIsVisible(JS_ToBool(ctx, val));
-  return JS_UNDEFINED;
+  pLine->SetIsVisible(args[0].toBoolean());
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue LineWrap::GetColor(JSContext* ctx, JSValue this_val) {
-  LineWrap* wrap = static_cast<LineWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool LineWrap::GetColor(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  LineWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
-  return JS_NewUint32(ctx, pLine->GetColor());
+  args.rval().setNumber(static_cast<uint32_t>(pLine->GetColor()));
+  return true;
 }
 
-JSValue LineWrap::SetColor(JSContext* ctx, JSValue this_val, JSValue val) {
-  LineWrap* wrap = static_cast<LineWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool LineWrap::SetColor(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  LineWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
   uint32_t ival = 0;
-  if (!JS_IsNumber(val) || JS_ToUint32(ctx, &ival, val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isNumber() || !JS::ToUint32(ctx, args[0], &ival)) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
   pLine->SetColor(static_cast<ushort>(ival));
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue LineWrap::GetZOrder(JSContext* ctx, JSValue this_val) {
-  LineWrap* wrap = static_cast<LineWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool LineWrap::GetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  LineWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
-  return JS_NewUint32(ctx, pLine->GetZOrder());
+  args.rval().setNumber(static_cast<uint32_t>(pLine->GetZOrder()));
+  return true;
 }
 
-JSValue LineWrap::SetZOrder(JSContext* ctx, JSValue this_val, JSValue val) {
-  LineWrap* wrap = static_cast<LineWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool LineWrap::SetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  LineWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
   uint32_t ival = 0;
-  if (!JS_IsNumber(val) || JS_ToUint32(ctx, &ival, val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isNumber() || !JS::ToUint32(ctx, args[0], &ival)) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
   pLine->SetZOrder((ushort)ival);
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue LineWrap::GetClick(JSContext* ctx, JSValue this_val) {
-  LineWrap* wrap = static_cast<LineWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool LineWrap::GetClick(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  LineWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
-  return JS_DupValue(ctx, pLine->GetClickHandler());
+  JS::RootedObject fun(ctx, pLine->GetClickHandler());
+  args.rval().setObject(*fun);
+  return true;
 }
 
-JSValue LineWrap::SetClick(JSContext* /*ctx*/, JSValue this_val, JSValue val) {
-  LineWrap* wrap = static_cast<LineWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool LineWrap::SetClick(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  LineWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
-  pLine->SetClickHandler(val);
-  return JS_UNDEFINED;
+  JS::RootedObject fun(ctx, args[0].toObjectOrNull());
+  pLine->SetClickHandler(fun);
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue LineWrap::GetHover(JSContext* ctx, JSValue this_val) {
-  LineWrap* wrap = static_cast<LineWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool LineWrap::GetHover(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  LineWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
-  return JS_DupValue(ctx, pLine->GetHoverHandler());
+  JS::RootedObject fun(ctx, pLine->GetHoverHandler());
+  args.rval().setObject(*fun);
+  return true;
 }
 
-JSValue LineWrap::SetHover(JSContext* /*ctx*/, JSValue this_val, JSValue val) {
-  LineWrap* wrap = static_cast<LineWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool LineWrap::SetHover(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  LineWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
-  pLine->SetHoverHandler(val);
-  return JS_UNDEFINED;
+  JS::RootedObject fun(ctx, args[0].toObjectOrNull());
+  pLine->SetHoverHandler(fun);
+  args.rval().setUndefined();
+  return true;
 }
 
 // functions
-JSValue LineWrap::Remove(JSContext* /*ctx*/, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
-  LineWrap* wrap = static_cast<LineWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
+bool LineWrap::Remove(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  LineWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
+  Genhook::EnterGlobalSection();
+  LineHook* pLine = wrap->pLine;
+  if (pLine) {
+    delete pLine;
+    wrap->pLine = nullptr;
   }
-
-  return JS_UNDEFINED;
+  Genhook::LeaveGlobalSection();
+  args.rval().setUndefined();
+  return true;
 }
 
 D2BS_BINDING_INTERNAL(LineWrap, LineWrap::Initialize)
 
-JSValue TextWrap::Instantiate(JSContext* ctx, JSValue new_target, TextHook* text) {
-  JSValue proto;
-  if (JS_IsUndefined(new_target)) {
-    proto = JS_GetClassProto(ctx, m_class_id);
-  } else {
-    proto = JS_GetPropertyStr(ctx, new_target, "prototype");
-    if (JS_IsException(proto)) {
-      return JS_EXCEPTION;
-    }
+JSObject* TextWrap::Instantiate(JSContext* ctx, TextHook* text) {
+  JS::RootedObject global(ctx, JS::CurrentGlobalOrNull(ctx));
+  JS::RootedValue constructor_val(ctx);
+  if (!JS_GetProperty(ctx, global, "Text", &constructor_val)) {
+    JS_ReportErrorASCII(ctx, "Could not find constructor object for Text");
+    return nullptr;
   }
-  JSValue obj = JS_NewObjectProtoClass(ctx, proto, m_class_id);
-  JS_FreeValue(ctx, proto);
-  if (JS_IsException(obj)) {
-    return obj;
+  if (!constructor_val.isObject()) {
+    JS_ReportErrorASCII(ctx, "Text is not a constructor");
+    return nullptr;
   }
+  JS::RootedObject constructor(ctx, &constructor_val.toObject());
 
-  TextWrap* wrap = new TextWrap(ctx, text);
+  JS::RootedObject obj(ctx, JS_New(ctx, constructor, JS::HandleValueArray::empty()));
+  if (!obj) {
+    JS_ReportErrorASCII(ctx, "Calling Text constructor failed");
+    return nullptr;
+  }
+  TextWrap* wrap = new TextWrap(ctx, obj, text);
   if (!wrap) {
-    JS_FreeValue(ctx, obj);
-    return JS_ThrowOutOfMemory(ctx);
+    JS_ReportOutOfMemory(ctx);
+    return nullptr;
   }
-  JS_SetOpaque(obj, wrap);
-
   return obj;
 }
 
-void TextWrap::Initialize(JSContext* ctx, JSValue target) {
-  JSClassDef def{};
-  def.class_name = "Text";
-  def.finalizer = [](JSRuntime* /*rt*/, JSValue val) {
-    TextWrap* wrap = static_cast<TextWrap*>(JS_GetOpaque(val, m_class_id));
-    if (wrap) {
-      delete wrap;
-    }
-  };
-
-  if (m_class_id == 0) {
-    JS_NewClassID(&m_class_id);
+void TextWrap::Initialize(JSContext* ctx, JS::HandleObject target) {
+  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, New, 0, m_props, m_methods, nullptr, nullptr));
+  if (!proto) {
+    return;
   }
-  JS_NewClass(JS_GetRuntime(ctx), m_class_id, &def);
-
-  JSValue proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, proto, m_proto_funcs, _countof(m_proto_funcs));
-
-  JSValue obj = JS_NewCFunction2(ctx, New, "Text", 0, JS_CFUNC_constructor, 0);
-  JS_SetConstructor(ctx, obj, proto);
-
-  JS_SetClassProto(ctx, m_class_id, proto);
-  JS_SetPropertyStr(ctx, target, "Text", obj);
 }
 
-TextWrap::TextWrap(JSContext* /*ctx*/, TextHook* text) : pText(text) {
+TextWrap::TextWrap(JSContext* ctx, JS::HandleObject obj, TextHook* text) : BaseObject(ctx, obj), pText(text) {
 }
 
 TextWrap::~TextWrap() {
   Genhook::EnterGlobalSection();
-  delete pText;
+  if (pText) {
+    delete pText;
+    pText = nullptr;
+  }
   Genhook::LeaveGlobalSection();
 }
 
-JSValue TextWrap::New(JSContext* ctx, JSValue new_target, int argc, JSValue* argv) {
-  Script* script = (Script*)JS_GetContextOpaque(ctx);
+void TextWrap::finalize(JSFreeOp* fop, JSObject* obj) {
+  BaseObject* wrap = BaseObject::FromJSObject(obj);
+  if (wrap) {
+    delete wrap;
+  }
+}
+
+bool TextWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ThreadState* ts = (ThreadState*)JS_GetContextPrivate(ctx);
+  Script* script = ts->script;
 
   ScreenhookState state = (script->GetMode() == kScriptModeMenu) ? OOG : IG;
   uint32_t x = 0, y = 0, color = 0, font = 0, align = Left;
   bool automap = false;
-  JSValue click = JS_UNDEFINED, hover = JS_UNDEFINED;
+  JS::RootedObject click(ctx);
+  JS::RootedObject hover(ctx);
   std::wstring szText;
 
-  if (argc > 0 && JS_IsString(argv[0])) {
-    const char* str = JS_ToCString(ctx, argv[0]);
+  if (argc > 0 && args[0].isString()) {
+    char* str = JS_EncodeString(ctx, args[0].toString());
     if (!str) {
-      return JS_EXCEPTION;
+      THROW_ERROR(ctx, "failed to encode string");
     }
     szText = AnsiToWide(str);
-    JS_FreeCString(ctx, str);
+    JS_free(ctx, str);
   }
-  if (argc > 1 && JS_IsNumber(argv[1]))
-    JS_ToUint32(ctx, &x, argv[1]);
-  if (argc > 2 && JS_IsNumber(argv[2]))
-    JS_ToUint32(ctx, &y, argv[2]);
-  if (argc > 3 && JS_IsNumber(argv[3]))
-    JS_ToUint32(ctx, &color, argv[3]);
-  if (argc > 4 && JS_IsNumber(argv[4]))
-    JS_ToUint32(ctx, &font, argv[4]);
-  if (argc > 5 && JS_IsNumber(argv[5]))
-    JS_ToUint32(ctx, &align, argv[5]);
-  if (argc > 6 && JS_IsBool(argv[6]))
-    automap = !!JS_ToBool(ctx, argv[6]);
-  if (argc > 7 && JS_IsFunction(ctx, argv[7]))
-    click = argv[7];
-  if (argc > 8 && JS_IsFunction(ctx, argv[8]))
-    hover = argv[8];
+  if (argc > 1 && args[1].isNumber())
+    JS::ToUint32(ctx, args[1], &x);
+  if (argc > 2 && args[2].isNumber())
+    JS::ToUint32(ctx, args[2], &y);
+  if (argc > 3 && args[3].isNumber())
+    JS::ToUint32(ctx, args[3], &color);
+  if (argc > 4 && args[4].isNumber())
+    JS::ToUint32(ctx, args[4], &font);
+  if (argc > 5 && args[5].isNumber())
+    JS::ToUint32(ctx, args[5], &align);
+  if (argc > 6 && args[6].isBoolean())
+    automap = args[6].toBoolean();
+  if (argc > 7 && args[7].isObject() && JS_ObjectIsFunction(ctx, args[7].toObjectOrNull()))
+    click.set(args[7].toObjectOrNull());
+  if (argc > 8 && args[8].isObject() && JS_ObjectIsFunction(ctx, args[8].toObjectOrNull()))
+    hover.set(args[8].toObjectOrNull());
 
-  TextHook* pTextHook = new TextHook(script, JS_UNDEFINED, szText.c_str(), x, y, static_cast<ushort>(font), static_cast<ushort>(color), automap, (Align)align, state);
+  JS::RootedObject newObject(ctx, JS_NewObjectForConstructor(ctx, &m_class, args));
+  if (!newObject) {
+    THROW_ERROR(ctx, "failed to instantiate text");
+  }
+  TextHook* pTextHook = new TextHook(script, newObject, szText.c_str(), x, y, static_cast<ushort>(font), static_cast<ushort>(color), automap, (Align)align, state);
   if (!pTextHook) {
     THROW_ERROR(ctx, "Failed to create texthook");
   }
 
-  JSValue hook = TextWrap::Instantiate(ctx, new_target, pTextHook);
+  TextWrap* wrap = new TextWrap(ctx, newObject, pTextHook);
+  if (!wrap) {
+    JS_ReportOutOfMemory(ctx);
+    return false;
+  }
 
-  pTextHook->SetClickHandler(click);
-  pTextHook->SetHoverHandler(hover);
-  return hook;
+  // pFrameHook->SetClickHandler(click);
+  // pFrameHook->SetHoverHandler(hover);
+  args.rval().setObject(*newObject);
+  return true;
 }
 
 // properties
-JSValue TextWrap::GetX(JSContext* ctx, JSValue this_val) {
-  TextWrap* wrap = static_cast<TextWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool TextWrap::GetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  TextWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
-  return JS_NewUint32(ctx, pText->GetX());
+  args.rval().setNumber(pText->GetX());
+  return true;
 }
 
-JSValue TextWrap::SetX(JSContext* ctx, JSValue this_val, JSValue val) {
-  TextWrap* wrap = static_cast<TextWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool TextWrap::SetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  TextWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
   uint32_t ival = 0;
-  if (!JS_IsNumber(val) || JS_ToUint32(ctx, &ival, val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isNumber() || !JS::ToUint32(ctx, args[0], &ival)) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
   pText->SetX(ival);
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue TextWrap::GetY(JSContext* ctx, JSValue this_val) {
-  TextWrap* wrap = static_cast<TextWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool TextWrap::GetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  TextWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
-  return JS_NewUint32(ctx, pText->GetY());
+  args.rval().setNumber(pText->GetY());
+  return true;
 }
 
-JSValue TextWrap::SetY(JSContext* ctx, JSValue this_val, JSValue val) {
-  TextWrap* wrap = static_cast<TextWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool TextWrap::SetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  TextWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
   uint32_t ival = 0;
-  if (!JS_IsNumber(val) || JS_ToUint32(ctx, &ival, val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isNumber() || !JS::ToUint32(ctx, args[0], &ival)) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
   pText->SetY(ival);
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue TextWrap::GetColor(JSContext* ctx, JSValue this_val) {
-  TextWrap* wrap = static_cast<TextWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool TextWrap::GetColor(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  TextWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
-  return JS_NewUint32(ctx, pText->GetColor());
+  args.rval().setNumber(static_cast<uint32_t>(pText->GetColor()));
+  return true;
 }
 
-JSValue TextWrap::SetColor(JSContext* ctx, JSValue this_val, JSValue val) {
-  TextWrap* wrap = static_cast<TextWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool TextWrap::SetColor(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  TextWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
   uint32_t ival = 0;
-  if (!JS_IsNumber(val) || JS_ToUint32(ctx, &ival, val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isNumber() || !JS::ToUint32(ctx, args[0], &ival)) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
   pText->SetColor((ushort)ival);
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue TextWrap::GetVisible(JSContext* ctx, JSValue this_val) {
-  TextWrap* wrap = static_cast<TextWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool TextWrap::GetVisible(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  TextWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
-  return JS_NewBool(ctx, pText->GetIsVisible());
+  args.rval().setBoolean(pText->GetIsVisible());
+  return true;
 }
 
-JSValue TextWrap::SetVisible(JSContext* ctx, JSValue this_val, JSValue val) {
-  TextWrap* wrap = static_cast<TextWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool TextWrap::SetVisible(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  TextWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
-  if (!JS_IsBool(val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isBoolean()) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
-  pText->SetIsVisible(JS_ToBool(ctx, val));
-  return JS_UNDEFINED;
+  pText->SetIsVisible(args[0].toBoolean());
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue TextWrap::GetAlign(JSContext* ctx, JSValue this_val) {
-  TextWrap* wrap = static_cast<TextWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool TextWrap::GetAlign(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  TextWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
-  return JS_NewUint32(ctx, pText->GetAlign());
+  args.rval().setNumber(static_cast<uint32_t>(pText->GetAlign()));
+  return true;
 }
 
-JSValue TextWrap::SetAlign(JSContext* ctx, JSValue this_val, JSValue val) {
-  TextWrap* wrap = static_cast<TextWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool TextWrap::SetAlign(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  TextWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
   uint32_t ival = 0;
-  if (!JS_IsNumber(val) || JS_ToUint32(ctx, &ival, val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isNumber() || !JS::ToUint32(ctx, args[0], &ival)) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
   pText->SetAlign((Align)ival);
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue TextWrap::GetZOrder(JSContext* ctx, JSValue this_val) {
-  TextWrap* wrap = static_cast<TextWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool TextWrap::GetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  TextWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
-  return JS_NewUint32(ctx, pText->GetZOrder());
+  args.rval().setNumber(static_cast<uint32_t>(pText->GetZOrder()));
+  return true;
 }
 
-JSValue TextWrap::SetZOrder(JSContext* ctx, JSValue this_val, JSValue val) {
-  TextWrap* wrap = static_cast<TextWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool TextWrap::SetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  TextWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
   uint32_t ival = 0;
-  if (!JS_IsNumber(val) || JS_ToUint32(ctx, &ival, val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isNumber() || !JS::ToUint32(ctx, args[0], &ival)) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
   pText->SetZOrder((ushort)ival);
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue TextWrap::GetClick(JSContext* ctx, JSValue this_val) {
-  TextWrap* wrap = static_cast<TextWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool TextWrap::GetClick(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  TextWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
-  return JS_DupValue(ctx, pText->GetClickHandler());
+  JS::RootedObject fun(ctx, pText->GetClickHandler());
+  args.rval().setObject(*fun);
+  return true;
 }
 
-JSValue TextWrap::SetClick(JSContext* /*ctx*/, JSValue this_val, JSValue val) {
-  TextWrap* wrap = static_cast<TextWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool TextWrap::SetClick(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  TextWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
-  pText->SetClickHandler(val);
-  return JS_UNDEFINED;
+  JS::RootedObject fun(ctx, args[0].toObjectOrNull());
+  pText->SetClickHandler(fun);
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue TextWrap::GetHover(JSContext* ctx, JSValue this_val) {
-  TextWrap* wrap = static_cast<TextWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool TextWrap::GetHover(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  TextWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
-  return JS_DupValue(ctx, pText->GetHoverHandler());
+  JS::RootedObject fun(ctx, pText->GetHoverHandler());
+  args.rval().setObject(*fun);
+  return true;
 }
 
-JSValue TextWrap::SetHover(JSContext* /*ctx*/, JSValue this_val, JSValue val) {
-  TextWrap* wrap = static_cast<TextWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool TextWrap::SetHover(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  TextWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
-  pText->SetHoverHandler(val);
-  return JS_UNDEFINED;
+  JS::RootedObject fun(ctx, args[0].toObjectOrNull());
+  pText->SetHoverHandler(fun);
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue TextWrap::GetFont(JSContext* ctx, JSValue this_val) {
-  TextWrap* wrap = static_cast<TextWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool TextWrap::GetFont(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  TextWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
-  return JS_NewUint32(ctx, pText->GetFont());
+  args.rval().setNumber(static_cast<uint32_t>(pText->GetFont()));
+  return true;
 }
 
-JSValue TextWrap::SetFont(JSContext* ctx, JSValue this_val, JSValue val) {
-  TextWrap* wrap = static_cast<TextWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool TextWrap::SetFont(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  TextWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
   uint32_t ival = 0;
-  if (!JS_IsNumber(val) || JS_ToUint32(ctx, &ival, val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isNumber() || !JS::ToUint32(ctx, args[0], &ival)) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
   pText->SetFont((ushort)ival);
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue TextWrap::GetText(JSContext* ctx, JSValue this_val) {
-  TextWrap* wrap = static_cast<TextWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool TextWrap::GetText(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  TextWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
-  return JS_NewString(ctx, pText->GetText());
+  args.rval().setString(JS_NewUCStringCopyZ(ctx, reinterpret_cast<const char16_t*>(pText->GetText())));
+  return true;
 }
 
-JSValue TextWrap::SetText(JSContext* ctx, JSValue this_val, JSValue val) {
-  TextWrap* wrap = static_cast<TextWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool TextWrap::SetText(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  TextWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pTextHook = wrap->pText;
-  if (JS_IsString(val)) {
-    const char* szText = JS_ToCString(ctx, val);
+  if (args[0].isString()) {
+    char* szText = JS_EncodeString(ctx, args[0].toString());
     if (!szText) {
-      return JS_EXCEPTION;
+      THROW_ERROR(ctx, "failed to encode string");
     }
     std::wstring pText = AnsiToWide(szText);
     pTextHook->SetText(pText.c_str());
-    JS_FreeCString(ctx, szText);
+    JS_free(ctx, szText);
   }
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
 // functions
-JSValue TextWrap::Remove(JSContext* /*ctx*/, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
-  TextWrap* wrap = static_cast<TextWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
+bool TextWrap::Remove(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  TextWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
+  Genhook::EnterGlobalSection();
+  TextHook* pText = wrap->pText;
+  if (pText) {
+    delete pText;
+    wrap->pText = nullptr;
   }
-
-  return JS_UNDEFINED;
+  Genhook::LeaveGlobalSection();
+  args.rval().setUndefined();
+  return true;
 }
 
 D2BS_BINDING_INTERNAL(TextWrap, TextWrap::Initialize)
 
 // Function to create a image which gets called on a "new Image ()"
 
-JSValue ImageWrap::Instantiate(JSContext* ctx, JSValue new_target, ImageHook* image) {
-  JSValue proto;
-  if (JS_IsUndefined(new_target)) {
-    proto = JS_GetClassProto(ctx, m_class_id);
-  } else {
-    proto = JS_GetPropertyStr(ctx, new_target, "prototype");
-    if (JS_IsException(proto)) {
-      return JS_EXCEPTION;
-    }
+JSObject* ImageWrap::Instantiate(JSContext* ctx, ImageHook* image) {
+  JS::RootedObject global(ctx, JS::CurrentGlobalOrNull(ctx));
+  JS::RootedValue constructor_val(ctx);
+  if (!JS_GetProperty(ctx, global, "Image", &constructor_val)) {
+    JS_ReportErrorASCII(ctx, "Could not find constructor object for Image");
+    return nullptr;
   }
-  JSValue obj = JS_NewObjectProtoClass(ctx, proto, m_class_id);
-  JS_FreeValue(ctx, proto);
-  if (JS_IsException(obj)) {
-    return obj;
+  if (!constructor_val.isObject()) {
+    JS_ReportErrorASCII(ctx, "Image is not a constructor");
+    return nullptr;
   }
+  JS::RootedObject constructor(ctx, &constructor_val.toObject());
 
-  ImageWrap* wrap = new ImageWrap(ctx, image);
+  JS::RootedObject obj(ctx, JS_New(ctx, constructor, JS::HandleValueArray::empty()));
+  if (!obj) {
+    JS_ReportErrorASCII(ctx, "Calling Image constructor failed");
+    return nullptr;
+  }
+  ImageWrap* wrap = new ImageWrap(ctx, obj, image);
   if (!wrap) {
-    JS_FreeValue(ctx, obj);
-    return JS_ThrowOutOfMemory(ctx);
+    JS_ReportOutOfMemory(ctx);
+    return nullptr;
   }
-  JS_SetOpaque(obj, wrap);
-
   return obj;
 }
 
-void ImageWrap::Initialize(JSContext* ctx, JSValue target) {
-  JSClassDef def{};
-  def.class_name = "Image";
-  def.finalizer = [](JSRuntime* /*rt*/, JSValue val) {
-    ImageWrap* wrap = static_cast<ImageWrap*>(JS_GetOpaque(val, m_class_id));
-    if (wrap) {
-      delete wrap;
-    }
-  };
-
-  if (m_class_id == 0) {
-    JS_NewClassID(&m_class_id);
+void ImageWrap::Initialize(JSContext* ctx, JS::HandleObject target) {
+  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, New, 0, m_props, m_methods, nullptr, nullptr));
+  if (!proto) {
+    return;
   }
-  JS_NewClass(JS_GetRuntime(ctx), m_class_id, &def);
-
-  JSValue proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, proto, m_proto_funcs, _countof(m_proto_funcs));
-
-  JSValue obj = JS_NewCFunction2(ctx, New, "Image", 0, JS_CFUNC_constructor, 0);
-  JS_SetConstructor(ctx, obj, proto);
-
-  JS_SetClassProto(ctx, m_class_id, proto);
-  JS_SetPropertyStr(ctx, target, "Image", obj);
 }
 
-ImageWrap::ImageWrap(JSContext* /*ctx*/, ImageHook* image) : pImage(image) {
+ImageWrap::ImageWrap(JSContext* ctx, JS::HandleObject obj, ImageHook* image) : BaseObject(ctx, obj), pImage(image) {
 }
 
 ImageWrap::~ImageWrap() {
   Genhook::EnterGlobalSection();
-  delete pImage;
+  if (pImage) {
+    delete pImage;
+    pImage = nullptr;
+  }
   Genhook::LeaveGlobalSection();
 }
 
-JSValue ImageWrap::New(JSContext* ctx, JSValue new_target, int argc, JSValue* argv) {
-  Script* script = (Script*)JS_GetContextOpaque(ctx);
+void ImageWrap::finalize(JSFreeOp* fop, JSObject* obj) {
+  BaseObject* wrap = BaseObject::FromJSObject(obj);
+  if (wrap) {
+    delete wrap;
+  }
+}
+
+bool ImageWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ThreadState* ts = (ThreadState*)JS_GetContextPrivate(ctx);
+  Script* script = ts->script;
 
   ScreenhookState state = (script->GetMode() == kScriptModeMenu) ? OOG : IG;
   uint32_t x = 0, y = 0, color = 0, align = Left;
   bool automap = false;
-  JSValue click = JS_UNDEFINED, hover = JS_UNDEFINED;
-  const char* szText = nullptr;
+  JS::RootedObject click(ctx);
+  JS::RootedObject hover(ctx);
+  char* szText = nullptr;
   wchar_t path[_MAX_FNAME + _MAX_PATH];
 
-  if (argc > 0 && JS_IsString(argv[0])) {
-    szText = JS_ToCString(ctx, argv[0]);
-    if (!szText) {
-      return JS_EXCEPTION;
+  if (argc > 0 && args[0].isString()) {
+    char* str = JS_EncodeString(ctx, args[0].toString());
+    if (!str) {
+      THROW_ERROR(ctx, "failed to encode string");
     }
   }
-  if (argc > 1 && JS_IsNumber(argv[1]))
-    JS_ToUint32(ctx, &x, argv[1]);
-  if (argc > 2 && JS_IsNumber(argv[2]))
-    JS_ToUint32(ctx, &y, argv[2]);
-  if (argc > 3 && JS_IsNumber(argv[3]))
-    JS_ToUint32(ctx, &color, argv[3]);
-  if (argc > 4 && JS_IsNumber(argv[4]))
-    JS_ToUint32(ctx, &align, argv[4]);
-  if (argc > 5 && JS_IsBool(argv[5]))
-    automap = !!JS_ToBool(ctx, argv[5]);
-  if (argc > 6 && JS_IsFunction(ctx, argv[6]))
-    click = argv[6];
-  if (argc > 7 && JS_IsFunction(ctx, argv[7]))
-    hover = argv[7];
+  if (argc > 1 && args[1].isNumber())
+    JS::ToUint32(ctx, args[1], &x);
+  if (argc > 2 && args[2].isNumber())
+    JS::ToUint32(ctx, args[2], &y);
+  if (argc > 3 && args[3].isNumber())
+    JS::ToUint32(ctx, args[3], &color);
+  if (argc > 4 && args[4].isNumber())
+    JS::ToUint32(ctx, args[4], &align);
+  if (argc > 5 && args[5].isBoolean())
+    automap = args[5].toBoolean();
+  if (argc > 6 && args[6].isObject() && JS_ObjectIsFunction(ctx, args[6].toObjectOrNull()))
+    click.set(args[6].toObjectOrNull());
+  if (argc > 7 && args[7].isObject() && JS_ObjectIsFunction(ctx, args[7].toObjectOrNull()))
+    hover.set(args[7].toObjectOrNull());
 
   if (isValidPath(szText)) {
     swprintf_s(path, _countof(path), L"%S", szText);
-    JS_FreeCString(ctx, szText);
+    JS_free(ctx, szText);
   } else {
-    JS_FreeCString(ctx, szText);
+    JS_free(ctx, szText);
     THROW_ERROR(ctx, "Invalid image file path");
   }
 
-  ImageHook* pImageHook = new ImageHook(script, JS_UNDEFINED, path, x, y, static_cast<ushort>(color), automap, (Align)align, state, true);
+  JS::RootedObject newObject(ctx, JS_NewObjectForConstructor(ctx, &m_class, args));
+  if (!newObject) {
+    THROW_ERROR(ctx, "failed to instantiate image");
+  }
+  ImageHook* pImageHook = new ImageHook(script, newObject, path, x, y, static_cast<ushort>(color), automap, (Align)align, state, true);
   if (!pImageHook)
     THROW_ERROR(ctx, "Failed to create ImageHook");
 
-  JSValue hook = ImageWrap::Instantiate(ctx, new_target, pImageHook);
+  ImageWrap* wrap = new ImageWrap(ctx, newObject, pImageHook);
+  if (!wrap) {
+    JS_ReportOutOfMemory(ctx);
+    return false;
+  }
 
-  pImageHook->SetClickHandler(click);
-  pImageHook->SetHoverHandler(hover);
-
-  return hook;
+  // pFrameHook->SetClickHandler(click);
+  // pFrameHook->SetHoverHandler(hover);
+  args.rval().setObject(*newObject);
+  return true;
 }
 
 // properties
-JSValue ImageWrap::GetX(JSContext* ctx, JSValue this_val) {
-  ImageWrap* wrap = static_cast<ImageWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool ImageWrap::GetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ImageWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
-  return JS_NewUint32(ctx, pImageHook->GetX());
+  args.rval().setNumber(pImageHook->GetX());
+  return true;
 }
 
-JSValue ImageWrap::SetX(JSContext* ctx, JSValue this_val, JSValue val) {
-  ImageWrap* wrap = static_cast<ImageWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool ImageWrap::SetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ImageWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
   uint32_t ival = 0;
-  if (!JS_IsNumber(val) || JS_ToUint32(ctx, &ival, val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isNumber() || !JS::ToUint32(ctx, args[0], &ival)) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
   pImageHook->SetX(ival);
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue ImageWrap::GetY(JSContext* ctx, JSValue this_val) {
-  ImageWrap* wrap = static_cast<ImageWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool ImageWrap::GetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ImageWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
-  return JS_NewUint32(ctx, pImageHook->GetY());
+  args.rval().setNumber(pImageHook->GetY());
+  return true;
 }
 
-JSValue ImageWrap::SetY(JSContext* ctx, JSValue this_val, JSValue val) {
-  ImageWrap* wrap = static_cast<ImageWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool ImageWrap::SetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ImageWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
   uint32_t ival = 0;
-  if (!JS_IsNumber(val) || JS_ToUint32(ctx, &ival, val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isNumber() || !JS::ToUint32(ctx, args[0], &ival)) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
   pImageHook->SetY(ival);
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue ImageWrap::GetVisible(JSContext* ctx, JSValue this_val) {
-  ImageWrap* wrap = static_cast<ImageWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool ImageWrap::GetVisible(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ImageWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
-  return JS_NewBool(ctx, pImageHook->GetIsVisible());
+  args.rval().setBoolean(pImageHook->GetIsVisible());
+  return true;
 }
 
-JSValue ImageWrap::GetLocation(JSContext* ctx, JSValue this_val) {
-  ImageWrap* wrap = static_cast<ImageWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool ImageWrap::GetLocation(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ImageWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
-  return JS_NewString(ctx, pImageHook->GetImage());
+  args.rval().setString(JS_NewUCStringCopyZ(ctx, reinterpret_cast<const char16_t*>(pImageHook->GetImage())));
+  return true;
 }
 
-JSValue ImageWrap::SetLocation(JSContext* ctx, JSValue this_val, JSValue val) {
-  ImageWrap* wrap = static_cast<ImageWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool ImageWrap::SetLocation(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ImageWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
-  if (JS_IsString(val)) {
-    const char* szText = JS_ToCString(ctx, val);
+  if (args[0].isString()) {
+    char* szText = JS_EncodeString(ctx, args[0].toString());
     if (!szText) {
-      return JS_EXCEPTION;
+      THROW_ERROR(ctx, "failed to encode string");
     }
     std::wstring pText = AnsiToWide(szText);
     pImageHook->SetImage(pText.c_str());
-    JS_FreeCString(ctx, szText);
+    JS_free(ctx, szText);
   }
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue ImageWrap::SetVisible(JSContext* ctx, JSValue this_val, JSValue val) {
-  ImageWrap* wrap = static_cast<ImageWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool ImageWrap::SetVisible(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ImageWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
-  if (!JS_IsBool(val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isBoolean()) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
-  pImageHook->SetIsVisible(JS_ToBool(ctx, val));
-  return JS_UNDEFINED;
+  pImageHook->SetIsVisible(args[0].toBoolean());
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue ImageWrap::GetAlign(JSContext* ctx, JSValue this_val) {
-  ImageWrap* wrap = static_cast<ImageWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool ImageWrap::GetAlign(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ImageWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
-  return JS_NewUint32(ctx, pImageHook->GetAlign());
+  args.rval().setNumber(static_cast<uint32_t>(pImageHook->GetAlign()));
+  return true;
 }
 
-JSValue ImageWrap::SetAlign(JSContext* ctx, JSValue this_val, JSValue val) {
-  ImageWrap* wrap = static_cast<ImageWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool ImageWrap::SetAlign(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ImageWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
   uint32_t ival = 0;
-  if (!JS_IsNumber(val) || JS_ToUint32(ctx, &ival, val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isNumber() || !JS::ToUint32(ctx, args[0], &ival)) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
   pImageHook->SetAlign((Align)ival);
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue ImageWrap::GetZOrder(JSContext* ctx, JSValue this_val) {
-  ImageWrap* wrap = static_cast<ImageWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool ImageWrap::GetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ImageWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
-  return JS_NewUint32(ctx, pImageHook->GetZOrder());
+  args.rval().setNumber(static_cast<uint32_t>(pImageHook->GetZOrder()));
+  return true;
 }
 
-JSValue ImageWrap::SetZOrder(JSContext* ctx, JSValue this_val, JSValue val) {
-  ImageWrap* wrap = static_cast<ImageWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool ImageWrap::SetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ImageWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
   uint32_t ival = 0;
-  if (!JS_IsNumber(val) || JS_ToUint32(ctx, &ival, val)) {
-    return JS_EXCEPTION;
+  if (!args[0].isNumber() || !JS::ToUint32(ctx, args[0], &ival)) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
-  pImageHook->SetZOrder((ushort)ival);
-  return JS_UNDEFINED;
+  pImageHook->SetZOrder(static_cast<ushort>(ival));
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue ImageWrap::GetClick(JSContext* ctx, JSValue this_val) {
-  ImageWrap* wrap = static_cast<ImageWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool ImageWrap::GetClick(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ImageWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
-  return JS_DupValue(ctx, pImageHook->GetClickHandler());
+  JS::RootedObject fun(ctx, pImageHook->GetClickHandler());
+  args.rval().setObject(*fun);
+  return true;
 }
 
-JSValue ImageWrap::SetClick(JSContext* /*ctx*/, JSValue this_val, JSValue val) {
-  ImageWrap* wrap = static_cast<ImageWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool ImageWrap::SetClick(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ImageWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
-  pImageHook->SetClickHandler(val);
-  return JS_UNDEFINED;
+  JS::RootedObject fun(ctx, args[0].toObjectOrNull());
+  pImageHook->SetClickHandler(fun);
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue ImageWrap::GetHover(JSContext* ctx, JSValue this_val) {
-  ImageWrap* wrap = static_cast<ImageWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool ImageWrap::GetHover(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ImageWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
-  return JS_DupValue(ctx, pImageHook->GetHoverHandler());
+  JS::RootedObject fun(ctx, pImageHook->GetHoverHandler());
+  args.rval().setObject(*fun);
+  return true;
 }
 
-JSValue ImageWrap::SetHover(JSContext* /*ctx*/, JSValue this_val, JSValue val) {
-  ImageWrap* wrap = static_cast<ImageWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool ImageWrap::SetHover(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ImageWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
-  pImageHook->SetHoverHandler(val);
-  return JS_UNDEFINED;
+  JS::RootedObject fun(ctx, args[0].toObjectOrNull());
+  pImageHook->SetHoverHandler(fun);
+  args.rval().setUndefined();
+  return true;
 }
 
 // functions
-JSValue ImageWrap::Remove(JSContext* /*ctx*/, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
-  ImageWrap* wrap = static_cast<ImageWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
+bool ImageWrap::Remove(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ImageWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
+  Genhook::EnterGlobalSection();
+  ImageHook* pImageHook = wrap->pImage;
+  if (pImageHook) {
+    delete pImageHook;
+    wrap->pImage = nullptr;
   }
-
-  return JS_UNDEFINED;
+  Genhook::LeaveGlobalSection();
+  args.rval().setUndefined();
+  return true;
 }
 
 D2BS_BINDING_INTERNAL(ImageWrap, ImageWrap::Initialize)

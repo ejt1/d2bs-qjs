@@ -1,35 +1,48 @@
 #pragma once
 
-#include "js32.h"
+#include "JSBaseObject.h"
 
-class DirectoryWrap {
+class DirectoryWrap : public BaseObject {
  public:
-  static JSValue Instantiate(JSContext* ctx, JSValue new_target, const char* name);
-  static void Initialize(JSContext* ctx, JSValue target);
+  static JSObject* Instantiate(JSContext* ctx, const char* name);
+  static void Initialize(JSContext* ctx, JS::HandleObject target);
 
  private:
-  DirectoryWrap(JSContext* ctx, const char* name);
+  DirectoryWrap(JSContext* ctx, JS::HandleObject obj, const char* name);
+
+  static void finalize(JSFreeOp* fop, JSObject* obj);
+
+  static bool New(JSContext* ctx, unsigned argc, JS::Value* vp);
 
   // properties
-  static JSValue GetName(JSContext* ctx, JSValue this_val);
+  static bool GetName(JSContext* ctx, unsigned argc, JS::Value* vp);
 
   // functions
-  static JSValue Create(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue Delete(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue GetFiles(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue GetFolders(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+  static bool Create(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool Delete(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetFiles(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetFolders(JSContext* ctx, unsigned argc, JS::Value* vp);
 
   // globals
-  static JSValue OpenDirectory(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+  static bool OpenDirectory(JSContext* ctx, unsigned argc, JS::Value* vp);
 
-  static inline JSClassID m_class_id = 0;
-  static inline JSCFunctionListEntry m_proto_funcs[] = {
-      JS_CGETSET_DEF("name", GetName, nullptr),
-
-      JS_FS("create", Create, 1, FUNCTION_FLAGS),          //
-      JS_FS("remove", Delete, 1, FUNCTION_FLAGS),          //
-      JS_FS("getFiles", GetFiles, 1, FUNCTION_FLAGS),      //
-      JS_FS("getFolders", GetFolders, 1, FUNCTION_FLAGS),  //
+  static inline JSClassOps m_ops = {
+      .addProperty = nullptr,
+      .delProperty = nullptr,
+      .enumerate = nullptr,
+      .newEnumerate = nullptr,
+      .resolve = nullptr,
+      .mayResolve = nullptr,
+      .finalize = finalize,
+      .call = nullptr,
+      .hasInstance = nullptr,
+      .construct = nullptr,
+      .trace = nullptr,
+  };
+  static inline JSClass m_class = {
+      "Folder",
+      JSCLASS_HAS_RESERVED_SLOTS(kInternalFieldCount) | JSCLASS_FOREGROUND_FINALIZE,
+      &m_ops,
   };
 
   char szName[_MAX_PATH];

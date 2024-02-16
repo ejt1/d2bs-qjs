@@ -1,6 +1,7 @@
 #include "JSScript.h"
 
 #include "Bindings.h"
+#include "D2Helpers.h"
 #include "Localization.h"
 #include "ScriptEngine.h"
 
@@ -30,121 +31,132 @@ static bool __fastcall FindScriptByTid(Script* script, void* argv) {
   return true;
 }
 
-JSValue ScriptWrap::Instantiate(JSContext* ctx, JSValue new_target, Script* script) {
-  JSValue proto;
-  if (JS_IsUndefined(new_target)) {
-    proto = JS_GetClassProto(ctx, m_class_id);
-  } else {
-    proto = JS_GetPropertyStr(ctx, new_target, "prototype");
-    if (JS_IsException(proto)) {
-      return JS_EXCEPTION;
-    }
+JSObject* ScriptWrap::Instantiate(JSContext* ctx, Script* script) {
+  JS::RootedObject global(ctx, JS::CurrentGlobalOrNull(ctx));
+  JS::RootedValue constructor_val(ctx);
+  if (!JS_GetProperty(ctx, global, "D2BSScript", &constructor_val)) {
+    JS_ReportErrorASCII(ctx, "Could not find constructor object for D2BSScript");
+    return nullptr;
   }
-  JSValue obj = JS_NewObjectProtoClass(ctx, proto, m_class_id);
-  JS_FreeValue(ctx, proto);
-  if (JS_IsException(obj)) {
-    return obj;
+  if (!constructor_val.isObject()) {
+    JS_ReportErrorASCII(ctx, "D2BSScript is not a constructor");
+    return nullptr;
   }
+  JS::RootedObject constructor(ctx, &constructor_val.toObject());
 
-  ScriptWrap* wrap = new ScriptWrap(ctx, script);
+  JS::RootedObject obj(ctx, JS_New(ctx, constructor, JS::HandleValueArray::empty()));
+  if (!obj) {
+    JS_ReportErrorASCII(ctx, "Calling D2BSScript constructor failed");
+    return nullptr;
+  }
+  ScriptWrap* wrap = new ScriptWrap(ctx, obj, script);
   if (!wrap) {
-    JS_FreeValue(ctx, obj);
-    return JS_ThrowOutOfMemory(ctx);
+    JS_ReportOutOfMemory(ctx);
+    return nullptr;
   }
-  JS_SetOpaque(obj, wrap);
-
   return obj;
 }
 
-void ScriptWrap::Initialize(JSContext* ctx, JSValue target) {
-  JSClassDef def{};
-  def.class_name = "D2BSScript";
-  def.finalizer = [](JSRuntime* /*rt*/, JSValue val) {
-    ScriptWrap* opaque = static_cast<ScriptWrap*>(JS_GetOpaque(val, m_class_id));
-    if (opaque) {
-      delete opaque;
-    }
+void ScriptWrap::Initialize(JSContext* ctx, JS::HandleObject target) {
+  static JSPropertySpec props[] = {
+      JS_PSG("name", GetName, JSPROP_ENUMERATE),          //
+      JS_PSG("type", GetType, JSPROP_ENUMERATE),          //
+      JS_PSG("running", GetRunning, JSPROP_ENUMERATE),    //
+      JS_PSG("threadid", GetThreadId, JSPROP_ENUMERATE),  //
+      JS_PSG("memory", GetMemory, JSPROP_ENUMERATE),      //
+      JS_PS_END,
+  };
+  static JSFunctionSpec methods[] = {
+      JS_FN("getNext", GetNext, 0, JSPROP_ENUMERATE),  //
+      JS_FN("pause", Pause, 0, JSPROP_ENUMERATE),      //
+      JS_FN("resume", Resume, 0, JSPROP_ENUMERATE),    //
+      JS_FN("stop", Stop, 0, JSPROP_ENUMERATE),        //
+      JS_FN("join", Join, 0, JSPROP_ENUMERATE),        //
+      JS_FN("send", Send, 1, JSPROP_ENUMERATE),        //
+      JS_FS_END,
   };
 
-  if (m_class_id == 0) {
-    JS_NewClassID(&m_class_id);
+  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, New, 0, props, methods, nullptr, nullptr));
+  if (!proto) {
+    Log("failed to initialize class Script");
+    return;
   }
-  JS_NewClass(JS_GetRuntime(ctx), m_class_id, &def);
-
-  JSValue proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, proto, m_proto_funcs, _countof(m_proto_funcs));
-
-  JSValue obj = JS_NewObjectProtoClass(ctx, proto, m_class_id);
-  JS_SetClassProto(ctx, m_class_id, proto);
-  JS_SetPropertyStr(ctx, target, "D2BSScript", obj);
 
   // globals
-  JS_SetPropertyStr(ctx, target, "getScript", JS_NewCFunction(ctx, GetScript, "getScript", 0));
-  JS_SetPropertyStr(ctx, target, "getScripts", JS_NewCFunction(ctx, GetScripts, "getScripts", 0));
+  JS_DefineFunction(ctx, target, "getScript", GetScript, 0, JSPROP_ENUMERATE);
+  JS_DefineFunction(ctx, target, "getScripts", GetScripts, 0, JSPROP_ENUMERATE);
 }
 
-ScriptWrap::ScriptWrap(JSContext* /*ctx*/, Script* script) : m_script(script) {
+ScriptWrap::ScriptWrap(JSContext* ctx, JS::HandleObject obj, Script* script) : BaseObject(ctx, obj),m_script(script) {
+}
+
+void ScriptWrap::finalize(JSFreeOp* fop, JSObject* obj) {
+  BaseObject* wrap = BaseObject::FromJSObject(obj);
+  if (wrap) {
+    delete wrap;
+  }
+}
+
+bool ScriptWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  JS::RootedObject newObject(ctx, JS_NewObjectForConstructor(ctx, &m_class, args));
+  if (!newObject) {
+    THROW_ERROR(ctx, "failed to instantiate script");
+  }
+  args.rval().setObject(*newObject);
+  return true;
 }
 
 // properties
-JSValue ScriptWrap::GetName(JSContext* ctx, JSValue this_val) {
-  ScriptWrap* wrap = static_cast<ScriptWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap || !wrap->m_script) {
-    return JS_EXCEPTION;
-  }
+bool ScriptWrap::GetName(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ScriptWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Script* script = wrap->m_script;
 
-  return JS_NewString(ctx, script->GetShortFilename());
+  args.rval().setString(JS_NewStringCopyZ(ctx, script->GetShortFilename()));
+  return true;
 }
 
-JSValue ScriptWrap::GetType(JSContext* ctx, JSValue this_val) {
-  ScriptWrap* wrap = static_cast<ScriptWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap || !wrap->m_script) {
-    return JS_EXCEPTION;
-  }
+bool ScriptWrap::GetType(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ScriptWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Script* script = wrap->m_script;
 
-  return JS_NewBool(ctx, script->GetMode() == kScriptModeGame ? false : true);
+  args.rval().setBoolean(script->GetMode() == kScriptModeGame ? false : true);
+  return true;
 }
 
-JSValue ScriptWrap::GetRunning(JSContext* ctx, JSValue this_val) {
-  ScriptWrap* wrap = static_cast<ScriptWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap || !wrap->m_script) {
-    return JS_EXCEPTION;
-  }
+bool ScriptWrap::GetRunning(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ScriptWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Script* script = wrap->m_script;
-
-  return JS_NewBool(ctx, script->IsRunning());
+  args.rval().setBoolean(script->IsRunning());
+  return true;
 }
 
-JSValue ScriptWrap::GetThreadId(JSContext* ctx, JSValue this_val) {
-  ScriptWrap* wrap = static_cast<ScriptWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap || !wrap->m_script) {
-    return JS_EXCEPTION;
-  }
+bool ScriptWrap::GetThreadId(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ScriptWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Script* script = wrap->m_script;
-
-  return JS_NewInt32(ctx, script->GetThreadId());
+  args.rval().setInt32(script->GetThreadId());
+  return true;
 }
 
-JSValue ScriptWrap::GetMemory(JSContext* ctx, JSValue this_val) {
-  ScriptWrap* wrap = static_cast<ScriptWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap || !wrap->m_script) {
-    return JS_EXCEPTION;
-  }
-  Script* script = wrap->m_script;
-
-  JSMemoryUsage mem;
-  JS_ComputeMemoryUsage(script->GetRuntime(), &mem);
-  return JS_NewInt64(ctx, mem.memory_used_size);
+bool ScriptWrap::GetMemory(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  args.rval().setInt32(JS_GetGCParameter(ctx, JSGCParamKey::JSGC_BYTES));
+  return true;
 }
 
 // functions
-JSValue ScriptWrap::GetNext(JSContext* ctx, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
-  ScriptWrap* wrap = static_cast<ScriptWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap || !wrap->m_script) {
-    return JS_EXCEPTION;
-  }
+bool ScriptWrap::GetNext(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ScriptWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Script* script = wrap->m_script;
 
   sScriptEngine->LockScriptList("scrip.getNext");
@@ -154,115 +166,124 @@ JSValue ScriptWrap::GetNext(JSContext* ctx, JSValue this_val, int /*argc*/, JSVa
       if (it == sScriptEngine->scripts().end())
         break;
 
-      JSValue r = ScriptWrap::Instantiate(ctx, JS_UNDEFINED, it->second);
+      JS::RootedObject r(ctx, ScriptWrap::Instantiate(ctx, it->second));
       sScriptEngine->UnLockScriptList("scrip.getNext");
-      return r;
+      args.rval().setObject(*r);
+      return true;
     }
   }
 
   sScriptEngine->UnLockScriptList("scrip.getNext");
-
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue ScriptWrap::Pause(JSContext* /*ctx*/, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
-  ScriptWrap* wrap = static_cast<ScriptWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap || !wrap->m_script) {
-    return JS_EXCEPTION;
-  }
+bool ScriptWrap::Pause(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ScriptWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Script* script = wrap->m_script;
 
   if (script->IsRunning())
     script->Pause();
-  return JS_NULL;
+  args.rval().setNull();
+  return true;
 }
 
-JSValue ScriptWrap::Resume(JSContext* /*ctx*/, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
-  ScriptWrap* wrap = static_cast<ScriptWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap || !wrap->m_script) {
-    return JS_EXCEPTION;
-  }
+bool ScriptWrap::Resume(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ScriptWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Script* script = wrap->m_script;
 
   script->Resume();
-  return JS_NULL;
+  args.rval().setNull();
+  return true;
 }
 
-JSValue ScriptWrap::Stop(JSContext* /*ctx*/, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
-  ScriptWrap* wrap = static_cast<ScriptWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap || !wrap->m_script) {
-    return JS_EXCEPTION;
-  }
+bool ScriptWrap::Stop(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ScriptWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Script* script = wrap->m_script;
 
   if (script->IsRunning())
     script->Stop();
-  return JS_NULL;
+  args.rval().setNull();
+  return true;
 }
 
-JSValue ScriptWrap::Join(JSContext* /*ctx*/, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
-  ScriptWrap* wrap = static_cast<ScriptWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap || !wrap->m_script) {
-    return JS_EXCEPTION;
-  }
+bool ScriptWrap::Join(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ScriptWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Script* script = wrap->m_script;
 
   script->Join();
-  return JS_NULL;
+  args.rval().setNull();
+  return true;
 }
 
-JSValue ScriptWrap::Send(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
-  if (argc > 1) {
-    THROW_ERROR(ctx, "too many arguments");
+bool ScriptWrap::Send(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  if (!args.requireAtLeast(ctx, "send", 1)) {
+    return false;
   }
 
-  ScriptWrap* wrap = static_cast<ScriptWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap || !wrap->m_script) {
-    return JS_EXCEPTION;
-  }
+  ScriptWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Script* script = wrap->m_script;
 
-  if (!script || !script->IsRunning())
-    return JS_NULL;
-
-  if (!ScriptMessageEvent(ctx, script, argv[0])) {
-    return JS_EXCEPTION;
+  if (!script || !script->IsRunning()) {
+    args.rval().setNull();
+    return true;
   }
 
-  return JS_NULL;
+  // documentation says to not use args.array but we do anyway because we dont give a fuck
+  if (!ScriptMessageEvent(ctx, script, argc, args.array())) {
+    THROW_ERROR(ctx, "failed to send message");
+  }
+
+  args.rval().setNull();
+  return true;
 }
 
-JSValue ScriptWrap::GetScript(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
+bool ScriptWrap::GetScript(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
   Script* iterp = NULL;
-  if (argc == 1 && JS_IsBool(argv[0]) && JS_ToBool(ctx, argv[0]) == TRUE)
-    iterp = (Script*)JS_GetContextOpaque(ctx);
-  else if (argc == 1 && JS_IsNumber(argv[0])) {
+  if (argc == 1 && args[0].isBoolean() && args[0].toBoolean() == TRUE)
+    iterp = ((ThreadState*)JS_GetContextPrivate(ctx))->script;
+  else if (argc == 1 && args[0].isNumber()) {
     // loop over the Scripts in ScriptEngine and find the one with the right threadid
     uint32_t tid;
-    if (JS_ToUint32(ctx, &tid, argv[0])) {
-      return JS_EXCEPTION;
+    if (!JS::ToUint32(ctx, args[0], &tid)) {
+      THROW_ERROR(ctx, "failed to convert argument");
     }
-    FindHelper args = {tid, NULL, NULL};
-    sScriptEngine->ForEachScript(FindScriptByTid, &args);
-    if (args.script != NULL)
-      iterp = args.script;
-    else
-      return JS_NULL;
-  } else if (argc == 1 && JS_IsString(argv[0])) {
-    const char* name = JS_ToCString(ctx, argv[0]);
+    FindHelper helper = {tid, NULL, NULL};
+    sScriptEngine->ForEachScript(FindScriptByTid, &helper);
+    if (helper.script != NULL)
+      iterp = helper.script;
+    else {
+      args.rval().setNull();
+      return true;
+    }
+  } else if (argc == 1 && args[0].isString()) {
+    char* name = JS_EncodeString(ctx, args[0].toString());
     if (!name) {
-      return JS_EXCEPTION;
+      THROW_ERROR(ctx, "failed to encode string");
     }
     char* fname = _strdup(name);
-    JS_FreeCString(ctx, name);
+    JS_free(ctx, name);
     StringReplace(fname, '/', '\\', strlen(fname));
-    FindHelper args = {0, fname, NULL};
-    sScriptEngine->ForEachScript(FindScriptByName, &args);
+    FindHelper helper = {0, fname, NULL};
+    sScriptEngine->ForEachScript(FindScriptByName, &helper);
     free(fname);
-    if (args.script != NULL)
-      iterp = args.script;
-    else
-      return JS_NULL;
+    if (helper.script != NULL)
+      iterp = helper.script;
+    else {
+      args.rval().setNull();
+      return true;
+    }
   } else {
     if (sScriptEngine->scripts().size() > 0) {
       //	EnterCriticalSection(&sScriptEngine->lock);
@@ -272,27 +293,39 @@ JSValue ScriptWrap::GetScript(JSContext* ctx, JSValue /*this_val*/, int argc, JS
       //	LeaveCriticalSection(&sScriptEngine->lock);
     }
 
-    if (iterp == NULL)
-      return JS_NULL;
+    if (iterp == NULL) {
+      args.rval().setNull();
+      return true;
+    }
   }
 
-  return ScriptWrap::Instantiate(ctx, JS_UNDEFINED, iterp);
+  JS::RootedObject obj(ctx, ScriptWrap::Instantiate(ctx, iterp));
+  if (!obj) {
+    THROW_ERROR(ctx, "failed to instantiate script");
+  }
+  args.rval().setObjectOrNull(obj);
+  return true;
 }
 
-JSValue ScriptWrap::GetScripts(JSContext* ctx, JSValue /*this_val*/, int /*argc*/, JSValue* /*argv*/) {
+bool ScriptWrap::GetScripts(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
   DWORD dwArrayCount = NULL;
 
-  JSValue pReturnArray = JS_NewArray(ctx);
+  JS::RootedObject pReturnArray(ctx, JS_NewArrayObject(ctx, 0));
   sScriptEngine->LockScriptList("getScripts");
 
   for (ScriptMap::iterator it = sScriptEngine->scripts().begin(); it != sScriptEngine->scripts().end(); it++) {
-    JSValue res = ScriptWrap::Instantiate(ctx, JS_UNDEFINED, it->second);
-    JS_SetPropertyUint32(ctx, pReturnArray, dwArrayCount, res);
+    JS::RootedObject res(ctx, ScriptWrap::Instantiate(ctx, it->second));
+    if (!res) {
+      THROW_ERROR(ctx, "failed to instantiate script");
+    }
+    JS_SetElement(ctx, pReturnArray, dwArrayCount, res);
     dwArrayCount++;
   }
 
   sScriptEngine->UnLockScriptList("getScripts");
-  return pReturnArray;
+  args.rval().setObject(*pReturnArray);
+  return true;
 }
 
 D2BS_BINDING_INTERNAL(ScriptWrap, ScriptWrap::Initialize)

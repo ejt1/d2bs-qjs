@@ -2,112 +2,111 @@
 
 #include "Bindings.h"
 
-JSValue ExitWrap::Instantiate(JSContext* ctx, JSValue new_target, Exit* exit, uint32_t level_id) {
-  JSValue proto;
-  if (JS_IsUndefined(new_target)) {
-    proto = JS_GetClassProto(ctx, m_class_id);
-  } else {
-    proto = JS_GetPropertyStr(ctx, new_target, "prototype");
-    if (JS_IsException(proto)) {
-      return JS_EXCEPTION;
-    }
+JSObject* ExitWrap::Instantiate(JSContext* ctx, Exit* exit, uint32_t level_id) {
+  JS::RootedObject global(ctx, JS::CurrentGlobalOrNull(ctx));
+  JS::RootedValue constructor_val(ctx);
+  if (!JS_GetProperty(ctx, global, "Exit", &constructor_val)) {
+    JS_ReportErrorASCII(ctx, "Could not find constructor object for Exit");
+    return nullptr;
   }
-  JSValue obj = JS_NewObjectProtoClass(ctx, proto, m_class_id);
-  JS_FreeValue(ctx, proto);
-  if (JS_IsException(obj)) {
-    return obj;
+  if (!constructor_val.isObject()) {
+    JS_ReportErrorASCII(ctx, "Exit is not a constructor");
+    return nullptr;
   }
+  JS::RootedObject constructor(ctx, &constructor_val.toObject());
 
-  ExitWrap* wrap = new ExitWrap(ctx, exit, level_id);
+  JS::RootedObject obj(ctx, JS_New(ctx, constructor, JS::HandleValueArray::empty()));
+  if (!obj) {
+    JS_ReportErrorASCII(ctx, "Calling Exit constructor failed");
+    return nullptr;
+  }
+  ExitWrap* wrap = new ExitWrap(ctx, obj, exit, level_id);
   if (!wrap) {
-    JS_FreeValue(ctx, obj);
-    return JS_ThrowOutOfMemory(ctx);
+    JS_ReportOutOfMemory(ctx);
+    return nullptr;
   }
-  JS_SetOpaque(obj, wrap);
-
   return obj;
 }
 
-void ExitWrap::Initialize(JSContext* ctx, JSValue target) {
-  JSClassDef def{};
-  def.class_name = "Exit";
-  def.finalizer = [](JSRuntime* /*rt*/, JSValue val) {
-    ExitWrap* wrap = static_cast<ExitWrap*>(JS_GetOpaque(val, m_class_id));
-    if (wrap) {
-      delete wrap;
-    }
-  };
-
-  if (m_class_id == 0) {
-    JS_NewClassID(&m_class_id);
+void ExitWrap::Initialize(JSContext* ctx, JS::HandleObject target) {
+  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, New, 0, m_props, nullptr, nullptr, nullptr));
+  if (!proto) {
+    Log("failed to initialize class Exit");
+    return;
   }
-  JS_NewClass(JS_GetRuntime(ctx), m_class_id, &def);
-
-  JSValue proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, proto, m_proto_funcs, _countof(m_proto_funcs));
-
-  JSValue obj = JS_NewObjectProtoClass(ctx, proto, m_class_id);
-  JS_SetClassProto(ctx, m_class_id, proto);
-  JS_SetPropertyStr(ctx, target, "Exit", obj);
 }
 
-ExitWrap::ExitWrap(JSContext* /*ctx*/, Exit* exit, uint32_t level_id)
-    : id(exit->Target), x(exit->Position.first), y(exit->Position.second), type(exit->Type), tileid(exit->TileId), level(level_id) {
+ExitWrap::ExitWrap(JSContext* ctx, JS::HandleObject obj, Exit* exit, uint32_t level_id)
+    : BaseObject(ctx, obj), id(exit->Target), x(exit->Position.first), y(exit->Position.second), type(exit->Type), tileid(exit->TileId), level(level_id) {
+}
+
+void ExitWrap::finalize(JSFreeOp* fop, JSObject* obj) {
+  BaseObject* wrap = BaseObject::FromJSObject(obj);
+  if (wrap) {
+    delete wrap;
+  }
+}
+
+bool ExitWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  JS::RootedObject newObject(ctx, JS_NewObjectForConstructor(ctx, &m_class, args));
+  if (!newObject) {
+    THROW_ERROR(ctx, "failed to instantiate exit");
+  }
+  // BUG(ejt): ask ejt
+  JS_DefineProperties(ctx, newObject, m_props);
+
+  args.rval().setObject(*newObject);
+  return true;
 }
 
 // properties
-JSValue ExitWrap::GetX(JSContext* ctx, JSValue this_val) {
-  ExitWrap* wrap = static_cast<ExitWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
-  return JS_NewUint32(ctx, wrap->x);
+bool ExitWrap::GetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ExitWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
+  args.rval().setInt32(wrap->x);
+  return true;
 }
 
-JSValue ExitWrap::GetY(JSContext* ctx, JSValue this_val) {
-  ExitWrap* wrap = static_cast<ExitWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
-  return JS_NewUint32(ctx, wrap->y);
+bool ExitWrap::GetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ExitWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
+  args.rval().setInt32(wrap->y);
+  return true;
 }
 
-JSValue ExitWrap::GetTarget(JSContext* ctx, JSValue this_val) {
-  ExitWrap* wrap = static_cast<ExitWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
-  return JS_NewUint32(ctx, wrap->id);
+bool ExitWrap::GetTarget(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ExitWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
+  args.rval().setInt32(wrap->id);
+  return true;
 }
 
-JSValue ExitWrap::GetType(JSContext* ctx, JSValue this_val) {
-  ExitWrap* wrap = static_cast<ExitWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
-  return JS_NewUint32(ctx, wrap->type);
+bool ExitWrap::GetType(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ExitWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
+  args.rval().setInt32(wrap->type);
+  return true;
 }
 
-JSValue ExitWrap::GetTileId(JSContext* ctx, JSValue this_val) {
-  ExitWrap* wrap = static_cast<ExitWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
-  return JS_NewUint32(ctx, wrap->tileid);
+bool ExitWrap::GetTileId(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ExitWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
+  args.rval().setInt32(wrap->tileid);
+  return true;
 }
 
-JSValue ExitWrap::GetLevelId(JSContext* ctx, JSValue this_val) {
-  ExitWrap* wrap = static_cast<ExitWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
-  return JS_NewUint32(ctx, wrap->level);
+bool ExitWrap::GetLevelId(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ExitWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
+  args.rval().setInt32(wrap->level);
+  return true;
 }
 
 D2BS_BINDING_INTERNAL(ExitWrap, ExitWrap::Initialize)

@@ -205,7 +205,7 @@ void Console::Draw(void) {
     int ysize = size.y;
     size = CalculateTextLen("@", Vars.dwConsoleFont);
     int charwidth = size.x;
-    int charheight = max(12, size.y / 2 + 2);
+    int charheight = std::max(12, static_cast<int>(size.y / 2 + 2));
     // the default console height is 30% of the screen size
     int _height = ((int)(((double)ysize) * .3) / charheight) * charheight + charheight;
     lineWidth = xsize - (2 * charwidth);

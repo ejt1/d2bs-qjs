@@ -1,52 +1,59 @@
 #pragma once
 
-#include "js32.h"
+#include "JSBaseObject.h"
 
-#include "Game/D2Roster.h" // D2RosterUnitStrc
+#include "Game/D2Roster.h"  // D2RosterUnitStrc
 
-class PartyWrap {
+class PartyWrap : public BaseObject {
  public:
-  static JSValue Instantiate(JSContext* ctx, JSValue new_target, D2RosterUnitStrc* unit);
-  static void Initialize(JSContext* ctx, JSValue target);
+  static JSObject* Instantiate(JSContext* ctx, D2RosterUnitStrc* unit);
+  static void Initialize(JSContext* ctx, JS::HandleObject target);
+
+  D2RosterUnitStrc* GetData();
 
  private:
-  PartyWrap(JSContext* ctx, D2RosterUnitStrc* unit);
+  PartyWrap(JSContext* ctx, JS::HandleObject obj, D2RosterUnitStrc* unit);
+
+  static void finalize(JSFreeOp* fop, JSObject* obj);
 
   // constructor
-  static JSValue New(JSContext* ctx, JSValue new_target, int argc, JSValue* argv);
+  static bool New(JSContext* ctx, unsigned argc, JS::Value* vp);
 
   // properties
-  static JSValue GetX(JSContext* ctx, JSValue this_val);
-  static JSValue GetY(JSContext* ctx, JSValue this_val);
-  static JSValue GetArea(JSContext* ctx, JSValue this_val);
-  static JSValue GetGid(JSContext* ctx, JSValue this_val);
-  static JSValue GetLife(JSContext* ctx, JSValue this_val);
-  static JSValue GetPartyFlag(JSContext* ctx, JSValue this_val);
-  static JSValue GetPartyId(JSContext* ctx, JSValue this_val);
-  static JSValue GetName(JSContext* ctx, JSValue this_val);
-  static JSValue GetClassId(JSContext* ctx, JSValue this_val);
-  static JSValue GetLevel(JSContext* ctx, JSValue this_val);
+  static bool GetX(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetY(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetArea(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetGid(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetLife(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetPartyFlag(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetPartyId(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetName(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetClassId(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetLevel(JSContext* ctx, unsigned argc, JS::Value* vp);
 
   // functions
-  static JSValue GetNext(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+  static bool GetNext(JSContext* ctx, unsigned argc, JS::Value* vp);
 
   // globals
-  static JSValue GetParty(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+  static bool GetParty(JSContext* ctx, unsigned argc, JS::Value* vp);
 
-  static inline JSClassID m_class_id = 0;
-  static inline JSCFunctionListEntry m_proto_funcs[] = {
-      JS_CGETSET_DEF("x", GetX, nullptr),
-      JS_CGETSET_DEF("y", GetY, nullptr),
-      JS_CGETSET_DEF("area", GetArea, nullptr),
-      JS_CGETSET_DEF("gid", GetGid, nullptr),
-      JS_CGETSET_DEF("life", GetLife, nullptr),
-      JS_CGETSET_DEF("partyflag", GetPartyFlag, nullptr),
-      JS_CGETSET_DEF("partyid", GetPartyId, nullptr),
-      JS_CGETSET_DEF("name", GetName, nullptr),
-      JS_CGETSET_DEF("classid", GetClassId, nullptr),
-      JS_CGETSET_DEF("level", GetLevel, nullptr),
-
-      JS_FS("getNext", GetNext, 0, FUNCTION_FLAGS),
+  static inline JSClassOps m_ops = {
+      .addProperty = nullptr,
+      .delProperty = nullptr,
+      .enumerate = nullptr,
+      .newEnumerate = nullptr,
+      .resolve = nullptr,
+      .mayResolve = nullptr,
+      .finalize = finalize,
+      .call = nullptr,
+      .hasInstance = nullptr,
+      .construct = nullptr,
+      .trace = nullptr,
+  };
+  static inline JSClass m_class = {
+      "Party",
+      JSCLASS_HAS_RESERVED_SLOTS(kInternalFieldCount) | JSCLASS_FOREGROUND_FINALIZE,
+      &m_ops,
   };
 
   D2RosterUnitStrc* pPresetUnit;

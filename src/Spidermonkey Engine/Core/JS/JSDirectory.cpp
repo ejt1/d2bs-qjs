@@ -17,116 +17,125 @@
 #include "JSDirectory.h"
 
 #include "Bindings.h"
-#include "D2Helpers.h" // Log
+#include "D2Helpers.h"  // Log
 #include "Globals.h"
 #include "File.h"
 
 #include <direct.h>
 
-JSValue DirectoryWrap::Instantiate(JSContext* ctx, JSValue new_target, const char* name) {
-  JSValue proto;
-  if (JS_IsUndefined(new_target)) {
-    proto = JS_GetClassProto(ctx, m_class_id);
-  } else {
-    proto = JS_GetPropertyStr(ctx, new_target, "prototype");
-    if (JS_IsException(proto)) {
-      return JS_EXCEPTION;
-    }
+JSObject* DirectoryWrap::Instantiate(JSContext* ctx, const char* name) {
+  JS::RootedObject global(ctx, JS::CurrentGlobalOrNull(ctx));
+  JS::RootedValue constructor_val(ctx);
+  if (!JS_GetProperty(ctx, global, "Folder", &constructor_val)) {
+    JS_ReportErrorASCII(ctx, "Could not find constructor object for Folder");
+    return nullptr;
   }
-  JSValue obj = JS_NewObjectProtoClass(ctx, proto, m_class_id);
-  JS_FreeValue(ctx, proto);
-  if (JS_IsException(obj)) {
-    return obj;
+  if (!constructor_val.isObject()) {
+    JS_ReportErrorASCII(ctx, "Folder is not a constructor");
+    return nullptr;
   }
+  JS::RootedObject constructor(ctx, &constructor_val.toObject());
 
-  DirectoryWrap* wrap = new DirectoryWrap(ctx, name);
+  JS::RootedObject obj(ctx, JS_New(ctx, constructor, JS::HandleValueArray::empty()));
+  if (!obj) {
+    JS_ReportErrorASCII(ctx, "Calling Folder constructor failed");
+    return nullptr;
+  }
+  DirectoryWrap* wrap = new DirectoryWrap(ctx, obj, name);
   if (!wrap) {
-    JS_FreeValue(ctx, obj);
-    return JS_ThrowOutOfMemory(ctx);
+    JS_ReportOutOfMemory(ctx);
+    return nullptr;
   }
-  JS_SetOpaque(obj, wrap);
-
   return obj;
 }
 
-void DirectoryWrap::Initialize(JSContext* ctx, JSValue target) {
-  JSClassDef def{};
-  def.class_name = "Folder";
-  def.finalizer = [](JSRuntime* /*rt*/, JSValue val) {
-    DirectoryWrap* wrap = static_cast<DirectoryWrap*>(JS_GetOpaque(val, m_class_id));
-    if (wrap) {
-      delete wrap;
-    }
+void DirectoryWrap::Initialize(JSContext* ctx, JS::HandleObject target) {
+  static JSPropertySpec props[] = {
+      JS_PSG("name", GetName, JSPROP_ENUMERATE),
+      JS_PS_END,
+  };
+  static JSFunctionSpec methods[] = {
+      JS_FN("create", Create, 1, JSPROP_ENUMERATE),          //
+      JS_FN("remove", Delete, 1, JSPROP_ENUMERATE),          //
+      JS_FN("getFiles", GetFiles, 1, JSPROP_ENUMERATE),      //
+      JS_FN("getFolders", GetFolders, 1, JSPROP_ENUMERATE),  //
+      JS_FS_END,
   };
 
-  if (m_class_id == 0) {
-    JS_NewClassID(&m_class_id);
+  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, New, 0, props, methods, nullptr, nullptr));
+  if (!proto) {
+    return;
   }
-  JS_NewClass(JS_GetRuntime(ctx), m_class_id, &def);
-
-  JSValue proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, proto, m_proto_funcs, _countof(m_proto_funcs));
-
-  JSValue obj = JS_NewObjectProtoClass(ctx, proto, m_class_id);
-  JS_SetClassProto(ctx, m_class_id, proto);
-  JS_SetPropertyStr(ctx, target, "Folder", obj);
 
   // globals
-  JS_SetPropertyStr(ctx, target, "dopen", JS_NewCFunction(ctx, OpenDirectory, "dopen", 0));
+  JS_DefineFunction(ctx, target, "dopen", OpenDirectory, 0, JSPROP_ENUMERATE);
 }
 
-DirectoryWrap::DirectoryWrap(JSContext* /*ctx*/, const char* name) {
+DirectoryWrap::DirectoryWrap(JSContext* ctx, JS::HandleObject obj, const char* name) : BaseObject(ctx, obj) {
   strcpy_s(szName, _MAX_PATH, name);
 }
 
-// properties
-JSValue DirectoryWrap::GetName(JSContext* ctx, JSValue this_val) {
-  DirectoryWrap* wrap = static_cast<DirectoryWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
+void DirectoryWrap::finalize(JSFreeOp* fop, JSObject* obj) {
+  BaseObject* wrap = BaseObject::FromJSObject(obj);
+  if (wrap) {
+    delete wrap;
   }
+}
 
-  return JS_NewString(ctx, wrap->szName);
+bool DirectoryWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  JS::RootedObject newObject(ctx, JS_NewObjectForConstructor(ctx, &m_class, args));
+  if (!newObject) {
+    THROW_ERROR(ctx, "failed to instantiate folder");
+  }
+  args.rval().setObject(*newObject);
+  return true;
+}
+
+// properties
+bool DirectoryWrap::GetName(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  DirectoryWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
+  args.rval().setString(JS_NewStringCopyZ(ctx, wrap->szName));
+  return true;
 }
 
 // functions
-JSValue DirectoryWrap::Create(JSContext* ctx, JSValue this_val, int /*argc*/, JSValue* argv) {
-  DirectoryWrap* wrap = static_cast<DirectoryWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
+bool DirectoryWrap::Create(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  DirectoryWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
 
   char path[_MAX_PATH];
-  if (!JS_IsString(argv[0]))
+  if (!args[0].isString())
     THROW_ERROR(ctx, "No path passed to dir.create()");
 
-  const char* szName = JS_ToCString(ctx, argv[0]);
+  char* szName = JS_EncodeString(ctx, args[0].toString());
   if (!szName) {
-    return JS_EXCEPTION;
+    THROW_ERROR(ctx, "failed to encode string");
   }
 
   if (!isValidPath(szName)) {
-    JS_FreeCString(ctx, szName);
-    return JS_EXCEPTION;
+    JS_free(ctx, szName);
+    THROW_ERROR(ctx, "invalid path");
   }
 
   sprintf_s(path, _MAX_PATH, "%s\\%s\\%s", Vars.szScriptPath, wrap->szName, szName);
   if (_mkdir(path) == -1 && (errno == ENOENT)) {
-    JS_ReportError(ctx, "Couldn't create directory %s, path %s not found", szName, path);
-    JS_FreeCString(ctx, szName);
-    return JS_FALSE;
+    JS_ReportErrorASCII(ctx, "Couldn't create directory %s, path %s not found", szName, path);
+    JS_free(ctx, szName);
+    return false;
   }
-
-  JSValue rval = DirectoryWrap::Instantiate(ctx, JS_UNDEFINED, szName);
-  JS_FreeCString(ctx, szName);
-  return rval;
+  args.rval().setObjectOrNull(DirectoryWrap::Instantiate(ctx, szName));
+  JS_free(ctx, szName);
+  return true;
 }
 
-JSValue DirectoryWrap::Delete(JSContext* ctx, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
-  DirectoryWrap* wrap = static_cast<DirectoryWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
+bool DirectoryWrap::Delete(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  DirectoryWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
 
   char path[_MAX_PATH];
   sprintf_s(path, _MAX_PATH, "%s\\%s", Vars.szScriptPath, wrap->szName);
@@ -138,26 +147,26 @@ JSValue DirectoryWrap::Delete(JSContext* ctx, JSValue this_val, int /*argc*/, JS
     if (errno == ENOENT)
       THROW_ERROR(ctx, "Path not found");
   }
-  return JS_TRUE;
+  args.rval().setBoolean(true);
+  return true;
 }
 
-JSValue DirectoryWrap::GetFiles(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
-  DirectoryWrap* wrap = static_cast<DirectoryWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
+bool DirectoryWrap::GetFiles(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  DirectoryWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
 
   char search[_MAX_PATH] = "*.*";
 
   if (argc > 1)
-    return JS_EXCEPTION;
+    THROW_ERROR(ctx, "not enough arguments");
   if (argc == 1) {
-    const char* szSearch = JS_ToCString(ctx, argv[0]);
+    char* szSearch = JS_EncodeString(ctx, args[0].toString());
     if (!szSearch) {
-      return JS_EXCEPTION;
+      THROW_ERROR(ctx, "failed to encode string");
     }
     strcpy_s(search, szSearch);
-    JS_FreeCString(ctx, szSearch);
+    JS_free(ctx, szSearch);
   }
 
   long hFile;
@@ -166,49 +175,50 @@ JSValue DirectoryWrap::GetFiles(JSContext* ctx, JSValue this_val, int argc, JSVa
 
   if (!_getcwd(oldpath, _MAX_PATH)) {
     Log("Error getting current working directory. (%s, %s)", "JSDirectory.cpp", "dir_getFiles");
-    return JS_EXCEPTION;
+    THROW_ERROR(ctx, "failed to get working directory");
   }
   if (_chdir(path) == -1) {
     Log("Changing directory to %s. (%s, %s)", path, "JSDirectory.cpp", "dir_getFiles");
-    return JS_EXCEPTION;
+    THROW_ERROR(ctx, "failed to change directory");
   }
 
   _finddata_t found;
-  JSValue jsarray = JS_NewArray(ctx);
+  JS::RootedObject jsarray(ctx, JS_NewArrayObject(ctx, 0));
   if ((hFile = _findfirst(search, &found)) != -1L) {
     int32_t element = 0;
     do {
       if ((found.attrib & _A_SUBDIR))
         continue;
-      JS_SetPropertyUint32(ctx, jsarray, element++, JS_NewString(ctx, found.name));
+      JS::RootedString name_val(ctx, JS_NewStringCopyZ(ctx, found.name));
+      JS_SetElement(ctx, jsarray, element++, name_val);
     } while (_findnext(hFile, &found) == 0);
   }
 
   if (_chdir(oldpath) == -1) {
     Log("Error changing directory back to %s. (%s, %s)", oldpath, "JSDirectory.cpp", "dir_getFiles");
-    return JS_EXCEPTION;
+    THROW_ERROR(ctx, "failed to change directory");
   }
 
-  return jsarray;
+  args.rval().setObject(*jsarray);
+  return true;
 }
 
-JSValue DirectoryWrap::GetFolders(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
-  DirectoryWrap* wrap = static_cast<DirectoryWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
+bool DirectoryWrap::GetFolders(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  DirectoryWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
 
   char search[_MAX_PATH] = "*.*";
 
   if (argc > 1)
-    return JS_EXCEPTION;
+    THROW_ERROR(ctx, "not enough arguments");
   if (argc == 1) {
-    const char* szSearch = JS_ToCString(ctx, argv[0]);
+    char* szSearch = JS_EncodeString(ctx, args[0].toString());
     if (!szSearch) {
-      return JS_EXCEPTION;
+      THROW_ERROR(ctx, "failed to encode string");
     }
     strcpy_s(search, szSearch);
-    JS_FreeCString(ctx, szSearch);
+    JS_free(ctx, szSearch);
   }
 
   long hFile;
@@ -217,61 +227,70 @@ JSValue DirectoryWrap::GetFolders(JSContext* ctx, JSValue this_val, int argc, JS
 
   if (!_getcwd(oldpath, _MAX_PATH)) {
     Log("Error getting current working directory. (%s, %s)", "JSDirectory.cpp", "dir_getFolders");
-    return JS_EXCEPTION;
+    THROW_ERROR(ctx, "failed to get working directory");
   }
   if (_chdir(path) == -1) {
     Log("Changing directory to %s. (%s, %s)", path, "JSDirectory.cpp", "dir_getFolders");
-    return JS_EXCEPTION;
+    THROW_ERROR(ctx, "failed to change directory");
   }
 
   _finddata_t found;
-  JSValue jsarray = JS_NewArray(ctx);
 
+  JS::RootedObject jsarray(ctx, JS_NewArrayObject(ctx, 0));
   if ((hFile = _findfirst(search, &found)) != -1L) {
     int32_t element = 0;
     do {
       if (!strcmp(found.name, "..") || !strcmp(found.name, ".") || !(found.attrib & _A_SUBDIR))
         continue;
-      JS_SetPropertyUint32(ctx, jsarray, element++, JS_NewString(ctx, found.name));
+      JS::RootedString name_val(ctx, JS_NewStringCopyZ(ctx, found.name));
+      JS_SetElement(ctx, jsarray, element++, name_val);
     } while (_findnext(hFile, &found) == 0);
   }
 
   if (_chdir(oldpath) == -1) {
     Log("Error changing directory back to %s. (%s, %s)", oldpath, "JSDirectory.cpp", "dir_getFolders");
-    return JS_EXCEPTION;
+    THROW_ERROR(ctx, "failed to change directory");
   }
 
-  return jsarray;
+  args.rval().setObject(*jsarray);
+  return true;
 }
 
 // globals
-JSValue DirectoryWrap::OpenDirectory(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
-  if (argc != 1)
-    return JS_UNDEFINED;
+bool DirectoryWrap::OpenDirectory(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  if (argc != 1) {
+    args.rval().setUndefined();
+    return true;
+  }
 
   char path[_MAX_PATH];
-  const char* szName = JS_ToCString(ctx, argv[0]);
+  char* szName = JS_EncodeString(ctx, args[0].toString());
   if (!szName) {
-    return JS_EXCEPTION;
+    THROW_ERROR(ctx, "failed to encode string");
   }
 
   if (!isValidPath(szName)) {
     Log("The following path was deemed invalid: %s. (%s, %s)", szName, "JSDirectory.cpp", "my_openDir");
-    JS_FreeCString(ctx, szName);
-    return JS_EXCEPTION;
+    JS_free(ctx, szName);
+    THROW_ERROR(ctx, "invalid path");
   }
 
   sprintf_s(path, _MAX_PATH, "%s\\%s", Vars.szScriptPath, szName);
 
   if ((_mkdir(path) == -1) && (errno == ENOENT)) {
-    JS_ReportError(ctx, "Couldn't get directory %s, path '%s' not found", szName, path);
-    JS_FreeCString(ctx, szName);
-    return JS_EXCEPTION;
+    JS_ReportErrorASCII(ctx, "Couldn't get directory %s, path '%s' not found", szName, path);
+    JS_free(ctx, szName);
+    return false;
   }
-  
-  JSValue rval = DirectoryWrap::Instantiate(ctx, JS_UNDEFINED, szName);
-  JS_FreeCString(ctx, szName);
-  return rval;
+  JS::RootedObject obj(ctx, DirectoryWrap::Instantiate(ctx, szName));
+  if (!obj) {
+    JS_free(ctx, szName);
+    THROW_ERROR(ctx, "failed to instantiate folder");
+  }
+  args.rval().setObject(*obj);
+  JS_free(ctx, szName);
+  return true;
 }
 
 D2BS_BINDING_INTERNAL(DirectoryWrap, DirectoryWrap::Initialize)

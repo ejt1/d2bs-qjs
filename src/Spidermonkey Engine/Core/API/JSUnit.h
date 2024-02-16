@@ -1,8 +1,9 @@
 #pragma once
 
-#include <windows.h>
-#include "js32.h"
+#include "JSBaseObject.h"
 #include "Offset.h"
+
+#include <Windows.h>
 
 enum unit_tinyid {
   UNIT_TYPE,
@@ -103,7 +104,7 @@ enum me_tinyid {
 #define PRIVATE_UNIT 1
 #define PRIVATE_ITEM 3
 
-class UnitWrap {
+class UnitWrap : public BaseObject {
  public:
   struct UnitData {
     DWORD dwPrivateType;
@@ -119,176 +120,282 @@ class UnitWrap {
     DWORD dwOwnerType;
   };
 
-  static JSValue Instantiate(JSContext* ctx, JSValue new_target, UnitData* priv);
-  static void Initialize(JSContext* ctx, JSValue target);
+  static JSObject* Instantiate(JSContext* ctx, UnitData* priv, bool isMe = false);
+  static void Initialize(JSContext* ctx, JS::HandleObject target);
 
-  // helper functions to make migration to new wrap model easier
   UnitData* GetData();
-  static UnitWrap* FromJSObject(JSValue value);
-  static UnitData* DataFromJSObject(JSValue value);
 
  private:
-  UnitWrap(JSContext* ctx, UnitData* priv);
+  UnitWrap(JSContext* ctx, JS::HandleObject obj, UnitData* priv);
   virtual ~UnitWrap();
 
+  static void finalize(JSFreeOp* fop, JSObject* obj);
+
   // constructor
-  static JSValue New(JSContext* ctx, JSValue new_target, int argc, JSValue* argv);
+  static bool New(JSContext* ctx, unsigned argc, JS::Value* vp);
 
   // properties
-  static JSValue GetProperty(JSContext* ctx, JSValue this_val, int magic);
-  static JSValue SetProperty(JSContext* ctx, JSValue this_val, JSValue val, int magic);
+  static bool GetType(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetClassID(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetMode(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetName(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetAct(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetGid(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetX(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetY(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetTargetX(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetTargetY(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetArea(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetHP(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetHPMax(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetMP(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetMPMax(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetStamina(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetStaminaMax(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetCharLevel(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetItemCount(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetOwner(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetOwnerType(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetSpecType(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetDirection(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetUniqueId(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetCode(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetPrefix(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetSuffix(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetPrefixes(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetSuffixes(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetPrefixNum(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetSuffixNum(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetPrefixNums(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetSuffixNums(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetFName(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetQuality(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetNode(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetLocation(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetSizeX(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetSizeY(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetItemType(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetDescription(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetBodyLocation(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetItemLevel(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetLevelRequirement(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetGfx(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetRunWalk(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool SetRunWalk(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetWeaaponSwitch(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetObjType(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetIsLocked(JSContext* ctx, unsigned argc, JS::Value* vp);
+
+  // properties for 'me'
+  static bool GetAccount(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetCharName(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetDiff(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetDiffMax(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetGameName(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetGamePassword(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetGameServerIp(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetGameStartTime(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetGameType(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetItemOnCursor(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetAutomap(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool SetAutomap(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetLadder(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetPing(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetFPS(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetLocale(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetPlayerType(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetRealm(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetRealmShort(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetMercReviveCost(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetChickenHP(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool SetChickenHP(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetChickenMP(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool SetChickenMP(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetQuitOnHostile(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool SetQuitOnHostile(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetBlockKeys(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool SetBlockKeys(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetBlockMouse(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool SetBlockMouse(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetGameReady(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetProfile(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetNoPickup(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool SetNoPickup(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetPID(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetUnsupported(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetCharFlags(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetScreenSize(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetWindowTitle(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetInGame(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetQuitOnError(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool SetQuitOnError(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetMaxGameTime(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool SetMaxGameTime(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetMapId(JSContext* ctx, unsigned argc, JS::Value* vp);
 
   // function
-  static JSValue getNext(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue cancel(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue repair(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue useMenu(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue interact(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue getItem(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue getItems(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue getMerc(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue getMercHP(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue getSkill(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue getParent(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue overhead(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue revive(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue getFlags(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue getFlag(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue getStat(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue getState(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue getEnchant(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue shop(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue setSkill(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue move(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue getQuest(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue getMinionCount(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue getRepairCost(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue getItemCost(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+  static bool getNext(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool cancel(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool repair(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool useMenu(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool interact(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool getItem(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool getItems(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool getMerc(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool getMercHP(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool getSkill(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool getParent(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool overhead(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool revive(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool getFlags(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool getFlag(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool getStat(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool getState(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool getEnchant(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool shop(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool setSkill(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool move(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool getQuest(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool getMinionCount(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool getRepairCost(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool getItemCost(JSContext* ctx, unsigned argc, JS::Value* vp);
 
   // globals
-  static JSValue getUnit(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+  static bool getUnit(JSContext* ctx, unsigned argc, JS::Value* vp);
 
-  static inline JSClassID m_unit_class_id = 0;
-  static inline JSCFunctionListEntry m_unit_proto_funcs[] = {
-      JS_CGETSET_MAGIC_DEF("type", GetProperty, nullptr, UNIT_TYPE),
-      JS_CGETSET_MAGIC_DEF("classid", GetProperty, nullptr, UNIT_CLASSID),
-      JS_CGETSET_MAGIC_DEF("mode", GetProperty, nullptr, UNIT_MODE),
-      JS_CGETSET_MAGIC_DEF("name", GetProperty, nullptr, UNIT_NAME),
-      JS_CGETSET_MAGIC_DEF("act", GetProperty, nullptr, UNIT_ACT),
-      JS_CGETSET_MAGIC_DEF("gid", GetProperty, nullptr, UNIT_ID),
-      JS_CGETSET_MAGIC_DEF("x", GetProperty, nullptr, UNIT_XPOS),
-      JS_CGETSET_MAGIC_DEF("y", GetProperty, nullptr, UNIT_YPOS),
-      JS_CGETSET_MAGIC_DEF("targetx", GetProperty, nullptr, UNIT_TARGETX),
-      JS_CGETSET_MAGIC_DEF("targety", GetProperty, nullptr, UNIT_TARGETY),
-      JS_CGETSET_MAGIC_DEF("area", GetProperty, nullptr, UNIT_AREA),
-      JS_CGETSET_MAGIC_DEF("hp", GetProperty, nullptr, UNIT_HP),
-      JS_CGETSET_MAGIC_DEF("hpmax", GetProperty, nullptr, UNIT_HPMAX),
-      JS_CGETSET_MAGIC_DEF("mp", GetProperty, nullptr, UNIT_MP),
-      JS_CGETSET_MAGIC_DEF("mpmax", GetProperty, nullptr, UNIT_MPMAX),
-      JS_CGETSET_MAGIC_DEF("stamina", GetProperty, nullptr, UNIT_STAMINA),
-      JS_CGETSET_MAGIC_DEF("staminamax", GetProperty, nullptr, UNIT_STAMINAMAX),
-      JS_CGETSET_MAGIC_DEF("charlvl", GetProperty, nullptr, UNIT_CHARLVL),
-      JS_CGETSET_MAGIC_DEF("itemcount", GetProperty, nullptr, UNIT_ITEMCOUNT),
-      JS_CGETSET_MAGIC_DEF("owner", GetProperty, nullptr, UNIT_OWNER),
-      JS_CGETSET_MAGIC_DEF("ownertype", GetProperty, nullptr, UNIT_OWNERTYPE),
-      JS_CGETSET_MAGIC_DEF("spectype", GetProperty, nullptr, UNIT_SPECTYPE),
-      JS_CGETSET_MAGIC_DEF("direction", GetProperty, nullptr, UNIT_DIRECTION),
-      JS_CGETSET_MAGIC_DEF("uniqueid", GetProperty, nullptr, UNIT_UNIQUEID),
-      JS_CGETSET_MAGIC_DEF("code", GetProperty, nullptr, ITEM_CODE),
-      JS_CGETSET_MAGIC_DEF("prefix", GetProperty, nullptr, ITEM_PREFIX),
-      JS_CGETSET_MAGIC_DEF("suffix", GetProperty, nullptr, ITEM_SUFFIX),
-      JS_CGETSET_MAGIC_DEF("prefixes", GetProperty, nullptr, ITEM_PREFIXES),
-      JS_CGETSET_MAGIC_DEF("suffixes", GetProperty, nullptr, ITEM_SUFFIXES),
-      JS_CGETSET_MAGIC_DEF("prefixnum", GetProperty, nullptr, ITEM_PREFIXNUM),
-      JS_CGETSET_MAGIC_DEF("suffixnum", GetProperty, nullptr, ITEM_SUFFIXNUM),
-      JS_CGETSET_MAGIC_DEF("prefixnums", GetProperty, nullptr, ITEM_PREFIXNUMS),
-      JS_CGETSET_MAGIC_DEF("suffixnums", GetProperty, nullptr, ITEM_SUFFIXNUMS),
-      JS_CGETSET_MAGIC_DEF("fname", GetProperty, nullptr, ITEM_FNAME),
-      JS_CGETSET_MAGIC_DEF("quality", GetProperty, nullptr, ITEM_QUALITY),
-      JS_CGETSET_MAGIC_DEF("node", GetProperty, nullptr, ITEM_NODE),
-      JS_CGETSET_MAGIC_DEF("location", GetProperty, nullptr, ITEM_LOC),
-      JS_CGETSET_MAGIC_DEF("sizex", GetProperty, nullptr, ITEM_SIZEX),
-      JS_CGETSET_MAGIC_DEF("sizey", GetProperty, nullptr, ITEM_SIZEY),
-      JS_CGETSET_MAGIC_DEF("itemType", GetProperty, nullptr, ITEM_TYPE),
-      JS_CGETSET_MAGIC_DEF("description", GetProperty, nullptr, ITEM_DESC),
-      JS_CGETSET_MAGIC_DEF("bodylocation", GetProperty, nullptr, ITEM_BODYLOCATION),
-      JS_CGETSET_MAGIC_DEF("ilvl", GetProperty, nullptr, ITEM_LEVEL),
-      JS_CGETSET_MAGIC_DEF("lvlreq", GetProperty, nullptr, ITEM_LEVELREQ),
-      JS_CGETSET_MAGIC_DEF("gfx", GetProperty, nullptr, ITEM_GFX),
-      JS_CGETSET_MAGIC_DEF("runwalk", GetProperty, nullptr, ME_RUNWALK),
-      JS_CGETSET_MAGIC_DEF("weaponswitch", GetProperty, nullptr, ME_WSWITCH),
-      JS_CGETSET_MAGIC_DEF("objtype", GetProperty, nullptr, OBJECT_TYPE),
-      JS_CGETSET_MAGIC_DEF("islocked", GetProperty, nullptr, OBJECT_LOCKED),
-
-      JS_FS("getNext", getNext, 0, FUNCTION_FLAGS),
-      JS_FS("cancel", cancel, 0, FUNCTION_FLAGS),
-      JS_FS("repair", repair, 0, FUNCTION_FLAGS),
-      JS_FS("useMenu", useMenu, 0, FUNCTION_FLAGS),
-      JS_FS("interact", interact, 0, FUNCTION_FLAGS),
-      JS_FS("getItem", getItem, 3, FUNCTION_FLAGS),
-      JS_FS("getItems", getItems, 0, FUNCTION_FLAGS),
-      JS_FS("getMerc", getMerc, 0, FUNCTION_FLAGS),
-      JS_FS("getMercHP", getMercHP, 0, FUNCTION_FLAGS),
-      JS_FS("getSkill", getSkill, 0, FUNCTION_FLAGS),
-      JS_FS("getParent", getParent, 0, FUNCTION_FLAGS),
-      JS_FS("overhead", overhead, 0, FUNCTION_FLAGS),
-      JS_FS("revive", revive, 0, FUNCTION_FLAGS),
-      JS_FS("getFlags", getFlags, 1, FUNCTION_FLAGS),
-      JS_FS("getFlag", getFlag, 1, FUNCTION_FLAGS),
-      JS_FS("getStat", getStat, 1, FUNCTION_FLAGS),
-      JS_FS("getState", getState, 1, FUNCTION_FLAGS),
-      JS_FS("getEnchant", getEnchant, 1, FUNCTION_FLAGS),
-      JS_FS("shop", shop, 2, FUNCTION_FLAGS),
-      JS_FS("setSkill", setSkill, 2, FUNCTION_FLAGS),
-      JS_FS("move", move, 2, FUNCTION_FLAGS),
-      JS_FS("getQuest", getQuest, 2, FUNCTION_FLAGS),
-      JS_FS("getMinionCount", getMinionCount, 1, FUNCTION_FLAGS),
-      JS_FS("getRepairCost", getRepairCost, 1, FUNCTION_FLAGS),
-      JS_FS("getItemCost", getItemCost, 1, FUNCTION_FLAGS),
+  static inline JSClassOps m_ops = {
+      .addProperty = nullptr,
+      .delProperty = nullptr,
+      .enumerate = nullptr,
+      .newEnumerate = nullptr,
+      .resolve = nullptr,
+      .mayResolve = nullptr,
+      .finalize = finalize,
+      .call = nullptr,
+      .hasInstance = nullptr,
+      .construct = nullptr,
+      .trace = nullptr,
+  };
+  static inline JSClass m_class = {
+      "Unit",
+      JSCLASS_HAS_RESERVED_SLOTS(kInternalFieldCount) | JSCLASS_FOREGROUND_FINALIZE,
+      &m_ops,
+  };
+  static inline JSPropertySpec m_unit_props[] = {
+      JS_PSG("type", GetType, JSPROP_ENUMERATE),
+      JS_PSG("classid", GetClassID, JSPROP_ENUMERATE),
+      JS_PSG("mode", GetMode, JSPROP_ENUMERATE),
+      JS_PSG("name", GetName, JSPROP_ENUMERATE),
+      JS_PSG("act", GetAct, JSPROP_ENUMERATE),
+      JS_PSG("gid", GetGid, JSPROP_ENUMERATE),
+      JS_PSG("x", GetX, JSPROP_ENUMERATE),
+      JS_PSG("y", GetY, JSPROP_ENUMERATE),
+      JS_PSG("targetx", GetTargetX, JSPROP_ENUMERATE),
+      JS_PSG("targety", GetTargetY, JSPROP_ENUMERATE),
+      JS_PSG("area", GetArea, JSPROP_ENUMERATE),
+      JS_PSG("hp", GetHP, JSPROP_ENUMERATE),
+      JS_PSG("hpmax", GetHPMax, JSPROP_ENUMERATE),
+      JS_PSG("mp", GetMP, JSPROP_ENUMERATE),
+      JS_PSG("mpmax", GetMPMax, JSPROP_ENUMERATE),
+      JS_PSG("stamina", GetStamina, JSPROP_ENUMERATE),
+      JS_PSG("staminamax", GetStaminaMax, JSPROP_ENUMERATE),
+      JS_PSG("charlvl", GetCharLevel, JSPROP_ENUMERATE),
+      JS_PSG("itemcount", GetItemCount, JSPROP_ENUMERATE),
+      JS_PSG("owner", GetOwner, JSPROP_ENUMERATE),
+      JS_PSG("ownertype", GetOwnerType, JSPROP_ENUMERATE),
+      JS_PSG("spectype", GetSpecType, JSPROP_ENUMERATE),
+      JS_PSG("direction", GetDirection, JSPROP_ENUMERATE),
+      JS_PSG("uniqueid", GetUniqueId, JSPROP_ENUMERATE),
+      JS_PSG("code", GetCode, JSPROP_ENUMERATE),
+      JS_PSG("prefix", GetPrefix, JSPROP_ENUMERATE),
+      JS_PSG("suffix", GetSuffix, JSPROP_ENUMERATE),
+      JS_PSG("prefixes", GetPrefixes, JSPROP_ENUMERATE),
+      JS_PSG("suffixes", GetSuffixes, JSPROP_ENUMERATE),
+      JS_PSG("prefixnum", GetPrefixNum, JSPROP_ENUMERATE),
+      JS_PSG("suffixnum", GetSuffixNum, JSPROP_ENUMERATE),
+      JS_PSG("prefixnums", GetPrefixNums, JSPROP_ENUMERATE),
+      JS_PSG("suffixnums", GetSuffixNums, JSPROP_ENUMERATE),
+      JS_PSG("fname", GetFName, JSPROP_ENUMERATE),
+      JS_PSG("quality", GetQuality, JSPROP_ENUMERATE),
+      JS_PSG("node", GetNode, JSPROP_ENUMERATE),
+      JS_PSG("location", GetLocation, JSPROP_ENUMERATE),
+      JS_PSG("sizex", GetSizeX, JSPROP_ENUMERATE),
+      JS_PSG("sizey", GetSizeY, JSPROP_ENUMERATE),
+      JS_PSG("itemType", GetItemType, JSPROP_ENUMERATE),
+      JS_PSG("description", GetDescription, JSPROP_ENUMERATE),
+      JS_PSG("bodylocation", GetBodyLocation, JSPROP_ENUMERATE),
+      JS_PSG("ilvl", GetItemLevel, JSPROP_ENUMERATE),
+      JS_PSG("lvlreq", GetLevelRequirement, JSPROP_ENUMERATE),
+      JS_PSG("gfx", GetGfx, JSPROP_ENUMERATE),
+      JS_PSGS("runwalk", GetRunWalk, SetRunWalk, JSPROP_ENUMERATE),
+      JS_PSG("weaponswitch", GetWeaaponSwitch, JSPROP_ENUMERATE),
+      JS_PSG("objtype", GetObjType, JSPROP_ENUMERATE),
+      JS_PSG("islocked", GetIsLocked, JSPROP_ENUMERATE),
+      JS_PS_END,
+  };
+  static inline JSFunctionSpec m_unit_methods[] = {
+      JS_FN("getNext", getNext, 0, JSPROP_ENUMERATE),
+      JS_FN("cancel", cancel, 0, JSPROP_ENUMERATE),
+      JS_FN("repair", repair, 0, JSPROP_ENUMERATE),
+      JS_FN("useMenu", useMenu, 0, JSPROP_ENUMERATE),
+      JS_FN("interact", interact, 0, JSPROP_ENUMERATE),
+      JS_FN("getItem", getItem, 3, JSPROP_ENUMERATE),
+      JS_FN("getItems", getItems, 0, JSPROP_ENUMERATE),
+      JS_FN("getMerc", getMerc, 0, JSPROP_ENUMERATE),
+      JS_FN("getMercHP", getMercHP, 0, JSPROP_ENUMERATE),
+      JS_FN("getSkill", getSkill, 0, JSPROP_ENUMERATE),
+      JS_FN("getParent", getParent, 0, JSPROP_ENUMERATE),
+      JS_FN("overhead", overhead, 0, JSPROP_ENUMERATE),
+      JS_FN("revive", revive, 0, JSPROP_ENUMERATE),
+      JS_FN("getFlags", getFlags, 1, JSPROP_ENUMERATE),
+      JS_FN("getFlag", getFlag, 1, JSPROP_ENUMERATE),
+      JS_FN("getStat", getStat, 1, JSPROP_ENUMERATE),
+      JS_FN("getState", getState, 1, JSPROP_ENUMERATE),
+      JS_FN("getEnchant", getEnchant, 1, JSPROP_ENUMERATE),
+      JS_FN("shop", shop, 2, JSPROP_ENUMERATE),
+      JS_FN("setSkill", setSkill, 2, JSPROP_ENUMERATE),
+      JS_FN("move", move, 2, JSPROP_ENUMERATE),
+      JS_FN("getQuest", getQuest, 2, JSPROP_ENUMERATE),
+      JS_FN("getMinionCount", getMinionCount, 1, JSPROP_ENUMERATE),
+      JS_FN("getRepairCost", getRepairCost, 1, JSPROP_ENUMERATE),
+      JS_FN("getItemCost", getItemCost, 1, JSPROP_ENUMERATE),
+      JS_FS_END,
   };
 
   UnitData* pData;
-
- public:
-  // dont worry about it :)
-  static inline JSCFunctionListEntry me_proto_funcs[] = {
-      JS_CGETSET_MAGIC_DEF("account", GetProperty, nullptr, ME_ACCOUNT),
-      JS_CGETSET_MAGIC_DEF("charname", GetProperty, nullptr, ME_CHARNAME),
-      JS_CGETSET_MAGIC_DEF("diff", GetProperty, nullptr, ME_DIFF),
-      JS_CGETSET_MAGIC_DEF("maxdiff", GetProperty, nullptr, ME_MAXDIFF),
-      JS_CGETSET_MAGIC_DEF("gamename", GetProperty, nullptr, ME_GAMENAME),
-      JS_CGETSET_MAGIC_DEF("gamepassword", GetProperty, nullptr, ME_GAMEPASSWORD),
-      JS_CGETSET_MAGIC_DEF("gameserverip", GetProperty, nullptr, ME_GAMESERVERIP),
-      JS_CGETSET_MAGIC_DEF("gamestarttime", GetProperty, nullptr, ME_GAMESTARTTIME),
-      JS_CGETSET_MAGIC_DEF("gametype", GetProperty, nullptr, ME_GAMETYPE),
-      JS_CGETSET_MAGIC_DEF("itemoncursor", GetProperty, nullptr, ME_ITEMONCURSOR),
-      JS_CGETSET_MAGIC_DEF("automap", GetProperty, SetProperty, ME_AUTOMAP),
-      JS_CGETSET_MAGIC_DEF("ladder", GetProperty, nullptr, ME_LADDER),
-      JS_CGETSET_MAGIC_DEF("ping", GetProperty, nullptr, ME_PING),
-      JS_CGETSET_MAGIC_DEF("fps", GetProperty, nullptr, ME_FPS),
-      JS_CGETSET_MAGIC_DEF("locale", GetProperty, nullptr, ME_LOCALE),
-      JS_CGETSET_MAGIC_DEF("playertype", GetProperty, nullptr, ME_PLAYERTYPE),
-      JS_CGETSET_MAGIC_DEF("realm", GetProperty, nullptr, ME_REALM),
-      JS_CGETSET_MAGIC_DEF("realmshort", GetProperty, nullptr, ME_REALMSHORT),
-      JS_CGETSET_MAGIC_DEF("mercrevivecost", GetProperty, nullptr, ME_MERCREVIVECOST),
-      JS_CGETSET_MAGIC_DEF("runwalk", GetProperty, SetProperty, ME_RUNWALK),
-      JS_CGETSET_MAGIC_DEF("weaponswitch", GetProperty, nullptr, ME_WSWITCH),
-      JS_CGETSET_MAGIC_DEF("chickenhp", GetProperty, SetProperty, ME_CHICKENHP),
-      JS_CGETSET_MAGIC_DEF("chickenmp", GetProperty, SetProperty, ME_CHICKENMP),
-      JS_CGETSET_MAGIC_DEF("quitonhostile", GetProperty, SetProperty, ME_QUITONHOSTILE),
-      JS_CGETSET_MAGIC_DEF("blockKeys", GetProperty, SetProperty, ME_BLOCKKEYS),
-      JS_CGETSET_MAGIC_DEF("blockMouse", GetProperty, SetProperty, ME_BLOCKMOUSE),
-      JS_CGETSET_MAGIC_DEF("gameReady", GetProperty, nullptr, ME_GAMEREADY),
-      JS_CGETSET_MAGIC_DEF("profile", GetProperty, nullptr, ME_PROFILE),
-      JS_CGETSET_MAGIC_DEF("nopickup", GetProperty, SetProperty, ME_NOPICKUP),
-      JS_CGETSET_MAGIC_DEF("pid", GetProperty, nullptr, ME_PID),
-      JS_CGETSET_MAGIC_DEF("unsupported", GetProperty, nullptr, ME_UNSUPPORTED),
-      JS_CGETSET_MAGIC_DEF("charflags", GetProperty, nullptr, ME_CHARFLAGS),
-      JS_CGETSET_MAGIC_DEF("screensize", GetProperty, nullptr, OOG_SCREENSIZE),
-      JS_CGETSET_MAGIC_DEF("windowtitle", GetProperty, nullptr, OOG_WINDOWTITLE),
-      JS_CGETSET_MAGIC_DEF("ingame", GetProperty, nullptr, OOG_INGAME),
-      JS_CGETSET_MAGIC_DEF("quitonerror", GetProperty, SetProperty, OOG_QUITONERROR),
-      JS_CGETSET_MAGIC_DEF("maxgametime", GetProperty, SetProperty, OOG_MAXGAMETIME),
-      JS_CGETSET_MAGIC_DEF("mapid", GetProperty, nullptr, ME_MAPID),
-  };
 };
+
+#define UNWRAP_UNIT_OR_RETURN(ctx, unused, obj)                                     \
+  if (ClientState() != ClientStateInGame) {                                         \
+    args.rval().setUndefined();                                                     \
+    return true;                                                                    \
+  }                                                                                 \
+  UnitWrap* wrap;                                                                   \
+  UNWRAP_OR_RETURN(ctx, &wrap, obj)                                                 \
+  UnitWrap::UnitData* pUnitData = wrap->GetData();                                  \
+  if (!pUnitData) {                                                                 \
+    args.rval().setUndefined();                                                     \
+    return true;                                                                    \
+  }                                                                                 \
+  D2UnitStrc* pUnit = D2UnitStrc::FindUnit(pUnitData->dwUnitId, pUnitData->dwType); \
+  if (!pUnit) {                                                                     \
+    args.rval().setUndefined();                                                     \
+    return true;                                                                    \
+  }
+
+#define UNWRAP_UNIT_OR_ERROR(ctx, unused, obj)                                      \
+  if (ClientState() != ClientStateInGame) {                                         \
+    args.rval().setUndefined();                                                     \
+    return true;                                                                    \
+  }                                                                                 \
+  UnitWrap* wrap;                                                                   \
+  UNWRAP_OR_RETURN(ctx, &wrap, obj)                                                 \
+  UnitWrap::UnitData* pUnitData = wrap->GetData();                                  \
+  if (!pUnitData) {                                                                 \
+    args.rval().setUndefined();                                                     \
+    return true;                                                                    \
+  }                                                                                 \
+  D2UnitStrc* pUnit = D2UnitStrc::FindUnit(pUnitData->dwUnitId, pUnitData->dwType); \
+  if (!pUnit) {                                                                     \
+    THROW_ERROR(ctx, "Unable to get Unit");                                         \
+  }

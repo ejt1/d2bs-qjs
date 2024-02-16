@@ -41,8 +41,8 @@ bool SwitchToProfile(const char* profile) {
 }
 
 void InitSettings(void) {
-  char hosts[256], debug[6], quitOnHostile[6], quitOnError[6], maxGameTime[6], gameTimeout[6], startAtMenu[6], disableCache[6],
-      memUsage[6], gamePrint[6], useProfilePath[6], logConsole[6], enableUnsupported[6], forwardMessageBox[6], consoleFont[6];
+  char hosts[256], debug[6], quitOnHostile[6], quitOnError[6], maxGameTime[6], gameTimeout[6], startAtMenu[6], disableCache[6], memUsage[6], gamePrint[6],
+      useProfilePath[6], logConsole[6], enableUnsupported[6], forwardMessageBox[6], consoleFont[6];
 
   char file[_MAX_FNAME + _MAX_PATH] = "";
   char scriptPath[_MAX_PATH] = "";
@@ -178,16 +178,16 @@ bool ProcessCommand(const char* command, bool unprocessedIsCommand) {
     result = true;
   }
 #if DEBUG
-  else if (_wcsicmp(argv, L"crash") == 0) {
+  else if (_stricmp(argv, "crash") == 0) {
     DWORD zero = 0;
     double value = 1 / zero;
-    Print(L"%d", value);
-  } else if (_wcsicmp(argv, L"profile") == 0) {
-    const wchar_t* profile = command + 8;
+    Print("%d", value);
+  } else if (_stricmp(argv, "profile") == 0) {
+    const char* profile = command + 8;
     if (SwitchToProfile(profile))
-      Print(L"ÿc2D2BSÿc0 :: Switched to profile %s", profile);
+      Print("ÿc2D2BSÿc0 :: Switched to profile %s", profile);
     else
-      Print(L"ÿc2D2BSÿc0 :: Profile %s not found", profile);
+      Print("ÿc2D2BSÿc0 :: Profile %s not found", profile);
     result = true;
   }
 #endif
@@ -195,7 +195,7 @@ bool ProcessCommand(const char* command, bool unprocessedIsCommand) {
     ExecCommand(command + 5);
     result = true;
   } else if (unprocessedIsCommand) {
-    ExecCommand(command + 5);
+    ExecCommand(command);
     result = true;
   }
   free(buf);
@@ -227,12 +227,16 @@ LONG WINAPI ExceptionHandler(EXCEPTION_POINTERS* ptrs) {
                     nullptr);
 
   CloseHandle(hFile);
-  quick_exit(0);
+#if defined(DEBUG)
+  std::terminate();
+#else
+  exit(0);
+#endif
 }
 
 void InitCommandLine() {
   char* line = GetCommandLineA();
-  memcpy(Vars.szCommandLine, line, min(sizeof(Vars.szCommandLine), sizeof(char) * strlen(line)));
+  memcpy(Vars.szCommandLine, line, std::min(sizeof(Vars.szCommandLine), sizeof(char) * strlen(line)));
 
   wchar_t* wline = GetCommandLineW();
   LPCWSTR cline = L"C:\\Program Files (x86)\\Diablo II\\Game.exe -w";

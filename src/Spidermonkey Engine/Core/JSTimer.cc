@@ -5,24 +5,24 @@
 
 #include "D2Helpers.h"
 
-JSValue TimerWrap::Instantiate(JSContext* ctx, int64_t delay, JSValue func, int argc, JSValue* argv, bool interval) {
-  JSRuntime* rt = JS_GetRuntime(ctx);
-  ThreadState* ts = static_cast<ThreadState*>(JS_GetRuntimeOpaque(rt));
-  JSValue obj = JS_NewObjectClass(ctx, m_class_id);
-  if (JS_IsException(obj)) {
-    return JS_EXCEPTION;
+JSObject* TimerWrap::Instantiate(JSContext* ctx, int64_t delay, JS::HandleValue func, unsigned argc, JS::Value* argv, bool interval) {
+  JS::RootedObject obj(ctx, JS_NewObject(ctx, &m_class));
+  if (!obj) {
+    JS_ReportErrorASCII(ctx, "Calling D2BSScript constructor failed");
+    return nullptr;
   }
-
-  TimerWrap* wrap = new TimerWrap(ctx);
+  TimerWrap* wrap = new TimerWrap(ctx, obj);
   if (!wrap) {
-    JS_FreeValue(ctx, obj);
-    return JS_ThrowOutOfMemory(ctx);
+    JS_ReportOutOfMemory(ctx);
+    return nullptr;
   }
-  wrap->callback = JS_DupValue(ctx, func);
-  for (int i = 0; i < argc; ++i) {
-    wrap->args.push_back(JS_DupValue(ctx, argv[i]));
+  wrap->ref.init(ctx, obj);
+  wrap->callback.init(ctx, func.toObjectOrNull());
+  for (uint32_t i = 0; i < argc; ++i) {
+    wrap->args.append(argv[i]);
   }
 
+  ThreadState* ts = static_cast<ThreadState*>(JS_GetContextPrivate(ctx));
   uv_timer_init(ts->loop, &wrap->timer_handle);
   // associate timer with TimerWrap so we can
   // access it inside the callback later
@@ -30,176 +30,146 @@ JSValue TimerWrap::Instantiate(JSContext* ctx, int64_t delay, JSValue func, int 
   // start timer
   uint64_t repeat = interval ? delay : 0;
   uv_timer_start(&wrap->timer_handle, TimerCallback, delay, repeat);
-  wrap->ref = JS_DupValue(ctx, obj);
-  JS_SetOpaque(obj, wrap);
   return obj;
 }
 
-void TimerWrap::Initialize(JSContext* ctx, JSValue target) {
-  JSClassDef def{};
-  def.class_name = "Timeout";
-  def.finalizer = [](JSRuntime* /*rt*/, JSValue val) {
-    TimerWrap* wrap = static_cast<TimerWrap*>(JS_GetOpaque(val, m_class_id));
-    if (wrap) {
-      delete wrap;
-    }
-  };
-  def.gc_mark = MarkGC;
-
-  if (m_class_id == 0) {
-    JS_NewClassID(&m_class_id);
+void TimerWrap::Initialize(JSContext* ctx, JS::HandleObject target) {
+  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, nullptr, 0, nullptr, nullptr, nullptr, nullptr));
+  if (!proto) {
+    Log("failed to initialize class Timeout");
+    return;
   }
-  JS_NewClass(JS_GetRuntime(ctx), m_class_id, &def);
-  JSValue proto = JS_NewObject(ctx);
-  JSValue obj = JS_NewObjectProtoClass(ctx, proto, m_class_id);
-  JS_SetClassProto(ctx, m_class_id, proto);
-  JS_SetPropertyStr(ctx, target, "Timeout", obj);
 
-  // globals
-  JS_SetPropertyFunctionList(ctx, target, m_funcs, _countof(m_funcs));
+  JS_DefineFunctions(ctx, target, m_methods);
 }
 
 void TimerWrap::Unref() {
-  if (context && !JS_IsUndefined(ref)) {
-    JS_FreeValue(context, ref);
-  }
+  ref.reset();
 }
 
-TimerWrap::TimerWrap(JSContext* ctx) : context(ctx), ref(JS_UNDEFINED), timer_handle(), callback(JS_UNDEFINED), inside_callback(false), clear_after_callback(false) {
+TimerWrap::TimerWrap(JSContext* ctx, JS::HandleObject obj)
+    : BaseObject(ctx, obj), context(ctx), ref(ctx), timer_handle(), callback(ctx), args(ctx), inside_callback(false), clear_after_callback(false) {
 }
 
 TimerWrap::~TimerWrap() {
   uv_close((uv_handle_t*)(&timer_handle), nullptr);
-  if (context && !JS_IsUndefined(callback)) {
-    for (const auto& arg : args) {
-      JS_FreeValue(context, arg);
-    }
-    args.clear();
-    JS_FreeValue(context, callback);
+}
+
+void TimerWrap::finalize(JSFreeOp* fop, JSObject* obj) {
+  BaseObject* wrap = BaseObject::FromJSObject(obj);
+  if (wrap) {
+    delete wrap;
   }
 }
 
-void TimerWrap::MarkGC(JSRuntime* rt, JSValue val, JS_MarkFunc* mark_func) {
-  TimerWrap* wrap = static_cast<TimerWrap*>(JS_GetOpaque(val, m_class_id));
-  if (wrap && !JS_IsUndefined(wrap->callback)) {
-    JS_MarkValue(rt, wrap->callback, mark_func);
+// void TimerWrap::MarkGC(JSRuntime* rt, JSValue val, JS_MarkFunc* mark_func) {
+//   TimerWrap* wrap = static_cast<TimerWrap*>(JS_GetOpaque(val, m_class_id));
+//   if (wrap && !JS_IsUndefined(wrap->callback)) {
+//     JS_MarkValue(rt, wrap->callback, mark_func);
+//   }
+// }
+
+bool TimerWrap::setImmediate(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  if (!args.requireAtLeast(ctx, "setImmediate", 1)) {
+    return false;
   }
+
+  JS::RootedValue func(ctx, args[0]);
+  if (!func.isObject() || !JS::IsCallable(&func.toObject())) {
+    JS_ReportErrorASCII(ctx, "handler must be a function");
+    return false;
+  }
+
+  args.rval().setObjectOrNull(Instantiate(ctx, 1, func, argc - 1, &vp[1]));
+  return true;
 }
 
-JSValue TimerWrap::setImmediate(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
-  if (argc < 1) {
-    return JS_ThrowSyntaxError(ctx, "not enough arguments");
+bool TimerWrap::clearImmediate(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  if (!args.requireAtLeast(ctx, "clearImmediate", 1)) {
+    return false;
   }
-
-  JSValue func = argv[0];
-  if (!JS_IsFunction(ctx, func)) {
-    return JS_ThrowTypeError(ctx, "handler must be a function");
-  }
-
-  return Instantiate(ctx, 1, func, argc - 1, &argv[1]);
-}
-
-JSValue TimerWrap::clearImmediate(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
-  if (argc < 1) {
-    return JS_ThrowSyntaxError(ctx, "not enough arguments");
-  }
-
-  if (!JS_IsObject(argv[0])) {
-    return JS_ThrowTypeError(ctx, "not an object");
-  }
-
-  TimerWrap* wrap = static_cast<TimerWrap*>(JS_GetOpaque2(ctx, argv[0], m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+  TimerWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args[0]);
   wrap->Clear();
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue TimerWrap::setTimeout(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
-  if (argc < 2) {
-    return JS_ThrowSyntaxError(ctx, "not enough arguments");
+bool TimerWrap::setTimeout(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  if (!args.requireAtLeast(ctx, "setTimeout", 2)) {
+    return false;
   }
 
-  JSValue func = argv[0];
-  if (!JS_IsFunction(ctx, func)) {
-    return JS_ThrowTypeError(ctx, "handler must be a function");
+  JS::RootedValue func(ctx, args[0]);
+  if (!func.isObject() || !JS::IsCallable(&func.toObject())) {
+    JS_ReportErrorASCII(ctx, "handler must be a function");
+    return false;
   }
 
-  int64_t delay;
-  if (JS_ToInt64(ctx, &delay, argv[1])) {
-    return JS_EXCEPTION;
-  }
+  int64_t delay = static_cast<int64_t>(args[1].toNumber());
 
-  return Instantiate(ctx, delay, func, argc - 2, &argv[2]);
+  args.rval().setObjectOrNull(Instantiate(ctx, delay, func, argc - 2, &vp[2]));
+  return true;
 }
 
-JSValue TimerWrap::clearTimeout(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
-  if (argc < 1) {
-    return JS_ThrowSyntaxError(ctx, "not enough arguments");
+bool TimerWrap::clearTimeout(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  if (!args.requireAtLeast(ctx, "clearTimeout", 1)) {
+    return false;
   }
 
-  if (!JS_IsObject(argv[0])) {
-    return JS_ThrowTypeError(ctx, "not an object");
-  }
-
-  TimerWrap* wrap = static_cast<TimerWrap*>(JS_GetOpaque2(ctx, argv[0], m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+  TimerWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args[0]);
   wrap->Clear();
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue TimerWrap::setInterval(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
-  if (argc < 2) {
-    return JS_ThrowSyntaxError(ctx, "not enough arguments");
+bool TimerWrap::setInterval(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  if (!args.requireAtLeast(ctx, "setInterval", 2)) {
+    return false;
   }
 
-  JSValue func = argv[0];
-  if (!JS_IsFunction(ctx, func)) {
-    return JS_ThrowTypeError(ctx, "handler must be a function");
+  JS::RootedValue func(ctx, args[0]);
+  if (!func.isObject() || !JS::IsCallable(&func.toObject())) {
+    JS_ReportErrorASCII(ctx, "handler must be a function");
+    return false;
   }
 
-  int64_t delay;
-  if (JS_ToInt64(ctx, &delay, argv[1])) {
-    return JS_EXCEPTION;
-  }
+  int64_t delay = static_cast<int64_t>(args[1].toNumber());
 
-  return Instantiate(ctx, delay, func, argc - 2, &argv[2], true);
+  args.rval().setObjectOrNull(Instantiate(ctx, delay, func, argc - 2, &vp[2], true));
+  return true;
 }
 
-JSValue TimerWrap::clearInterval(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
-  if (argc < 1) {
-    return JS_ThrowSyntaxError(ctx, "not enough arguments");
+bool TimerWrap::clearInterval(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  if (!args.requireAtLeast(ctx, "clearInterval", 1)) {
+    return false;
   }
 
-  if (!JS_IsObject(argv[0])) {
-    return JS_ThrowTypeError(ctx, "not an object");
-  }
-
-  TimerWrap* wrap = static_cast<TimerWrap*>(JS_GetOpaque2(ctx, argv[0], m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+  TimerWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args[0]);
   wrap->Clear();
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
 void TimerWrap::TimerCallback(uv_timer_t* handle) {
   TimerWrap* wrap = static_cast<TimerWrap*>(handle->data);
-  // BUG(ejt): Timers CANNOT be canceled inside its own callback!
   wrap->inside_callback = true;
-  JSValue rval = JS_Call(wrap->context, wrap->callback, JS_UNDEFINED, wrap->args.size(), wrap->args.data());
-  wrap->inside_callback = false;
-  if (JS_IsException(rval)) {
+  JS::RootedValue rval(wrap->context);
+  JS::RootedObject global(wrap->context, JS_GetGlobalForObject(wrap->context, wrap->ref));
+  JS::RootedFunction fun(wrap->context, JS_GetObjectFunction(wrap->callback.get()));
+  if (!JS_CallFunction(wrap->context, global, fun, wrap->args, &rval)) {
     JS_ReportPendingException(wrap->context);
     wrap->Clear();
   }
-  JS_FreeValue(wrap->context, rval);
+  wrap->inside_callback = false;
   if (wrap->clear_after_callback) {
     wrap->Clear();
     wrap->clear_after_callback = false;

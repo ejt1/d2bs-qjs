@@ -42,8 +42,8 @@ class Genhook {
   Script* owner;
   ScreenhookState gameState;
   Align alignment;
-  JSValue clicked, hovered;
-  JSValue self;
+  JS::PersistentRootedObject clicked, hovered;
+  JS::PersistentRootedObject self;
   bool isAutomap, isVisible;
   ushort opacity, zorder;
   POINT location;
@@ -53,7 +53,7 @@ class Genhook {
   Genhook& operator=(const Genhook&) = delete;
 
  public:
-  Genhook(Script* nowner, JSValue nself, uint32_t x, uint32_t y, ushort nopacity, bool nisAutomap = false, Align nalign = Left, ScreenhookState ngameState = Perm);
+  Genhook(Script* nowner, JS::HandleObject nself, uint32_t x, uint32_t y, ushort nopacity, bool nisAutomap = false, Align nalign = Left, ScreenhookState ngameState = Perm);
   virtual ~Genhook(void);
 
   friend bool __fastcall DrawHook(Genhook* hook, void* argv, uint32_t argc);
@@ -140,8 +140,8 @@ class Genhook {
     zorder = norder;
     Unlock();
   }
-  void SetClickHandler(JSValue handler);
-  void SetHoverHandler(JSValue handler);
+  void SetClickHandler(JS::HandleObject handler);
+  void SetHoverHandler(JS::HandleObject handler);
 
   POINT GetLocation(void) const {
     return location;
@@ -170,10 +170,10 @@ class Genhook {
   ushort GetZOrder(void) const {
     return zorder;
   }
-  JSValue GetClickHandler(void) {
+  JSObject* GetClickHandler(void) {
     return clicked;
   }
-  JSValue GetHoverHandler(void) {
+  JSObject* GetHoverHandler(void) {
     return hovered;
   }
 
@@ -199,7 +199,7 @@ class TextHook : public Genhook {
   TextHook& operator=(const TextHook&);
 
  public:
-  TextHook(Script* owner, JSValue nself, const wchar_t* text, uint32_t x, uint32_t y, ushort nfont, ushort ncolor, bool automap = false, Align align = Left,
+  TextHook(Script* owner, JS::HandleObject nself, const wchar_t* text, uint32_t x, uint32_t y, ushort nfont, ushort ncolor, bool automap = false, Align align = Left,
            ScreenhookState state = Perm)
       : Genhook(owner, nself, x, y, 0, automap, align, state), text(NULL), font(nfont), color(ncolor) {
     this->text = _wcsdup(text);
@@ -247,7 +247,7 @@ class ImageHook : public Genhook {
   ImageHook& operator=(const ImageHook&);
 
  public:
-  ImageHook(Script* owner, JSValue nself, const wchar_t* nloc, uint32_t x, uint32_t y, ushort ncolor, bool automap = false, Align align = Left,
+  ImageHook(Script* owner, JS::HandleObject nself, const wchar_t* nloc, uint32_t x, uint32_t y, ushort ncolor, bool automap = false, Align align = Left,
             ScreenhookState state = Perm,
             bool fromFile = true)
       : Genhook(owner, nself, x, y, 0, automap, align, state), color(ncolor), image(NULL), location(NULL) {
@@ -291,7 +291,7 @@ class LineHook : public Genhook {
   LineHook& operator=(const LineHook&);
 
  public:
-  LineHook(Script* owner, JSValue nself, uint32_t x, uint32_t y, uint32_t nx2, uint32_t ny2, ushort ncolor, bool automap = false, Align align = Left,
+  LineHook(Script* owner, JS::HandleObject nself, uint32_t x, uint32_t y, uint32_t nx2, uint32_t ny2, ushort ncolor, bool automap = false, Align align = Left,
            ScreenhookState state = Perm)
       : Genhook(owner, nself, x, y, 0, automap, align, state), x2(nx2), y2(ny2), color(ncolor) {
   }
@@ -345,7 +345,7 @@ class BoxHook : public Genhook {
   BoxHook& operator=(const BoxHook&);
 
  public:
-  BoxHook(Script* owner, JSValue nself, uint32_t x, uint32_t y, uint32_t nxsize, uint32_t nysize, ushort ncolor, ushort opacity, bool automap = false, Align align = Left,
+  BoxHook(Script* owner, JS::HandleObject nself, uint32_t x, uint32_t y, uint32_t nxsize, uint32_t nysize, ushort ncolor, ushort opacity, bool automap = false, Align align = Left,
           ScreenhookState state = Perm)
       : Genhook(owner, nself, x, y, opacity, automap, align, state), xsize(nxsize), ysize(nysize), color(ncolor) {
   }
@@ -393,7 +393,7 @@ class FrameHook : public Genhook {
   FrameHook& operator=(const FrameHook&);
 
  public:
-  FrameHook(Script* owner, JSValue nself, uint32_t x, uint32_t y, uint32_t nxsize, uint32_t nysize, bool automap = false, Align align = Left,
+  FrameHook(Script* owner, JS::HandleObject nself, uint32_t x, uint32_t y, uint32_t nxsize, uint32_t nysize, bool automap = false, Align align = Left,
             ScreenhookState state = Perm)
       : Genhook(owner, nself, x, y, 0, automap, align, state), xsize(nxsize), ysize(nysize) {
   }
