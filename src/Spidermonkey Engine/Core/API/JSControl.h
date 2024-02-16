@@ -13,35 +13,35 @@ class ControlWrap : public BaseObject {
 
   static void finalize(JSFreeOp* fop, JSObject* obj);
 
-  static bool New(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool New(JSContext* ctx, JS::CallArgs& args);
 
   // properties
-  static bool GetText(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetText(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetX(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetY(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetSizeX(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetSizeY(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetState(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetState(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetPassword(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetType(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetCursorPos(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetCursorPos(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetSelectStart(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetSelectEnd(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetDisabled(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetDisabled(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetText(JSContext* ctx, JS::CallArgs& args);
+  static bool SetText(JSContext* ctx, JS::CallArgs& args);
+  static bool GetX(JSContext* ctx, JS::CallArgs& args);
+  static bool GetY(JSContext* ctx, JS::CallArgs& args);
+  static bool GetSizeX(JSContext* ctx, JS::CallArgs& args);
+  static bool GetSizeY(JSContext* ctx, JS::CallArgs& args);
+  static bool GetState(JSContext* ctx, JS::CallArgs& args);
+  static bool SetState(JSContext* ctx, JS::CallArgs& args);
+  static bool GetPassword(JSContext* ctx, JS::CallArgs& args);
+  static bool GetType(JSContext* ctx, JS::CallArgs& args);
+  static bool GetCursorPos(JSContext* ctx, JS::CallArgs& args);
+  static bool SetCursorPos(JSContext* ctx, JS::CallArgs& args);
+  static bool GetSelectStart(JSContext* ctx, JS::CallArgs& args);
+  static bool GetSelectEnd(JSContext* ctx, JS::CallArgs& args);
+  static bool GetDisabled(JSContext* ctx, JS::CallArgs& args);
+  static bool SetDisabled(JSContext* ctx, JS::CallArgs& args);
 
   // functions
-  static bool GetNext(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool Click(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool FreeGetText(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool FreeSetText(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetNext(JSContext* ctx, JS::CallArgs& args);
+  static bool Click(JSContext* ctx, JS::CallArgs& args);
+  static bool FreeGetText(JSContext* ctx, JS::CallArgs& args);
+  static bool FreeSetText(JSContext* ctx, JS::CallArgs& args);
 
   // globals
-  static bool GetControl(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetControls(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetControl(JSContext* ctx, JS::CallArgs& args);
+  static bool GetControls(JSContext* ctx, JS::CallArgs& args);
 
   static inline JSClassOps m_ops = {
       .addProperty = nullptr,

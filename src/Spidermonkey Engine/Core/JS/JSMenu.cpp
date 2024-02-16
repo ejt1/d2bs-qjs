@@ -7,8 +7,7 @@
 
 #include "Profile.h"
 
-bool my_login(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_login(JSContext* ctx, JS::CallArgs& args) {
   if (ClientState() != ClientStateMenu) {
     args.rval().setUndefined();
     return true;
@@ -50,9 +49,8 @@ bool my_login(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_selectChar(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-  if (argc != 1 || !args[0].isString())
+bool my_selectChar(JSContext* ctx, JS::CallArgs& args) {
+  if (args.length() != 1 || !args[0].isString())
     THROW_ERROR(ctx, "Invalid parameters specified to selectCharacter");
 
   char* szProfile = JS_EncodeString(ctx, args[0].toString());
@@ -73,8 +71,7 @@ bool my_selectChar(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_createGame(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_createGame(JSContext* ctx, JS::CallArgs& args) {
   if (ClientState() != ClientStateMenu) {
     args.rval().setNull();
     return true;
@@ -98,7 +95,7 @@ bool my_createGame(JSContext* ctx, unsigned argc, JS::Value* vp) {
     JS_free(ctx, jspass);
   }
   int32_t diff = 3;
-  if (argc > 2 && args[2].isInt32()) {
+  if (args.length() > 2 && args[2].isInt32()) {
     diff = args[2].toInt32();
   }
 
@@ -112,8 +109,7 @@ bool my_createGame(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_joinGame(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_joinGame(JSContext* ctx, JS::CallArgs& args) {
   if (ClientState() != ClientStateMenu) {
     args.rval().setNull();
     return true;
@@ -147,12 +143,11 @@ bool my_joinGame(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_addProfile(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_addProfile(JSContext* ctx, JS::CallArgs& args) {
   // validate the args...
   std::string profile, mode, gateway, username, password, charname;
   int spdifficulty = 3;
-  if (argc < 6 || argc > 7)
+  if (args.length() < 6 || args.length() > 7)
     THROW_ERROR(ctx, "Invalid arguments passed to addProfile");
 
   std::string* vals[] = {&profile, &mode, &gateway, &username, &password, &charname};
@@ -165,7 +160,7 @@ bool my_addProfile(JSContext* ctx, unsigned argc, JS::Value* vp) {
     JS_free(ctx, tmp);
   }
 
-  if (argc == 7) {
+  if (args.length() == 7) {
     spdifficulty = args[6].toInt32();
   }
 
@@ -188,8 +183,7 @@ bool my_addProfile(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_getOOGLocation(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_getOOGLocation(JSContext* /*ctx*/, JS::CallArgs& args) {
   if (ClientState() != ClientStateMenu) {
     args.rval().setNull();
     return true;
@@ -199,8 +193,7 @@ bool my_getOOGLocation(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_createCharacter(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_createCharacter(JSContext* ctx, JS::CallArgs& args) {
   if (ClientState() != ClientStateMenu) {
     args.rval().setUndefined();
     return true;

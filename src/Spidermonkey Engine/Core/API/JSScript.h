@@ -13,26 +13,26 @@ class ScriptWrap : public BaseObject {
 
   static void finalize(JSFreeOp* fop, JSObject* obj);
 
-  static bool New(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool New(JSContext* ctx, JS::CallArgs& args);
 
   // properties
-  static bool GetName(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetType(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetRunning(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetThreadId(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetMemory(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetName(JSContext* ctx, JS::CallArgs& args);
+  static bool GetType(JSContext* ctx, JS::CallArgs& args);
+  static bool GetRunning(JSContext* ctx, JS::CallArgs& args);
+  static bool GetThreadId(JSContext* ctx, JS::CallArgs& args);
+  static bool GetMemory(JSContext* ctx, JS::CallArgs& args);
 
   // functions
-  static bool GetNext(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool Pause(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool Resume(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool Stop(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool Join(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool Send(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetNext(JSContext* ctx, JS::CallArgs& args);
+  static bool Pause(JSContext* ctx, JS::CallArgs& args);
+  static bool Resume(JSContext* ctx, JS::CallArgs& args);
+  static bool Stop(JSContext* ctx, JS::CallArgs& args);
+  static bool Join(JSContext* ctx, JS::CallArgs& args);
+  static bool Send(JSContext* ctx, JS::CallArgs& args);
 
   // global functions
-  static bool GetScript(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetScripts(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetScript(JSContext* ctx, JS::CallArgs& args);
+  static bool GetScripts(JSContext* ctx, JS::CallArgs& args);
 
   static inline JSClassOps m_ops = {
       .addProperty = nullptr,

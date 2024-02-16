@@ -31,14 +31,14 @@ JSObject* PresetUnitWrap::Instantiate(JSContext* ctx, D2PresetUnitStrc* preset, 
 }
 
 void PresetUnitWrap::Initialize(JSContext* ctx, JS::HandleObject target) {
-  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, New, 0, m_props, nullptr, nullptr, nullptr));
+  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, trampoline<New>, 0, m_props, nullptr, nullptr, nullptr));
   if (!proto) {
     return;
   }
 
   // globals
-  JS_DefineFunction(ctx, target, "getPresetUnit", GetPresetUnit, 0, JSPROP_ENUMERATE);
-  JS_DefineFunction(ctx, target, "getPresetUnits", GetPresetUnits, 0, JSPROP_ENUMERATE);
+  JS_DefineFunction(ctx, target, "getPresetUnit", trampoline<GetPresetUnit>, 0, JSPROP_ENUMERATE);
+  JS_DefineFunction(ctx, target, "getPresetUnits", trampoline<GetPresetUnits>, 0, JSPROP_ENUMERATE);
 }
 
 PresetUnitWrap::PresetUnitWrap(JSContext* ctx, JS::HandleObject obj, D2PresetUnitStrc* preset, D2DrlgRoomStrc* room, uint32_t level)
@@ -52,15 +52,14 @@ PresetUnitWrap::PresetUnitWrap(JSContext* ctx, JS::HandleObject obj, D2PresetUni
       dwLevel(level) {
 }
 
-void PresetUnitWrap::finalize(JSFreeOp* fop, JSObject* obj) {
+void PresetUnitWrap::finalize(JSFreeOp* /*fop*/, JSObject* obj) {
   BaseObject* wrap = BaseObject::FromJSObject(obj);
   if (wrap) {
     delete wrap;
   }
 }
 
-bool PresetUnitWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool PresetUnitWrap::New(JSContext* ctx, JS::CallArgs& args) {
   JS::RootedObject newObject(ctx, JS_NewObjectForConstructor(ctx, &m_class, args));
   if (!newObject) {
     THROW_ERROR(ctx, "failed to instantiate preset");
@@ -73,68 +72,60 @@ bool PresetUnitWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
 }
 
 // properties
-bool PresetUnitWrap::GetType(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool PresetUnitWrap::GetType(JSContext* ctx, JS::CallArgs& args) {
   PresetUnitWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   args.rval().setInt32(wrap->dwType);
   return true;
 }
 
-bool PresetUnitWrap::GetRoomX(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool PresetUnitWrap::GetRoomX(JSContext* ctx, JS::CallArgs& args) {
   PresetUnitWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   args.rval().setInt32(wrap->dwRoomX);
   return true;
 }
 
-bool PresetUnitWrap::GetRoomY(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool PresetUnitWrap::GetRoomY(JSContext* ctx, JS::CallArgs& args) {
   PresetUnitWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   args.rval().setInt32(wrap->dwRoomY);
   return true;
 }
 
-bool PresetUnitWrap::GetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool PresetUnitWrap::GetX(JSContext* ctx, JS::CallArgs& args) {
   PresetUnitWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   args.rval().setInt32(wrap->dwPosX);
   return true;
 }
 
-bool PresetUnitWrap::GetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool PresetUnitWrap::GetY(JSContext* ctx, JS::CallArgs& args) {
   PresetUnitWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   args.rval().setInt32(wrap->dwPosY);
   return true;
 }
 
-bool PresetUnitWrap::GetId(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool PresetUnitWrap::GetId(JSContext* ctx, JS::CallArgs& args) {
   PresetUnitWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   args.rval().setInt32(wrap->dwId);
   return true;
 }
 
-bool PresetUnitWrap::GetLevel(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool PresetUnitWrap::GetLevel(JSContext* ctx, JS::CallArgs& args) {
   PresetUnitWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   args.rval().setInt32(wrap->dwLevel);
   return true;
 }
 
-bool PresetUnitWrap::GetPresetUnit(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool PresetUnitWrap::GetPresetUnit(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  if (argc < 1) {
+  if (args.length() < 1) {
     args.rval().setBoolean(false);
     return true;
   }
@@ -149,9 +140,9 @@ bool PresetUnitWrap::GetPresetUnit(JSContext* ctx, unsigned argc, JS::Value* vp)
   uint32_t nClassId = NULL;
   uint32_t nType = NULL;
 
-  if (argc >= 2)
+  if (args.length() >= 2)
     JS::ToUint32(ctx, args[1], &nType);
-  if (argc >= 3)
+  if (args.length() >= 3)
     JS::ToUint32(ctx, args[2], &nClassId);
 
   AutoCriticalRoom cRoom;
@@ -189,12 +180,11 @@ bool PresetUnitWrap::GetPresetUnit(JSContext* ctx, unsigned argc, JS::Value* vp)
   return true;
 }
 
-bool PresetUnitWrap::GetPresetUnits(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool PresetUnitWrap::GetPresetUnits(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  if (argc < 1) {
+  if (args.length() < 1) {
     args.rval().setBoolean(false);
     return true;
   }
@@ -210,9 +200,9 @@ bool PresetUnitWrap::GetPresetUnits(JSContext* ctx, unsigned argc, JS::Value* vp
   uint32_t nClassId = NULL;
   uint32_t nType = NULL;
 
-  if (argc >= 2)
+  if (args.length() >= 2)
     JS::ToUint32(ctx, args[1], &nType);
-  if (argc >= 3)
+  if (args.length() >= 3)
     JS::ToUint32(ctx, args[2], &nClassId);
 
   AutoCriticalRoom cRoom;

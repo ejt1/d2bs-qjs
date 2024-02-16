@@ -32,31 +32,31 @@ JSObject* PartyWrap::Instantiate(JSContext* ctx, D2RosterUnitStrc* unit) {
 
 void PartyWrap::Initialize(JSContext* ctx, JS::HandleObject target) {
   static JSPropertySpec props[] = {
-      JS_PSG("x", GetX, JSPROP_ENUMERATE),
-      JS_PSG("y", GetY, JSPROP_ENUMERATE),
-      JS_PSG("area", GetArea, JSPROP_ENUMERATE),
-      JS_PSG("gid", GetGid, JSPROP_ENUMERATE),
-      JS_PSG("life", GetLife, JSPROP_ENUMERATE),
-      JS_PSG("partyflag", GetPartyFlag, JSPROP_ENUMERATE),
-      JS_PSG("partyid", GetPartyId, JSPROP_ENUMERATE),
-      JS_PSG("name", GetName, JSPROP_ENUMERATE),
-      JS_PSG("classid", GetClassId, JSPROP_ENUMERATE),
-      JS_PSG("level", GetLevel, JSPROP_ENUMERATE),
+      JS_PSG("x", trampoline<GetX>, JSPROP_ENUMERATE),
+      JS_PSG("y", trampoline<GetY>, JSPROP_ENUMERATE),
+      JS_PSG("area", trampoline<GetArea>, JSPROP_ENUMERATE),
+      JS_PSG("gid", trampoline<GetGid>, JSPROP_ENUMERATE),
+      JS_PSG("life", trampoline<GetLife>, JSPROP_ENUMERATE),
+      JS_PSG("partyflag", trampoline<GetPartyFlag>, JSPROP_ENUMERATE),
+      JS_PSG("partyid", trampoline<GetPartyId>, JSPROP_ENUMERATE),
+      JS_PSG("name", trampoline<GetName>, JSPROP_ENUMERATE),
+      JS_PSG("classid", trampoline<GetClassId>, JSPROP_ENUMERATE),
+      JS_PSG("level", trampoline<GetLevel>, JSPROP_ENUMERATE),
       JS_PS_END,
   };
 
   static JSFunctionSpec methods[] = {
-      JS_FN("getNext", GetNext, 0, JSPROP_ENUMERATE),
+      JS_FN("getNext", trampoline<GetNext>, 0, JSPROP_ENUMERATE),
       JS_FS_END,
   };
 
-  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, New, 0, props, methods, nullptr, nullptr));
+  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, trampoline<New>, 0, props, methods, nullptr, nullptr));
   if (!proto) {
     return;
   }
 
   // globals
-  JS_DefineFunction(ctx, target, "getParty", GetParty, 0, JSPROP_ENUMERATE);
+  JS_DefineFunction(ctx, target, "getParty", trampoline<GetParty>, 0, JSPROP_ENUMERATE);
 }
 
 D2RosterUnitStrc* PartyWrap::GetData() {
@@ -73,8 +73,7 @@ void PartyWrap::finalize(JSFreeOp* fop, JSObject* obj) {
   }
 }
 
-bool PartyWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool PartyWrap::New(JSContext* ctx, JS::CallArgs& args) {
   JS::RootedObject newObject(ctx, JS_NewObjectForConstructor(ctx, &m_class, args));
   if (!newObject) {
     THROW_ERROR(ctx, "failed to instantiate party");
@@ -84,8 +83,7 @@ bool PartyWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
 }
 
 // properties
-bool PartyWrap::GetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool PartyWrap::GetX(JSContext* ctx, JS::CallArgs& args) {
   PartyWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
 
@@ -94,8 +92,7 @@ bool PartyWrap::GetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool PartyWrap::GetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool PartyWrap::GetY(JSContext* ctx, JS::CallArgs& args) {
   PartyWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
 
@@ -104,8 +101,7 @@ bool PartyWrap::GetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool PartyWrap::GetArea(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool PartyWrap::GetArea(JSContext* ctx, JS::CallArgs& args) {
   PartyWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
 
@@ -114,8 +110,7 @@ bool PartyWrap::GetArea(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool PartyWrap::GetGid(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool PartyWrap::GetGid(JSContext* ctx, JS::CallArgs& args) {
   PartyWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
 
@@ -124,8 +119,7 @@ bool PartyWrap::GetGid(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool PartyWrap::GetLife(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool PartyWrap::GetLife(JSContext* ctx, JS::CallArgs& args) {
   PartyWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
 
@@ -134,8 +128,7 @@ bool PartyWrap::GetLife(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool PartyWrap::GetPartyFlag(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool PartyWrap::GetPartyFlag(JSContext* ctx, JS::CallArgs& args) {
   PartyWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
 
@@ -144,8 +137,7 @@ bool PartyWrap::GetPartyFlag(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool PartyWrap::GetPartyId(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool PartyWrap::GetPartyId(JSContext* ctx, JS::CallArgs& args) {
   PartyWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
 
@@ -154,8 +146,7 @@ bool PartyWrap::GetPartyId(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool PartyWrap::GetName(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool PartyWrap::GetName(JSContext* ctx, JS::CallArgs& args) {
   PartyWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
 
@@ -164,8 +155,7 @@ bool PartyWrap::GetName(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool PartyWrap::GetClassId(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool PartyWrap::GetClassId(JSContext* ctx, JS::CallArgs& args) {
   PartyWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
 
@@ -174,8 +164,7 @@ bool PartyWrap::GetClassId(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool PartyWrap::GetLevel(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool PartyWrap::GetLevel(JSContext* ctx, JS::CallArgs& args) {
   PartyWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
 
@@ -185,8 +174,7 @@ bool PartyWrap::GetLevel(JSContext* ctx, unsigned argc, JS::Value* vp) {
 }
 
 // functions
-bool PartyWrap::GetNext(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool PartyWrap::GetNext(JSContext* ctx, JS::CallArgs& args) {
   PartyWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
 
@@ -202,9 +190,7 @@ bool PartyWrap::GetNext(JSContext* ctx, unsigned argc, JS::Value* vp) {
 }
 
 // globals
-bool PartyWrap::GetParty(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool PartyWrap::GetParty(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
@@ -214,7 +200,7 @@ bool PartyWrap::GetParty(JSContext* ctx, unsigned argc, JS::Value* vp) {
     return true;
   }
 
-  if (argc == 1) {
+  if (args.length() == 1) {
     char* nPlayerName = nullptr;
     uint32_t nPlayerId = NULL;
 

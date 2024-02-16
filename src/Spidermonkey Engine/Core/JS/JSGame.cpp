@@ -24,8 +24,7 @@
 #include "MapHeader.h"
 #include "MPQStats.h"
 
-bool my_copyUnit(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_copyUnit(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "copyUnit", 1)) {
     return false;
   }
@@ -76,8 +75,7 @@ bool my_copyUnit(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_clickMap(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_clickMap(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "clickMap", 3)) {
     return false;
   }
@@ -98,7 +96,7 @@ bool my_clickMap(JSContext* ctx, unsigned argc, JS::Value* vp) {
   if (args.hasDefined(3) && args[3].isNumber())
     JS::ToUint32(ctx, args[3], &nY);
 
-  if (argc == 3 && args[0].isNumber() && (args[1].isNumber() || args[1].isBoolean()) && args[2].isObject() && !args[2].isNull()) {
+  if (args.length() == 3 && args[0].isNumber() && (args[1].isNumber() || args[1].isBoolean()) && args[2].isObject() && !args[2].isNull()) {
     UnitWrap* wrap;
     UNWRAP_OR_RETURN(ctx, &wrap, args[2]);
     UnitWrap::UnitData* mypUnit = wrap->GetData();
@@ -118,7 +116,7 @@ bool my_clickMap(JSContext* ctx, unsigned argc, JS::Value* vp) {
     Vars.dwSelectedUnitType = NULL;
     args.rval().setBoolean(ClickMap(nClickType, nX, nY, nShift, pUnit));
     return true;
-  } else if (argc > 3 && args[0].isNumber() && (args[1].isNumber() || args[1].isBoolean()) && args[2].isNumber() && args[3].isNumber()) {
+  } else if (args.length() > 3 && args[0].isNumber() && (args[1].isNumber() || args[1].isBoolean()) && args[2].isNumber() && args[3].isNumber()) {
     args.rval().setBoolean(ClickMap(nClickType, nX, nY, nShift, NULL));
   }
 
@@ -126,9 +124,7 @@ bool my_clickMap(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_acceptTrade(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool my_acceptTrade(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady()) {
     JS_ReportWarningASCII(ctx, "Game not ready");
     args.rval().setBoolean(false);
@@ -137,7 +133,7 @@ bool my_acceptTrade(JSContext* ctx, unsigned argc, JS::Value* vp) {
 
   // TODO: Fix this nonsense.
 
-  if (argc > 0) {
+  if (args.length() > 0) {
     int32_t test = args[0].toInt32();
     if (test == 1) {  // Called with a '1' it will return if we already accepted it or not
       args.rval().setBoolean(*D2CLIENT_bTradeAccepted);
@@ -175,9 +171,7 @@ bool my_acceptTrade(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return false;
 }
 
-bool my_tradeOk(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool my_tradeOk(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady()) {
     JS_ReportWarningASCII(ctx, "Game not ready");
     args.rval().setBoolean(false);
@@ -203,9 +197,7 @@ bool my_tradeOk(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return false;
 }
 
-bool my_getDialogLines(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool my_getDialogLines(JSContext* ctx, JS::CallArgs& args) {
   D2NPCMessageTableStrc* pTdi = *D2CLIENT_pTransactionDialogsInfo;
   unsigned int i;
 
@@ -227,16 +219,14 @@ bool my_getDialogLines(JSContext* ctx, unsigned argc, JS::Value* vp) {
     JS_DefineProperty(ctx, line, "index", i, JSPROP_ENUMERATE);
     JS_DefineProperty(ctx, line, "text", text_val, JSPROP_ENUMERATE);
     JS_DefineProperty(ctx, line, "selectable", static_cast<bool>(pTdi->dialogLines[i].bMaybeSelectable), JSPROP_ENUMERATE);
-    JS_DefineFunction(ctx, line, "handler", my_clickDialog, 0, JSPROP_ENUMERATE);
+    JS_DefineFunction(ctx, line, "handler", trampoline<my_clickDialog>, 0, JSPROP_ENUMERATE);
     JS_SetElement(ctx, pReturnArray, i, line);
   }
   args.rval().setObject(*pReturnArray);
   return true;
 }
 
-bool my_clickDialog(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool my_clickDialog(JSContext* ctx, JS::CallArgs& args) {
   D2NPCMessageTableStrc* pTdi = *D2CLIENT_pTransactionDialogsInfo;
   D2NPCMessageStrc* tdl;
 
@@ -265,23 +255,21 @@ bool my_clickDialog(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_getPath(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool my_getPath(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady()) {
     JS_ReportWarningASCII(ctx, "Game not ready");
     args.rval().setBoolean(false);
     return true;
   }
 
-  if (argc < 5) {
+  if (args.length() < 5) {
     JS_ReportErrorASCII(ctx, "Not enough parameters were passed to getPath!");
     return false;
   }
 
   uint32_t lvl = 0, x = 0, y = 0, dx = 0, dy = 0, reductionType = 0, radius = 20;
   uint32_t* tmp[] = {&lvl, &x, &y, &dx, &dy, &reductionType, &radius};
-  for (uint32_t i = 0; i < argc && i < _countof(tmp); ++i) {
+  for (uint32_t i = 0; i < args.length() && i < _countof(tmp); ++i) {
     if (args[i].isNumber() && !JS::ToUint32(ctx, args[i], tmp[i])) {
       THROW_ERROR(ctx, "failed to convert argument");
     }
@@ -351,9 +339,7 @@ bool my_getPath(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_getCollision(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool my_getCollision(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady()) {
     JS_ReportWarningASCII(ctx, "Game not ready");
     args.rval().setBoolean(false);
@@ -362,7 +348,7 @@ bool my_getCollision(JSContext* ctx, unsigned argc, JS::Value* vp) {
 
   uint32_t nLevelId, nX, nY;
   uint32_t* tmp[] = {&nLevelId, &nX, &nY};
-  for (uint32_t i = 0; i < argc && i < _countof(tmp); ++i) {
+  for (uint32_t i = 0; i < args.length() && i < _countof(tmp); ++i) {
     if (args[i].isNumber() && !JS::ToUint32(ctx, args[i], tmp[i])) {
       THROW_ERROR(ctx, "failed to convert argument");
     }
@@ -384,9 +370,7 @@ bool my_getCollision(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_clickItem(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool my_clickItem(JSContext* ctx, JS::CallArgs& args) {
   args.rval().setNull();
   typedef void __fastcall clickequip(D2UnitStrc * pPlayer, D2InventoryStrc * pIventory, int loc);
 
@@ -432,7 +416,7 @@ bool my_clickItem(JSContext* ctx, unsigned argc, JS::Value* vp) {
   *D2CLIENT_CursorHoverX = 0xFFFFFFFF;
   *D2CLIENT_CursorHoverY = 0xFFFFFFFF;
 
-  if (argc == 1 && args[0].isObject()) {
+  if (args.length() == 1 && args[0].isObject()) {
     UnitWrap* wrap;
     UNWRAP_OR_RETURN(ctx, &wrap, args[0]);
     UnitWrap::UnitData* pmyUnit = wrap->GetData();
@@ -455,7 +439,7 @@ bool my_clickItem(JSContext* ctx, unsigned argc, JS::Value* vp) {
 
     click(D2CLIENT_GetPlayerUnit(), D2CLIENT_GetPlayerUnit()->pInventory, pUnit->pItemData->BodyLocation);
     return true;
-  } else if (argc == 2 && args[0].isInt32() && args[1].isInt32()) {
+  } else if (args.length() == 2 && args[0].isInt32() && args[1].isInt32()) {
     int32_t nClickType = args[0].toInt32();
     int32_t nBodyLoc = args[1].toInt32();
 
@@ -480,7 +464,7 @@ bool my_clickItem(JSContext* ctx, unsigned argc, JS::Value* vp) {
       }
     }
     return true;
-  } else if (argc == 2 && args[0].isInt32() && args[1].isObject()) {
+  } else if (args.length() == 2 && args[0].isInt32() && args[1].isObject()) {
     UnitWrap* wrap;
     UNWRAP_OR_RETURN(ctx, &wrap, args[1]);
     UnitWrap::UnitData* pmyUnit = wrap->GetData();
@@ -577,7 +561,7 @@ bool my_clickItem(JSContext* ctx, unsigned argc, JS::Value* vp) {
 
       click(D2CLIENT_GetPlayerUnit(), D2CLIENT_GetPlayerUnit()->pInventory, nClickType);
     }
-  } else if (argc == 4) {
+  } else if (args.length() == 4) {
     if (args[0].isInt32() && args[1].isInt32() && args[2].isInt32() && args[3].isInt32()) {
       int32_t nButton = args[0].toInt32();
       int32_t nX = args[1].toInt32();
@@ -679,10 +663,8 @@ bool my_clickItem(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_getLocaleString(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
-  if (argc < 1 || !args[0].isNumber()) {
+bool my_getLocaleString(JSContext* ctx, JS::CallArgs& args) {
+  if (args.length() < 1 || !args[0].isNumber()) {
     args.rval().setUndefined();
     return true;
   }
@@ -694,10 +676,8 @@ bool my_getLocaleString(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_rand(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
-  if (argc < 2 || !args[0].isInt32() || !args[1].isInt32()) {
+bool my_rand(JSContext* ctx, JS::CallArgs& args) {
+  if (args.length() < 2 || !args[0].isInt32() || !args[1].isInt32()) {
     args.rval().setInt32(0);
     return true;
   }
@@ -728,8 +708,7 @@ bool my_rand(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_getDistance(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_getDistance(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady()) {
     JS_ReportWarningASCII(ctx, "Game not ready");
     args.rval().setBoolean(false);
@@ -742,7 +721,7 @@ bool my_getDistance(JSContext* ctx, unsigned argc, JS::Value* vp) {
   int32_t nY1 = NULL;
   int32_t nY2 = NULL;
 
-  if (argc == 1 && args[0].isObject()) {
+  if (args.length() == 1 && args[0].isObject()) {
     JS::RootedObject obj(ctx, args[0].toObjectOrNull());
     JS::RootedValue x1_val(ctx);
     JS::RootedValue y1_val(ctx);
@@ -760,7 +739,7 @@ bool my_getDistance(JSContext* ctx, unsigned argc, JS::Value* vp) {
       nX2 = x1_val.toInt32();
       nY2 = y1_val.toInt32();
     }
-  } else if (argc == 2) {
+  } else if (args.length() == 2) {
     if (args[0].isInt32() && args[1].isInt32()) {
       nX1 = D2CLIENT_GetUnitX(D2CLIENT_GetPlayerUnit());
       nY1 = D2CLIENT_GetUnitY(D2CLIENT_GetPlayerUnit());
@@ -799,7 +778,7 @@ bool my_getDistance(JSContext* ctx, unsigned argc, JS::Value* vp) {
         nY2 = y2_val.toInt32();
       }
     }
-  } else if (argc == 3) {
+  } else if (args.length() == 3) {
     if (args[0].isObject() && args[1].isInt32() && args[2].isInt32()) {
       UnitWrap* unit_wrap;
       UNWRAP_OR_RETURN(ctx, &unit_wrap, args[0]);
@@ -840,7 +819,7 @@ bool my_getDistance(JSContext* ctx, unsigned argc, JS::Value* vp) {
       nX2 = args[0].toInt32();
       nY2 = args[1].toInt32();
     }
-  } else if (argc == 4) {
+  } else if (args.length() == 4) {
     if (args[0].isInt32() && args[1].isInt32() && args[2].isInt32() && args[3].isInt32()) {
       nX1 = args[0].toInt32();
       nY1 = args[1].toInt32();
@@ -852,9 +831,7 @@ bool my_getDistance(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_gold(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool my_gold(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady()) {
     JS_ReportWarningASCII(ctx, "Game not ready");
     args.rval().setBoolean(false);
@@ -864,10 +841,10 @@ bool my_gold(JSContext* ctx, unsigned argc, JS::Value* vp) {
   int32_t nGold = NULL;
   int32_t nMode = 1;
 
-  if (argc > 0 && args[0].isInt32())
+  if (args.length() > 0 && args[0].isInt32())
     nGold = args[0].toInt32();
 
-  if (argc > 1 && args[1].isInt32())
+  if (args.length() > 1 && args[1].isInt32())
     nMode = args[1].toInt32();
 
   SendGold(nGold, nMode);
@@ -875,16 +852,14 @@ bool my_gold(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_checkCollision(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool my_checkCollision(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady()) {
     JS_ReportWarningASCII(ctx, "Game not ready");
     args.rval().setBoolean(false);
     return true;
   }
 
-  if (argc == 3 && args[0].isObject() && args[1].isObject() && args[2].isInt32()) {
+  if (args.length() == 3 && args[0].isObject() && args[1].isObject() && args[2].isInt32()) {
     UnitWrap* unit_wrap1;
     UNWRAP_OR_RETURN(ctx, &unit_wrap1, args[0]);
     UnitWrap* unit_wrap2;
@@ -913,22 +888,18 @@ bool my_checkCollision(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_getCursorType(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool my_getCursorType(JSContext* ctx, JS::CallArgs& args) {
   int32_t nType = NULL;
 
-  if (argc > 0)
+  if (args.length() > 0)
     nType = args[0].toInt32();
 
   args.rval().setInt32(nType == 1 ? *D2CLIENT_ShopCursorType : *D2CLIENT_RegularCursorType);
   return true;
 }
 
-bool my_getSkillByName(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
-  if (argc < 1 || !args[0].isString()) {
+bool my_getSkillByName(JSContext* ctx, JS::CallArgs& args) {
+  if (args.length() < 1 || !args[0].isString()) {
     args.rval().setUndefined();
     return true;
   }
@@ -957,10 +928,8 @@ bool my_getSkillByName(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_getSkillById(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
-  if (argc < 1 || !args[0].isInt32()) {
+bool my_getSkillById(JSContext* ctx, JS::CallArgs& args) {
+  if (args.length() < 1 || !args[0].isInt32()) {
     args.rval().setUndefined();
     return true;
   }
@@ -979,10 +948,8 @@ bool my_getSkillById(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_getTextSize(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
-  if (argc < 2 || !args[0].isString() || !args[1].isInt32()) {
+bool my_getTextSize(JSContext* ctx, JS::CallArgs& args) {
+  if (args.length() < 2 || !args[0].isString() || !args[1].isInt32()) {
     args.rval().setBoolean(false);
     return true;
   }
@@ -998,7 +965,7 @@ bool my_getTextSize(JSContext* ctx, unsigned argc, JS::Value* vp) {
   JS::RootedValue x(ctx, JS::NumberValue(r.x));
   JS::RootedValue y(ctx, JS::NumberValue(r.y));
 
-  if (argc > 2 && args[2].isBoolean() && args[2].toBoolean() == TRUE) {
+  if (args.length() > 2 && args[2].isBoolean() && args[2].toBoolean() == TRUE) {
     // return an object with a height/width rather than an array
     JS::RootedObject pObj(ctx, JS_NewPlainObject(ctx));
     JS_SetProperty(ctx, pObj, "width", x);
@@ -1014,10 +981,8 @@ bool my_getTextSize(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_getTradeInfo(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
-  if (argc < 1) {
+bool my_getTradeInfo(JSContext* ctx, JS::CallArgs& args) {
+  if (args.length() < 1) {
     args.rval().setBoolean(false);
     return true;
   }
@@ -1055,10 +1020,8 @@ bool my_getTradeInfo(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_getUIFlag(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
-  if (argc < 1 || !args[0].isInt32()) {
+bool my_getUIFlag(JSContext* ctx, JS::CallArgs& args) {
+  if (args.length() < 1 || !args[0].isInt32()) {
     args.rval().setUndefined();
     return true;
   }
@@ -1074,10 +1037,8 @@ bool my_getUIFlag(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_getWaypoint(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
-  if (argc < 1 || !args[0].isInt32()) {
+bool my_getWaypoint(JSContext* ctx, JS::CallArgs& args) {
+  if (args.length() < 1 || !args[0].isInt32()) {
     args.rval().setBoolean(false);
     return true;
   }
@@ -1097,9 +1058,7 @@ bool my_getWaypoint(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_quitGame(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool my_quitGame(JSContext* ctx, JS::CallArgs& args) {
   if (ClientState() != ClientStateMenu)
     D2CLIENT_ExitGame();
 
@@ -1112,9 +1071,7 @@ bool my_quitGame(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_quit(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool my_quit(JSContext* ctx, JS::CallArgs& args) {
   Vars.bQuitting = true;
   if (ClientState() != ClientStateMenu)
     D2CLIENT_ExitGame();
@@ -1123,11 +1080,9 @@ bool my_quit(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_playSound(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool my_playSound(JSContext* ctx, JS::CallArgs& args) {
   // I need to take a closer look at the D2CLIENT_PlaySound function
-  // if (argc < 1 || !JS_IsNumber(argv[0])) {
+  // if (args.length() < 1 || !JS_IsNumber(argv[0])) {
   //  args.rval().setBoolean(false);
   //  return true;
   //}
@@ -1139,10 +1094,8 @@ bool my_playSound(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_say(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
-  for (uint32_t i = 0; i < argc; i++) {
+bool my_say(JSContext* ctx, JS::CallArgs& args) {
+  for (uint32_t i = 0; i < args.length(); i++) {
     char* str = JS_EncodeString(ctx, args[i].toString());
     if (!str) {
       THROW_ERROR(ctx, "failed to encode string");
@@ -1154,12 +1107,10 @@ bool my_say(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_clickParty(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool my_clickParty(JSContext* ctx, JS::CallArgs& args) {
   args.rval().setBoolean(false);
 
-  if (argc < 2 || !args[0].isObject() || !args[1].isInt32())
+  if (args.length() < 2 || !args[0].isObject() || !args[1].isInt32())
     return true;
 
   if (!WaitForGameReady()) {
@@ -1229,9 +1180,7 @@ bool my_clickParty(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_useStatPoint(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool my_useStatPoint(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady()) {
     JS_ReportWarningASCII(ctx, "Game not ready");
     args.rval().setBoolean(false);
@@ -1241,7 +1190,7 @@ bool my_useStatPoint(JSContext* ctx, unsigned argc, JS::Value* vp) {
   uint32_t stat = 0;
   int32_t count = 1;
   JS::ToUint32(ctx, args[0], &stat);
-  if (argc > 1) {
+  if (args.length() > 1) {
     count = args[1].toInt32();
   }
 
@@ -1250,9 +1199,7 @@ bool my_useStatPoint(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_useSkillPoint(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool my_useSkillPoint(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady()) {
     JS_ReportWarningASCII(ctx, "Game not ready");
     args.rval().setBoolean(false);
@@ -1262,7 +1209,7 @@ bool my_useSkillPoint(JSContext* ctx, unsigned argc, JS::Value* vp) {
   uint32_t skill = 0;
   int32_t count = 1;
   JS::ToUint32(ctx, args[0], &skill);
-  if (argc > 1) {
+  if (args.length() > 1) {
     count = args[1].toInt32();
   }
 
@@ -1271,10 +1218,8 @@ bool my_useSkillPoint(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_getBaseStat(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
-  if (argc > 2) {
+bool my_getBaseStat(JSContext* ctx, JS::CallArgs& args) {
+  if (args.length() > 2) {
     char *szStatName = NULL, *szTableName = NULL;
     int32_t nBaseStat = 0;
     int32_t nClassId = 0;
@@ -1322,9 +1267,7 @@ bool my_getBaseStat(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_weaponSwitch(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool my_weaponSwitch(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady()) {
     JS_ReportWarningASCII(ctx, "Game not ready");
     args.rval().setBoolean(false);
@@ -1332,7 +1275,7 @@ bool my_weaponSwitch(JSContext* ctx, unsigned argc, JS::Value* vp) {
   }
 
   int32_t nParameter = NULL;
-  if (argc > 0) {
+  if (args.length() > 0) {
     nParameter = args[0].toInt32();
   }
 
@@ -1358,9 +1301,7 @@ bool my_weaponSwitch(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_transmute(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool my_transmute(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady()) {
     JS_ReportWarningASCII(ctx, "Game not ready");
     args.rval().setBoolean(false);
@@ -1380,10 +1321,8 @@ bool my_transmute(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_getPlayerFlag(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
-  if (argc != 3 || !args[0].isNumber() || !args[1].isNumber() || !args[2].isNumber()) {
+bool my_getPlayerFlag(JSContext* ctx, JS::CallArgs& args) {
+  if (args.length() != 3 || !args[0].isNumber() || !args[1].isNumber() || !args[2].isNumber()) {
     args.rval().setUndefined();
     return true;
   }
@@ -1405,15 +1344,13 @@ bool my_getPlayerFlag(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_getMouseCoords(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool my_getMouseCoords(JSContext* ctx, JS::CallArgs& args) {
   bool nFlag = false, nReturn = false;
 
-  if (argc > 0 && args[0].isInt32() || args[0].isBoolean())
+  if (args.length() > 0 && args[0].isInt32() || args[0].isBoolean())
     nFlag = args[0].toBoolean();
 
-  if (argc > 1 && args[1].isInt32() || args[1].isBoolean())
+  if (args.length() > 1 && args[1].isInt32() || args[1].isBoolean())
     nReturn = args[1].toBoolean();
 
   POINT Coords = {static_cast<LONG>(*D2CLIENT_MouseX), static_cast<LONG>(*D2CLIENT_MouseY)};
@@ -1445,9 +1382,7 @@ bool my_getMouseCoords(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_submitItem(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool my_submitItem(JSContext* ctx, JS::CallArgs& args) {
   args.rval().setNull();
 
   if (!WaitForGameReady()) {
@@ -1485,9 +1420,7 @@ bool my_submitItem(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_getIsTalkingNPC(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool my_getIsTalkingNPC(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady()) {
     JS_ReportWarningASCII(ctx, "Game not ready");
     args.rval().setBoolean(false);
@@ -1498,9 +1431,7 @@ bool my_getIsTalkingNPC(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_getInteractedNPC(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool my_getInteractedNPC(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady()) {
     JS_ReportWarningASCII(ctx, "Game not ready");
     args.rval().setBoolean(false);
@@ -1534,15 +1465,13 @@ bool my_getInteractedNPC(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_takeScreenshot(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_takeScreenshot(JSContext* ctx, JS::CallArgs& args) {
   Vars.bTakeScreenshot = true;
   args.rval().setUndefined();
   return true;
 }
 
-bool my_moveNPC(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_moveNPC(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "moveNPC", 2)) {
     return false;
   }
@@ -1590,9 +1519,7 @@ bool my_moveNPC(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_revealLevel(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool my_revealLevel(JSContext* ctx, JS::CallArgs& args) {
   D2UnitStrc* unit = D2CLIENT_GetPlayerUnit();
 
   if (!unit) {
@@ -1609,7 +1536,7 @@ bool my_revealLevel(JSContext* ctx, unsigned argc, JS::Value* vp) {
 
   BOOL bDrawPresets = false;
 
-  if (argc == 1 && args[0].isBoolean()) {
+  if (args.length() == 1 && args[0].isBoolean()) {
     bDrawPresets = args[0].toBoolean();
   }
   AutoCriticalRoom cRoom;
@@ -1625,13 +1552,12 @@ bool my_revealLevel(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool screenToAutomap(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool screenToAutomap(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "screenToAutomap", 1)) {
     return false;
   }
 
-  if (argc == 1) {
+  if (args.length() == 1) {
     // the arg must be an object with an x and a y that we can convert
     if (args[0].isObject()) {
       JS::RootedObject obj(ctx, args[0].toObjectOrNull());
@@ -1666,7 +1592,7 @@ bool screenToAutomap(JSContext* ctx, unsigned argc, JS::Value* vp) {
       JS_ReportErrorASCII(ctx, "Invalid object specified to screenToAutomap");
       return false;
     }
-  } else if (argc == 2) {
+  } else if (args.length() == 2) {
     // the args must be ints
     if (args[0].isInt32() && args[1].isInt32()) {
       int32_t ix = args[0].toInt32();
@@ -1692,13 +1618,12 @@ bool screenToAutomap(JSContext* ctx, unsigned argc, JS::Value* vp) {
 
 // POINT result = {ix, iy};
 // AutomapToScreen(&result);
-bool automapToScreen(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool automapToScreen(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "automapToScreen", 1)) {
     return false;
   }
 
-  if (argc == 1) {
+  if (args.length() == 1) {
     // the arg must be an object with an x and a y that we can convert
     if (args[0].isObject()) {
       JS::RootedObject obj(ctx, args[0].toObjectOrNull());
@@ -1734,7 +1659,7 @@ bool automapToScreen(JSContext* ctx, unsigned argc, JS::Value* vp) {
       JS_ReportErrorASCII(ctx, "Invalid object specified to screenToAutomap");
       return false;
     }
-  } else if (argc == 2) {
+  } else if (args.length() == 2) {
     // the args must be ints
     // the args must be ints
     if (args[0].isInt32() && args[1].isInt32()) {

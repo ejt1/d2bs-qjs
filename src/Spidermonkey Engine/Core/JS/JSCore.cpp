@@ -24,8 +24,7 @@
 #include "StringWrap.h"
 
 // TODO(ejt): is this function necessary, and does it even work?!
-bool my_stringToEUC(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_stringToEUC(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "stringToEUC", 1)) {
     return false;
   }
@@ -44,10 +43,9 @@ bool my_stringToEUC(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_print(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_print(JSContext* ctx, JS::CallArgs& args) {
   std::stringstream ss;
-  for (uint32_t i = 0; i < argc; i++) {
+  for (uint32_t i = 0; i < args.length(); i++) {
     if (i != 0) {
       ss << " ";
     }
@@ -65,8 +63,7 @@ bool my_print(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_delay(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_delay(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "delay", 1)) {
     return false;
   }
@@ -80,8 +77,7 @@ bool my_delay(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_load(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_load(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "load", 1)) {
     return false;
   }
@@ -123,8 +119,7 @@ bool my_load(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_include(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_include(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "include", 1)) {
     return false;
   }
@@ -152,9 +147,7 @@ bool my_include(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_stop(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool my_stop(JSContext* ctx, JS::CallArgs& args) {
   if (args.length() > 0 && (args[0].isInt32() && args[0].toInt32() == 1) || (args[0].isBoolean() && args[0].toBoolean())) {
     ThreadState* ts = static_cast<ThreadState*>(JS_GetContextPrivate(ctx));
     ts->script->Stop();
@@ -166,15 +159,13 @@ bool my_stop(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_stacktrace(JSContext* /*ctx*/, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_stacktrace(JSContext* /*ctx*/, JS::CallArgs& args) {
   Log("stacktrace is deprecated");
   args.rval().setUndefined();
   return true;
 }
 
-bool my_beep(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_beep(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "beep", 1)) {
     return false;
   }
@@ -187,20 +178,17 @@ bool my_beep(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_getTickCount(JSContext* /*ctx*/, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_getTickCount(JSContext* /*ctx*/, JS::CallArgs& args) {
   args.rval().setNumber(static_cast<double>(GetTickCount()));
   return true;
 }
 
-bool my_getThreadPriority(JSContext* /*ctx*/, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_getThreadPriority(JSContext* /*ctx*/, JS::CallArgs& args) {
   args.rval().setInt32(GetThreadPriority(GetCurrentThread()));
   return true;
 }
 
-bool my_isIncluded(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_isIncluded(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "isIncluded", 1)) {
     return false;
   }
@@ -223,8 +211,7 @@ bool my_isIncluded(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_version(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_version(JSContext* ctx, JS::CallArgs& args) {
   if (!args.hasDefined(0)) {
     args.rval().setString(JS_NewStringCopyN(ctx, D2BS_VERSION, strlen(D2BS_VERSION)));
     return true;
@@ -235,10 +222,9 @@ bool my_version(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_debugLog(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_debugLog(JSContext* ctx, JS::CallArgs& args) {
   std::stringstream ss;
-  for (uint32_t i = 0; i < argc; i++) {
+  for (uint32_t i = 0; i < args.length(); i++) {
     if (i != 0) {
       ss << " ";
     }
@@ -255,8 +241,7 @@ bool my_debugLog(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_copy(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_copy(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "copy", 1)) {
     return false;
   }
@@ -281,8 +266,7 @@ bool my_copy(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_paste(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_paste(JSContext* ctx, JS::CallArgs& args) {
   OpenClipboard(NULL);
   HANDLE foo = GetClipboardData(CF_TEXT);
   CloseClipboard();
@@ -291,8 +275,7 @@ bool my_paste(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_sendCopyData(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_sendCopyData(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "sendCopyData", 4)) {
     return false;
   }
@@ -342,8 +325,7 @@ bool my_sendCopyData(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_keystate(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_keystate(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "keystate", 1)) {
     return false;
   }
@@ -356,8 +338,7 @@ bool my_keystate(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_addEventListener(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_addEventListener(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "addEventListener", 2)) {
     return false;
   }
@@ -378,8 +359,7 @@ bool my_addEventListener(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_removeEventListener(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_removeEventListener(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "removeEventListener", 2)) {
     return false;
   }
@@ -399,8 +379,7 @@ bool my_removeEventListener(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_clearEvent(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_clearEvent(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "clearEvent", 1)) {
     return false;
   }
@@ -414,22 +393,20 @@ bool my_clearEvent(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_clearAllEvents(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_clearAllEvents(JSContext* ctx, JS::CallArgs& args) {
   ThreadState* ts = static_cast<ThreadState*>(JS_GetContextPrivate(ctx));
   ts->script->RemoveAllEventListeners();
   args.rval().setUndefined();
   return true;
 }
 
-bool my_js_strict(JSContext* /*ctx*/, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-  if (argc == NULL) {
+bool my_js_strict(JSContext* /*ctx*/, JS::CallArgs& args) {
+  if (args.length() == NULL) {
     args.rval().setBoolean(true);
     return true;
   }
 
-  if (argc == 1) {
+  if (args.length() == 1) {
     // NOTE(ejt): disabled setting strict this way for now
     //
     // bool bFlag = ((JS_GetOptions(cx) & JSOPTION_STRICT) == JSOPTION_STRICT);
@@ -446,40 +423,35 @@ bool my_js_strict(JSContext* /*ctx*/, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_scriptBroadcast(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_scriptBroadcast(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "scriptBroadcast", 1)) {
     return false;
   }
 
   // documentation says to not use args.array but we do anyway because we're badasses
-  ScriptBroadcastEvent(ctx, argc, args.array());
+  ScriptBroadcastEvent(ctx, args.length(), args.array());
   args.rval().setUndefined();
   return true;
 }
 
-bool my_showConsole(JSContext* /*ctx*/, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_showConsole(JSContext* /*ctx*/, JS::CallArgs& args) {
   Console::Show();
   args.rval().setUndefined();
   return true;
 }
 
-bool my_hideConsole(JSContext* /*ctx*/, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_hideConsole(JSContext* /*ctx*/, JS::CallArgs& args) {
   Console::Hide();
   args.rval().setUndefined();
   return true;
 }
 
-bool my_handler(JSContext* /*ctx*/, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_handler(JSContext* /*ctx*/, JS::CallArgs& args) {
   args.rval().setInt32(reinterpret_cast<int32_t>(Vars.hHandle));
   return true;
 }
 
-bool my_loadMpq(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_loadMpq(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "loadMpq", 1)) {
     return false;
   }
@@ -495,8 +467,7 @@ bool my_loadMpq(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_sendPacket(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_sendPacket(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "sendPacket", 1)) {
     return false;
   }
@@ -524,17 +495,17 @@ bool my_sendPacket(JSContext* ctx, unsigned argc, JS::Value* vp) {
       return false;
     }
   } else {
-    if (argc % 2 != 0) {
+    if (args.length() % 2 != 0) {
       JS_ReportWarningASCII(ctx, "invalid packet format");
       args.rval().setBoolean(false);
       return true;
     }
 
-    aPacket = new BYTE[2 * argc];
+    aPacket = new BYTE[2 * args.length()];
     del = true;
     uint32_t size = 0;
 
-    for (uint32_t i = 0; i < argc; i += 2, len += size) {
+    for (uint32_t i = 0; i < args.length(); i += 2, len += size) {
       JS::ToUint32(ctx, args[i], &size);
       JS::ToUint32(ctx, args[i + 1], (uint32_t*)&aPacket[len]);
       size = args[i].toInt32();
@@ -550,8 +521,7 @@ bool my_sendPacket(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_getPacket(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_getPacket(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "getPacket", 1)) {
     return false;
   }
@@ -576,17 +546,17 @@ bool my_getPacket(JSContext* ctx, unsigned argc, JS::Value* vp) {
       return false;
     }
   } else {
-    if (argc % 2 != 0) {
+    if (args.length() % 2 != 0) {
       JS_ReportWarningASCII(ctx, "invalid packet format");
       args.rval().setBoolean(false);
       return true;
     }
 
-    aPacket = new BYTE[2 * argc];
+    aPacket = new BYTE[2 * args.length()];
     del = true;
     uint32_t size = 0;
 
-    for (uint32_t i = 0; i < argc; i += 2, len += size) {
+    for (uint32_t i = 0; i < args.length(); i += 2, len += size) {
       size = args[i].toInt32();
       aPacket[len] = static_cast<BYTE>(args[i + 1].toInt32());
     }
@@ -601,8 +571,7 @@ bool my_getPacket(JSContext* ctx, unsigned argc, JS::Value* vp) {
 }
 
 #pragma comment(lib, "wininet")
-bool my_getIP(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_getIP(JSContext* ctx, JS::CallArgs& args) {
   HINTERNET hInternet, hFile;
   DWORD rSize;
   char buffer[32];
@@ -617,8 +586,7 @@ bool my_getIP(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_sendClick(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_sendClick(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "sendClick", 2)) {
     return false;
   }
@@ -640,8 +608,7 @@ bool my_sendClick(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool my_sendKey(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool my_sendKey(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "sendKey", 1)) {
     return false;
   }

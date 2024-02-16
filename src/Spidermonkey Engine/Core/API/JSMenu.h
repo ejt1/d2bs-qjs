@@ -2,10 +2,10 @@
 
 #include "js32.h"
 
-bool my_login(JSContext* ctx, unsigned argc, JS::Value* vp);
-bool my_selectChar(JSContext* ctx, unsigned argc, JS::Value* vp);
-bool my_createGame(JSContext* ctx, unsigned argc, JS::Value* vp);
-bool my_joinGame(JSContext* ctx, unsigned argc, JS::Value* vp);
-bool my_addProfile(JSContext* ctx, unsigned argc, JS::Value* vp);
-bool my_getOOGLocation(JSContext* ctx, unsigned argc, JS::Value* vp);
-bool my_createCharacter(JSContext* ctx, unsigned argc, JS::Value* vp);
+bool my_login(JSContext* ctx, JS::CallArgs& args);
+bool my_selectChar(JSContext* ctx, JS::CallArgs& args);
+bool my_createGame(JSContext* ctx, JS::CallArgs& args);
+bool my_joinGame(JSContext* ctx, JS::CallArgs& args);
+bool my_addProfile(JSContext* ctx, JS::CallArgs& args);
+bool my_getOOGLocation(JSContext* ctx, JS::CallArgs& args);
+bool my_createCharacter(JSContext* ctx, JS::CallArgs& args);

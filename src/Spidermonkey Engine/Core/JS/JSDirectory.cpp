@@ -51,39 +51,38 @@ JSObject* DirectoryWrap::Instantiate(JSContext* ctx, const char* name) {
 
 void DirectoryWrap::Initialize(JSContext* ctx, JS::HandleObject target) {
   static JSPropertySpec props[] = {
-      JS_PSG("name", GetName, JSPROP_ENUMERATE),
+      JS_PSG("name", trampoline<GetName>, JSPROP_ENUMERATE),
       JS_PS_END,
   };
   static JSFunctionSpec methods[] = {
-      JS_FN("create", Create, 1, JSPROP_ENUMERATE),          //
-      JS_FN("remove", Delete, 1, JSPROP_ENUMERATE),          //
-      JS_FN("getFiles", GetFiles, 1, JSPROP_ENUMERATE),      //
-      JS_FN("getFolders", GetFolders, 1, JSPROP_ENUMERATE),  //
+      JS_FN("create", trampoline<Create>, 1, JSPROP_ENUMERATE),          //
+      JS_FN("remove", trampoline<Delete>, 1, JSPROP_ENUMERATE),          //
+      JS_FN("getFiles", trampoline<GetFiles>, 1, JSPROP_ENUMERATE),      //
+      JS_FN("getFolders", trampoline<GetFolders>, 1, JSPROP_ENUMERATE),  //
       JS_FS_END,
   };
 
-  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, New, 0, props, methods, nullptr, nullptr));
+  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, trampoline<New>, 0, props, methods, nullptr, nullptr));
   if (!proto) {
     return;
   }
 
   // globals
-  JS_DefineFunction(ctx, target, "dopen", OpenDirectory, 0, JSPROP_ENUMERATE);
+  JS_DefineFunction(ctx, target, "dopen", trampoline<OpenDirectory>, 0, JSPROP_ENUMERATE);
 }
 
 DirectoryWrap::DirectoryWrap(JSContext* ctx, JS::HandleObject obj, const char* name) : BaseObject(ctx, obj) {
   strcpy_s(szName, _MAX_PATH, name);
 }
 
-void DirectoryWrap::finalize(JSFreeOp* fop, JSObject* obj) {
+void DirectoryWrap::finalize(JSFreeOp* /*fop*/, JSObject* obj) {
   BaseObject* wrap = BaseObject::FromJSObject(obj);
   if (wrap) {
     delete wrap;
   }
 }
 
-bool DirectoryWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool DirectoryWrap::New(JSContext* ctx, JS::CallArgs& args) {
   JS::RootedObject newObject(ctx, JS_NewObjectForConstructor(ctx, &m_class, args));
   if (!newObject) {
     THROW_ERROR(ctx, "failed to instantiate folder");
@@ -93,8 +92,7 @@ bool DirectoryWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
 }
 
 // properties
-bool DirectoryWrap::GetName(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool DirectoryWrap::GetName(JSContext* ctx, JS::CallArgs& args) {
   DirectoryWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   args.rval().setString(JS_NewStringCopyZ(ctx, wrap->szName));
@@ -102,8 +100,7 @@ bool DirectoryWrap::GetName(JSContext* ctx, unsigned argc, JS::Value* vp) {
 }
 
 // functions
-bool DirectoryWrap::Create(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool DirectoryWrap::Create(JSContext* ctx, JS::CallArgs& args) {
   DirectoryWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
 
@@ -132,8 +129,7 @@ bool DirectoryWrap::Create(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool DirectoryWrap::Delete(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool DirectoryWrap::Delete(JSContext* ctx, JS::CallArgs& args) {
   DirectoryWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
 
@@ -151,16 +147,15 @@ bool DirectoryWrap::Delete(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool DirectoryWrap::GetFiles(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool DirectoryWrap::GetFiles(JSContext* ctx, JS::CallArgs& args) {
   DirectoryWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
 
   char search[_MAX_PATH] = "*.*";
 
-  if (argc > 1)
+  if (args.length() > 1)
     THROW_ERROR(ctx, "not enough arguments");
-  if (argc == 1) {
+  if (args.length() == 1) {
     char* szSearch = JS_EncodeString(ctx, args[0].toString());
     if (!szSearch) {
       THROW_ERROR(ctx, "failed to encode string");
@@ -203,16 +198,15 @@ bool DirectoryWrap::GetFiles(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool DirectoryWrap::GetFolders(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool DirectoryWrap::GetFolders(JSContext* ctx, JS::CallArgs& args) {
   DirectoryWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
 
   char search[_MAX_PATH] = "*.*";
 
-  if (argc > 1)
+  if (args.length() > 1)
     THROW_ERROR(ctx, "not enough arguments");
-  if (argc == 1) {
+  if (args.length() == 1) {
     char* szSearch = JS_EncodeString(ctx, args[0].toString());
     if (!szSearch) {
       THROW_ERROR(ctx, "failed to encode string");
@@ -257,9 +251,8 @@ bool DirectoryWrap::GetFolders(JSContext* ctx, unsigned argc, JS::Value* vp) {
 }
 
 // globals
-bool DirectoryWrap::OpenDirectory(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-  if (argc != 1) {
+bool DirectoryWrap::OpenDirectory(JSContext* ctx, JS::CallArgs& args) {
+  if (args.length() != 1) {
     args.rval().setUndefined();
     return true;
   }

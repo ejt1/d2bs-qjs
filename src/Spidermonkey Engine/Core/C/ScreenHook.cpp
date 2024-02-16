@@ -210,7 +210,7 @@ void Genhook::Hover(POINT* loc) {
   return GenhookHoverEvent(owner, loc, hovered);
 }
 
-void Genhook::SetClickHandler(JS::HandleObject handler) {
+void Genhook::SetClickHandler(JS::HandleObject /*handler*/) {
   if (!owner)
     return;
   Lock();
@@ -231,7 +231,7 @@ void Genhook::SetClickHandler(JS::HandleObject handler) {
   Unlock();
 }
 
-void Genhook::SetHoverHandler(JS::HandleObject handler) {
+void Genhook::SetHoverHandler(JS::HandleObject /*handler*/) {
   if (!owner)
     return;
   Lock();

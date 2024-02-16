@@ -13,15 +13,15 @@ class ExitWrap : public BaseObject {
 
   static void finalize(JSFreeOp* fop, JSObject* obj);
 
-  static bool New(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool New(JSContext* ctx, JS::CallArgs& args);
 
   // properties
-  static bool GetX(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetY(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetTarget(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetType(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetTileId(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetLevelId(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetX(JSContext* ctx, JS::CallArgs& args);
+  static bool GetY(JSContext* ctx, JS::CallArgs& args);
+  static bool GetTarget(JSContext* ctx, JS::CallArgs& args);
+  static bool GetType(JSContext* ctx, JS::CallArgs& args);
+  static bool GetTileId(JSContext* ctx, JS::CallArgs& args);
+  static bool GetLevelId(JSContext* ctx, JS::CallArgs& args);
 
   static inline JSClassOps m_ops = {
       .addProperty = nullptr,
@@ -42,12 +42,12 @@ class ExitWrap : public BaseObject {
       &m_ops,
   };
   static inline JSPropertySpec m_props[] = {
-      JS_PSG("x", GetX, JSPROP_ENUMERATE | JSPROP_PERMANENT),            //
-      JS_PSG("y", GetY, JSPROP_ENUMERATE | JSPROP_PERMANENT),            //
-      JS_PSG("target", GetTarget, JSPROP_ENUMERATE | JSPROP_PERMANENT),  //
-      JS_PSG("type", GetType, JSPROP_ENUMERATE | JSPROP_PERMANENT),      //
-      JS_PSG("tileid", GetTileId, JSPROP_ENUMERATE | JSPROP_PERMANENT),  //
-      JS_PSG("level", GetLevelId, JSPROP_ENUMERATE | JSPROP_PERMANENT),  //
+      JS_PSG("x", trampoline<GetX>, JSPROP_ENUMERATE | JSPROP_PERMANENT),            //
+      JS_PSG("y", trampoline<GetY>, JSPROP_ENUMERATE | JSPROP_PERMANENT),            //
+      JS_PSG("target", trampoline<GetTarget>, JSPROP_ENUMERATE | JSPROP_PERMANENT),  //
+      JS_PSG("type", trampoline<GetType>, JSPROP_ENUMERATE | JSPROP_PERMANENT),      //
+      JS_PSG("tileid", trampoline<GetTileId>, JSPROP_ENUMERATE | JSPROP_PERMANENT),  //
+      JS_PSG("level", trampoline<GetLevelId>, JSPROP_ENUMERATE | JSPROP_PERMANENT),  //
       JS_PS_END,
   };
 

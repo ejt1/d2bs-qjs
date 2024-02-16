@@ -15,20 +15,20 @@ class PresetUnitWrap : public BaseObject {
   static void finalize(JSFreeOp* fop, JSObject* obj);
 
   // constructor
-  static bool New(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool New(JSContext* ctx, JS::CallArgs& args);
 
   // properties
-  static bool GetType(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetRoomX(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetRoomY(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetX(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetY(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetId(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetLevel(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetType(JSContext* ctx, JS::CallArgs& args);
+  static bool GetRoomX(JSContext* ctx, JS::CallArgs& args);
+  static bool GetRoomY(JSContext* ctx, JS::CallArgs& args);
+  static bool GetX(JSContext* ctx, JS::CallArgs& args);
+  static bool GetY(JSContext* ctx, JS::CallArgs& args);
+  static bool GetId(JSContext* ctx, JS::CallArgs& args);
+  static bool GetLevel(JSContext* ctx, JS::CallArgs& args);
 
   // globals
-  static bool GetPresetUnit(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetPresetUnits(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetPresetUnit(JSContext* ctx, JS::CallArgs& args);
+  static bool GetPresetUnits(JSContext* ctx, JS::CallArgs& args);
 
   static inline JSClassOps m_ops = {
       .addProperty = nullptr,
@@ -49,13 +49,13 @@ class PresetUnitWrap : public BaseObject {
       &m_ops,
   };
   static inline JSPropertySpec m_props[] = {
-      JS_PSG("type", GetType, JSPROP_ENUMERATE),    //
-      JS_PSG("roomx", GetRoomX, JSPROP_ENUMERATE),  //
-      JS_PSG("roomy", GetRoomY, JSPROP_ENUMERATE),  //
-      JS_PSG("x", GetX, JSPROP_ENUMERATE),          //
-      JS_PSG("y", GetY, JSPROP_ENUMERATE),          //
-      JS_PSG("id", GetId, JSPROP_ENUMERATE),        //
-      JS_PSG("level", GetLevel, JSPROP_ENUMERATE),  //
+      JS_PSG("type", trampoline<GetType>, JSPROP_ENUMERATE),    //
+      JS_PSG("roomx", trampoline<GetRoomX>, JSPROP_ENUMERATE),  //
+      JS_PSG("roomy", trampoline<GetRoomY>, JSPROP_ENUMERATE),  //
+      JS_PSG("x", trampoline<GetX>, JSPROP_ENUMERATE),          //
+      JS_PSG("y", trampoline<GetY>, JSPROP_ENUMERATE),          //
+      JS_PSG("id", trampoline<GetId>, JSPROP_ENUMERATE),        //
+      JS_PSG("level", trampoline<GetLevel>, JSPROP_ENUMERATE),  //
       JS_PS_END,
   };
 

@@ -24,32 +24,30 @@
 
 void FileToolsWrap::Initialize(JSContext* ctx, JS::HandleObject target) {
   static JSFunctionSpec smethods[] = {
-      JS_FN("remove", Remove, 1, JSPROP_ENUMERATE),          //
-      JS_FN("rename", Rename, 2, JSPROP_ENUMERATE),          //
-      JS_FN("copy", Copy, 2, JSPROP_ENUMERATE),              //
-      JS_FN("exists", Exists, 1, JSPROP_ENUMERATE),          //
-      JS_FN("readText", ReadText, 1, JSPROP_ENUMERATE),      //
-      JS_FN("writeText", WriteText, 2, JSPROP_ENUMERATE),    //
-      JS_FN("appendText", AppendText, 2, JSPROP_ENUMERATE),  //
+      JS_FN("remove", trampoline<Remove>, 1, JSPROP_ENUMERATE),          //
+      JS_FN("rename", trampoline<Rename>, 2, JSPROP_ENUMERATE),          //
+      JS_FN("copy", trampoline<Copy>, 2, JSPROP_ENUMERATE),              //
+      JS_FN("exists", trampoline<Exists>, 1, JSPROP_ENUMERATE),          //
+      JS_FN("readText", trampoline<ReadText>, 1, JSPROP_ENUMERATE),      //
+      JS_FN("writeText", trampoline<WriteText>, 2, JSPROP_ENUMERATE),    //
+      JS_FN("appendText", trampoline<AppendText>, 2, JSPROP_ENUMERATE),  //
       JS_FS_END,
   };
 
-  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, New, 0, nullptr, nullptr, nullptr, smethods));
+  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, trampoline<New>, 0, nullptr, nullptr, nullptr, smethods));
   if (!proto) {
     Log("failed to initialize FileTools");
     return;
   }
 }
 
-bool FileToolsWrap::New(JSContext* ctx, unsigned /*argc*/, JS::Value* /*vp*/) {
+bool FileToolsWrap::New(JSContext* ctx, JS::CallArgs& /*args*/) {
   THROW_ERROR(ctx, "FileTools constructor is not callable");
 }
 
 // static functions
-bool FileToolsWrap::Remove(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
-  if (argc < 1 || !args[0].isString()) {
+bool FileToolsWrap::Remove(JSContext* ctx, JS::CallArgs& args) {
+  if (args.length() < 1 || !args[0].isString()) {
     JS_ReportErrorASCII(ctx, "You must supply a file name");
     return false;
   }
@@ -72,13 +70,11 @@ bool FileToolsWrap::Remove(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool FileToolsWrap::Rename(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
-  if (argc < 1 || !args[0].isString()) {
+bool FileToolsWrap::Rename(JSContext* ctx, JS::CallArgs& args) {
+  if (args.length() < 1 || !args[0].isString()) {
     THROW_ERROR(ctx, "You must supply an original file name");
   }
-  if (argc < 2 || !args[1].isString())
+  if (args.length() < 2 || !args[1].isString())
     THROW_ERROR(ctx, "You must supply a new file name");
 
   char* szOrig = JS_EncodeString(ctx, args[0].toString());
@@ -110,12 +106,11 @@ bool FileToolsWrap::Rename(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool FileToolsWrap::Copy(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-  if (argc < 1 || !args[0].isString()) {
+bool FileToolsWrap::Copy(JSContext* ctx, JS::CallArgs& args) {
+  if (args.length() < 1 || !args[0].isString()) {
     THROW_ERROR(ctx, "You must supply an original file name");
   }
-  if (argc < 2 || !args[1].isString())
+  if (args.length() < 2 || !args[1].isString())
     THROW_ERROR(ctx, "You must supply a new file name");
 
   char* szOrig = JS_EncodeString(ctx, args[0].toString());
@@ -127,7 +122,7 @@ bool FileToolsWrap::Copy(JSContext* ctx, unsigned argc, JS::Value* vp) {
   char pnewName[_MAX_PATH + _MAX_FNAME];
   bool overwrite = false;
 
-  if (argc > 2 && args[2].isBoolean())
+  if (args.length() > 2 && args[2].isBoolean())
     overwrite = args[2].toBoolean();
 
   if (getPathRelScript(szNewName, _MAX_PATH + _MAX_FNAME, pnewName) == NULL) {
@@ -182,9 +177,8 @@ bool FileToolsWrap::Copy(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool FileToolsWrap::Exists(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-  if (argc < 1 || !args[0].isString())
+bool FileToolsWrap::Exists(JSContext* ctx, JS::CallArgs& args) {
+  if (args.length() < 1 || !args[0].isString())
     THROW_ERROR(ctx, "Invalid file name");
 
   char* szFile = JS_EncodeString(ctx, args[0].toString());
@@ -204,9 +198,8 @@ bool FileToolsWrap::Exists(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool FileToolsWrap::ReadText(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-  if (argc < 1 || !args[0].isString())
+bool FileToolsWrap::ReadText(JSContext* ctx, JS::CallArgs& args) {
+  if (args.length() < 1 || !args[0].isString())
     THROW_ERROR(ctx, "You must supply a file name");
 
   char* szFile = JS_EncodeString(ctx, args[0].toString());
@@ -254,9 +247,8 @@ bool FileToolsWrap::ReadText(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool FileToolsWrap::WriteText(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-  if (argc < 1 || !args[0].isString())
+bool FileToolsWrap::WriteText(JSContext* ctx, JS::CallArgs& args) {
+  if (args.length() < 1 || !args[0].isString())
     THROW_ERROR(ctx, "You must supply a file name");
 
   EnterCriticalSection(&Vars.cFileSection);
@@ -276,7 +268,7 @@ bool FileToolsWrap::WriteText(JSContext* ctx, unsigned argc, JS::Value* vp) {
     THROW_ERROR(ctx, "fptr == NULL");
   }
 
-  for (uint32_t i = 1; i < argc; i++)
+  for (uint32_t i = 1; i < args.length(); i++)
     if (!writeValue(fptr, ctx, args[i], false, true))
       result = false;
 
@@ -289,9 +281,8 @@ bool FileToolsWrap::WriteText(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool FileToolsWrap::AppendText(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-  if (argc < 1 || !args[0].isString())
+bool FileToolsWrap::AppendText(JSContext* ctx, JS::CallArgs& args) {
+  if (args.length() < 1 || !args[0].isString())
     THROW_ERROR(ctx, "You must supply a file name");
 
   EnterCriticalSection(&Vars.cFileSection);
@@ -312,7 +303,7 @@ bool FileToolsWrap::AppendText(JSContext* ctx, unsigned argc, JS::Value* vp) {
     return false;
   }
 
-  for (uint32_t i = 1; i < argc; i++)
+  for (uint32_t i = 1; i < args.length(); i++)
     if (!writeValue(fptr, ctx, args[i], false, true))
       result = false;
 

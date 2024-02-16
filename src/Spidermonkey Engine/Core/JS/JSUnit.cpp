@@ -34,44 +34,44 @@ JSObject* UnitWrap::Instantiate(JSContext* ctx, UnitData* priv, bool isMe) {
   if (isMe) {
     // NOTE(ejt): hack to define additional properties for 'me'
     static JSPropertySpec me_props[] = {
-        JS_PSG("account", GetAccount, JSPROP_ENUMERATE),
-        JS_PSG("charname", GetCharName, JSPROP_ENUMERATE),
-        JS_PSG("diff", GetDiff, JSPROP_ENUMERATE),
-        JS_PSG("maxdiff", GetDiffMax, JSPROP_ENUMERATE),
-        JS_PSG("gamename", GetGameName, JSPROP_ENUMERATE),
-        JS_PSG("gamepassword", GetGamePassword, JSPROP_ENUMERATE),
-        JS_PSG("gameserverip", GetGameServerIp, JSPROP_ENUMERATE),
-        JS_PSG("gamestarttime", GetGameStartTime, JSPROP_ENUMERATE),
-        JS_PSG("gametype", GetGameType, JSPROP_ENUMERATE),
-        JS_PSG("itemoncursor", GetItemOnCursor, JSPROP_ENUMERATE),
-        JS_PSGS("automap", GetAutomap, SetAutomap, JSPROP_ENUMERATE),
-        JS_PSG("ladder", GetLadder, JSPROP_ENUMERATE),
-        JS_PSG("ping", GetPing, JSPROP_ENUMERATE),
-        JS_PSG("fps", GetFPS, JSPROP_ENUMERATE),
-        JS_PSG("locale", GetLocale, JSPROP_ENUMERATE),
-        JS_PSG("playertype", GetPlayerType, JSPROP_ENUMERATE),
-        JS_PSG("realm", GetRealm, JSPROP_ENUMERATE),
-        JS_PSG("realmshort", GetRealmShort, JSPROP_ENUMERATE),
-        JS_PSG("mercrevivecost", GetMercReviveCost, JSPROP_ENUMERATE),
-        JS_PSGS("runwalk", GetRunWalk, SetRunWalk, JSPROP_ENUMERATE),
-        JS_PSG("weaponswitch", GetWeaaponSwitch, JSPROP_ENUMERATE),
-        JS_PSGS("chickenhp", GetChickenHP, SetChickenHP, JSPROP_ENUMERATE),
-        JS_PSGS("chickenmp", GetChickenMP, SetChickenMP, JSPROP_ENUMERATE),
-        JS_PSGS("quitonhostile", GetQuitOnHostile, SetQuitOnHostile, JSPROP_ENUMERATE),
-        JS_PSGS("blockKeys", GetBlockKeys, SetBlockKeys, JSPROP_ENUMERATE),
-        JS_PSGS("blockMouse", GetBlockMouse, SetBlockMouse, JSPROP_ENUMERATE),
-        JS_PSG("gameReady", GetGameReady, JSPROP_ENUMERATE),
-        JS_PSG("profile", GetProfile, JSPROP_ENUMERATE),
-        JS_PSGS("nopickup", GetNoPickup, SetNoPickup, JSPROP_ENUMERATE),
-        JS_PSG("pid", GetPID, JSPROP_ENUMERATE),
-        JS_PSG("unsupported", GetUnsupported, JSPROP_ENUMERATE),
-        JS_PSG("charflags", GetCharFlags, JSPROP_ENUMERATE),
-        JS_PSG("screensize", GetScreenSize, JSPROP_ENUMERATE),
-        JS_PSG("windowtitle", GetWindowTitle, JSPROP_ENUMERATE),
-        JS_PSG("ingame", GetInGame, JSPROP_ENUMERATE),
-        JS_PSGS("quitonerror", GetQuitOnError, SetQuitOnError, JSPROP_ENUMERATE),
-        JS_PSGS("maxgametime", GetMaxGameTime, SetMaxGameTime, JSPROP_ENUMERATE),
-        JS_PSG("mapid", GetMapId, JSPROP_ENUMERATE),
+        JS_PSG("account", trampoline<GetAccount>, JSPROP_ENUMERATE),
+        JS_PSG("charname", trampoline<GetCharName>, JSPROP_ENUMERATE),
+        JS_PSG("diff", trampoline<GetDiff>, JSPROP_ENUMERATE),
+        JS_PSG("maxdiff", trampoline<GetDiffMax>, JSPROP_ENUMERATE),
+        JS_PSG("gamename", trampoline<GetGameName>, JSPROP_ENUMERATE),
+        JS_PSG("gamepassword", trampoline<GetGamePassword>, JSPROP_ENUMERATE),
+        JS_PSG("gameserverip", trampoline<GetGameServerIp>, JSPROP_ENUMERATE),
+        JS_PSG("gamestarttime", trampoline<GetGameStartTime>, JSPROP_ENUMERATE),
+        JS_PSG("gametype", trampoline<GetGameType>, JSPROP_ENUMERATE),
+        JS_PSG("itemoncursor", trampoline<GetItemOnCursor>, JSPROP_ENUMERATE),
+        JS_PSGS("automap", trampoline<GetAutomap>, trampoline<SetAutomap>, JSPROP_ENUMERATE),
+        JS_PSG("ladder", trampoline<GetLadder>, JSPROP_ENUMERATE),
+        JS_PSG("ping", trampoline<GetPing>, JSPROP_ENUMERATE),
+        JS_PSG("fps", trampoline<GetFPS>, JSPROP_ENUMERATE),
+        JS_PSG("locale", trampoline<GetLocale>, JSPROP_ENUMERATE),
+        JS_PSG("playertype", trampoline<GetPlayerType>, JSPROP_ENUMERATE),
+        JS_PSG("realm", trampoline<GetRealm>, JSPROP_ENUMERATE),
+        JS_PSG("realmshort", trampoline<GetRealmShort>, JSPROP_ENUMERATE),
+        JS_PSG("mercrevivecost", trampoline<GetMercReviveCost>, JSPROP_ENUMERATE),
+        JS_PSGS("runwalk", trampoline<GetRunWalk>, trampoline<SetRunWalk>, JSPROP_ENUMERATE),
+        JS_PSG("weaponswitch", trampoline<GetWeaaponSwitch>, JSPROP_ENUMERATE),
+        JS_PSGS("chickenhp", trampoline<GetChickenHP>, trampoline<SetChickenHP>, JSPROP_ENUMERATE),
+        JS_PSGS("chickenmp", trampoline<GetChickenMP>, trampoline<SetChickenMP>, JSPROP_ENUMERATE),
+        JS_PSGS("quitonhostile", trampoline<GetQuitOnHostile>, trampoline<SetQuitOnHostile>, JSPROP_ENUMERATE),
+        JS_PSGS("blockKeys", trampoline<GetBlockKeys>, trampoline<SetBlockKeys>, JSPROP_ENUMERATE),
+        JS_PSGS("blockMouse", trampoline<GetBlockMouse>, trampoline<SetBlockMouse>, JSPROP_ENUMERATE),
+        JS_PSG("gameReady", trampoline<GetGameReady>, JSPROP_ENUMERATE),
+        JS_PSG("profile", trampoline<GetProfile>, JSPROP_ENUMERATE),
+        JS_PSGS("nopickup", trampoline<GetNoPickup>, trampoline<SetNoPickup>, JSPROP_ENUMERATE),
+        JS_PSG("pid", trampoline<GetPID>, JSPROP_ENUMERATE),
+        JS_PSG("unsupported", trampoline<GetUnsupported>, JSPROP_ENUMERATE),
+        JS_PSG("charflags", trampoline<GetCharFlags>, JSPROP_ENUMERATE),
+        JS_PSG("screensize", trampoline<GetScreenSize>, JSPROP_ENUMERATE),
+        JS_PSG("windowtitle", trampoline<GetWindowTitle>, JSPROP_ENUMERATE),
+        JS_PSG("ingame", trampoline<GetInGame>, JSPROP_ENUMERATE),
+        JS_PSGS("quitonerror", trampoline<GetQuitOnError>, trampoline<SetQuitOnError>, JSPROP_ENUMERATE),
+        JS_PSGS("maxgametime", trampoline<GetMaxGameTime>, trampoline<SetMaxGameTime>, JSPROP_ENUMERATE),
+        JS_PSG("mapid", trampoline<GetMapId>, JSPROP_ENUMERATE),
         JS_PS_END,
     };
     JS_DefineProperties(ctx, obj, me_props);
@@ -85,14 +85,14 @@ JSObject* UnitWrap::Instantiate(JSContext* ctx, UnitData* priv, bool isMe) {
 }
 
 void UnitWrap::Initialize(JSContext* ctx, JS::HandleObject target) {
-  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, New, 0, m_unit_props, m_unit_methods, nullptr, nullptr));
+  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, trampoline<New>, 0, m_unit_props, m_unit_methods, nullptr, nullptr));
   if (!proto) {
     Log("failed to initialize class Unit");
     return;
   }
 
-  JS_DefineFunction(ctx, target, "getUnit", getUnit, 0, JSPROP_ENUMERATE);
-  JS_DefineFunction(ctx, target, "getMercHP", getMercHP, 0, JSPROP_ENUMERATE);
+  JS_DefineFunction(ctx, target, "getUnit", trampoline<getUnit>, 0, JSPROP_ENUMERATE);
+  JS_DefineFunction(ctx, target, "getMercHP", trampoline<getMercHP>, 0, JSPROP_ENUMERATE);
 }
 
 UnitWrap::UnitData* UnitWrap::GetData() {
@@ -118,15 +118,14 @@ UnitWrap::~UnitWrap() {
   }
 }
 
-void UnitWrap::finalize(JSFreeOp* fop, JSObject* obj) {
+void UnitWrap::finalize(JSFreeOp* /*fop*/, JSObject* obj) {
   BaseObject* wrap = BaseObject::FromJSObject(obj);
   if (wrap) {
     delete wrap;
   }
 }
 
-bool UnitWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::New(JSContext* ctx, JS::CallArgs& args) {
   JS::RootedObject newObject(ctx, JS_NewObjectForConstructor(ctx, &m_class, args));
   if (!newObject) {
     THROW_ERROR(ctx, "failed to construct Unit");
@@ -139,29 +138,25 @@ bool UnitWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
 }
 
 // properties
-bool UnitWrap::GetType(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetType(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, &wrap, args.thisv());
   args.rval().setNumber(pUnit->dwType);
   return true;
 }
 
-bool UnitWrap::GetClassID(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetClassID(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, &wrap, args.thisv());
   args.rval().setNumber(pUnit->dwTxtFileNo);
   return true;
 }
 
-bool UnitWrap::GetMode(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetMode(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, &wrap, args.thisv());
   args.rval().setNumber(pUnit->dwMode);
   return true;
 }
 
-bool UnitWrap::GetName(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetName(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, &wrap, args.thisv());
   char tmp[128]{};
   pUnit->GetUnitName(tmp, 128);
@@ -169,36 +164,31 @@ bool UnitWrap::GetName(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetAct(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetAct(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   args.rval().setNumber(pUnit->dwAct + 1);
   return true;
 }
 
-bool UnitWrap::GetGid(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetGid(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   args.rval().setNumber(pUnit->dwUnitId);
   return true;
 }
 
-bool UnitWrap::GetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetX(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   args.rval().setInt32(D2CLIENT_GetUnitX(pUnit));
   return true;
 }
 
-bool UnitWrap::GetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetY(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   args.rval().setInt32(D2CLIENT_GetUnitY(pUnit));
   return true;
 }
 
-bool UnitWrap::GetTargetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetTargetX(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   switch (pUnit->dwType) {
     case 0:
@@ -211,8 +201,7 @@ bool UnitWrap::GetTargetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetTargetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetTargetY(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   switch (pUnit->dwType) {
     case 0:
@@ -225,8 +214,7 @@ bool UnitWrap::GetTargetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetArea(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetArea(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   auto pRoom = D2COMMON_GetRoomFromUnit(pUnit);
   if (pRoom && pRoom->pRoom2 && pRoom->pRoom2->pLevel) {
@@ -237,57 +225,49 @@ bool UnitWrap::GetArea(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetHP(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetHP(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   args.rval().setInt32(D2COMMON_GetUnitStat(pUnit, 6, 0) >> 8);
   return true;
 }
 
-bool UnitWrap::GetHPMax(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetHPMax(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   args.rval().setInt32(D2COMMON_GetUnitStat(pUnit, 7, 0) >> 8);
   return true;
 }
 
-bool UnitWrap::GetMP(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetMP(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   args.rval().setInt32(D2COMMON_GetUnitStat(pUnit, 8, 0) >> 8);
   return true;
 }
 
-bool UnitWrap::GetMPMax(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetMPMax(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   args.rval().setInt32(D2COMMON_GetUnitStat(pUnit, 9, 0) >> 8);
   return true;
 }
 
-bool UnitWrap::GetStamina(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetStamina(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   args.rval().setInt32(D2COMMON_GetUnitStat(pUnit, 10, 0) >> 8);
   return true;
 }
 
-bool UnitWrap::GetStaminaMax(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetStaminaMax(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   args.rval().setInt32(D2COMMON_GetUnitStat(pUnit, 11, 0) >> 8);
   return true;
 }
 
-bool UnitWrap::GetCharLevel(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetCharLevel(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   args.rval().setInt32(D2COMMON_GetUnitStat(pUnit, 12, 0));
   return true;
 }
 
-bool UnitWrap::GetItemCount(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetItemCount(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   if (!pUnit->pInventory) {
     args.rval().setUndefined();
@@ -297,22 +277,19 @@ bool UnitWrap::GetItemCount(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetOwner(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetOwner(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   args.rval().setInt32(pUnit->dwOwnerId);
   return true;
 }
 
-bool UnitWrap::GetOwnerType(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetOwnerType(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   args.rval().setInt32(pUnit->dwOwnerType);
   return true;
 }
 
-bool UnitWrap::GetSpecType(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetSpecType(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   uint32_t specType = NULL;
   if (pUnit->dwType == UNIT_MONSTER && pUnit->pMonsterData) {
@@ -333,8 +310,7 @@ bool UnitWrap::GetSpecType(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetDirection(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetDirection(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   if (!pUnit->pPath || !pUnit->pPath->pRoom1) {
     args.rval().setUndefined();
@@ -344,8 +320,7 @@ bool UnitWrap::GetDirection(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetUniqueId(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetUniqueId(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   if (pUnit->dwType == UNIT_MONSTER && pUnit->pMonsterData->UFlags.fBoss && pUnit->pMonsterData->UFlags.fNormal) {
     args.rval().setInt32(pUnit->pMonsterData->wUniqueNo);
@@ -355,8 +330,7 @@ bool UnitWrap::GetUniqueId(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetCode(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetCode(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   if (pUnit->dwType != UNIT_ITEM || !pUnit->pItemData) {
     args.rval().setUndefined();
@@ -373,8 +347,7 @@ bool UnitWrap::GetCode(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetPrefix(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetPrefix(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   if (pUnit->dwType != UNIT_ITEM || !pUnit->pItemData) {
     args.rval().setUndefined();
@@ -389,8 +362,7 @@ bool UnitWrap::GetPrefix(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetSuffix(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetSuffix(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   if (pUnit->dwType != UNIT_ITEM || !pUnit->pItemData) {
     args.rval().setUndefined();
@@ -405,8 +377,7 @@ bool UnitWrap::GetSuffix(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetPrefixes(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetPrefixes(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   if (pUnit->dwType != UNIT_ITEM || !pUnit->pItemData) {
     args.rval().setUndefined();
@@ -424,8 +395,7 @@ bool UnitWrap::GetPrefixes(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetSuffixes(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetSuffixes(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   if (pUnit->dwType != UNIT_ITEM || !pUnit->pItemData) {
     args.rval().setUndefined();
@@ -443,8 +413,7 @@ bool UnitWrap::GetSuffixes(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetPrefixNum(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetPrefixNum(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   if (pUnit->dwType != UNIT_ITEM || !pUnit->pItemData) {
     args.rval().setUndefined();
@@ -454,8 +423,7 @@ bool UnitWrap::GetPrefixNum(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetSuffixNum(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetSuffixNum(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   if (pUnit->dwType != UNIT_ITEM || !pUnit->pItemData) {
     args.rval().setUndefined();
@@ -465,8 +433,7 @@ bool UnitWrap::GetSuffixNum(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetPrefixNums(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetPrefixNums(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   if (pUnit->dwType != UNIT_ITEM || !pUnit->pItemData) {
     args.rval().setUndefined();
@@ -482,8 +449,7 @@ bool UnitWrap::GetPrefixNums(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetSuffixNums(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetSuffixNums(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   if (pUnit->dwType != UNIT_ITEM || !pUnit->pItemData) {
     args.rval().setUndefined();
@@ -499,8 +465,7 @@ bool UnitWrap::GetSuffixNums(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetFName(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetFName(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   if (pUnit->dwType != UNIT_ITEM || !pUnit->pItemData) {
     args.rval().setUndefined();
@@ -512,8 +477,7 @@ bool UnitWrap::GetFName(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetQuality(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetQuality(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   if (pUnit->dwType != UNIT_ITEM || !pUnit->pItemData) {
     args.rval().setUndefined();
@@ -523,8 +487,7 @@ bool UnitWrap::GetQuality(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetNode(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetNode(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   if (pUnit->dwType != UNIT_ITEM || !pUnit->pItemData) {
     args.rval().setUndefined();
@@ -534,8 +497,7 @@ bool UnitWrap::GetNode(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetLocation(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetLocation(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   if (pUnit->dwType != UNIT_ITEM || !pUnit->pItemData) {
     args.rval().setUndefined();
@@ -545,8 +507,7 @@ bool UnitWrap::GetLocation(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetSizeX(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetSizeX(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   if (pUnit->dwType != UNIT_ITEM || !pUnit->pItemData) {
     args.rval().setUndefined();
@@ -561,8 +522,7 @@ bool UnitWrap::GetSizeX(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetSizeY(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetSizeY(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   if (pUnit->dwType != UNIT_ITEM || !pUnit->pItemData) {
     args.rval().setUndefined();
@@ -577,8 +537,7 @@ bool UnitWrap::GetSizeY(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetItemType(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetItemType(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   if (pUnit->dwType != UNIT_ITEM || !pUnit->pItemData) {
     args.rval().setUndefined();
@@ -593,8 +552,7 @@ bool UnitWrap::GetItemType(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetDescription(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetDescription(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   if (pUnit->dwType != UNIT_ITEM || !pUnit->pItemData || !pUnit->pItemData->pOwnerInventory || !pUnit->pItemData->pOwnerInventory->pOwner) {
     args.rval().setUndefined();
@@ -620,8 +578,7 @@ bool UnitWrap::GetDescription(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetBodyLocation(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetBodyLocation(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   if (pUnit->dwType != UNIT_ITEM || !pUnit->pItemData) {
     args.rval().setUndefined();
@@ -631,8 +588,7 @@ bool UnitWrap::GetBodyLocation(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetItemLevel(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetItemLevel(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   if (pUnit->dwType != UNIT_ITEM || !pUnit->pItemData) {
     args.rval().setUndefined();
@@ -642,8 +598,7 @@ bool UnitWrap::GetItemLevel(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetLevelRequirement(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetLevelRequirement(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   if (pUnit->dwType != UNIT_ITEM || !pUnit->pItemData) {
     args.rval().setUndefined();
@@ -653,8 +608,7 @@ bool UnitWrap::GetLevelRequirement(JSContext* ctx, unsigned argc, JS::Value* vp)
   return true;
 }
 
-bool UnitWrap::GetGfx(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetGfx(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   if (pUnit->dwType != UNIT_ITEM || !pUnit->pItemData) {
     args.rval().setUndefined();
@@ -664,8 +618,7 @@ bool UnitWrap::GetGfx(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetRunWalk(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetRunWalk(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   if (pUnit == D2CLIENT_GetPlayerUnit()) {
     args.rval().setInt32(*D2CLIENT_AlwaysRun);
@@ -675,8 +628,7 @@ bool UnitWrap::GetRunWalk(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::SetRunWalk(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::SetRunWalk(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "runwalk", 1)) {
     return false;
   }
@@ -685,8 +637,7 @@ bool UnitWrap::SetRunWalk(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetWeaaponSwitch(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetWeaaponSwitch(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   if (pUnit != D2CLIENT_GetPlayerUnit()) {
     args.rval().setUndefined();
@@ -696,8 +647,7 @@ bool UnitWrap::GetWeaaponSwitch(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetObjType(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetObjType(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   if (pUnit->dwType != UNIT_OBJECT || !pUnit->pObjectData) {
     args.rval().setUndefined();
@@ -712,8 +662,7 @@ bool UnitWrap::GetObjType(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetIsLocked(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetIsLocked(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   if (pUnit->dwType != UNIT_OBJECT || !pUnit->pObjectData) {
     args.rval().setUndefined();
@@ -724,8 +673,7 @@ bool UnitWrap::GetIsLocked(JSContext* ctx, unsigned argc, JS::Value* vp) {
 }
 
 // properties for 'me'
-bool UnitWrap::GetAccount(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetAccount(JSContext* ctx, JS::CallArgs& args) {
   BnetData* pData = *D2LAUNCH_BnData;
   if (!pData) {
     args.rval().setUndefined();
@@ -735,8 +683,7 @@ bool UnitWrap::GetAccount(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetCharName(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetCharName(JSContext* ctx, JS::CallArgs& args) {
   BnetData* pData = *D2LAUNCH_BnData;
   if (!pData) {
     args.rval().setUndefined();
@@ -746,14 +693,12 @@ bool UnitWrap::GetCharName(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetDiff(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetDiff(JSContext* /*ctx*/, JS::CallArgs& args) {
   args.rval().setInt32(D2CLIENT_GetDifficulty());
   return true;
 }
 
-bool UnitWrap::GetDiffMax(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetDiffMax(JSContext* /*ctx*/, JS::CallArgs& args) {
   BnetData* pData = *D2LAUNCH_BnData;
   if (!pData) {
     args.rval().setUndefined();
@@ -763,8 +708,7 @@ bool UnitWrap::GetDiffMax(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetGameName(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetGameName(JSContext* ctx, JS::CallArgs& args) {
   D2GameInfoStrc* pInfo = *D2CLIENT_GameInfo;
   if (!pInfo) {
     args.rval().setUndefined();
@@ -774,8 +718,7 @@ bool UnitWrap::GetGameName(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetGamePassword(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetGamePassword(JSContext* ctx, JS::CallArgs& args) {
   D2GameInfoStrc* pInfo = *D2CLIENT_GameInfo;
   if (!pInfo) {
     args.rval().setUndefined();
@@ -785,8 +728,7 @@ bool UnitWrap::GetGamePassword(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetGameServerIp(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetGameServerIp(JSContext* ctx, JS::CallArgs& args) {
   D2GameInfoStrc* pInfo = *D2CLIENT_GameInfo;
   if (!pInfo) {
     args.rval().setUndefined();
@@ -796,32 +738,27 @@ bool UnitWrap::GetGameServerIp(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetGameStartTime(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetGameStartTime(JSContext* /*ctx*/, JS::CallArgs& args) {
   args.rval().setNumber(static_cast<uint32_t>(Vars.dwGameTime));
   return true;
 }
 
-bool UnitWrap::GetGameType(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetGameType(JSContext* /*ctx*/, JS::CallArgs& args) {
   args.rval().setInt32(*D2CLIENT_ExpCharFlag);
   return true;
 }
 
-bool UnitWrap::GetItemOnCursor(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetItemOnCursor(JSContext* /*ctx*/, JS::CallArgs& args) {
   args.rval().setBoolean(static_cast<bool>(D2CLIENT_GetCursorItem()));
   return true;
 }
 
-bool UnitWrap::GetAutomap(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetAutomap(JSContext* /*ctx*/, JS::CallArgs& args) {
   args.rval().setBoolean(static_cast<bool>(*D2CLIENT_AutomapOn));
   return true;
 }
 
-bool UnitWrap::SetAutomap(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::SetAutomap(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "automap", 1)) {
     return false;
   }
@@ -830,8 +767,7 @@ bool UnitWrap::SetAutomap(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetLadder(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetLadder(JSContext* /*ctx*/, JS::CallArgs& args) {
   BnetData* pData = *D2LAUNCH_BnData;
   if (!pData) {
     args.rval().setUndefined();
@@ -841,26 +777,22 @@ bool UnitWrap::GetLadder(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetPing(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetPing(JSContext* /*ctx*/, JS::CallArgs& args) {
   args.rval().setInt32(*D2CLIENT_Ping);
   return true;
 }
 
-bool UnitWrap::GetFPS(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetFPS(JSContext* /*ctx*/, JS::CallArgs& args) {
   args.rval().setInt32(*D2CLIENT_FPS);
   return true;
 }
 
-bool UnitWrap::GetLocale(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetLocale(JSContext* /*ctx*/, JS::CallArgs& args) {
   args.rval().setInt32(*D2CLIENT_Lang);
   return true;
 }
 
-bool UnitWrap::GetPlayerType(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetPlayerType(JSContext* /*ctx*/, JS::CallArgs& args) {
   BnetData* pData = *D2LAUNCH_BnData;
   if (!pData) {
     args.rval().setUndefined();
@@ -870,8 +802,7 @@ bool UnitWrap::GetPlayerType(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetRealm(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetRealm(JSContext* ctx, JS::CallArgs& args) {
   BnetData* pData = *D2LAUNCH_BnData;
   if (!pData) {
     args.rval().setUndefined();
@@ -881,8 +812,7 @@ bool UnitWrap::GetRealm(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetRealmShort(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetRealmShort(JSContext* ctx, JS::CallArgs& args) {
   BnetData* pData = *D2LAUNCH_BnData;
   if (!pData) {
     args.rval().setUndefined();
@@ -892,20 +822,17 @@ bool UnitWrap::GetRealmShort(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetMercReviveCost(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetMercReviveCost(JSContext* /*ctx*/, JS::CallArgs& args) {
   args.rval().setInt32(*D2CLIENT_MercReviveCost);
   return true;
 }
 
-bool UnitWrap::GetChickenHP(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetChickenHP(JSContext* /*ctx*/, JS::CallArgs& args) {
   args.rval().setInt32(Vars.nChickenHP);
   return true;
 }
 
-bool UnitWrap::SetChickenHP(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::SetChickenHP(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "chickenhp", 1)) {
     return false;
   }
@@ -914,14 +841,12 @@ bool UnitWrap::SetChickenHP(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetChickenMP(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetChickenMP(JSContext* /*ctx*/, JS::CallArgs& args) {
   args.rval().setInt32(Vars.nChickenMP);
   return true;
 }
 
-bool UnitWrap::SetChickenMP(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::SetChickenMP(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "chickenmp", 1)) {
     return false;
   }
@@ -930,14 +855,12 @@ bool UnitWrap::SetChickenMP(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetQuitOnHostile(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetQuitOnHostile(JSContext* /*ctx*/, JS::CallArgs& args) {
   args.rval().setBoolean(static_cast<bool>(Vars.bQuitOnHostile));
   return true;
 }
 
-bool UnitWrap::SetQuitOnHostile(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::SetQuitOnHostile(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "quitonhostile", 1)) {
     return false;
   }
@@ -946,14 +869,12 @@ bool UnitWrap::SetQuitOnHostile(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetBlockKeys(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetBlockKeys(JSContext* /*ctx*/, JS::CallArgs& args) {
   args.rval().setBoolean(Vars.bBlockKeys);
   return true;
 }
 
-bool UnitWrap::SetBlockKeys(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::SetBlockKeys(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "blockkeys", 1)) {
     return false;
   }
@@ -962,14 +883,12 @@ bool UnitWrap::SetBlockKeys(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetBlockMouse(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetBlockMouse(JSContext* /*ctx*/, JS::CallArgs& args) {
   args.rval().setBoolean(Vars.bBlockMouse);
   return true;
 }
 
-bool UnitWrap::SetBlockMouse(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::SetBlockMouse(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "blockmouse", 1)) {
     return false;
   }
@@ -978,27 +897,23 @@ bool UnitWrap::SetBlockMouse(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetGameReady(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetGameReady(JSContext* /*ctx*/, JS::CallArgs& args) {
   args.rval().setBoolean(GameReady());
   return true;
 }
 
-bool UnitWrap::GetProfile(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetProfile(JSContext* ctx, JS::CallArgs& args) {
   args.rval().setString(JS_NewStringCopyZ(ctx, Vars.szProfile));
   return true;
 }
 
-bool UnitWrap::GetNoPickup(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetNoPickup(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   args.rval().setBoolean(static_cast<bool>(*D2CLIENT_NoPickUp));
   return true;
 }
 
-bool UnitWrap::SetNoPickup(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::SetNoPickup(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "maxgametime", 1)) {
     return false;
   }
@@ -1007,20 +922,17 @@ bool UnitWrap::SetNoPickup(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetPID(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetPID(JSContext* /*ctx*/, JS::CallArgs& args) {
   args.rval().setNumber(static_cast<double>(GetCurrentProcessId()));
   return true;
 }
 
-bool UnitWrap::GetUnsupported(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetUnsupported(JSContext* /*ctx*/, JS::CallArgs& args) {
   args.rval().setBoolean(Vars.bEnableUnsupported);
   return true;
 }
 
-bool UnitWrap::GetCharFlags(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetCharFlags(JSContext* /*ctx*/, JS::CallArgs& args) {
   BnetData* pData = *D2LAUNCH_BnData;
   if (!pData) {
     args.rval().setUndefined();
@@ -1030,34 +942,29 @@ bool UnitWrap::GetCharFlags(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetScreenSize(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetScreenSize(JSContext* /*ctx*/, JS::CallArgs& args) {
   args.rval().setInt32(D2GFX_GetScreenSize());
   return true;
 }
 
-bool UnitWrap::GetWindowTitle(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetWindowTitle(JSContext* ctx, JS::CallArgs& args) {
   char szTitle[256]{};
   GetWindowText(D2GFX_GetHwnd(), szTitle, 256);
   args.rval().setString(JS_NewStringCopyZ(ctx, szTitle));
   return true;
 }
 
-bool UnitWrap::GetInGame(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetInGame(JSContext* /*ctx*/, JS::CallArgs& args) {
   args.rval().setBoolean(ClientState() == ClientStateInGame);
   return true;
 }
 
-bool UnitWrap::GetQuitOnError(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetQuitOnError(JSContext* /*ctx*/, JS::CallArgs& args) {
   args.rval().setBoolean(Vars.bQuitOnError);
   return true;
 }
 
-bool UnitWrap::SetQuitOnError(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::SetQuitOnError(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "quitonerror", 1)) {
     return false;
   }
@@ -1066,14 +973,12 @@ bool UnitWrap::SetQuitOnError(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetMaxGameTime(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetMaxGameTime(JSContext* /*ctx*/, JS::CallArgs& args) {
   args.rval().setInt32(Vars.dwMaxGameTime);
   return true;
 }
 
-bool UnitWrap::SetMaxGameTime(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::SetMaxGameTime(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "maxgametime", 1)) {
     return false;
   }
@@ -1082,16 +987,14 @@ bool UnitWrap::SetMaxGameTime(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::GetMapId(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::GetMapId(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_UNIT_OR_RETURN(ctx, 0, args.thisv());
   args.rval().setInt32(*D2CLIENT_MapId);
   return true;
 }
 
 // function
-bool UnitWrap::getNext(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::getNext(JSContext* ctx, JS::CallArgs& args) {
   UnitWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   UnitData* unit = wrap->pData;
@@ -1105,16 +1008,16 @@ bool UnitWrap::getNext(JSContext* ctx, unsigned argc, JS::Value* vp) {
       args.rval().setUndefined();
       return true;
     }
-    if (argc > 0 && args[0].isString()) {
+    if (args.length() > 0 && args[0].isString()) {
       char* szText = JS_EncodeString(ctx, args[0].toString());
       strcpy_s(lpUnit->szName, 128, szText);
       JS_free(ctx, szText);
     }
 
-    if (argc > 0 && args[0].isNumber() && !args[1].isNull())
+    if (args.length() > 0 && args[0].isNumber() && !args[1].isNull())
       JS::ToUint32(ctx, args[0], (uint32_t*)&(lpUnit->dwClassId));
 
-    if (argc > 1 && args[1].isNumber() && !args[2].isNull())
+    if (args.length() > 1 && args[1].isNumber() && !args[2].isNull())
       JS::ToUint32(ctx, args[1], (uint32_t*)&(lpUnit->dwMode));
 
     pUnit = pUnit->GetNext(lpUnit->szName, lpUnit->dwClassId, lpUnit->dwType, lpUnit->dwMode);
@@ -1140,16 +1043,16 @@ bool UnitWrap::getNext(JSContext* ctx, unsigned argc, JS::Value* vp) {
       return true;
     }
 
-    if (argc > 0 && args[0].isString()) {
+    if (args.length() > 0 && args[0].isString()) {
       char* szText = JS_EncodeString(ctx, args[0].toString());
       strcpy_s(pmyUnit->szName, 128, szText);
       JS_free(ctx, szText);
     }
 
-    if (argc > 0 && args[0].isNumber() && !args[1].isNull())
+    if (args.length() > 0 && args[0].isNumber() && !args[1].isNull())
       JS::ToUint32(ctx, args[0], (uint32_t*)&(pmyUnit->dwClassId));
 
-    if (argc > 1 && args[1].isNumber() && !args[2].isNull())
+    if (args.length() > 1 && args[1].isNumber() && !args[2].isNull())
       JS::ToUint32(ctx, args[1], (uint32_t*)&(pmyUnit->dwMode));
 
     D2UnitStrc* nextItem = pUnit->GetNextItem(pOwner, pmyUnit->szName, pmyUnit->dwClassId, pmyUnit->dwMode);
@@ -1167,16 +1070,14 @@ bool UnitWrap::getNext(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::cancel(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool UnitWrap::cancel(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
   DWORD automapOn = *D2CLIENT_AutomapOn;
   int32_t mode = -1;
 
-  if (argc > 0) {
+  if (args.length() > 0) {
     if (args[0].isNumber())
       JS::ToUint32(ctx, args[0], (uint32_t*)&mode);
   } else if (IsScrollingText())
@@ -1208,8 +1109,7 @@ bool UnitWrap::cancel(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::repair(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::repair(JSContext* ctx, JS::CallArgs& args) {
   UnitWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   UnitData* lpUnit = wrap->pData;
@@ -1238,12 +1138,11 @@ bool UnitWrap::repair(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::useMenu(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool UnitWrap::useMenu(JSContext* ctx, JS::CallArgs& args) {
   UnitWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   UnitData* lpUnit = wrap->pData;
-  if (argc < 1 || !args[0].isNumber()) {
+  if (args.length() < 1 || !args[0].isNumber()) {
     args.rval().setBoolean(false);
     return true;
   }
@@ -1266,9 +1165,7 @@ bool UnitWrap::useMenu(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::interact(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool UnitWrap::interact(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
@@ -1311,7 +1208,7 @@ bool UnitWrap::interact(JSContext* ctx, unsigned argc, JS::Value* vp) {
     }
   }
 
-  if (pUnit->dwType == UNIT_OBJECT && argc == 1 && args[0].isInt32()) {
+  if (pUnit->dwType == UNIT_OBJECT && args.length() == 1 && args[0].isInt32()) {
     int32_t nWaypointID = args[0].toInt32();
     int retVal = 0;
     if (FillBaseStat("levels", nWaypointID, "Waypoint", &retVal, sizeof(int)))
@@ -1327,7 +1224,7 @@ bool UnitWrap::interact(JSContext* ctx, unsigned argc, JS::Value* vp) {
     args.rval().setBoolean(true);
     return true;
   }
-  //	else if(pUnit->dwType == UNIT_PLAYER && argc == 1 && JSVAL_IS_INT(argv[0]) && JSVAL_TO_INT(argv[0]) == 1)
+  //	else if(pUnit->dwType == UNIT_PLAYER && args.length() == 1 && JSVAL_IS_INT(argv[0]) && JSVAL_TO_INT(argv[0]) == 1)
   //	{
   // Accept Trade
   //	}
@@ -1338,9 +1235,7 @@ bool UnitWrap::interact(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::getItem(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool UnitWrap::getItem(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
@@ -1364,19 +1259,19 @@ bool UnitWrap::getItem(JSContext* ctx, unsigned argc, JS::Value* vp) {
   uint32_t nUnitId = (uint32_t)-1;
   char szName[128] = "";
 
-  if (argc > 0 && args[0].isString()) {
+  if (args.length() > 0 && args[0].isString()) {
     char* szText = JS_EncodeString(ctx, args[0].toString());
     strcpy_s(szName, sizeof(szName), szText);
     JS_free(ctx, szText);
   }
 
-  if (argc > 0 && args[0].isNumber() && !args[0].isNull())
+  if (args.length() > 0 && args[0].isNumber() && !args[0].isNull())
     JS::ToUint32(ctx, args[0], &nClassId);
 
-  if (argc > 1 && args[1].isNumber() && !args[1].isNull())
+  if (args.length() > 1 && args[1].isNumber() && !args[1].isNull())
     JS::ToUint32(ctx, args[1], &nMode);
 
-  if (argc > 2 && args[2].isNumber() && !args[2].isNull())
+  if (args.length() > 2 && args[2].isNumber() && !args[2].isNull())
     JS::ToUint32(ctx, args[2], &nUnitId);
 
   D2UnitStrc* pItem = pUnit->FindItem(szName, nClassId, nMode, nUnitId);
@@ -1408,9 +1303,7 @@ bool UnitWrap::getItem(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::getItems(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool UnitWrap::getItems(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
@@ -1462,9 +1355,7 @@ bool UnitWrap::getItems(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::getMerc(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool UnitWrap::getMerc(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
@@ -1498,9 +1389,7 @@ bool UnitWrap::getMerc(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::getMercHP(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool UnitWrap::getMercHP(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
   // this is stupid because getMercHP is both a method of Unit and a global function... FOR SOME REASON!
@@ -1526,10 +1415,8 @@ bool UnitWrap::getMercHP(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::getSkill(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
-  if (argc == NULL || argc > 3) {
+bool UnitWrap::getSkill(JSContext* ctx, JS::CallArgs& args) {
+  if (args.length() == NULL || args.length() > 3) {
     args.rval().setUndefined();
     return true;
   }
@@ -1555,7 +1442,7 @@ bool UnitWrap::getSkill(JSContext* ctx, unsigned argc, JS::Value* vp) {
     return true;
   }
 
-  if (argc >= 1) {
+  if (args.length() >= 1) {
     if (!args[0].isInt32()) {
       args.rval().setUndefined();
       return true;
@@ -1563,7 +1450,7 @@ bool UnitWrap::getSkill(JSContext* ctx, unsigned argc, JS::Value* vp) {
     nSkillId = args[0].toInt32();
   }
 
-  if (argc >= 2) {
+  if (args.length() >= 2) {
     if (!args[1].isInt32()) {
       args.rval().setUndefined();
       return true;
@@ -1572,7 +1459,7 @@ bool UnitWrap::getSkill(JSContext* ctx, unsigned argc, JS::Value* vp) {
     nExt = args[1].toInt32();
   }
 
-  if (argc == 3) {
+  if (args.length() == 3) {
     if (!args[2].isBoolean()) {
       args.rval().setUndefined();
       return true;
@@ -1581,7 +1468,7 @@ bool UnitWrap::getSkill(JSContext* ctx, unsigned argc, JS::Value* vp) {
     nCharge = JS::ToBoolean(args[2]);
   }
 
-  if (argc == 1) {
+  if (args.length() == 1) {
     WORD wLeftSkillId = pUnit->pInfo->pLeftSkill->pSkillInfo->wSkillId;
     WORD wRightSkillId = pUnit->pInfo->pRightSkill->pSkillInfo->wSkillId;
     switch (nSkillId) {
@@ -1640,7 +1527,7 @@ bool UnitWrap::getSkill(JSContext* ctx, unsigned argc, JS::Value* vp) {
   if (pUnit && pUnit->pInfo && pUnit->pInfo->pFirstSkill) {
     for (D2SkillStrc* pSkill = pUnit->pInfo->pFirstSkill; pSkill; pSkill = pSkill->pNextSkill) {
       if (pSkill->pSkillInfo && pSkill->pSkillInfo->wSkillId == nSkillId) {
-        if ((argc == 2 && pSkill->IsCharge == 0) || (argc == 3 && (nCharge == false || pSkill->IsCharge == 1))) {
+        if ((args.length() == 2 && pSkill->IsCharge == 0) || (args.length() == 3 && (nCharge == false || pSkill->IsCharge == 1))) {
           args.rval().setInt32(D2COMMON_GetSkillLevel(pUnit, pSkill, nExt));
           return true;
         }
@@ -1652,9 +1539,7 @@ bool UnitWrap::getSkill(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::getParent(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool UnitWrap::getParent(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
@@ -1764,9 +1649,7 @@ bool UnitWrap::getParent(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::overhead(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool UnitWrap::overhead(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
@@ -1802,9 +1685,7 @@ bool UnitWrap::overhead(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::revive(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool UnitWrap::revive(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
@@ -1814,9 +1695,7 @@ bool UnitWrap::revive(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::getFlags(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool UnitWrap::getFlags(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
@@ -1839,13 +1718,11 @@ bool UnitWrap::getFlags(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::getFlag(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool UnitWrap::getFlag(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  if (argc < 1 || !args[0].isInt32()) {
+  if (args.length() < 1 || !args[0].isInt32()) {
     args.rval().setUndefined();
     return true;
   }
@@ -1873,9 +1750,7 @@ bool UnitWrap::getFlag(JSContext* ctx, unsigned argc, JS::Value* vp) {
 void InsertStatsToGenericObject(D2UnitStrc* pUnit, D2StatListExStrc* pStatList, JSContext* pJSContext, JS::MutableHandleObject pGenericObject);
 void InsertStatsNow(D2StatStrc* pStat, int nStat, JSContext* cx, JS::MutableHandleObject pArray);
 
-bool UnitWrap::getStat(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool UnitWrap::getStat(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
@@ -1895,14 +1770,14 @@ bool UnitWrap::getStat(JSContext* ctx, unsigned argc, JS::Value* vp) {
 
   int32_t nStat = 0;
   int32_t nSubIndex = 0;
-  if (argc == 0) {
+  if (args.length() == 0) {
     THROW_ERROR(ctx, "not enough arguments");
   }
   if (args[0].isInt32()) {
     nStat = args[0].toInt32();
   }
 
-  if (argc > 1 && args[1].isInt32()) {
+  if (args.length() > 1 && args[1].isInt32()) {
     nSubIndex = args[1].toInt32();
   }
   if (nStat >= STAT_HP && nStat <= STAT_MAXSTAMINA) {
@@ -2073,9 +1948,7 @@ void InsertStatsNow(D2StatStrc* pStat, int nStat, JSContext* cx, JS::MutableHand
   }
 }
 
-bool UnitWrap::getState(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool UnitWrap::getState(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
@@ -2106,13 +1979,11 @@ bool UnitWrap::getState(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::getEnchant(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool UnitWrap::getEnchant(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  if (argc < 1 || !args[0].isInt32()) {
+  if (args.length() < 1 || !args[0].isInt32()) {
     args.rval().setUndefined();
     return true;
   }
@@ -2143,9 +2014,7 @@ bool UnitWrap::getEnchant(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::shop(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool UnitWrap::shop(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
@@ -2178,7 +2047,7 @@ bool UnitWrap::shop(JSContext* ctx, unsigned argc, JS::Value* vp) {
 
   D2UnitStrc* pNPC = D2CLIENT_GetCurrentInteractingNPC();
   uint32_t dwMode;
-  JS::ToUint32(ctx, args[argc - 1], &dwMode);
+  JS::ToUint32(ctx, args[args.length() - 1], &dwMode);
 
   // Check if we are interacted.
   if (!pNPC) {
@@ -2291,9 +2160,7 @@ static BOOL SetSkill(JSContext* cx, WORD wSkillId, BOOL bLeft, DWORD dwItemId) {
   return FALSE;
 }
 
-bool UnitWrap::setSkill(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool UnitWrap::setSkill(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
@@ -2302,7 +2169,7 @@ bool UnitWrap::setSkill(JSContext* ctx, unsigned argc, JS::Value* vp) {
   BOOL nHand = FALSE;
   DWORD itemId = (DWORD)-1;
 
-  if (argc < 1) {
+  if (args.length() < 1) {
     args.rval().setBoolean(false);
     return true;
   }
@@ -2333,7 +2200,7 @@ bool UnitWrap::setSkill(JSContext* ctx, unsigned argc, JS::Value* vp) {
     return true;
   }
 
-  if (argc == 3 && args[2].isObject()) {
+  if (args.length() == 3 && args[2].isObject()) {
     JS::RootedObject test_obj(ctx, args[2].toObjectOrNull());
     if (JS_InstanceOf(ctx, test_obj, &m_class, &args)) {
       UnitWrap* wrap;
@@ -2358,9 +2225,7 @@ bool UnitWrap::setSkill(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::move(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool UnitWrap::move(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
@@ -2384,7 +2249,7 @@ bool UnitWrap::move(JSContext* ctx, unsigned argc, JS::Value* vp) {
   int32_t x, y;
 
   if (pUnit == pPlayer) {
-    if (argc < 2) {
+    if (args.length() < 2) {
       args.rval().setUndefined();
       return true;
     }
@@ -2410,13 +2275,11 @@ bool UnitWrap::move(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::getQuest(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool UnitWrap::getQuest(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  if (argc < 2 || !args[0].isInt32() || !args[1].isInt32()) {
+  if (args.length() < 2 || !args[0].isInt32() || !args[1].isInt32()) {
     args.rval().setUndefined();
     return true;
   }
@@ -2427,13 +2290,11 @@ bool UnitWrap::getQuest(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::getMinionCount(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool UnitWrap::getMinionCount(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  if (argc < 1 || !args[0].isInt32()) {
+  if (args.length() < 1 || !args[0].isInt32()) {
     args.rval().setUndefined();
     return true;
   }
@@ -2459,25 +2320,21 @@ bool UnitWrap::getMinionCount(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::getRepairCost(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool UnitWrap::getRepairCost(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
   D2UnitStrc* npc = D2CLIENT_GetCurrentInteractingNPC();
   int32_t nNpcClassId = (npc ? npc->dwTxtFileNo : 0x9A);
 
-  if (argc > 0 && args[0].isInt32())
+  if (args.length() > 0 && args[0].isInt32())
     nNpcClassId = args[0].toInt32();
 
   args.rval().setInt32(D2COMMON_GetRepairCost(NULL, D2CLIENT_GetPlayerUnit(), nNpcClassId, D2CLIENT_GetDifficulty(), *D2CLIENT_ItemPriceList, 0));
   return true;
 }
 
-bool UnitWrap::getItemCost(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
+bool UnitWrap::getItemCost(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
@@ -2486,7 +2343,7 @@ bool UnitWrap::getItemCost(JSContext* ctx, unsigned argc, JS::Value* vp) {
   int32_t nNpcClassId = (npc ? npc->dwTxtFileNo : 0x9A);  // defaults to Charsi's NPC id
   int32_t nDifficulty = D2CLIENT_GetDifficulty();
 
-  if (argc < 1 || !args[0].isInt32()) {
+  if (args.length() < 1 || !args[0].isInt32()) {
     args.rval().setUndefined();
     return true;
   }
@@ -2508,7 +2365,7 @@ bool UnitWrap::getItemCost(JSContext* ctx, unsigned argc, JS::Value* vp) {
 
   nMode = args[0].toInt32();
 
-  if (argc > 1) {
+  if (args.length() > 1) {
     if (args[1].isObject()) {
       UnitWrap* npc_wrap;
       UNWRAP_OR_RETURN(ctx, &npc_wrap, args[1]);
@@ -2538,7 +2395,7 @@ bool UnitWrap::getItemCost(JSContext* ctx, unsigned argc, JS::Value* vp) {
       nNpcClassId = 0x9A;  // invalid npcid incoming! default to charsi to allow the game to continue
   }
 
-  if (argc > 2 && args[2].isInt32())
+  if (args.length() > 2 && args[2].isInt32())
     nDifficulty = args[2].toInt32();
 
   switch (nMode) {
@@ -2559,10 +2416,8 @@ bool UnitWrap::getItemCost(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool UnitWrap::getUnit(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
-
-  if (argc < 1) {
+bool UnitWrap::getUnit(JSContext* ctx, JS::CallArgs& args) {
+  if (args.length() < 1) {
     args.rval().setUndefined();
     return true;
   }
@@ -2573,19 +2428,19 @@ bool UnitWrap::getUnit(JSContext* ctx, unsigned argc, JS::Value* vp) {
   uint32_t nUnitId = (uint32_t)-1;
   char* szName = nullptr;
 
-  if (argc > 0 && args[0].isNumber())
+  if (args.length() > 0 && args[0].isNumber())
     JS::ToInt32(ctx, args[0], &nType);
 
-  if (argc > 1 && args[1].isString())
+  if (args.length() > 1 && args[1].isString())
     szName = JS_EncodeString(ctx, args[1].toString());
 
-  if (argc > 1 && args[1].isNumber() && !args[1].isNull())
+  if (args.length() > 1 && args[1].isNumber() && !args[1].isNull())
     JS::ToUint32(ctx, args[1], &nClassId);
 
-  if (argc > 2 && args[2].isNumber() && !args[2].isNull())
+  if (args.length() > 2 && args[2].isNumber() && !args[2].isNull())
     JS::ToUint32(ctx, args[2], &nMode);
 
-  if (argc > 3 && args[3].isNumber() && !args[3].isNull())
+  if (args.length() > 3 && args[3].isNumber() && !args[3].isNull())
     JS::ToUint32(ctx, args[3], &nUnitId);
 
   D2UnitStrc* pUnit = NULL;

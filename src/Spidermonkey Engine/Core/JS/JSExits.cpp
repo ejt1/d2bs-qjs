@@ -29,7 +29,7 @@ JSObject* ExitWrap::Instantiate(JSContext* ctx, Exit* exit, uint32_t level_id) {
 }
 
 void ExitWrap::Initialize(JSContext* ctx, JS::HandleObject target) {
-  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, New, 0, m_props, nullptr, nullptr, nullptr));
+  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, trampoline<New>, 0, m_props, nullptr, nullptr, nullptr));
   if (!proto) {
     Log("failed to initialize class Exit");
     return;
@@ -40,15 +40,14 @@ ExitWrap::ExitWrap(JSContext* ctx, JS::HandleObject obj, Exit* exit, uint32_t le
     : BaseObject(ctx, obj), id(exit->Target), x(exit->Position.first), y(exit->Position.second), type(exit->Type), tileid(exit->TileId), level(level_id) {
 }
 
-void ExitWrap::finalize(JSFreeOp* fop, JSObject* obj) {
+void ExitWrap::finalize(JSFreeOp* /*fop*/, JSObject* obj) {
   BaseObject* wrap = BaseObject::FromJSObject(obj);
   if (wrap) {
     delete wrap;
   }
 }
 
-bool ExitWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ExitWrap::New(JSContext* ctx, JS::CallArgs& args) {
   JS::RootedObject newObject(ctx, JS_NewObjectForConstructor(ctx, &m_class, args));
   if (!newObject) {
     THROW_ERROR(ctx, "failed to instantiate exit");
@@ -61,48 +60,42 @@ bool ExitWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
 }
 
 // properties
-bool ExitWrap::GetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ExitWrap::GetX(JSContext* ctx, JS::CallArgs& args) {
   ExitWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   args.rval().setInt32(wrap->x);
   return true;
 }
 
-bool ExitWrap::GetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ExitWrap::GetY(JSContext* ctx, JS::CallArgs& args) {
   ExitWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   args.rval().setInt32(wrap->y);
   return true;
 }
 
-bool ExitWrap::GetTarget(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ExitWrap::GetTarget(JSContext* ctx, JS::CallArgs& args) {
   ExitWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   args.rval().setInt32(wrap->id);
   return true;
 }
 
-bool ExitWrap::GetType(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ExitWrap::GetType(JSContext* ctx, JS::CallArgs& args) {
   ExitWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   args.rval().setInt32(wrap->type);
   return true;
 }
 
-bool ExitWrap::GetTileId(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ExitWrap::GetTileId(JSContext* ctx, JS::CallArgs& args) {
   ExitWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   args.rval().setInt32(wrap->tileid);
   return true;
 }
 
-bool ExitWrap::GetLevelId(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ExitWrap::GetLevelId(JSContext* ctx, JS::CallArgs& args) {
   ExitWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   args.rval().setInt32(wrap->level);

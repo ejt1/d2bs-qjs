@@ -7,7 +7,7 @@
 
 #include "Bindings.h"
 
-JSObject* FrameWrap::Instantiate(JSContext* ctx, FrameHook* frame) {
+JSObject* FrameWrap::Instantiate(JSContext* ctx) {
   JS::RootedObject global(ctx, JS::CurrentGlobalOrNull(ctx));
   JS::RootedValue constructor_val(ctx);
   if (!JS_GetProperty(ctx, global, "Frame", &constructor_val)) {
@@ -29,7 +29,7 @@ JSObject* FrameWrap::Instantiate(JSContext* ctx, FrameHook* frame) {
 }
 
 void FrameWrap::Initialize(JSContext* ctx, JS::HandleObject target) {
-  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, New, 0, m_props, m_methods, nullptr, nullptr));
+  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, trampoline<New>, 0, m_props, m_methods, nullptr, nullptr));
   if (!proto) {
     return;
   }
@@ -47,15 +47,14 @@ FrameWrap::~FrameWrap() {
   Genhook::LeaveGlobalSection();
 }
 
-void FrameWrap::finalize(JSFreeOp* fop, JSObject* obj) {
+void FrameWrap::finalize(JSFreeOp* /*fop*/, JSObject* obj) {
   BaseObject* wrap = BaseObject::FromJSObject(obj);
   if (wrap) {
     delete wrap;
   }
 }
 
-bool FrameWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool FrameWrap::New(JSContext* ctx, JS::CallArgs& args) {
   ThreadState* ts = (ThreadState*)JS_GetContextPrivate(ctx);
   Script* script = ts->script;
 
@@ -65,21 +64,21 @@ bool FrameWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
   JS::RootedObject click(ctx);
   JS::RootedObject hover(ctx);
 
-  if (argc > 0 && args[0].isNumber())
+  if (args.length() > 0 && args[0].isNumber())
     JS::ToUint32(ctx, args[0], &x);
-  if (argc > 1 && args[1].isNumber())
+  if (args.length() > 1 && args[1].isNumber())
     JS::ToUint32(ctx, args[1], &y);
-  if (argc > 2 && args[2].isNumber())
+  if (args.length() > 2 && args[2].isNumber())
     JS::ToUint32(ctx, args[2], &x2);
-  if (argc > 3 && args[3].isNumber())
+  if (args.length() > 3 && args[3].isNumber())
     JS::ToUint32(ctx, args[3], &y2);
-  if (argc > 4 && args[4].isNumber())
+  if (args.length() > 4 && args[4].isNumber())
     JS::ToUint32(ctx, args[4], (uint32_t*)(&align));
-  if (argc > 5 && args[5].isBoolean())
+  if (args.length() > 5 && args[5].isBoolean())
     automap = args[5].toBoolean();
-  if (argc > 6 && args[6].isObject() && JS_ObjectIsFunction(ctx, args[6].toObjectOrNull()))
+  if (args.length() > 6 && args[6].isObject() && JS_ObjectIsFunction(ctx, args[6].toObjectOrNull()))
     click.set(args[6].toObjectOrNull());
-  if (argc > 7 && args[7].isObject() && JS_ObjectIsFunction(ctx, args[7].toObjectOrNull()))
+  if (args.length() > 7 && args[7].isObject() && JS_ObjectIsFunction(ctx, args[7].toObjectOrNull()))
     hover.set(args[7].toObjectOrNull());
 
   JS::RootedObject newObject(ctx, JS_NewObjectForConstructor(ctx, &m_class, args));
@@ -104,8 +103,7 @@ bool FrameWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
 }
 
 // properties
-bool FrameWrap::GetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool FrameWrap::GetX(JSContext* ctx, JS::CallArgs& args) {
   FrameWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
@@ -113,8 +111,7 @@ bool FrameWrap::GetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool FrameWrap::SetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool FrameWrap::SetX(JSContext* ctx, JS::CallArgs& args) {
   FrameWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
@@ -127,8 +124,7 @@ bool FrameWrap::SetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool FrameWrap::GetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool FrameWrap::GetY(JSContext* ctx, JS::CallArgs& args) {
   FrameWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
@@ -136,8 +132,7 @@ bool FrameWrap::GetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool FrameWrap::SetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool FrameWrap::SetY(JSContext* ctx, JS::CallArgs& args) {
   FrameWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
@@ -150,8 +145,7 @@ bool FrameWrap::SetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool FrameWrap::GetSizeX(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool FrameWrap::GetSizeX(JSContext* ctx, JS::CallArgs& args) {
   FrameWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
@@ -159,8 +153,7 @@ bool FrameWrap::GetSizeX(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool FrameWrap::SetSizeX(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool FrameWrap::SetSizeX(JSContext* ctx, JS::CallArgs& args) {
   FrameWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
@@ -173,8 +166,7 @@ bool FrameWrap::SetSizeX(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool FrameWrap::GetSizeY(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool FrameWrap::GetSizeY(JSContext* ctx, JS::CallArgs& args) {
   FrameWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
@@ -182,8 +174,7 @@ bool FrameWrap::GetSizeY(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool FrameWrap::SetSizeY(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool FrameWrap::SetSizeY(JSContext* ctx, JS::CallArgs& args) {
   FrameWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
@@ -196,8 +187,7 @@ bool FrameWrap::SetSizeY(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool FrameWrap::GetVisible(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool FrameWrap::GetVisible(JSContext* ctx, JS::CallArgs& args) {
   FrameWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
@@ -205,8 +195,7 @@ bool FrameWrap::GetVisible(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool FrameWrap::SetVisible(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool FrameWrap::SetVisible(JSContext* ctx, JS::CallArgs& args) {
   FrameWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
@@ -218,8 +207,7 @@ bool FrameWrap::SetVisible(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool FrameWrap::GetAlign(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool FrameWrap::GetAlign(JSContext* ctx, JS::CallArgs& args) {
   FrameWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
@@ -227,8 +215,7 @@ bool FrameWrap::GetAlign(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool FrameWrap::SetAlign(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool FrameWrap::SetAlign(JSContext* ctx, JS::CallArgs& args) {
   FrameWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
@@ -241,8 +228,7 @@ bool FrameWrap::SetAlign(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool FrameWrap::GetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool FrameWrap::GetZOrder(JSContext* ctx, JS::CallArgs& args) {
   FrameWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
@@ -250,8 +236,7 @@ bool FrameWrap::GetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool FrameWrap::SetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool FrameWrap::SetZOrder(JSContext* ctx, JS::CallArgs& args) {
   FrameWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
@@ -264,8 +249,7 @@ bool FrameWrap::SetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool FrameWrap::GetClick(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool FrameWrap::GetClick(JSContext* ctx, JS::CallArgs& args) {
   FrameWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
@@ -274,8 +258,7 @@ bool FrameWrap::GetClick(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool FrameWrap::SetClick(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool FrameWrap::SetClick(JSContext* ctx, JS::CallArgs& args) {
   FrameWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
@@ -285,8 +268,7 @@ bool FrameWrap::SetClick(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool FrameWrap::GetHover(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool FrameWrap::GetHover(JSContext* ctx, JS::CallArgs& args) {
   FrameWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
@@ -295,8 +277,7 @@ bool FrameWrap::GetHover(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool FrameWrap::SetHover(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool FrameWrap::SetHover(JSContext* ctx, JS::CallArgs& args) {
   FrameWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   FrameHook* pFramehook = wrap->pFrame;
@@ -307,8 +288,7 @@ bool FrameWrap::SetHover(JSContext* ctx, unsigned argc, JS::Value* vp) {
 }
 
 // functions
-bool FrameWrap::Remove(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool FrameWrap::Remove(JSContext* ctx, JS::CallArgs& args) {
   FrameWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Genhook::EnterGlobalSection();
@@ -351,7 +331,7 @@ JSObject* BoxWrap::Instantiate(JSContext* ctx, BoxHook* box) {
 }
 
 void BoxWrap::Initialize(JSContext* ctx, JS::HandleObject target) {
-  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, New, 0, m_props, m_methods, nullptr, nullptr));
+  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, trampoline<New>, 0, m_props, m_methods, nullptr, nullptr));
   if (!proto) {
     return;
   }
@@ -369,15 +349,14 @@ BoxWrap::~BoxWrap() {
   Genhook::LeaveGlobalSection();
 }
 
-void BoxWrap::finalize(JSFreeOp* fop, JSObject* obj) {
+void BoxWrap::finalize(JSFreeOp* /*fop*/, JSObject* obj) {
   BaseObject* wrap = BaseObject::FromJSObject(obj);
   if (wrap) {
     delete wrap;
   }
 }
 
-bool BoxWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool BoxWrap::New(JSContext* ctx, JS::CallArgs& args) {
   ThreadState* ts = (ThreadState*)JS_GetContextPrivate(ctx);
   Script* script = ts->script;
 
@@ -387,25 +366,25 @@ bool BoxWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
   JS::RootedObject click(ctx);
   JS::RootedObject hover(ctx);
 
-  if (argc > 0 && args[0].isNumber())
+  if (args.length() > 0 && args[0].isNumber())
     JS::ToUint32(ctx, args[0], &x);
-  if (argc > 1 && args[1].isNumber())
+  if (args.length() > 1 && args[1].isNumber())
     JS::ToUint32(ctx, args[1], &y);
-  if (argc > 2 && args[2].isNumber())
+  if (args.length() > 2 && args[2].isNumber())
     JS::ToUint32(ctx, args[2], &x2);
-  if (argc > 3 && args[3].isNumber())
+  if (args.length() > 3 && args[3].isNumber())
     JS::ToUint32(ctx, args[3], &y2);
-  if (argc > 4 && args[4].isNumber())
+  if (args.length() > 4 && args[4].isNumber())
     JS::ToUint32(ctx, args[4], &color);
-  if (argc > 5 && args[5].isNumber())
+  if (args.length() > 5 && args[5].isNumber())
     JS::ToUint32(ctx, args[5], &opacity);
-  if (argc > 6 && args[6].isNumber())
+  if (args.length() > 6 && args[6].isNumber())
     JS::ToUint32(ctx, args[6], &align);
-  if (argc > 7 && args[7].isBoolean())
+  if (args.length() > 7 && args[7].isBoolean())
     automap = args[7].toBoolean();
-  if (argc > 8 && args[8].isObject() && JS_ObjectIsFunction(ctx, args[8].toObjectOrNull()))
+  if (args.length() > 8 && args[8].isObject() && JS_ObjectIsFunction(ctx, args[8].toObjectOrNull()))
     click.set(args[8].toObjectOrNull());
-  if (argc > 9 && args[9].isObject() && JS_ObjectIsFunction(ctx, args[9].toObjectOrNull()))
+  if (args.length() > 9 && args[9].isObject() && JS_ObjectIsFunction(ctx, args[9].toObjectOrNull()))
     hover.set(args[9].toObjectOrNull());
 
   JS::RootedObject newObject(ctx, JS_NewObjectForConstructor(ctx, &m_class, args));
@@ -429,8 +408,7 @@ bool BoxWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
 }
 
 // properties
-bool BoxWrap::GetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool BoxWrap::GetX(JSContext* ctx, JS::CallArgs& args) {
   BoxWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
@@ -438,8 +416,7 @@ bool BoxWrap::GetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool BoxWrap::SetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool BoxWrap::SetX(JSContext* ctx, JS::CallArgs& args) {
   BoxWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
@@ -452,8 +429,7 @@ bool BoxWrap::SetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool BoxWrap::GetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool BoxWrap::GetY(JSContext* ctx, JS::CallArgs& args) {
   BoxWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
@@ -461,8 +437,7 @@ bool BoxWrap::GetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool BoxWrap::SetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool BoxWrap::SetY(JSContext* ctx, JS::CallArgs& args) {
   BoxWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
@@ -475,8 +450,7 @@ bool BoxWrap::SetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool BoxWrap::GetSizeX(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool BoxWrap::GetSizeX(JSContext* ctx, JS::CallArgs& args) {
   BoxWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
@@ -484,8 +458,7 @@ bool BoxWrap::GetSizeX(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool BoxWrap::SetSizeX(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool BoxWrap::SetSizeX(JSContext* ctx, JS::CallArgs& args) {
   BoxWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
@@ -498,8 +471,7 @@ bool BoxWrap::SetSizeX(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool BoxWrap::GetSizeY(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool BoxWrap::GetSizeY(JSContext* ctx, JS::CallArgs& args) {
   BoxWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
@@ -507,8 +479,7 @@ bool BoxWrap::GetSizeY(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool BoxWrap::SetSizeY(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool BoxWrap::SetSizeY(JSContext* ctx, JS::CallArgs& args) {
   BoxWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
@@ -521,8 +492,7 @@ bool BoxWrap::SetSizeY(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool BoxWrap::GetVisible(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool BoxWrap::GetVisible(JSContext* ctx, JS::CallArgs& args) {
   BoxWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
@@ -530,8 +500,7 @@ bool BoxWrap::GetVisible(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool BoxWrap::SetVisible(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool BoxWrap::SetVisible(JSContext* ctx, JS::CallArgs& args) {
   BoxWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
@@ -543,8 +512,7 @@ bool BoxWrap::SetVisible(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool BoxWrap::GetAlign(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool BoxWrap::GetAlign(JSContext* ctx, JS::CallArgs& args) {
   BoxWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
@@ -552,8 +520,7 @@ bool BoxWrap::GetAlign(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool BoxWrap::SetAlign(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool BoxWrap::SetAlign(JSContext* ctx, JS::CallArgs& args) {
   BoxWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
@@ -566,8 +533,7 @@ bool BoxWrap::SetAlign(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool BoxWrap::GetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool BoxWrap::GetZOrder(JSContext* ctx, JS::CallArgs& args) {
   BoxWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
@@ -575,8 +541,7 @@ bool BoxWrap::GetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool BoxWrap::SetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool BoxWrap::SetZOrder(JSContext* ctx, JS::CallArgs& args) {
   BoxWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
@@ -589,8 +554,7 @@ bool BoxWrap::SetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool BoxWrap::GetClick(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool BoxWrap::GetClick(JSContext* ctx, JS::CallArgs& args) {
   BoxWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
@@ -599,8 +563,7 @@ bool BoxWrap::GetClick(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool BoxWrap::SetClick(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool BoxWrap::SetClick(JSContext* ctx, JS::CallArgs& args) {
   BoxWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
@@ -610,8 +573,7 @@ bool BoxWrap::SetClick(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool BoxWrap::GetHover(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool BoxWrap::GetHover(JSContext* ctx, JS::CallArgs& args) {
   BoxWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
@@ -620,8 +582,7 @@ bool BoxWrap::GetHover(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool BoxWrap::SetHover(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool BoxWrap::SetHover(JSContext* ctx, JS::CallArgs& args) {
   BoxWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
@@ -631,8 +592,7 @@ bool BoxWrap::SetHover(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool BoxWrap::GetColor(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool BoxWrap::GetColor(JSContext* ctx, JS::CallArgs& args) {
   BoxWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
@@ -640,8 +600,7 @@ bool BoxWrap::GetColor(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool BoxWrap::SetColor(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool BoxWrap::SetColor(JSContext* ctx, JS::CallArgs& args) {
   BoxWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
@@ -654,8 +613,7 @@ bool BoxWrap::SetColor(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool BoxWrap::GetOpacity(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool BoxWrap::GetOpacity(JSContext* ctx, JS::CallArgs& args) {
   BoxWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
@@ -663,8 +621,7 @@ bool BoxWrap::GetOpacity(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool BoxWrap::SetOpacity(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool BoxWrap::SetOpacity(JSContext* ctx, JS::CallArgs& args) {
   BoxWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   BoxHook* pBox = wrap->pBox;
@@ -678,8 +635,7 @@ bool BoxWrap::SetOpacity(JSContext* ctx, unsigned argc, JS::Value* vp) {
 }
 
 // functions
-bool BoxWrap::Remove(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool BoxWrap::Remove(JSContext* ctx, JS::CallArgs& args) {
   BoxWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Genhook::EnterGlobalSection();
@@ -724,7 +680,7 @@ JSObject* LineWrap::Instantiate(JSContext* ctx, LineHook* line) {
 }
 
 void LineWrap::Initialize(JSContext* ctx, JS::HandleObject target) {
-  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, New, 0, m_props, m_methods, nullptr, nullptr));
+  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, trampoline<New>, 0, m_props, m_methods, nullptr, nullptr));
   if (!proto) {
     return;
   }
@@ -742,15 +698,14 @@ LineWrap::~LineWrap() {
   Genhook::LeaveGlobalSection();
 }
 
-void LineWrap::finalize(JSFreeOp* fop, JSObject* obj) {
+void LineWrap::finalize(JSFreeOp* /*fop*/, JSObject* obj) {
   BaseObject* wrap = BaseObject::FromJSObject(obj);
   if (wrap) {
     delete wrap;
   }
 }
 
-bool LineWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool LineWrap::New(JSContext* ctx, JS::CallArgs& args) {
   ThreadState* ts = (ThreadState*)JS_GetContextPrivate(ctx);
   Script* script = ts->script;
 
@@ -760,21 +715,21 @@ bool LineWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
   JS::RootedObject click(ctx);
   JS::RootedObject hover(ctx);
 
-  if (argc > 0 && args[0].isNumber())
+  if (args.length() > 0 && args[0].isNumber())
     JS::ToUint32(ctx, args[0], &x);
-  if (argc > 1 && args[1].isNumber())
+  if (args.length() > 1 && args[1].isNumber())
     JS::ToUint32(ctx, args[1], &y);
-  if (argc > 2 && args[2].isNumber())
+  if (args.length() > 2 && args[2].isNumber())
     JS::ToUint32(ctx, args[2], &x2);
-  if (argc > 3 && args[3].isNumber())
+  if (args.length() > 3 && args[3].isNumber())
     JS::ToUint32(ctx, args[3], &y2);
-  if (argc > 4 && args[4].isNumber())
+  if (args.length() > 4 && args[4].isNumber())
     JS::ToUint32(ctx, args[4], &color);
-  if (argc > 5 && args[5].isBoolean())
+  if (args.length() > 5 && args[5].isBoolean())
     automap = args[5].toBoolean();
-  if (argc > 6 && args[6].isObject() && JS_ObjectIsFunction(ctx, args[6].toObjectOrNull()))
+  if (args.length() > 6 && args[6].isObject() && JS_ObjectIsFunction(ctx, args[6].toObjectOrNull()))
     click.set(args[6].toObjectOrNull());
-  if (argc > 7 && args[7].isObject() && JS_ObjectIsFunction(ctx, args[7].toObjectOrNull()))
+  if (args.length() > 7 && args[7].isObject() && JS_ObjectIsFunction(ctx, args[7].toObjectOrNull()))
     hover.set(args[7].toObjectOrNull());
 
   JS::RootedObject newObject(ctx, JS_NewObjectForConstructor(ctx, &m_class, args));
@@ -799,8 +754,7 @@ bool LineWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
 }
 
 // properties
-bool LineWrap::GetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool LineWrap::GetX(JSContext* ctx, JS::CallArgs& args) {
   LineWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
@@ -808,8 +762,7 @@ bool LineWrap::GetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool LineWrap::SetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool LineWrap::SetX(JSContext* ctx, JS::CallArgs& args) {
   LineWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
@@ -822,8 +775,7 @@ bool LineWrap::SetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool LineWrap::GetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool LineWrap::GetY(JSContext* ctx, JS::CallArgs& args) {
   LineWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
@@ -831,8 +783,7 @@ bool LineWrap::GetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool LineWrap::SetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool LineWrap::SetY(JSContext* ctx, JS::CallArgs& args) {
   LineWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
@@ -845,8 +796,7 @@ bool LineWrap::SetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool LineWrap::GetX2(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool LineWrap::GetX2(JSContext* ctx, JS::CallArgs& args) {
   LineWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
@@ -854,8 +804,7 @@ bool LineWrap::GetX2(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool LineWrap::SetX2(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool LineWrap::SetX2(JSContext* ctx, JS::CallArgs& args) {
   LineWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
@@ -868,8 +817,7 @@ bool LineWrap::SetX2(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool LineWrap::GetY2(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool LineWrap::GetY2(JSContext* ctx, JS::CallArgs& args) {
   LineWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
@@ -877,8 +825,7 @@ bool LineWrap::GetY2(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool LineWrap::SetY2(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool LineWrap::SetY2(JSContext* ctx, JS::CallArgs& args) {
   LineWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
@@ -891,8 +838,7 @@ bool LineWrap::SetY2(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool LineWrap::GetVisible(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool LineWrap::GetVisible(JSContext* ctx, JS::CallArgs& args) {
   LineWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
@@ -900,8 +846,7 @@ bool LineWrap::GetVisible(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool LineWrap::SetVisible(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool LineWrap::SetVisible(JSContext* ctx, JS::CallArgs& args) {
   LineWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
@@ -913,8 +858,7 @@ bool LineWrap::SetVisible(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool LineWrap::GetColor(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool LineWrap::GetColor(JSContext* ctx, JS::CallArgs& args) {
   LineWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
@@ -922,8 +866,7 @@ bool LineWrap::GetColor(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool LineWrap::SetColor(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool LineWrap::SetColor(JSContext* ctx, JS::CallArgs& args) {
   LineWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
@@ -936,8 +879,7 @@ bool LineWrap::SetColor(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool LineWrap::GetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool LineWrap::GetZOrder(JSContext* ctx, JS::CallArgs& args) {
   LineWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
@@ -945,8 +887,7 @@ bool LineWrap::GetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool LineWrap::SetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool LineWrap::SetZOrder(JSContext* ctx, JS::CallArgs& args) {
   LineWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
@@ -959,8 +900,7 @@ bool LineWrap::SetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool LineWrap::GetClick(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool LineWrap::GetClick(JSContext* ctx, JS::CallArgs& args) {
   LineWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
@@ -969,8 +909,7 @@ bool LineWrap::GetClick(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool LineWrap::SetClick(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool LineWrap::SetClick(JSContext* ctx, JS::CallArgs& args) {
   LineWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
@@ -980,8 +919,7 @@ bool LineWrap::SetClick(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool LineWrap::GetHover(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool LineWrap::GetHover(JSContext* ctx, JS::CallArgs& args) {
   LineWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
@@ -990,8 +928,7 @@ bool LineWrap::GetHover(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool LineWrap::SetHover(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool LineWrap::SetHover(JSContext* ctx, JS::CallArgs& args) {
   LineWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   LineHook* pLine = wrap->pLine;
@@ -1002,8 +939,7 @@ bool LineWrap::SetHover(JSContext* ctx, unsigned argc, JS::Value* vp) {
 }
 
 // functions
-bool LineWrap::Remove(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool LineWrap::Remove(JSContext* ctx, JS::CallArgs& args) {
   LineWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Genhook::EnterGlobalSection();
@@ -1046,7 +982,7 @@ JSObject* TextWrap::Instantiate(JSContext* ctx, TextHook* text) {
 }
 
 void TextWrap::Initialize(JSContext* ctx, JS::HandleObject target) {
-  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, New, 0, m_props, m_methods, nullptr, nullptr));
+  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, trampoline<New>, 0, m_props, m_methods, nullptr, nullptr));
   if (!proto) {
     return;
   }
@@ -1064,15 +1000,14 @@ TextWrap::~TextWrap() {
   Genhook::LeaveGlobalSection();
 }
 
-void TextWrap::finalize(JSFreeOp* fop, JSObject* obj) {
+void TextWrap::finalize(JSFreeOp* /*fop*/, JSObject* obj) {
   BaseObject* wrap = BaseObject::FromJSObject(obj);
   if (wrap) {
     delete wrap;
   }
 }
 
-bool TextWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool TextWrap::New(JSContext* ctx, JS::CallArgs& args) {
   ThreadState* ts = (ThreadState*)JS_GetContextPrivate(ctx);
   Script* script = ts->script;
 
@@ -1083,7 +1018,7 @@ bool TextWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
   JS::RootedObject hover(ctx);
   std::wstring szText;
 
-  if (argc > 0 && args[0].isString()) {
+  if (args.length() > 0 && args[0].isString()) {
     char* str = JS_EncodeString(ctx, args[0].toString());
     if (!str) {
       THROW_ERROR(ctx, "failed to encode string");
@@ -1091,21 +1026,21 @@ bool TextWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
     szText = AnsiToWide(str);
     JS_free(ctx, str);
   }
-  if (argc > 1 && args[1].isNumber())
+  if (args.length() > 1 && args[1].isNumber())
     JS::ToUint32(ctx, args[1], &x);
-  if (argc > 2 && args[2].isNumber())
+  if (args.length() > 2 && args[2].isNumber())
     JS::ToUint32(ctx, args[2], &y);
-  if (argc > 3 && args[3].isNumber())
+  if (args.length() > 3 && args[3].isNumber())
     JS::ToUint32(ctx, args[3], &color);
-  if (argc > 4 && args[4].isNumber())
+  if (args.length() > 4 && args[4].isNumber())
     JS::ToUint32(ctx, args[4], &font);
-  if (argc > 5 && args[5].isNumber())
+  if (args.length() > 5 && args[5].isNumber())
     JS::ToUint32(ctx, args[5], &align);
-  if (argc > 6 && args[6].isBoolean())
+  if (args.length() > 6 && args[6].isBoolean())
     automap = args[6].toBoolean();
-  if (argc > 7 && args[7].isObject() && JS_ObjectIsFunction(ctx, args[7].toObjectOrNull()))
+  if (args.length() > 7 && args[7].isObject() && JS_ObjectIsFunction(ctx, args[7].toObjectOrNull()))
     click.set(args[7].toObjectOrNull());
-  if (argc > 8 && args[8].isObject() && JS_ObjectIsFunction(ctx, args[8].toObjectOrNull()))
+  if (args.length() > 8 && args[8].isObject() && JS_ObjectIsFunction(ctx, args[8].toObjectOrNull()))
     hover.set(args[8].toObjectOrNull());
 
   JS::RootedObject newObject(ctx, JS_NewObjectForConstructor(ctx, &m_class, args));
@@ -1130,8 +1065,7 @@ bool TextWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
 }
 
 // properties
-bool TextWrap::GetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool TextWrap::GetX(JSContext* ctx, JS::CallArgs& args) {
   TextWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
@@ -1139,8 +1073,7 @@ bool TextWrap::GetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool TextWrap::SetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool TextWrap::SetX(JSContext* ctx, JS::CallArgs& args) {
   TextWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
@@ -1153,8 +1086,7 @@ bool TextWrap::SetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool TextWrap::GetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool TextWrap::GetY(JSContext* ctx, JS::CallArgs& args) {
   TextWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
@@ -1162,8 +1094,7 @@ bool TextWrap::GetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool TextWrap::SetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool TextWrap::SetY(JSContext* ctx, JS::CallArgs& args) {
   TextWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
@@ -1176,8 +1107,7 @@ bool TextWrap::SetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool TextWrap::GetColor(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool TextWrap::GetColor(JSContext* ctx, JS::CallArgs& args) {
   TextWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
@@ -1185,8 +1115,7 @@ bool TextWrap::GetColor(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool TextWrap::SetColor(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool TextWrap::SetColor(JSContext* ctx, JS::CallArgs& args) {
   TextWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
@@ -1199,8 +1128,7 @@ bool TextWrap::SetColor(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool TextWrap::GetVisible(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool TextWrap::GetVisible(JSContext* ctx, JS::CallArgs& args) {
   TextWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
@@ -1208,8 +1136,7 @@ bool TextWrap::GetVisible(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool TextWrap::SetVisible(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool TextWrap::SetVisible(JSContext* ctx, JS::CallArgs& args) {
   TextWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
@@ -1221,8 +1148,7 @@ bool TextWrap::SetVisible(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool TextWrap::GetAlign(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool TextWrap::GetAlign(JSContext* ctx, JS::CallArgs& args) {
   TextWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
@@ -1230,8 +1156,7 @@ bool TextWrap::GetAlign(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool TextWrap::SetAlign(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool TextWrap::SetAlign(JSContext* ctx, JS::CallArgs& args) {
   TextWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
@@ -1244,8 +1169,7 @@ bool TextWrap::SetAlign(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool TextWrap::GetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool TextWrap::GetZOrder(JSContext* ctx, JS::CallArgs& args) {
   TextWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
@@ -1253,8 +1177,7 @@ bool TextWrap::GetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool TextWrap::SetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool TextWrap::SetZOrder(JSContext* ctx, JS::CallArgs& args) {
   TextWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
@@ -1267,8 +1190,7 @@ bool TextWrap::SetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool TextWrap::GetClick(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool TextWrap::GetClick(JSContext* ctx, JS::CallArgs& args) {
   TextWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
@@ -1277,8 +1199,7 @@ bool TextWrap::GetClick(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool TextWrap::SetClick(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool TextWrap::SetClick(JSContext* ctx, JS::CallArgs& args) {
   TextWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
@@ -1288,8 +1209,7 @@ bool TextWrap::SetClick(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool TextWrap::GetHover(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool TextWrap::GetHover(JSContext* ctx, JS::CallArgs& args) {
   TextWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
@@ -1298,8 +1218,7 @@ bool TextWrap::GetHover(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool TextWrap::SetHover(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool TextWrap::SetHover(JSContext* ctx, JS::CallArgs& args) {
   TextWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
@@ -1309,8 +1228,7 @@ bool TextWrap::SetHover(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool TextWrap::GetFont(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool TextWrap::GetFont(JSContext* ctx, JS::CallArgs& args) {
   TextWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
@@ -1318,8 +1236,7 @@ bool TextWrap::GetFont(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool TextWrap::SetFont(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool TextWrap::SetFont(JSContext* ctx, JS::CallArgs& args) {
   TextWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
@@ -1332,8 +1249,7 @@ bool TextWrap::SetFont(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool TextWrap::GetText(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool TextWrap::GetText(JSContext* ctx, JS::CallArgs& args) {
   TextWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pText = wrap->pText;
@@ -1341,8 +1257,7 @@ bool TextWrap::GetText(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool TextWrap::SetText(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool TextWrap::SetText(JSContext* ctx, JS::CallArgs& args) {
   TextWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pTextHook = wrap->pText;
@@ -1360,8 +1275,7 @@ bool TextWrap::SetText(JSContext* ctx, unsigned argc, JS::Value* vp) {
 }
 
 // functions
-bool TextWrap::Remove(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool TextWrap::Remove(JSContext* ctx, JS::CallArgs& args) {
   TextWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Genhook::EnterGlobalSection();
@@ -1406,7 +1320,7 @@ JSObject* ImageWrap::Instantiate(JSContext* ctx, ImageHook* image) {
 }
 
 void ImageWrap::Initialize(JSContext* ctx, JS::HandleObject target) {
-  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, New, 0, m_props, m_methods, nullptr, nullptr));
+  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, trampoline<New>, 0, m_props, m_methods, nullptr, nullptr));
   if (!proto) {
     return;
   }
@@ -1424,15 +1338,14 @@ ImageWrap::~ImageWrap() {
   Genhook::LeaveGlobalSection();
 }
 
-void ImageWrap::finalize(JSFreeOp* fop, JSObject* obj) {
+void ImageWrap::finalize(JSFreeOp* /*fop*/, JSObject* obj) {
   BaseObject* wrap = BaseObject::FromJSObject(obj);
   if (wrap) {
     delete wrap;
   }
 }
 
-bool ImageWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ImageWrap::New(JSContext* ctx, JS::CallArgs& args) {
   ThreadState* ts = (ThreadState*)JS_GetContextPrivate(ctx);
   Script* script = ts->script;
 
@@ -1444,25 +1357,25 @@ bool ImageWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
   char* szText = nullptr;
   wchar_t path[_MAX_FNAME + _MAX_PATH];
 
-  if (argc > 0 && args[0].isString()) {
+  if (args.length() > 0 && args[0].isString()) {
     char* str = JS_EncodeString(ctx, args[0].toString());
     if (!str) {
       THROW_ERROR(ctx, "failed to encode string");
     }
   }
-  if (argc > 1 && args[1].isNumber())
+  if (args.length() > 1 && args[1].isNumber())
     JS::ToUint32(ctx, args[1], &x);
-  if (argc > 2 && args[2].isNumber())
+  if (args.length() > 2 && args[2].isNumber())
     JS::ToUint32(ctx, args[2], &y);
-  if (argc > 3 && args[3].isNumber())
+  if (args.length() > 3 && args[3].isNumber())
     JS::ToUint32(ctx, args[3], &color);
-  if (argc > 4 && args[4].isNumber())
+  if (args.length() > 4 && args[4].isNumber())
     JS::ToUint32(ctx, args[4], &align);
-  if (argc > 5 && args[5].isBoolean())
+  if (args.length() > 5 && args[5].isBoolean())
     automap = args[5].toBoolean();
-  if (argc > 6 && args[6].isObject() && JS_ObjectIsFunction(ctx, args[6].toObjectOrNull()))
+  if (args.length() > 6 && args[6].isObject() && JS_ObjectIsFunction(ctx, args[6].toObjectOrNull()))
     click.set(args[6].toObjectOrNull());
-  if (argc > 7 && args[7].isObject() && JS_ObjectIsFunction(ctx, args[7].toObjectOrNull()))
+  if (args.length() > 7 && args[7].isObject() && JS_ObjectIsFunction(ctx, args[7].toObjectOrNull()))
     hover.set(args[7].toObjectOrNull());
 
   if (isValidPath(szText)) {
@@ -1494,8 +1407,7 @@ bool ImageWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
 }
 
 // properties
-bool ImageWrap::GetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ImageWrap::GetX(JSContext* ctx, JS::CallArgs& args) {
   ImageWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
@@ -1503,8 +1415,7 @@ bool ImageWrap::GetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ImageWrap::SetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ImageWrap::SetX(JSContext* ctx, JS::CallArgs& args) {
   ImageWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
@@ -1517,8 +1428,7 @@ bool ImageWrap::SetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ImageWrap::GetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ImageWrap::GetY(JSContext* ctx, JS::CallArgs& args) {
   ImageWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
@@ -1526,8 +1436,7 @@ bool ImageWrap::GetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ImageWrap::SetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ImageWrap::SetY(JSContext* ctx, JS::CallArgs& args) {
   ImageWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
@@ -1540,8 +1449,7 @@ bool ImageWrap::SetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ImageWrap::GetVisible(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ImageWrap::GetVisible(JSContext* ctx, JS::CallArgs& args) {
   ImageWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
@@ -1549,8 +1457,7 @@ bool ImageWrap::GetVisible(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ImageWrap::GetLocation(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ImageWrap::GetLocation(JSContext* ctx, JS::CallArgs& args) {
   ImageWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
@@ -1558,8 +1465,7 @@ bool ImageWrap::GetLocation(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ImageWrap::SetLocation(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ImageWrap::SetLocation(JSContext* ctx, JS::CallArgs& args) {
   ImageWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
@@ -1576,8 +1482,7 @@ bool ImageWrap::SetLocation(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ImageWrap::SetVisible(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ImageWrap::SetVisible(JSContext* ctx, JS::CallArgs& args) {
   ImageWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
@@ -1589,8 +1494,7 @@ bool ImageWrap::SetVisible(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ImageWrap::GetAlign(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ImageWrap::GetAlign(JSContext* ctx, JS::CallArgs& args) {
   ImageWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
@@ -1598,8 +1502,7 @@ bool ImageWrap::GetAlign(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ImageWrap::SetAlign(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ImageWrap::SetAlign(JSContext* ctx, JS::CallArgs& args) {
   ImageWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
@@ -1612,8 +1515,7 @@ bool ImageWrap::SetAlign(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ImageWrap::GetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ImageWrap::GetZOrder(JSContext* ctx, JS::CallArgs& args) {
   ImageWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
@@ -1621,8 +1523,7 @@ bool ImageWrap::GetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ImageWrap::SetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ImageWrap::SetZOrder(JSContext* ctx, JS::CallArgs& args) {
   ImageWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
@@ -1635,8 +1536,7 @@ bool ImageWrap::SetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ImageWrap::GetClick(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ImageWrap::GetClick(JSContext* ctx, JS::CallArgs& args) {
   ImageWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
@@ -1645,8 +1545,7 @@ bool ImageWrap::GetClick(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ImageWrap::SetClick(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ImageWrap::SetClick(JSContext* ctx, JS::CallArgs& args) {
   ImageWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
@@ -1656,8 +1555,7 @@ bool ImageWrap::SetClick(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ImageWrap::GetHover(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ImageWrap::GetHover(JSContext* ctx, JS::CallArgs& args) {
   ImageWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
@@ -1666,8 +1564,7 @@ bool ImageWrap::GetHover(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ImageWrap::SetHover(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ImageWrap::SetHover(JSContext* ctx, JS::CallArgs& args) {
   ImageWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
@@ -1678,8 +1575,7 @@ bool ImageWrap::SetHover(JSContext* ctx, unsigned argc, JS::Value* vp) {
 }
 
 // functions
-bool ImageWrap::Remove(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ImageWrap::Remove(JSContext* ctx, JS::CallArgs& args) {
   ImageWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Genhook::EnterGlobalSection();

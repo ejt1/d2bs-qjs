@@ -31,50 +31,49 @@ JSObject* ControlWrap::Instantiate(JSContext* ctx, D2WinControlStrc* control) {
 
 void ControlWrap::Initialize(JSContext* ctx, JS::HandleObject target) {
   static JSPropertySpec props[] = {
-      JS_PSGS("text", GetText, SetText, JSPROP_ENUMERATE),
-      JS_PSG("x", GetX, JSPROP_ENUMERATE),
-      JS_PSG("y", GetY, JSPROP_ENUMERATE),
-      JS_PSG("xsize", GetSizeX, JSPROP_ENUMERATE),
-      JS_PSG("ysize", GetSizeY, JSPROP_ENUMERATE),
-      JS_PSGS("state", GetState, SetState, JSPROP_ENUMERATE),
-      JS_PSG("password", GetPassword, JSPROP_ENUMERATE),
-      JS_PSG("type", GetType, JSPROP_ENUMERATE),
-      JS_PSGS("cursorpos", GetCursorPos, SetCursorPos, JSPROP_ENUMERATE),
-      JS_PSG("selectstart", GetSelectStart, JSPROP_ENUMERATE),
-      JS_PSG("selectend", GetSelectEnd, JSPROP_ENUMERATE),
-      JS_PSGS("disabled", GetDisabled, SetDisabled, JSPROP_ENUMERATE),
+      JS_PSGS("text", trampoline<GetText>, trampoline<SetText>, JSPROP_ENUMERATE),
+      JS_PSG("x", trampoline<GetX>, JSPROP_ENUMERATE),
+      JS_PSG("y", trampoline<GetY>, JSPROP_ENUMERATE),
+      JS_PSG("xsize", trampoline<GetSizeX>, JSPROP_ENUMERATE),
+      JS_PSG("ysize", trampoline<GetSizeY>, JSPROP_ENUMERATE),
+      JS_PSGS("state", trampoline<GetState>, trampoline<SetState>, JSPROP_ENUMERATE),
+      JS_PSG("password", trampoline<GetPassword>, JSPROP_ENUMERATE),
+      JS_PSG("type", trampoline<GetType>, JSPROP_ENUMERATE),
+      JS_PSGS("cursorpos", trampoline<GetCursorPos>, trampoline<SetCursorPos>, JSPROP_ENUMERATE),
+      JS_PSG("selectstart", trampoline<GetSelectStart>, JSPROP_ENUMERATE),
+      JS_PSG("selectend", trampoline<GetSelectEnd>, JSPROP_ENUMERATE),
+      JS_PSGS("disabled", trampoline<GetDisabled>, trampoline<SetDisabled>, JSPROP_ENUMERATE),
       JS_PS_END,
   };
   static JSFunctionSpec methods[] = {
-      JS_FN("getNext", GetNext, 0, JSPROP_ENUMERATE),
-      JS_FN("click", Click, 0, JSPROP_ENUMERATE),
-      JS_FN("getText", FreeGetText, 0, JSPROP_ENUMERATE),
-      JS_FN("setText", FreeSetText, 1, JSPROP_ENUMERATE),
+      JS_FN("getNext", trampoline<GetNext>, 0, JSPROP_ENUMERATE),
+      JS_FN("click", trampoline<Click>, 0, JSPROP_ENUMERATE),
+      JS_FN("getText", trampoline<FreeGetText>, 0, JSPROP_ENUMERATE),
+      JS_FN("setText", trampoline<FreeSetText>, 1, JSPROP_ENUMERATE),
       JS_FS_END,
   };
-  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, New, 0, props, methods, nullptr, nullptr));
+  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, trampoline<New>, 0, props, methods, nullptr, nullptr));
   if (!proto) {
     return;
   }
 
   // globals
-  JS_DefineFunction(ctx, target, "getControl", GetControl, 0, JSPROP_ENUMERATE);
-  JS_DefineFunction(ctx, target, "getControls", GetControls, 0, JSPROP_ENUMERATE);
+  JS_DefineFunction(ctx, target, "getControl", trampoline<GetControl>, 0, JSPROP_ENUMERATE);
+  JS_DefineFunction(ctx, target, "getControls", trampoline<GetControls>, 0, JSPROP_ENUMERATE);
 }
 
 ControlWrap::ControlWrap(JSContext* ctx, JS::HandleObject obj, D2WinControlStrc* control)
     : BaseObject(ctx, obj), dwType(control->dwType), dwX(control->dwPosX), dwY(control->dwPosY), dwSizeX(control->dwSizeX), dwSizeY(control->dwSizeY) {
 }
 
-void ControlWrap::finalize(JSFreeOp* fop, JSObject* obj) {
+void ControlWrap::finalize(JSFreeOp* /*fop*/, JSObject* obj) {
   BaseObject* wrap = BaseObject::FromJSObject(obj);
   if (wrap) {
     delete wrap;
   }
 }
 
-bool ControlWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ControlWrap::New(JSContext* ctx, JS::CallArgs& args) {
   JS::RootedObject newObject(ctx, JS_NewObjectForConstructor(ctx, &m_class, args));
   if (!newObject) {
     THROW_ERROR(ctx, "failed to instantiate control");
@@ -84,8 +83,7 @@ bool ControlWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
 }
 
 // properties
-bool ControlWrap::GetText(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ControlWrap::GetText(JSContext* ctx, JS::CallArgs& args) {
   D2WinControlStrc* ctrl;
   UNWRAP_CONTROL_OR_ERROR(ctx, &ctrl, args.thisv());
 
@@ -97,8 +95,7 @@ bool ControlWrap::GetText(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ControlWrap::SetText(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ControlWrap::SetText(JSContext* ctx, JS::CallArgs& args) {
   D2WinControlStrc* ctrl;
   UNWRAP_CONTROL_OR_ERROR(ctx, &ctrl, args.thisv());
 
@@ -114,48 +111,42 @@ bool ControlWrap::SetText(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ControlWrap::GetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ControlWrap::GetX(JSContext* ctx, JS::CallArgs& args) {
   D2WinControlStrc* ctrl;
   UNWRAP_CONTROL_OR_ERROR(ctx, &ctrl, args.thisv());
   args.rval().setNumber(ctrl->dwPosX);
   return true;
 }
 
-bool ControlWrap::GetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ControlWrap::GetY(JSContext* ctx, JS::CallArgs& args) {
   D2WinControlStrc* ctrl;
   UNWRAP_CONTROL_OR_ERROR(ctx, &ctrl, args.thisv());
   args.rval().setNumber(ctrl->dwPosY);
   return true;
 }
 
-bool ControlWrap::GetSizeX(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ControlWrap::GetSizeX(JSContext* ctx, JS::CallArgs& args) {
   D2WinControlStrc* ctrl;
   UNWRAP_CONTROL_OR_ERROR(ctx, &ctrl, args.thisv());
   args.rval().setNumber(ctrl->dwSizeX);
   return true;
 }
 
-bool ControlWrap::GetSizeY(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ControlWrap::GetSizeY(JSContext* ctx, JS::CallArgs& args) {
   D2WinControlStrc* ctrl;
   UNWRAP_CONTROL_OR_ERROR(ctx, &ctrl, args.thisv());
   args.rval().setNumber(ctrl->dwSizeY);
   return true;
 }
 
-bool ControlWrap::GetState(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ControlWrap::GetState(JSContext* ctx, JS::CallArgs& args) {
   D2WinControlStrc* ctrl;
   UNWRAP_CONTROL_OR_ERROR(ctx, &ctrl, args.thisv());
   args.rval().setNumber(ctrl->dwDisabled - 2);
   return true;
 }
 
-bool ControlWrap::SetState(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ControlWrap::SetState(JSContext* ctx, JS::CallArgs& args) {
   D2WinControlStrc* ctrl;
   UNWRAP_CONTROL_OR_ERROR(ctx, &ctrl, args.thisv());
 
@@ -170,32 +161,28 @@ bool ControlWrap::SetState(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ControlWrap::GetPassword(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ControlWrap::GetPassword(JSContext* ctx, JS::CallArgs& args) {
   D2WinControlStrc* ctrl;
   UNWRAP_CONTROL_OR_ERROR(ctx, &ctrl, args.thisv());
   args.rval().setBoolean(ctrl->TextBox.dwIsCloaked == 33);
   return true;
 }
 
-bool ControlWrap::GetType(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ControlWrap::GetType(JSContext* ctx, JS::CallArgs& args) {
   D2WinControlStrc* ctrl;
   UNWRAP_CONTROL_OR_ERROR(ctx, &ctrl, args.thisv());
   args.rval().setNumber(ctrl->dwType);
   return true;
 }
 
-bool ControlWrap::GetCursorPos(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ControlWrap::GetCursorPos(JSContext* ctx, JS::CallArgs& args) {
   D2WinControlStrc* ctrl;
   UNWRAP_CONTROL_OR_ERROR(ctx, &ctrl, args.thisv());
   args.rval().setNumber(ctrl->TextBox.dwCursorPos);
   return true;
 }
 
-bool ControlWrap::SetCursorPos(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ControlWrap::SetCursorPos(JSContext* ctx, JS::CallArgs& args) {
   D2WinControlStrc* ctrl;
   UNWRAP_CONTROL_OR_ERROR(ctx, &ctrl, args.thisv());
 
@@ -210,32 +197,28 @@ bool ControlWrap::SetCursorPos(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ControlWrap::GetSelectStart(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ControlWrap::GetSelectStart(JSContext* ctx, JS::CallArgs& args) {
   D2WinControlStrc* ctrl;
   UNWRAP_CONTROL_OR_ERROR(ctx, &ctrl, args.thisv());
   args.rval().setNumber(ctrl->dwSelectStart);
   return true;
 }
 
-bool ControlWrap::GetSelectEnd(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ControlWrap::GetSelectEnd(JSContext* ctx, JS::CallArgs& args) {
   D2WinControlStrc* ctrl;
   UNWRAP_CONTROL_OR_ERROR(ctx, &ctrl, args.thisv());
   args.rval().setNumber(ctrl->dwSelectEnd);
   return true;
 }
 
-bool ControlWrap::GetDisabled(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ControlWrap::GetDisabled(JSContext* ctx, JS::CallArgs& args) {
   D2WinControlStrc* ctrl;
   UNWRAP_CONTROL_OR_ERROR(ctx, &ctrl, args.thisv());
   args.rval().setNumber(ctrl->dwDisabled);
   return true;
 }
 
-bool ControlWrap::SetDisabled(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ControlWrap::SetDisabled(JSContext* ctx, JS::CallArgs& args) {
   D2WinControlStrc* ctrl;
   UNWRAP_CONTROL_OR_ERROR(ctx, &ctrl, args.thisv());
 
@@ -251,8 +234,7 @@ bool ControlWrap::SetDisabled(JSContext* ctx, unsigned argc, JS::Value* vp) {
 }
 
 // functions
-bool ControlWrap::GetNext(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ControlWrap::GetNext(JSContext* ctx, JS::CallArgs& args) {
   if (ClientState() != ClientStateMenu) {
     args.rval().setUndefined();
     return true;
@@ -284,8 +266,7 @@ bool ControlWrap::GetNext(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ControlWrap::Click(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ControlWrap::Click(JSContext* ctx, JS::CallArgs& args) {
   if (ClientState() != ClientStateMenu) {
     args.rval().setUndefined();
     return true;
@@ -302,7 +283,7 @@ bool ControlWrap::Click(JSContext* ctx, unsigned argc, JS::Value* vp) {
 
   uint32_t x = (uint32_t)-1, y = (uint32_t)-1;
 
-  if (argc > 1 && args[0].isNumber() && args[1].isNumber()) {
+  if (args.length() > 1 && args[0].isNumber() && args[1].isNumber()) {
     JS::ToUint32(ctx, args[0], &x);
     JS::ToUint32(ctx, args[1], &y);
   }
@@ -313,8 +294,7 @@ bool ControlWrap::Click(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ControlWrap::FreeGetText(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ControlWrap::FreeGetText(JSContext* ctx, JS::CallArgs& args) {
   if (ClientState() != ClientStateMenu) {
     args.rval().setUndefined();
     return true;
@@ -362,8 +342,7 @@ bool ControlWrap::FreeGetText(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ControlWrap::FreeSetText(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ControlWrap::FreeSetText(JSContext* ctx, JS::CallArgs& args) {
   if (ClientState() != ClientStateMenu) {
     args.rval().setUndefined();
     return true;
@@ -378,7 +357,7 @@ bool ControlWrap::FreeSetText(JSContext* ctx, unsigned argc, JS::Value* vp) {
     return true;
   }
 
-  if (argc < 0 || !args[0].isString()) {
+  if (args.length() < 0 || !args[0].isString()) {
     args.rval().setUndefined();
     return true;
   }
@@ -394,8 +373,7 @@ bool ControlWrap::FreeSetText(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ControlWrap::GetControl(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ControlWrap::GetControl(JSContext* ctx, JS::CallArgs& args) {
   if (ClientState() != ClientStateMenu) {
     args.rval().setUndefined();
     return true;
@@ -403,7 +381,7 @@ bool ControlWrap::GetControl(JSContext* ctx, unsigned argc, JS::Value* vp) {
 
   int32_t nType = -1, nX = -1, nY = -1, nXSize = -1, nYSize = -1;
   int32_t* vals[] = {&nType, &nX, &nY, &nXSize, &nYSize};
-  for (uint32_t i = 0; i < argc; i++) {
+  for (uint32_t i = 0; i < args.length(); i++) {
     if (args[i].isInt32()) {
       *vals[i] = args[i].toInt32();
     }
@@ -423,8 +401,7 @@ bool ControlWrap::GetControl(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ControlWrap::GetControls(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ControlWrap::GetControls(JSContext* ctx, JS::CallArgs& args) {
   if (ClientState() != ClientStateMenu) {
     args.rval().setUndefined();
     return true;

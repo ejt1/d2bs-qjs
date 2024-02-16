@@ -19,14 +19,14 @@ class TimerWrap : public BaseObject {
   // static void MarkGC(JSRuntime* rt, JSValue val, JS_MarkFunc* mark_func);
 
   // globals
-  static bool setImmediate(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool clearImmediate(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool setImmediate(JSContext* ctx, JS::CallArgs& args);
+  static bool clearImmediate(JSContext* ctx, JS::CallArgs& args);
 
-  static bool setTimeout(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool clearTimeout(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool setTimeout(JSContext* ctx, JS::CallArgs& args);
+  static bool clearTimeout(JSContext* ctx, JS::CallArgs& args);
 
-  static bool setInterval(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool clearInterval(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool setInterval(JSContext* ctx, JS::CallArgs& args);
+  static bool clearInterval(JSContext* ctx, JS::CallArgs& args);
 
   // implementation detail
   static void TimerCallback(uv_timer_t* handle);
@@ -51,13 +51,13 @@ class TimerWrap : public BaseObject {
       &m_ops,
   };
   static inline JSFunctionSpec m_methods[] = {
-      JS_FN("setImmediate", setImmediate, 1, JSPROP_ENUMERATE),      //
-      JS_FN("clearImmediate", clearImmediate, 1, JSPROP_ENUMERATE),  //
-      JS_FN("setTimeout", setTimeout, 2, JSPROP_ENUMERATE),          //
-      JS_FN("clearTimeout", clearTimeout, 1, JSPROP_ENUMERATE),      //
-      JS_FN("setInterval", setInterval, 2, JSPROP_ENUMERATE),        //
-      JS_FN("clearInterval", clearInterval, 1, JSPROP_ENUMERATE),    //
-      JS_FS_END,                                                     //
+      JS_FN("setImmediate", trampoline<setImmediate>, 1, JSPROP_ENUMERATE),      //
+      JS_FN("clearImmediate", trampoline<clearImmediate>, 1, JSPROP_ENUMERATE),  //
+      JS_FN("setTimeout", trampoline<setTimeout>, 2, JSPROP_ENUMERATE),          //
+      JS_FN("clearTimeout", trampoline<clearTimeout>, 1, JSPROP_ENUMERATE),      //
+      JS_FN("setInterval", trampoline<setInterval>, 2, JSPROP_ENUMERATE),        //
+      JS_FN("clearInterval", trampoline<clearInterval>, 1, JSPROP_ENUMERATE),    //
+      JS_FS_END,                                                                 //
   };
 
   JSContext* context;

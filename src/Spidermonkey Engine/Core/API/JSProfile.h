@@ -15,20 +15,20 @@ class ProfileWrap : public BaseObject {
   static void finalize(JSFreeOp* fop, JSObject* obj);
 
   // constructor
-  static bool New(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool New(JSContext* ctx, JS::CallArgs& args);
 
   // properties
-  static bool GetType(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetIP(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetUsername(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetGateway(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetCharacter(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetDifficulty(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetMaxLoginTime(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetMaxCharacterSelectTime(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetType(JSContext* ctx, JS::CallArgs& args);
+  static bool GetIP(JSContext* ctx, JS::CallArgs& args);
+  static bool GetUsername(JSContext* ctx, JS::CallArgs& args);
+  static bool GetGateway(JSContext* ctx, JS::CallArgs& args);
+  static bool GetCharacter(JSContext* ctx, JS::CallArgs& args);
+  static bool GetDifficulty(JSContext* ctx, JS::CallArgs& args);
+  static bool GetMaxLoginTime(JSContext* ctx, JS::CallArgs& args);
+  static bool GetMaxCharacterSelectTime(JSContext* ctx, JS::CallArgs& args);
 
   // functions
-  static bool Login(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool Login(JSContext* ctx, JS::CallArgs& args);
 
   static inline JSClassOps m_ops = {
       .addProperty = nullptr,

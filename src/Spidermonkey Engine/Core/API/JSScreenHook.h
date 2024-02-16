@@ -14,7 +14,7 @@
 
 class FrameWrap : public BaseObject {
  public:
-  static JSObject* Instantiate(JSContext* ctx, FrameHook* frame);
+  static JSObject* Instantiate(JSContext* ctx);
   static void Initialize(JSContext* ctx, JS::HandleObject target);
 
  private:
@@ -24,30 +24,30 @@ class FrameWrap : public BaseObject {
   static void finalize(JSFreeOp* fop, JSObject* obj);
 
   // constructor
-  static bool New(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool New(JSContext* ctx, JS::CallArgs& args);
 
   // properties
-  static bool GetX(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetX(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetY(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetY(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetSizeX(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetSizeX(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetSizeY(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetSizeY(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetVisible(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetVisible(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetAlign(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetAlign(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetClick(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetClick(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetHover(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetHover(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetX(JSContext* ctx, JS::CallArgs& args);
+  static bool SetX(JSContext* ctx, JS::CallArgs& args);
+  static bool GetY(JSContext* ctx, JS::CallArgs& args);
+  static bool SetY(JSContext* ctx, JS::CallArgs& args);
+  static bool GetSizeX(JSContext* ctx, JS::CallArgs& args);
+  static bool SetSizeX(JSContext* ctx, JS::CallArgs& args);
+  static bool GetSizeY(JSContext* ctx, JS::CallArgs& args);
+  static bool SetSizeY(JSContext* ctx, JS::CallArgs& args);
+  static bool GetVisible(JSContext* ctx, JS::CallArgs& args);
+  static bool SetVisible(JSContext* ctx, JS::CallArgs& args);
+  static bool GetAlign(JSContext* ctx, JS::CallArgs& args);
+  static bool SetAlign(JSContext* ctx, JS::CallArgs& args);
+  static bool GetZOrder(JSContext* ctx, JS::CallArgs& args);
+  static bool SetZOrder(JSContext* ctx, JS::CallArgs& args);
+  static bool GetClick(JSContext* ctx, JS::CallArgs& args);
+  static bool SetClick(JSContext* ctx, JS::CallArgs& args);
+  static bool GetHover(JSContext* ctx, JS::CallArgs& args);
+  static bool SetHover(JSContext* ctx, JS::CallArgs& args);
 
   // functions
-  static bool Remove(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool Remove(JSContext* ctx, JS::CallArgs& args);
 
   static inline JSClassOps m_ops = {
       .addProperty = nullptr,
@@ -67,18 +67,20 @@ class FrameWrap : public BaseObject {
       JSCLASS_HAS_RESERVED_SLOTS(kInternalFieldCount) | JSCLASS_FOREGROUND_FINALIZE,
       &m_ops,
   };
-  static inline JSPropertySpec m_props[] = {JS_PSGS("x", GetX, SetX, JSPROP_ENUMERATE),
-                                            JS_PSGS("y", GetY, SetY, JSPROP_ENUMERATE),
-                                            JS_PSGS("xsize", GetSizeX, SetSizeX, JSPROP_ENUMERATE),
-                                            JS_PSGS("ysize", GetSizeY, SetSizeY, JSPROP_ENUMERATE),
-                                            JS_PSGS("visible", GetVisible, SetVisible, JSPROP_ENUMERATE),
-                                            JS_PSGS("align", GetAlign, SetAlign, JSPROP_ENUMERATE),
-                                            JS_PSGS("zorder", GetZOrder, SetZOrder, JSPROP_ENUMERATE),
-                                            JS_PSGS("click", GetClick, SetClick, JSPROP_ENUMERATE),
-                                            JS_PSGS("hover", GetHover, SetHover, JSPROP_ENUMERATE),
-                                            JS_PS_END};
+  static inline JSPropertySpec m_props[] = {
+      JS_PSGS("x", trampoline<GetX>, trampoline<SetX>, JSPROP_ENUMERATE),
+      JS_PSGS("y", trampoline<GetY>, trampoline<SetY>, JSPROP_ENUMERATE),
+      JS_PSGS("xsize", trampoline<GetSizeX>, trampoline<SetSizeX>, JSPROP_ENUMERATE),
+      JS_PSGS("ysize", trampoline<GetSizeY>, trampoline<SetSizeY>, JSPROP_ENUMERATE),
+      JS_PSGS("visible", trampoline<GetVisible>, trampoline<SetVisible>, JSPROP_ENUMERATE),
+      JS_PSGS("align", trampoline<GetAlign>, trampoline<SetAlign>, JSPROP_ENUMERATE),
+      JS_PSGS("zorder", trampoline<GetZOrder>, trampoline<SetZOrder>, JSPROP_ENUMERATE),
+      JS_PSGS("click", trampoline<GetClick>, trampoline<SetClick>, JSPROP_ENUMERATE),
+      JS_PSGS("hover", trampoline<GetHover>, trampoline<SetHover>, JSPROP_ENUMERATE),
+      JS_PS_END,
+  };
   static inline JSFunctionSpec m_methods[] = {
-      JS_FN("remove", Remove, 0, JSPROP_ENUMERATE),
+      JS_FN("remove", trampoline<Remove>, 0, JSPROP_ENUMERATE),
       JS_FS_END,
   };
 
@@ -101,35 +103,35 @@ class BoxWrap : public BaseObject {
   static void finalize(JSFreeOp* fop, JSObject* obj);
 
   // constructor
-  static bool New(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool New(JSContext* ctx, JS::CallArgs& args);
 
   // properties
-  static bool GetX(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetX(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetY(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetY(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetSizeX(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetSizeX(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetSizeY(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetSizeY(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetVisible(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetVisible(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetAlign(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetAlign(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetClick(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetClick(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetHover(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetHover(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetX(JSContext* ctx, JS::CallArgs& args);
+  static bool SetX(JSContext* ctx, JS::CallArgs& args);
+  static bool GetY(JSContext* ctx, JS::CallArgs& args);
+  static bool SetY(JSContext* ctx, JS::CallArgs& args);
+  static bool GetSizeX(JSContext* ctx, JS::CallArgs& args);
+  static bool SetSizeX(JSContext* ctx, JS::CallArgs& args);
+  static bool GetSizeY(JSContext* ctx, JS::CallArgs& args);
+  static bool SetSizeY(JSContext* ctx, JS::CallArgs& args);
+  static bool GetVisible(JSContext* ctx, JS::CallArgs& args);
+  static bool SetVisible(JSContext* ctx, JS::CallArgs& args);
+  static bool GetAlign(JSContext* ctx, JS::CallArgs& args);
+  static bool SetAlign(JSContext* ctx, JS::CallArgs& args);
+  static bool GetZOrder(JSContext* ctx, JS::CallArgs& args);
+  static bool SetZOrder(JSContext* ctx, JS::CallArgs& args);
+  static bool GetClick(JSContext* ctx, JS::CallArgs& args);
+  static bool SetClick(JSContext* ctx, JS::CallArgs& args);
+  static bool GetHover(JSContext* ctx, JS::CallArgs& args);
+  static bool SetHover(JSContext* ctx, JS::CallArgs& args);
 
-  static bool GetColor(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetColor(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetOpacity(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetOpacity(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetColor(JSContext* ctx, JS::CallArgs& args);
+  static bool SetColor(JSContext* ctx, JS::CallArgs& args);
+  static bool GetOpacity(JSContext* ctx, JS::CallArgs& args);
+  static bool SetOpacity(JSContext* ctx, JS::CallArgs& args);
 
   // functions
-  static bool Remove(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool Remove(JSContext* ctx, JS::CallArgs& args);
 
   static inline JSClassOps m_ops = {
       .addProperty = nullptr,
@@ -150,22 +152,22 @@ class BoxWrap : public BaseObject {
       &m_ops,
   };
   static inline JSPropertySpec m_props[] = {
-      JS_PSGS("x", GetX, SetX, JSPROP_ENUMERATE),
-      JS_PSGS("y", GetY, SetY, JSPROP_ENUMERATE),
-      JS_PSGS("xsize", GetSizeX, SetSizeX, JSPROP_ENUMERATE),
-      JS_PSGS("ysize", GetSizeY, SetSizeY, JSPROP_ENUMERATE),
-      JS_PSGS("visible", GetVisible, SetVisible, JSPROP_ENUMERATE),
-      JS_PSGS("align", GetAlign, SetAlign, JSPROP_ENUMERATE),
-      JS_PSGS("zorder", GetZOrder, SetZOrder, JSPROP_ENUMERATE),
-      JS_PSGS("click", GetClick, SetClick, JSPROP_ENUMERATE),
-      JS_PSGS("hover", GetHover, SetHover, JSPROP_ENUMERATE),
+      JS_PSGS("x", trampoline<GetX>, trampoline<SetX>, JSPROP_ENUMERATE),
+      JS_PSGS("y", trampoline<GetY>, trampoline<SetY>, JSPROP_ENUMERATE),
+      JS_PSGS("xsize", trampoline<GetSizeX>, trampoline<SetSizeX>, JSPROP_ENUMERATE),
+      JS_PSGS("ysize", trampoline<GetSizeY>, trampoline<SetSizeY>, JSPROP_ENUMERATE),
+      JS_PSGS("visible", trampoline<GetVisible>, trampoline<SetVisible>, JSPROP_ENUMERATE),
+      JS_PSGS("align", trampoline<GetAlign>, trampoline<SetAlign>, JSPROP_ENUMERATE),
+      JS_PSGS("zorder", trampoline<GetZOrder>, trampoline<SetZOrder>, JSPROP_ENUMERATE),
+      JS_PSGS("click", trampoline<GetClick>, trampoline<SetClick>, JSPROP_ENUMERATE),
+      JS_PSGS("hover", trampoline<GetHover>, trampoline<SetHover>, JSPROP_ENUMERATE),
 
-      JS_PSGS("color", GetColor, SetColor, JSPROP_ENUMERATE),
-      JS_PSGS("opacity", GetOpacity, SetOpacity, JSPROP_ENUMERATE),
+      JS_PSGS("color", trampoline<GetColor>, trampoline<SetColor>, JSPROP_ENUMERATE),
+      JS_PSGS("opacity", trampoline<GetOpacity>, trampoline<SetOpacity>, JSPROP_ENUMERATE),
       JS_PS_END,
   };
   static inline JSFunctionSpec m_methods[] = {
-      JS_FN("remove", Remove, 0, JSPROP_ENUMERATE),
+      JS_FN("remove", trampoline<Remove>, 0, JSPROP_ENUMERATE),
       JS_FS_END,
   };
 
@@ -188,30 +190,30 @@ class LineWrap : public BaseObject {
   static void finalize(JSFreeOp* fop, JSObject* obj);
 
   // constructor
-  static bool New(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool New(JSContext* ctx, JS::CallArgs& args);
 
   // properties
-  static bool GetX(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetX(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetY(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetY(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetX2(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetX2(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetY2(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetY2(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetVisible(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetVisible(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetColor(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetColor(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetClick(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetClick(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetHover(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetHover(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetX(JSContext* ctx, JS::CallArgs& args);
+  static bool SetX(JSContext* ctx, JS::CallArgs& args);
+  static bool GetY(JSContext* ctx, JS::CallArgs& args);
+  static bool SetY(JSContext* ctx, JS::CallArgs& args);
+  static bool GetX2(JSContext* ctx, JS::CallArgs& args);
+  static bool SetX2(JSContext* ctx, JS::CallArgs& args);
+  static bool GetY2(JSContext* ctx, JS::CallArgs& args);
+  static bool SetY2(JSContext* ctx, JS::CallArgs& args);
+  static bool GetVisible(JSContext* ctx, JS::CallArgs& args);
+  static bool SetVisible(JSContext* ctx, JS::CallArgs& args);
+  static bool GetColor(JSContext* ctx, JS::CallArgs& args);
+  static bool SetColor(JSContext* ctx, JS::CallArgs& args);
+  static bool GetZOrder(JSContext* ctx, JS::CallArgs& args);
+  static bool SetZOrder(JSContext* ctx, JS::CallArgs& args);
+  static bool GetClick(JSContext* ctx, JS::CallArgs& args);
+  static bool SetClick(JSContext* ctx, JS::CallArgs& args);
+  static bool GetHover(JSContext* ctx, JS::CallArgs& args);
+  static bool SetHover(JSContext* ctx, JS::CallArgs& args);
 
   // functions
-  static bool Remove(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool Remove(JSContext* ctx, JS::CallArgs& args);
 
   static inline JSClassOps m_ops = {
       .addProperty = nullptr,
@@ -232,19 +234,19 @@ class LineWrap : public BaseObject {
       &m_ops,
   };
   static inline JSPropertySpec m_props[] = {
-      JS_PSGS("x", GetX, SetX, JSPROP_ENUMERATE),
-      JS_PSGS("y", GetY, SetY, JSPROP_ENUMERATE),
-      JS_PSGS("x2", GetX2, SetY2, JSPROP_ENUMERATE),
-      JS_PSGS("y2", GetY2, SetY2, JSPROP_ENUMERATE),
-      JS_PSGS("visible", GetVisible, SetVisible, JSPROP_ENUMERATE),
-      JS_PSGS("color", GetColor, SetColor, JSPROP_ENUMERATE),
-      JS_PSGS("zorder", GetZOrder, SetZOrder, JSPROP_ENUMERATE),
-      JS_PSGS("click", GetClick, SetClick, JSPROP_ENUMERATE),
-      JS_PSGS("hover", GetHover, SetHover, JSPROP_ENUMERATE),
+      JS_PSGS("x", trampoline<GetX>, trampoline<SetX>, JSPROP_ENUMERATE),
+      JS_PSGS("y", trampoline<GetY>, trampoline<SetY>, JSPROP_ENUMERATE),
+      JS_PSGS("x2", trampoline<GetX2>, trampoline<SetY2>, JSPROP_ENUMERATE),
+      JS_PSGS("y2", trampoline<GetY2>, trampoline<SetY2>, JSPROP_ENUMERATE),
+      JS_PSGS("visible", trampoline<GetVisible>, trampoline<SetVisible>, JSPROP_ENUMERATE),
+      JS_PSGS("color", trampoline<GetColor>, trampoline<SetColor>, JSPROP_ENUMERATE),
+      JS_PSGS("zorder", trampoline<GetZOrder>, trampoline<SetZOrder>, JSPROP_ENUMERATE),
+      JS_PSGS("click", trampoline<GetClick>, trampoline<SetClick>, JSPROP_ENUMERATE),
+      JS_PSGS("hover", trampoline<GetHover>, trampoline<SetHover>, JSPROP_ENUMERATE),
       JS_PS_END,
   };
   static inline JSFunctionSpec m_methods[] = {
-      JS_FN("remove", Remove, 0, JSPROP_ENUMERATE),
+      JS_FN("remove", trampoline<Remove>, 0, JSPROP_ENUMERATE),
       JS_FS_END,
   };
 
@@ -267,33 +269,33 @@ class TextWrap : public BaseObject {
   static void finalize(JSFreeOp* fop, JSObject* obj);
 
   // constructor
-  static bool New(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool New(JSContext* ctx, JS::CallArgs& args);
 
   // properties
-  static bool GetX(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetX(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetY(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetY(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetColor(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetColor(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetVisible(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetVisible(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetAlign(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetAlign(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetClick(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetClick(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetHover(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetHover(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetX(JSContext* ctx, JS::CallArgs& args);
+  static bool SetX(JSContext* ctx, JS::CallArgs& args);
+  static bool GetY(JSContext* ctx, JS::CallArgs& args);
+  static bool SetY(JSContext* ctx, JS::CallArgs& args);
+  static bool GetColor(JSContext* ctx, JS::CallArgs& args);
+  static bool SetColor(JSContext* ctx, JS::CallArgs& args);
+  static bool GetVisible(JSContext* ctx, JS::CallArgs& args);
+  static bool SetVisible(JSContext* ctx, JS::CallArgs& args);
+  static bool GetAlign(JSContext* ctx, JS::CallArgs& args);
+  static bool SetAlign(JSContext* ctx, JS::CallArgs& args);
+  static bool GetZOrder(JSContext* ctx, JS::CallArgs& args);
+  static bool SetZOrder(JSContext* ctx, JS::CallArgs& args);
+  static bool GetClick(JSContext* ctx, JS::CallArgs& args);
+  static bool SetClick(JSContext* ctx, JS::CallArgs& args);
+  static bool GetHover(JSContext* ctx, JS::CallArgs& args);
+  static bool SetHover(JSContext* ctx, JS::CallArgs& args);
 
-  static bool GetFont(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetFont(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetText(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetText(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetFont(JSContext* ctx, JS::CallArgs& args);
+  static bool SetFont(JSContext* ctx, JS::CallArgs& args);
+  static bool GetText(JSContext* ctx, JS::CallArgs& args);
+  static bool SetText(JSContext* ctx, JS::CallArgs& args);
 
   // functions
-  static bool Remove(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool Remove(JSContext* ctx, JS::CallArgs& args);
 
   static inline JSClassOps m_ops = {
       .addProperty = nullptr,
@@ -314,21 +316,21 @@ class TextWrap : public BaseObject {
       &m_ops,
   };
   static inline JSPropertySpec m_props[] = {
-      JS_PSGS("x", GetX, SetX, JSPROP_ENUMERATE),
-      JS_PSGS("y", GetY, SetY, JSPROP_ENUMERATE),
-      JS_PSGS("color", GetColor, SetColor, JSPROP_ENUMERATE),
-      JS_PSGS("visible", GetVisible, SetVisible, JSPROP_ENUMERATE),
-      JS_PSGS("align", GetAlign, SetAlign, JSPROP_ENUMERATE),
-      JS_PSGS("zorder", GetZOrder, SetZOrder, JSPROP_ENUMERATE),
-      JS_PSGS("click", GetClick, SetClick, JSPROP_ENUMERATE),
-      JS_PSGS("hover", GetHover, SetHover, JSPROP_ENUMERATE),
+      JS_PSGS("x", trampoline<GetX>, trampoline<SetX>, JSPROP_ENUMERATE),
+      JS_PSGS("y", trampoline<GetY>, trampoline<SetY>, JSPROP_ENUMERATE),
+      JS_PSGS("color", trampoline<GetColor>, trampoline<SetColor>, JSPROP_ENUMERATE),
+      JS_PSGS("visible", trampoline<GetVisible>, trampoline<SetVisible>, JSPROP_ENUMERATE),
+      JS_PSGS("align", trampoline<GetAlign>, trampoline<SetAlign>, JSPROP_ENUMERATE),
+      JS_PSGS("zorder", trampoline<GetZOrder>, trampoline<SetZOrder>, JSPROP_ENUMERATE),
+      JS_PSGS("click", trampoline<GetClick>, trampoline<SetClick>, JSPROP_ENUMERATE),
+      JS_PSGS("hover", trampoline<GetHover>, trampoline<SetHover>, JSPROP_ENUMERATE),
 
-      JS_PSGS("font", GetFont, SetFont, JSPROP_ENUMERATE),
-      JS_PSGS("text", GetText, SetText, JSPROP_ENUMERATE),
+      JS_PSGS("font", trampoline<GetFont>, trampoline<SetFont>, JSPROP_ENUMERATE),
+      JS_PSGS("text", trampoline<GetText>, trampoline<SetText>, JSPROP_ENUMERATE),
       JS_PS_END,
   };
   static inline JSFunctionSpec m_methods[] = {
-      JS_FN("remove", Remove, 0, JSPROP_ENUMERATE),
+      JS_FN("remove", trampoline<Remove>, 0, JSPROP_ENUMERATE),
       JS_FS_END,
   };
 
@@ -351,28 +353,28 @@ class ImageWrap : public BaseObject {
   static void finalize(JSFreeOp* fop, JSObject* obj);
 
   // constructor
-  static bool New(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool New(JSContext* ctx, JS::CallArgs& args);
 
   // properties
-  static bool GetX(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetX(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetY(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetY(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetVisible(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetVisible(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetLocation(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetLocation(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetAlign(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetAlign(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetZOrder(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetClick(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetClick(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetHover(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool SetHover(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetX(JSContext* ctx, JS::CallArgs& args);
+  static bool SetX(JSContext* ctx, JS::CallArgs& args);
+  static bool GetY(JSContext* ctx, JS::CallArgs& args);
+  static bool SetY(JSContext* ctx, JS::CallArgs& args);
+  static bool GetVisible(JSContext* ctx, JS::CallArgs& args);
+  static bool SetVisible(JSContext* ctx, JS::CallArgs& args);
+  static bool GetLocation(JSContext* ctx, JS::CallArgs& args);
+  static bool SetLocation(JSContext* ctx, JS::CallArgs& args);
+  static bool GetAlign(JSContext* ctx, JS::CallArgs& args);
+  static bool SetAlign(JSContext* ctx, JS::CallArgs& args);
+  static bool GetZOrder(JSContext* ctx, JS::CallArgs& args);
+  static bool SetZOrder(JSContext* ctx, JS::CallArgs& args);
+  static bool GetClick(JSContext* ctx, JS::CallArgs& args);
+  static bool SetClick(JSContext* ctx, JS::CallArgs& args);
+  static bool GetHover(JSContext* ctx, JS::CallArgs& args);
+  static bool SetHover(JSContext* ctx, JS::CallArgs& args);
 
   // functions
-  static bool Remove(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool Remove(JSContext* ctx, JS::CallArgs& args);
 
   static inline JSClassOps m_ops = {
       .addProperty = nullptr,
@@ -393,18 +395,18 @@ class ImageWrap : public BaseObject {
       &m_ops,
   };
   static inline JSPropertySpec m_props[] = {
-      JS_PSGS("x", GetX, SetX, JSPROP_ENUMERATE),
-      JS_PSGS("y", GetY, SetY, JSPROP_ENUMERATE),
-      JS_PSGS("visible", GetVisible, SetVisible, JSPROP_ENUMERATE),
-      JS_PSGS("location", GetLocation, SetLocation, JSPROP_ENUMERATE),
-      JS_PSGS("align", GetAlign, SetAlign, JSPROP_ENUMERATE),
-      JS_PSGS("zorder", GetZOrder, SetZOrder, JSPROP_ENUMERATE),
-      JS_PSGS("click", GetClick, SetClick, JSPROP_ENUMERATE),
-      JS_PSGS("hover", GetHover, SetHover, JSPROP_ENUMERATE),
+      JS_PSGS("x", trampoline<GetX>, trampoline<SetX>, JSPROP_ENUMERATE),
+      JS_PSGS("y", trampoline<GetY>, trampoline<SetY>, JSPROP_ENUMERATE),
+      JS_PSGS("visible", trampoline<GetVisible>, trampoline<SetVisible>, JSPROP_ENUMERATE),
+      JS_PSGS("location", trampoline<GetLocation>, trampoline<SetLocation>, JSPROP_ENUMERATE),
+      JS_PSGS("align", trampoline<GetAlign>, trampoline<SetAlign>, JSPROP_ENUMERATE),
+      JS_PSGS("zorder", trampoline<GetZOrder>, trampoline<SetZOrder>, JSPROP_ENUMERATE),
+      JS_PSGS("click", trampoline<GetClick>, trampoline<SetClick>, JSPROP_ENUMERATE),
+      JS_PSGS("hover", trampoline<GetHover>, trampoline<SetHover>, JSPROP_ENUMERATE),
       JS_PS_END,
   };
   static inline JSFunctionSpec m_methods[] = {
-      JS_FN("remove", Remove, 0, JSPROP_ENUMERATE),
+      JS_FN("remove", trampoline<Remove>, 0, JSPROP_ENUMERATE),
       JS_FS_END,
   };
 

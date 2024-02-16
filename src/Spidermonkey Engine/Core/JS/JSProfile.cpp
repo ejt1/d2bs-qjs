@@ -30,22 +30,22 @@ JSObject* ProfileWrap::Instantiate(JSContext* ctx, Profile* prof) {
 
 void ProfileWrap::Initialize(JSContext* ctx, JS::HandleObject target) {
   static JSPropertySpec props[] = {
-      JS_PSG("type", GetType, JSPROP_ENUMERATE),                                      //
-      JS_PSG("ip", GetIP, JSPROP_ENUMERATE),                                          //
-      JS_PSG("username", GetUsername, JSPROP_ENUMERATE),                              //
-      JS_PSG("gateway", GetGateway, JSPROP_ENUMERATE),                                //
-      JS_PSG("character", GetCharacter, JSPROP_ENUMERATE),                            //
-      JS_PSG("difficulty", GetDifficulty, JSPROP_ENUMERATE),                          //
-      JS_PSG("maxLoginTime", GetMaxLoginTime, JSPROP_ENUMERATE),                      //
-      JS_PSG("maxCharacterSelectTime", GetMaxCharacterSelectTime, JSPROP_ENUMERATE),  //
+      JS_PSG("type", trampoline<GetType>, JSPROP_ENUMERATE),                                      //
+      JS_PSG("ip", trampoline<GetIP>, JSPROP_ENUMERATE),                                          //
+      JS_PSG("username", trampoline<GetUsername>, JSPROP_ENUMERATE),                              //
+      JS_PSG("gateway", trampoline<GetGateway>, JSPROP_ENUMERATE),                                //
+      JS_PSG("character", trampoline<GetCharacter>, JSPROP_ENUMERATE),                            //
+      JS_PSG("difficulty", trampoline<GetDifficulty>, JSPROP_ENUMERATE),                          //
+      JS_PSG("maxLoginTime", trampoline<GetMaxLoginTime>, JSPROP_ENUMERATE),                      //
+      JS_PSG("maxCharacterSelectTime", trampoline<GetMaxCharacterSelectTime>, JSPROP_ENUMERATE),  //
       JS_PS_END,
   };
   static JSFunctionSpec methods[] = {
-      JS_FN("login", Login, 0, JSPROP_ENUMERATE),
+      JS_FN("login", trampoline<Login>, 0, JSPROP_ENUMERATE),
       JS_FS_END,
   };
 
-  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, New, 0, props, methods, nullptr, nullptr));
+  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, trampoline<New>, 0, props, methods, nullptr, nullptr));
   if (!proto) {
     return;
   }
@@ -58,15 +58,14 @@ ProfileWrap::~ProfileWrap() {
   delete profile;
 }
 
-void ProfileWrap::finalize(JSFreeOp* fop, JSObject* obj) {
+void ProfileWrap::finalize(JSFreeOp* /*fop*/, JSObject* obj) {
   BaseObject* wrap = BaseObject::FromJSObject(obj);
   if (wrap) {
     delete wrap;
   }
 }
 
-bool ProfileWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ProfileWrap::New(JSContext* ctx, JS::CallArgs& args) {
   Profile* prof;
   ProfileType pt;
   // unsigned int i;
@@ -75,29 +74,29 @@ bool ProfileWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
 
   try {
     // Profile()
-    if (argc == 0) {
+    if (args.length() == 0) {
       if (Vars.szProfile != NULL)
         prof = new Profile();
       else
         THROW_ERROR(ctx, "No active profile!");
     }
     // Profile(name) - get the named profile
-    else if (argc == 1 && args[0].isString()) {
+    else if (args.length() == 1 && args[0].isString()) {
       char* str1 = JS_EncodeString(ctx, args[0].toString());
       prof = new Profile(str1);
       JS_free(ctx, str1);
-    } else if (argc > 1 && args[0].isInt32()) {
+    } else if (args.length() > 1 && args[0].isInt32()) {
       int32_t type = args[0].toInt32();
 
       // Profile(ProfileType.singlePlayer, charname, diff)
-      if (argc == 3 && type == PROFILETYPE_SINGLEPLAYER) {
+      if (args.length() == 3 && type == PROFILETYPE_SINGLEPLAYER) {
         char* str1 = JS_EncodeString(ctx, args[1].toString());
         int32_t diff = args[2].toInt32();
         prof = new Profile(PROFILETYPE_SINGLEPLAYER, str1, static_cast<char>(diff));
         JS_free(ctx, str1);
       }
       // Profile(ProfileType.battleNet, account, pass, charname, gateway)
-      else if (argc == 5 && type == PROFILETYPE_BATTLENET) {
+      else if (args.length() == 5 && type == PROFILETYPE_BATTLENET) {
         char* str1 = JS_EncodeString(ctx, args[1].toString());
         char* str2 = JS_EncodeString(ctx, args[2].toString());
         char* str3 = JS_EncodeString(ctx, args[3].toString());
@@ -109,7 +108,7 @@ bool ProfileWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
         JS_free(ctx, str4);
       }
       // Profile(ProfileType.openBattleNet, account, pass, charname, gateway)
-      else if (argc == 5 && type == PROFILETYPE_OPEN_BATTLENET) {
+      else if (args.length() == 5 && type == PROFILETYPE_OPEN_BATTLENET) {
         char* str1 = JS_EncodeString(ctx, args[1].toString());
         char* str2 = JS_EncodeString(ctx, args[2].toString());
         char* str3 = JS_EncodeString(ctx, args[3].toString());
@@ -121,14 +120,14 @@ bool ProfileWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
         JS_free(ctx, str4);
       }
       // Profile(ProfileType.tcpIpHost, charname, diff)
-      else if (argc == 3 && type == PROFILETYPE_TCPIP_HOST) {
+      else if (args.length() == 3 && type == PROFILETYPE_TCPIP_HOST) {
         char* str1 = JS_EncodeString(ctx, args[1].toString());
         int32_t diff = args[2].toInt32();
         prof = new Profile(PROFILETYPE_TCPIP_HOST, str1, static_cast<char>(diff));
         JS_free(ctx, str1);
       }
       // Profile(ProfileType.tcpIpJoin, charname, ip)
-      else if (argc == 3 && type == PROFILETYPE_TCPIP_JOIN) {
+      else if (args.length() == 3 && type == PROFILETYPE_TCPIP_JOIN) {
         char* str1 = JS_EncodeString(ctx, args[1].toString());
         char* str2 = JS_EncodeString(ctx, args[2].toString());
         prof = new Profile(PROFILETYPE_TCPIP_JOIN, str1, str2);
@@ -158,8 +157,7 @@ bool ProfileWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
 }
 
 // properties
-bool ProfileWrap::GetType(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ProfileWrap::GetType(JSContext* ctx, JS::CallArgs& args) {
   ProfileWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Profile* profile = wrap->profile;
@@ -167,8 +165,7 @@ bool ProfileWrap::GetType(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ProfileWrap::GetIP(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ProfileWrap::GetIP(JSContext* ctx, JS::CallArgs& args) {
   ProfileWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Profile* profile = wrap->profile;
@@ -176,8 +173,7 @@ bool ProfileWrap::GetIP(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ProfileWrap::GetUsername(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ProfileWrap::GetUsername(JSContext* ctx, JS::CallArgs& args) {
   ProfileWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Profile* profile = wrap->profile;
@@ -185,8 +181,7 @@ bool ProfileWrap::GetUsername(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ProfileWrap::GetGateway(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ProfileWrap::GetGateway(JSContext* ctx, JS::CallArgs& args) {
   ProfileWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Profile* profile = wrap->profile;
@@ -194,8 +189,7 @@ bool ProfileWrap::GetGateway(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ProfileWrap::GetCharacter(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ProfileWrap::GetCharacter(JSContext* ctx, JS::CallArgs& args) {
   ProfileWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Profile* profile = wrap->profile;
@@ -203,8 +197,7 @@ bool ProfileWrap::GetCharacter(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ProfileWrap::GetDifficulty(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ProfileWrap::GetDifficulty(JSContext* ctx, JS::CallArgs& args) {
   ProfileWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Profile* profile = wrap->profile;
@@ -212,8 +205,7 @@ bool ProfileWrap::GetDifficulty(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ProfileWrap::GetMaxLoginTime(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ProfileWrap::GetMaxLoginTime(JSContext* ctx, JS::CallArgs& args) {
   ProfileWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Profile* profile = wrap->profile;
@@ -221,8 +213,7 @@ bool ProfileWrap::GetMaxLoginTime(JSContext* ctx, unsigned argc, JS::Value* vp) 
   return true;
 }
 
-bool ProfileWrap::GetMaxCharacterSelectTime(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ProfileWrap::GetMaxCharacterSelectTime(JSContext* ctx, JS::CallArgs& args) {
   ProfileWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Profile* profile = wrap->profile;
@@ -231,8 +222,7 @@ bool ProfileWrap::GetMaxCharacterSelectTime(JSContext* ctx, unsigned argc, JS::V
 }
 
 // functions
-bool ProfileWrap::Login(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ProfileWrap::Login(JSContext* ctx, JS::CallArgs& args) {
   ProfileWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
 

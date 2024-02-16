@@ -55,7 +55,7 @@ TimerWrap::~TimerWrap() {
   uv_close((uv_handle_t*)(&timer_handle), nullptr);
 }
 
-void TimerWrap::finalize(JSFreeOp* fop, JSObject* obj) {
+void TimerWrap::finalize(JSFreeOp* /*fop*/, JSObject* obj) {
   BaseObject* wrap = BaseObject::FromJSObject(obj);
   if (wrap) {
     delete wrap;
@@ -69,8 +69,7 @@ void TimerWrap::finalize(JSFreeOp* fop, JSObject* obj) {
 //   }
 // }
 
-bool TimerWrap::setImmediate(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool TimerWrap::setImmediate(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "setImmediate", 1)) {
     return false;
   }
@@ -81,12 +80,11 @@ bool TimerWrap::setImmediate(JSContext* ctx, unsigned argc, JS::Value* vp) {
     return false;
   }
 
-  args.rval().setObjectOrNull(Instantiate(ctx, 1, func, argc - 1, &vp[1]));
+  args.rval().setObjectOrNull(Instantiate(ctx, 1, func, args.length() - 1, &args.array()[1]));
   return true;
 }
 
-bool TimerWrap::clearImmediate(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool TimerWrap::clearImmediate(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "clearImmediate", 1)) {
     return false;
   }
@@ -97,8 +95,7 @@ bool TimerWrap::clearImmediate(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool TimerWrap::setTimeout(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool TimerWrap::setTimeout(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "setTimeout", 2)) {
     return false;
   }
@@ -111,12 +108,11 @@ bool TimerWrap::setTimeout(JSContext* ctx, unsigned argc, JS::Value* vp) {
 
   int64_t delay = static_cast<int64_t>(args[1].toNumber());
 
-  args.rval().setObjectOrNull(Instantiate(ctx, delay, func, argc - 2, &vp[2]));
+  args.rval().setObjectOrNull(Instantiate(ctx, delay, func, args.length() - 2, &args.array()[2]));
   return true;
 }
 
-bool TimerWrap::clearTimeout(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool TimerWrap::clearTimeout(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "clearTimeout", 1)) {
     return false;
   }
@@ -128,8 +124,7 @@ bool TimerWrap::clearTimeout(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool TimerWrap::setInterval(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool TimerWrap::setInterval(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "setInterval", 2)) {
     return false;
   }
@@ -142,12 +137,11 @@ bool TimerWrap::setInterval(JSContext* ctx, unsigned argc, JS::Value* vp) {
 
   int64_t delay = static_cast<int64_t>(args[1].toNumber());
 
-  args.rval().setObjectOrNull(Instantiate(ctx, delay, func, argc - 2, &vp[2], true));
+  args.rval().setObjectOrNull(Instantiate(ctx, delay, func, args.length() - 2, &args.array()[2], true));
   return true;
 }
 
-bool TimerWrap::clearInterval(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool TimerWrap::clearInterval(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "clearInterval", 1)) {
     return false;
   }

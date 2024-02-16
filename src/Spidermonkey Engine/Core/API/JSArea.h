@@ -13,19 +13,19 @@ class AreaWrap : public BaseObject {
 
   static void finalize(JSFreeOp* fop, JSObject* obj);
 
-  static bool New(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool New(JSContext* ctx, JS::CallArgs& args);
 
   // properties
-  static bool GetId(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetName(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetExits(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetPosX(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetPosY(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetSizeX(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetSizeY(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetId(JSContext* ctx, JS::CallArgs& args);
+  static bool GetName(JSContext* ctx, JS::CallArgs& args);
+  static bool GetExits(JSContext* ctx, JS::CallArgs& args);
+  static bool GetPosX(JSContext* ctx, JS::CallArgs& args);
+  static bool GetPosY(JSContext* ctx, JS::CallArgs& args);
+  static bool GetSizeX(JSContext* ctx, JS::CallArgs& args);
+  static bool GetSizeY(JSContext* ctx, JS::CallArgs& args);
 
   // globals
-  static bool GetArea(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetArea(JSContext* ctx, JS::CallArgs& args);
 
   static inline JSClassOps m_ops = {
       .addProperty = nullptr,
@@ -46,14 +46,14 @@ class AreaWrap : public BaseObject {
       &m_ops,
   };
   static inline JSPropertySpec m_props[] = {
-      JS_PSG("id", GetId, JSPROP_ENUMERATE | JSPROP_PERMANENT),        //
-      JS_PSG("name", GetName, JSPROP_ENUMERATE | JSPROP_PERMANENT),    //
-      JS_PSG("exits", GetExits, JSPROP_ENUMERATE | JSPROP_PERMANENT),  //
-      JS_PSG("x", GetPosX, JSPROP_ENUMERATE | JSPROP_PERMANENT),       //
-      JS_PSG("y", GetPosY, JSPROP_ENUMERATE | JSPROP_PERMANENT),       //
-      JS_PSG("xsize", GetSizeX, JSPROP_ENUMERATE | JSPROP_PERMANENT),  //
-      JS_PSG("ysize", GetSizeY, JSPROP_ENUMERATE | JSPROP_PERMANENT),  //
-      JS_PS_END,                                                       //
+      JS_PSG("id", trampoline<GetId>, JSPROP_ENUMERATE | JSPROP_PERMANENT),        //
+      JS_PSG("name", trampoline<GetName>, JSPROP_ENUMERATE | JSPROP_PERMANENT),    //
+      JS_PSG("exits", trampoline<GetExits>, JSPROP_ENUMERATE | JSPROP_PERMANENT),  //
+      JS_PSG("x", trampoline<GetPosX>, JSPROP_ENUMERATE | JSPROP_PERMANENT),       //
+      JS_PSG("y", trampoline<GetPosY>, JSPROP_ENUMERATE | JSPROP_PERMANENT),       //
+      JS_PSG("xsize", trampoline<GetSizeX>, JSPROP_ENUMERATE | JSPROP_PERMANENT),  //
+      JS_PSG("ysize", trampoline<GetSizeY>, JSPROP_ENUMERATE | JSPROP_PERMANENT),  //
+      JS_PS_END,                                                                   //
   };
 
   uint32_t dwAreaId;

@@ -12,19 +12,19 @@ class DirectoryWrap : public BaseObject {
 
   static void finalize(JSFreeOp* fop, JSObject* obj);
 
-  static bool New(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool New(JSContext* ctx, JS::CallArgs& args);
 
   // properties
-  static bool GetName(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetName(JSContext* ctx, JS::CallArgs& args);
 
   // functions
-  static bool Create(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool Delete(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetFiles(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetFolders(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool Create(JSContext* ctx, JS::CallArgs& args);
+  static bool Delete(JSContext* ctx, JS::CallArgs& args);
+  static bool GetFiles(JSContext* ctx, JS::CallArgs& args);
+  static bool GetFolders(JSContext* ctx, JS::CallArgs& args);
 
   // globals
-  static bool OpenDirectory(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool OpenDirectory(JSContext* ctx, JS::CallArgs& args);
 
   static inline JSClassOps m_ops = {
       .addProperty = nullptr,

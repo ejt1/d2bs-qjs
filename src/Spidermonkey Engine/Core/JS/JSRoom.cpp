@@ -33,27 +33,26 @@ JSObject* RoomWrap::Instantiate(JSContext* ctx, D2DrlgRoomStrc* room) {
 }
 
 void RoomWrap::Initialize(JSContext* ctx, JS::HandleObject target) {
-  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, New, 0, m_props, m_methods, nullptr, nullptr));
+  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, trampoline<New>, 0, m_props, m_methods, nullptr, nullptr));
   if (!proto) {
     return;
   }
 
   // globals
-  JS_DefineFunction(ctx, target, "getRoom", GetRoom, 0, JSPROP_ENUMERATE);
+  JS_DefineFunction(ctx, target, "getRoom", trampoline<GetRoom>, 0, JSPROP_ENUMERATE);
 }
 
 RoomWrap::RoomWrap(JSContext* ctx, JS::HandleObject obj, D2DrlgRoomStrc* room) : BaseObject(ctx, obj), pRoom(room) {
 }
 
-void RoomWrap::finalize(JSFreeOp* fop, JSObject* obj) {
+void RoomWrap::finalize(JSFreeOp* /*fop*/, JSObject* obj) {
   BaseObject* wrap = BaseObject::FromJSObject(obj);
   if (wrap) {
     delete wrap;
   }
 }
 
-bool RoomWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool RoomWrap::New(JSContext* ctx, JS::CallArgs& args) {
   JS::RootedObject newObject(ctx, JS_NewObjectForConstructor(ctx, &m_class, args));
   if (!newObject) {
     THROW_ERROR(ctx, "failed to instantiate room");
@@ -67,8 +66,7 @@ bool RoomWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
 }
 
 // properties
-bool RoomWrap::GetNumber(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool RoomWrap::GetNumber(JSContext* ctx, JS::CallArgs& args) {
   RoomWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* room = wrap->pRoom;
@@ -81,8 +79,7 @@ bool RoomWrap::GetNumber(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool RoomWrap::GetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool RoomWrap::GetX(JSContext* ctx, JS::CallArgs& args) {
   RoomWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* room = wrap->pRoom;
@@ -90,8 +87,7 @@ bool RoomWrap::GetX(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool RoomWrap::GetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool RoomWrap::GetY(JSContext* ctx, JS::CallArgs& args) {
   RoomWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* room = wrap->pRoom;
@@ -99,8 +95,7 @@ bool RoomWrap::GetY(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool RoomWrap::GetSizeX(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool RoomWrap::GetSizeX(JSContext* ctx, JS::CallArgs& args) {
   RoomWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* room = wrap->pRoom;
@@ -108,8 +103,7 @@ bool RoomWrap::GetSizeX(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool RoomWrap::GetSizeY(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool RoomWrap::GetSizeY(JSContext* ctx, JS::CallArgs& args) {
   RoomWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* room = wrap->pRoom;
@@ -117,8 +111,7 @@ bool RoomWrap::GetSizeY(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool RoomWrap::GetArea(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool RoomWrap::GetArea(JSContext* ctx, JS::CallArgs& args) {
   RoomWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* room = wrap->pRoom;
@@ -130,8 +123,7 @@ bool RoomWrap::GetArea(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool RoomWrap::GetLevel(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool RoomWrap::GetLevel(JSContext* ctx, JS::CallArgs& args) {
   RoomWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* room = wrap->pRoom;
@@ -143,8 +135,7 @@ bool RoomWrap::GetLevel(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool RoomWrap::GetCorrectTomb(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool RoomWrap::GetCorrectTomb(JSContext* ctx, JS::CallArgs& args) {
   RoomWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* room = wrap->pRoom;
@@ -157,8 +148,7 @@ bool RoomWrap::GetCorrectTomb(JSContext* ctx, unsigned argc, JS::Value* vp) {
 }
 
 // functions
-bool RoomWrap::GetFirst(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool RoomWrap::GetFirst(JSContext* ctx, JS::CallArgs& args) {
   RoomWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* room = wrap->pRoom;
@@ -175,8 +165,7 @@ bool RoomWrap::GetFirst(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool RoomWrap::GetNext(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool RoomWrap::GetNext(JSContext* ctx, JS::CallArgs& args) {
   RoomWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* room = wrap->pRoom;
@@ -189,13 +178,12 @@ bool RoomWrap::GetNext(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool RoomWrap::Reveal(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool RoomWrap::Reveal(JSContext* ctx, JS::CallArgs& args) {
   RoomWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* room = wrap->pRoom;
   BOOL bDrawPresets = false;
-  if (argc == 1 && args[0].isBoolean())
+  if (args.length() == 1 && args[0].isBoolean())
     bDrawPresets = args[0].toBoolean();
 
   AutoCriticalRoom cRoom;
@@ -207,17 +195,16 @@ bool RoomWrap::Reveal(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool RoomWrap::GetPresetUnits(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool RoomWrap::GetPresetUnits(JSContext* ctx, JS::CallArgs& args) {
   RoomWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* room = wrap->pRoom;
   uint32_t nType = NULL;
   uint32_t nClass = NULL;
 
-  if (argc > 0 && args[0].isNumber())
+  if (args.length() > 0 && args[0].isNumber())
     JS::ToUint32(ctx, args[0], &nType);
-  if (argc > 1 && args[1].isNumber())
+  if (args.length() > 1 && args[1].isNumber())
     JS::ToUint32(ctx, args[1], &nClass);
 
   bool bAdded = FALSE;
@@ -234,7 +221,7 @@ bool RoomWrap::GetPresetUnits(JSContext* ctx, unsigned argc, JS::Value* vp) {
     D2COMMON_AddRoomData(D2CLIENT_GetPlayerUnit()->pAct, room->pLevel->dwLevelNo, room->dwPosX, room->dwPosY, D2CLIENT_GetPlayerUnit()->pPath->pRoom1);
   }
 
-  JS::RootedObject pReturnArray(ctx,  JS_NewArrayObject(ctx, 0));
+  JS::RootedObject pReturnArray(ctx, JS_NewArrayObject(ctx, 0));
   for (D2PresetUnitStrc* pUnit = room->pPreset; pUnit; pUnit = pUnit->pPresetNext) {
     if ((pUnit->dwType == nType || nType == NULL) && (pUnit->dwTxtFileNo == nClass || nClass == NULL)) {
       JS::RootedObject jsUnit(ctx, PresetUnitWrap::Instantiate(ctx, pUnit, room, room->pLevel ? room->pLevel->dwLevelNo : 0));
@@ -255,8 +242,7 @@ bool RoomWrap::GetPresetUnits(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool RoomWrap::GetCollision(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool RoomWrap::GetCollision(JSContext* ctx, JS::CallArgs& args) {
   RoomWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* pRoom2 = wrap->pRoom;
@@ -302,7 +288,7 @@ bool RoomWrap::GetCollision(JSContext* ctx, unsigned argc, JS::Value* vp) {
 
   WORD* p = pCol->pMapStart;
   for (int j = y; j < nLimitY; j++) {
-    JS::RootedObject jsobjx(ctx,  JS_NewArrayObject(ctx, 0));
+    JS::RootedObject jsobjx(ctx, JS_NewArrayObject(ctx, 0));
 
     int nCurrentArrayX = 0;
     for (int i = x; i < nLimitX; i++) {
@@ -322,8 +308,7 @@ bool RoomWrap::GetCollision(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool RoomWrap::GetCollisionA(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool RoomWrap::GetCollisionA(JSContext* ctx, JS::CallArgs& args) {
   RoomWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* pRoom2 = wrap->pRoom;
@@ -385,8 +370,7 @@ bool RoomWrap::GetCollisionA(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool RoomWrap::GetNearby(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool RoomWrap::GetNearby(JSContext* ctx, JS::CallArgs& args) {
   RoomWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* pRoom2 = wrap->pRoom;
@@ -408,13 +392,12 @@ bool RoomWrap::GetNearby(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool RoomWrap::GetStat(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool RoomWrap::GetStat(JSContext* ctx, JS::CallArgs& args) {
   RoomWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* pRoom2 = wrap->pRoom;
   args.rval().setNull();
-  if (argc < 1 || !args[0].isInt32())
+  if (args.length() < 1 || !args[0].isInt32())
     return true;
 
   int32_t nStat = args[0].toInt32();
@@ -475,13 +458,12 @@ bool RoomWrap::GetStat(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool RoomWrap::UnitInRoom(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool RoomWrap::UnitInRoom(JSContext* ctx, JS::CallArgs& args) {
   RoomWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* pRoom2 = wrap->pRoom;
   args.rval().setUndefined();
-  if (!pRoom2 || argc < 1 || !args[0].isObject())
+  if (!pRoom2 || args.length() < 1 || !args[0].isObject())
     return true;
 
   UnitWrap* unit_wrap;
@@ -504,14 +486,13 @@ bool RoomWrap::UnitInRoom(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool RoomWrap::GetRoom(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool RoomWrap::GetRoom(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady())
     THROW_ERROR(ctx, "Get Room Game not ready");
 
   AutoCriticalRoom cRoom;
 
-  if (argc == 1 && args[0].isNumber()) {
+  if (args.length() == 1 && args[0].isNumber()) {
     uint32_t levelId;
     JS::ToUint32(ctx, args[0], &levelId);
     if (levelId != 0)  // 1 Parameter, AreaId
@@ -527,7 +508,7 @@ bool RoomWrap::GetRoom(JSContext* ctx, unsigned argc, JS::Value* vp) {
         args.rval().setUndefined();
         return true;
       }
-      
+
       args.rval().setObject(*jsroom);
       return true;
     } else if (levelId == 0) {
@@ -547,13 +528,13 @@ bool RoomWrap::GetRoom(JSContext* ctx, unsigned argc, JS::Value* vp) {
       args.rval().setObject(*jsroom);
       return true;
     }
-  } else if (argc == 3 || argc == 2)  // area ,x and y
+  } else if (args.length() == 3 || args.length() == 2)  // area ,x and y
   {
     D2DrlgLevelStrc* pLevel = NULL;
 
     uint32_t levelId;
     JS::ToUint32(ctx, args[0], &levelId);
-    if (argc == 3) {
+    if (args.length() == 3) {
       pLevel = D2DrlgLevelStrc::FindLevelFromLevelId(levelId);
     } else if (D2CLIENT_GetPlayerUnit() && D2CLIENT_GetPlayerUnit()->pPath && D2CLIENT_GetPlayerUnit()->pPath->pRoom1 && D2CLIENT_GetPlayerUnit()->pPath->pRoom1->pRoom2)
       pLevel = D2CLIENT_GetPlayerUnit()->pPath->pRoom1->pRoom2->pLevel;
@@ -565,10 +546,10 @@ bool RoomWrap::GetRoom(JSContext* ctx, unsigned argc, JS::Value* vp) {
 
     uint32_t nX = NULL;
     uint32_t nY = NULL;
-    if (argc == 2) {
+    if (args.length() == 2) {
       JS::ToUint32(ctx, args[0], &nX);
       JS::ToUint32(ctx, args[1], &nY);
-    } else if (argc == 3) {
+    } else if (args.length() == 3) {
       JS::ToUint32(ctx, args[1], &nX);
       JS::ToUint32(ctx, args[2], &nY);
     }

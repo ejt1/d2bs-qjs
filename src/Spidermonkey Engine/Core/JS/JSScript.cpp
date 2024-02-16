@@ -59,46 +59,45 @@ JSObject* ScriptWrap::Instantiate(JSContext* ctx, Script* script) {
 
 void ScriptWrap::Initialize(JSContext* ctx, JS::HandleObject target) {
   static JSPropertySpec props[] = {
-      JS_PSG("name", GetName, JSPROP_ENUMERATE),          //
-      JS_PSG("type", GetType, JSPROP_ENUMERATE),          //
-      JS_PSG("running", GetRunning, JSPROP_ENUMERATE),    //
-      JS_PSG("threadid", GetThreadId, JSPROP_ENUMERATE),  //
-      JS_PSG("memory", GetMemory, JSPROP_ENUMERATE),      //
+      JS_PSG("name", trampoline<GetName>, JSPROP_ENUMERATE),          //
+      JS_PSG("type", trampoline<GetType>, JSPROP_ENUMERATE),          //
+      JS_PSG("running", trampoline<GetRunning>, JSPROP_ENUMERATE),    //
+      JS_PSG("threadid", trampoline<GetThreadId>, JSPROP_ENUMERATE),  //
+      JS_PSG("memory", trampoline<GetMemory>, JSPROP_ENUMERATE),      //
       JS_PS_END,
   };
   static JSFunctionSpec methods[] = {
-      JS_FN("getNext", GetNext, 0, JSPROP_ENUMERATE),  //
-      JS_FN("pause", Pause, 0, JSPROP_ENUMERATE),      //
-      JS_FN("resume", Resume, 0, JSPROP_ENUMERATE),    //
-      JS_FN("stop", Stop, 0, JSPROP_ENUMERATE),        //
-      JS_FN("join", Join, 0, JSPROP_ENUMERATE),        //
-      JS_FN("send", Send, 1, JSPROP_ENUMERATE),        //
+      JS_FN("getNext", trampoline<GetNext>, 0, JSPROP_ENUMERATE),  //
+      JS_FN("pause", trampoline<Pause>, 0, JSPROP_ENUMERATE),      //
+      JS_FN("resume", trampoline<Resume>, 0, JSPROP_ENUMERATE),    //
+      JS_FN("stop", trampoline<Stop>, 0, JSPROP_ENUMERATE),        //
+      JS_FN("join", trampoline<Join>, 0, JSPROP_ENUMERATE),        //
+      JS_FN("send", trampoline<Send>, 1, JSPROP_ENUMERATE),        //
       JS_FS_END,
   };
 
-  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, New, 0, props, methods, nullptr, nullptr));
+  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, trampoline<New>, 0, props, methods, nullptr, nullptr));
   if (!proto) {
     Log("failed to initialize class Script");
     return;
   }
 
   // globals
-  JS_DefineFunction(ctx, target, "getScript", GetScript, 0, JSPROP_ENUMERATE);
-  JS_DefineFunction(ctx, target, "getScripts", GetScripts, 0, JSPROP_ENUMERATE);
+  JS_DefineFunction(ctx, target, "getScript", trampoline<GetScript>, 0, JSPROP_ENUMERATE);
+  JS_DefineFunction(ctx, target, "getScripts", trampoline<GetScripts>, 0, JSPROP_ENUMERATE);
 }
 
-ScriptWrap::ScriptWrap(JSContext* ctx, JS::HandleObject obj, Script* script) : BaseObject(ctx, obj),m_script(script) {
+ScriptWrap::ScriptWrap(JSContext* ctx, JS::HandleObject obj, Script* script) : BaseObject(ctx, obj), m_script(script) {
 }
 
-void ScriptWrap::finalize(JSFreeOp* fop, JSObject* obj) {
+void ScriptWrap::finalize(JSFreeOp* /*fop*/, JSObject* obj) {
   BaseObject* wrap = BaseObject::FromJSObject(obj);
   if (wrap) {
     delete wrap;
   }
 }
 
-bool ScriptWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ScriptWrap::New(JSContext* ctx, JS::CallArgs& args) {
   JS::RootedObject newObject(ctx, JS_NewObjectForConstructor(ctx, &m_class, args));
   if (!newObject) {
     THROW_ERROR(ctx, "failed to instantiate script");
@@ -108,8 +107,7 @@ bool ScriptWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
 }
 
 // properties
-bool ScriptWrap::GetName(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ScriptWrap::GetName(JSContext* ctx, JS::CallArgs& args) {
   ScriptWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Script* script = wrap->m_script;
@@ -118,8 +116,7 @@ bool ScriptWrap::GetName(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ScriptWrap::GetType(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ScriptWrap::GetType(JSContext* ctx, JS::CallArgs& args) {
   ScriptWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Script* script = wrap->m_script;
@@ -128,8 +125,7 @@ bool ScriptWrap::GetType(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ScriptWrap::GetRunning(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ScriptWrap::GetRunning(JSContext* ctx, JS::CallArgs& args) {
   ScriptWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Script* script = wrap->m_script;
@@ -137,8 +133,7 @@ bool ScriptWrap::GetRunning(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ScriptWrap::GetThreadId(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ScriptWrap::GetThreadId(JSContext* ctx, JS::CallArgs& args) {
   ScriptWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Script* script = wrap->m_script;
@@ -146,15 +141,13 @@ bool ScriptWrap::GetThreadId(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ScriptWrap::GetMemory(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ScriptWrap::GetMemory(JSContext* ctx, JS::CallArgs& args) {
   args.rval().setInt32(JS_GetGCParameter(ctx, JSGCParamKey::JSGC_BYTES));
   return true;
 }
 
 // functions
-bool ScriptWrap::GetNext(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ScriptWrap::GetNext(JSContext* ctx, JS::CallArgs& args) {
   ScriptWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Script* script = wrap->m_script;
@@ -178,8 +171,7 @@ bool ScriptWrap::GetNext(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ScriptWrap::Pause(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ScriptWrap::Pause(JSContext* ctx, JS::CallArgs& args) {
   ScriptWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Script* script = wrap->m_script;
@@ -190,8 +182,7 @@ bool ScriptWrap::Pause(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ScriptWrap::Resume(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ScriptWrap::Resume(JSContext* ctx, JS::CallArgs& args) {
   ScriptWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Script* script = wrap->m_script;
@@ -201,8 +192,7 @@ bool ScriptWrap::Resume(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ScriptWrap::Stop(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ScriptWrap::Stop(JSContext* ctx, JS::CallArgs& args) {
   ScriptWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Script* script = wrap->m_script;
@@ -213,8 +203,7 @@ bool ScriptWrap::Stop(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ScriptWrap::Join(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ScriptWrap::Join(JSContext* ctx, JS::CallArgs& args) {
   ScriptWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Script* script = wrap->m_script;
@@ -224,8 +213,7 @@ bool ScriptWrap::Join(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ScriptWrap::Send(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ScriptWrap::Send(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "send", 1)) {
     return false;
   }
@@ -240,7 +228,7 @@ bool ScriptWrap::Send(JSContext* ctx, unsigned argc, JS::Value* vp) {
   }
 
   // documentation says to not use args.array but we do anyway because we dont give a fuck
-  if (!ScriptMessageEvent(ctx, script, argc, args.array())) {
+  if (!ScriptMessageEvent(ctx, script, args.length(), args.array())) {
     THROW_ERROR(ctx, "failed to send message");
   }
 
@@ -248,12 +236,11 @@ bool ScriptWrap::Send(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ScriptWrap::GetScript(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ScriptWrap::GetScript(JSContext* ctx, JS::CallArgs& args) {
   Script* iterp = NULL;
-  if (argc == 1 && args[0].isBoolean() && args[0].toBoolean() == TRUE)
+  if (args.length() == 1 && args[0].isBoolean() && args[0].toBoolean() == TRUE)
     iterp = ((ThreadState*)JS_GetContextPrivate(ctx))->script;
-  else if (argc == 1 && args[0].isNumber()) {
+  else if (args.length() == 1 && args[0].isNumber()) {
     // loop over the Scripts in ScriptEngine and find the one with the right threadid
     uint32_t tid;
     if (!JS::ToUint32(ctx, args[0], &tid)) {
@@ -267,7 +254,7 @@ bool ScriptWrap::GetScript(JSContext* ctx, unsigned argc, JS::Value* vp) {
       args.rval().setNull();
       return true;
     }
-  } else if (argc == 1 && args[0].isString()) {
+  } else if (args.length() == 1 && args[0].isString()) {
     char* name = JS_EncodeString(ctx, args[0].toString());
     if (!name) {
       THROW_ERROR(ctx, "failed to encode string");
@@ -307,8 +294,7 @@ bool ScriptWrap::GetScript(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool ScriptWrap::GetScripts(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool ScriptWrap::GetScripts(JSContext* ctx, JS::CallArgs& args) {
   DWORD dwArrayCount = NULL;
 
   JS::RootedObject pReturnArray(ctx, JS_NewArrayObject(ctx, 0));

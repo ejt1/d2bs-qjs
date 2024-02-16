@@ -17,25 +17,25 @@ class PartyWrap : public BaseObject {
   static void finalize(JSFreeOp* fop, JSObject* obj);
 
   // constructor
-  static bool New(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool New(JSContext* ctx, JS::CallArgs& args);
 
   // properties
-  static bool GetX(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetY(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetArea(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetGid(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetLife(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetPartyFlag(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetPartyId(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetName(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetClassId(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetLevel(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetX(JSContext* ctx, JS::CallArgs& args);
+  static bool GetY(JSContext* ctx, JS::CallArgs& args);
+  static bool GetArea(JSContext* ctx, JS::CallArgs& args);
+  static bool GetGid(JSContext* ctx, JS::CallArgs& args);
+  static bool GetLife(JSContext* ctx, JS::CallArgs& args);
+  static bool GetPartyFlag(JSContext* ctx, JS::CallArgs& args);
+  static bool GetPartyId(JSContext* ctx, JS::CallArgs& args);
+  static bool GetName(JSContext* ctx, JS::CallArgs& args);
+  static bool GetClassId(JSContext* ctx, JS::CallArgs& args);
+  static bool GetLevel(JSContext* ctx, JS::CallArgs& args);
 
   // functions
-  static bool GetNext(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetNext(JSContext* ctx, JS::CallArgs& args);
 
   // globals
-  static bool GetParty(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetParty(JSContext* ctx, JS::CallArgs& args);
 
   static inline JSClassOps m_ops = {
       .addProperty = nullptr,

@@ -31,27 +31,26 @@ JSObject* AreaWrap::Instantiate(JSContext* ctx, uint32_t dwAreaId) {
 }
 
 void AreaWrap::Initialize(JSContext* ctx, JS::HandleObject target) {
-  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, New, 0, m_props, nullptr, nullptr, nullptr));
+  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, trampoline<New>, 0, m_props, nullptr, nullptr, nullptr));
   if (!proto) {
     Log("failed to initialize class Area");
     return;
   }
 
-  JS_DefineFunction(ctx, target, "getArea", GetArea, 0, JSPROP_ENUMERATE);
+  JS_DefineFunction(ctx, target, "getArea", trampoline<GetArea>, 0, JSPROP_ENUMERATE);
 }
 
 AreaWrap::AreaWrap(JSContext* ctx, JS::HandleObject obj, uint32_t dwAreaId) : BaseObject(ctx, obj), dwAreaId(dwAreaId), dwExits(0), arrExitArray(ctx) {
 }
 
-void AreaWrap::finalize(JSFreeOp* fop, JSObject* obj) {
+void AreaWrap::finalize(JSFreeOp* /*fop*/, JSObject* obj) {
   BaseObject* wrap = BaseObject::FromJSObject(obj);
   if (wrap) {
     delete wrap;
   }
 }
 
-bool AreaWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool AreaWrap::New(JSContext* ctx, JS::CallArgs& args) {
   JS::RootedObject newObject(ctx, JS_NewObjectForConstructor(ctx, &m_class, args));
   if (!newObject) {
     THROW_ERROR(ctx, "failed to instantiate area");
@@ -63,8 +62,7 @@ bool AreaWrap::New(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool AreaWrap::GetId(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool AreaWrap::GetId(JSContext* ctx, JS::CallArgs& args) {
   AreaWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgLevelStrc* pLevel = D2DrlgLevelStrc::FindLevelFromLevelId(wrap->dwAreaId);
@@ -75,8 +73,7 @@ bool AreaWrap::GetId(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool AreaWrap::GetName(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool AreaWrap::GetName(JSContext* ctx, JS::CallArgs& args) {
   AreaWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2LevelsTxt* pTxt = D2COMMON_GetLevelText(wrap->dwAreaId);
@@ -88,8 +85,7 @@ bool AreaWrap::GetName(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool AreaWrap::GetExits(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool AreaWrap::GetExits(JSContext* ctx, JS::CallArgs& args) {
   AreaWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgLevelStrc* pLevel = D2DrlgLevelStrc::FindLevelFromLevelId(wrap->dwAreaId);
@@ -119,8 +115,7 @@ bool AreaWrap::GetExits(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool AreaWrap::GetPosX(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool AreaWrap::GetPosX(JSContext* ctx, JS::CallArgs& args) {
   AreaWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgLevelStrc* pLevel = D2DrlgLevelStrc::FindLevelFromLevelId(wrap->dwAreaId);
@@ -131,8 +126,7 @@ bool AreaWrap::GetPosX(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool AreaWrap::GetPosY(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool AreaWrap::GetPosY(JSContext* ctx, JS::CallArgs& args) {
   AreaWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgLevelStrc* pLevel = D2DrlgLevelStrc::FindLevelFromLevelId(wrap->dwAreaId);
@@ -143,8 +137,7 @@ bool AreaWrap::GetPosY(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool AreaWrap::GetSizeX(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool AreaWrap::GetSizeX(JSContext* ctx, JS::CallArgs& args) {
   AreaWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgLevelStrc* pLevel = D2DrlgLevelStrc::FindLevelFromLevelId(wrap->dwAreaId);
@@ -155,8 +148,7 @@ bool AreaWrap::GetSizeX(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool AreaWrap::GetSizeY(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool AreaWrap::GetSizeY(JSContext* ctx, JS::CallArgs& args) {
   AreaWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgLevelStrc* pLevel = D2DrlgLevelStrc::FindLevelFromLevelId(wrap->dwAreaId);
@@ -168,8 +160,7 @@ bool AreaWrap::GetSizeY(JSContext* ctx, unsigned argc, JS::Value* vp) {
   return true;
 }
 
-bool AreaWrap::GetArea(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+bool AreaWrap::GetArea(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady()) {
     JS_ReportErrorASCII(ctx, "Get Area: Game not ready");
     return false;
@@ -177,7 +168,7 @@ bool AreaWrap::GetArea(JSContext* ctx, unsigned argc, JS::Value* vp) {
 
   int32_t nArea = GetPlayerArea();
 
-  if (argc == 1) {
+  if (args.length() == 1) {
     nArea = args[0].toInt32();
   }
 

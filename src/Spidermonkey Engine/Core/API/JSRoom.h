@@ -14,31 +14,31 @@ class RoomWrap : BaseObject {
   static void finalize(JSFreeOp* fop, JSObject* obj);
 
   // constructor
-  static bool New(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool New(JSContext* ctx, JS::CallArgs& args);
 
   // properties
-  static bool GetNumber(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetX(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetY(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetSizeX(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetSizeY(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetArea(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetLevel(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetCorrectTomb(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetNumber(JSContext* ctx, JS::CallArgs& args);
+  static bool GetX(JSContext* ctx, JS::CallArgs& args);
+  static bool GetY(JSContext* ctx, JS::CallArgs& args);
+  static bool GetSizeX(JSContext* ctx, JS::CallArgs& args);
+  static bool GetSizeY(JSContext* ctx, JS::CallArgs& args);
+  static bool GetArea(JSContext* ctx, JS::CallArgs& args);
+  static bool GetLevel(JSContext* ctx, JS::CallArgs& args);
+  static bool GetCorrectTomb(JSContext* ctx, JS::CallArgs& args);
 
   // functions
-  static bool GetFirst(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetNext(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool Reveal(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetPresetUnits(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetCollision(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetCollisionA(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetNearby(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool GetStat(JSContext* ctx, unsigned argc, JS::Value* vp);
-  static bool UnitInRoom(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetFirst(JSContext* ctx, JS::CallArgs& args);
+  static bool GetNext(JSContext* ctx, JS::CallArgs& args);
+  static bool Reveal(JSContext* ctx, JS::CallArgs& args);
+  static bool GetPresetUnits(JSContext* ctx, JS::CallArgs& args);
+  static bool GetCollision(JSContext* ctx, JS::CallArgs& args);
+  static bool GetCollisionA(JSContext* ctx, JS::CallArgs& args);
+  static bool GetNearby(JSContext* ctx, JS::CallArgs& args);
+  static bool GetStat(JSContext* ctx, JS::CallArgs& args);
+  static bool UnitInRoom(JSContext* ctx, JS::CallArgs& args);
 
   // globals
-  static bool GetRoom(JSContext* ctx, unsigned argc, JS::Value* vp);
+  static bool GetRoom(JSContext* ctx, JS::CallArgs& args);
 
   static inline JSClassOps m_ops = {
       .addProperty = nullptr,
@@ -59,26 +59,26 @@ class RoomWrap : BaseObject {
       &m_ops,
   };
   static inline JSPropertySpec m_props[] = {
-      JS_PSG("number", GetNumber, JSPROP_ENUMERATE),
-      JS_PSG("x", GetX, JSPROP_ENUMERATE),
-      JS_PSG("y", GetY, JSPROP_ENUMERATE),
-      JS_PSG("xsize", GetSizeX, JSPROP_ENUMERATE),
-      JS_PSG("ysize", GetSizeY, JSPROP_ENUMERATE),
-      JS_PSG("area", GetArea, JSPROP_ENUMERATE),
-      JS_PSG("level", GetLevel, JSPROP_ENUMERATE),
-      JS_PSG("correcttomb", GetCorrectTomb, JSPROP_ENUMERATE),
+      JS_PSG("number", trampoline<GetNumber>, JSPROP_ENUMERATE),
+      JS_PSG("x", trampoline<GetX>, JSPROP_ENUMERATE),
+      JS_PSG("y", trampoline<GetY>, JSPROP_ENUMERATE),
+      JS_PSG("xsize", trampoline<GetSizeX>, JSPROP_ENUMERATE),
+      JS_PSG("ysize", trampoline<GetSizeY>, JSPROP_ENUMERATE),
+      JS_PSG("area", trampoline<GetArea>, JSPROP_ENUMERATE),
+      JS_PSG("level", trampoline<GetLevel>, JSPROP_ENUMERATE),
+      JS_PSG("correcttomb", trampoline<GetCorrectTomb>, JSPROP_ENUMERATE),
       JS_PS_END,
   };
   static inline JSFunctionSpec m_methods[] = {
-      JS_FN("getFirst", GetFirst, 0, JSPROP_ENUMERATE),
-      JS_FN("getNext", GetNext, 0, JSPROP_ENUMERATE),
-      JS_FN("reveal", Reveal, 1, JSPROP_ENUMERATE),
-      JS_FN("getPresetUnits", GetPresetUnits, 0, JSPROP_ENUMERATE),
-      JS_FN("getCollision", GetCollision, 0, JSPROP_ENUMERATE),
-      JS_FN("getCollisionA", GetCollisionA, 0, JSPROP_ENUMERATE),
-      JS_FN("getNearby", GetNearby, 0, JSPROP_ENUMERATE),
-      JS_FN("getStat", GetStat, 0, JSPROP_ENUMERATE),
-      JS_FN("unitInRoom", UnitInRoom, 1, JSPROP_ENUMERATE),
+      JS_FN("getFirst", trampoline<GetFirst>, 0, JSPROP_ENUMERATE),
+      JS_FN("getNext", trampoline<GetNext>, 0, JSPROP_ENUMERATE),
+      JS_FN("reveal", trampoline<Reveal>, 1, JSPROP_ENUMERATE),
+      JS_FN("getPresetUnits", trampoline<GetPresetUnits>, 0, JSPROP_ENUMERATE),
+      JS_FN("getCollision", trampoline<GetCollision>, 0, JSPROP_ENUMERATE),
+      JS_FN("getCollisionA", trampoline<GetCollisionA>, 0, JSPROP_ENUMERATE),
+      JS_FN("getNearby", trampoline<GetNearby>, 0, JSPROP_ENUMERATE),
+      JS_FN("getStat", trampoline<GetStat>, 0, JSPROP_ENUMERATE),
+      JS_FN("unitInRoom", trampoline<UnitInRoom>, 1, JSPROP_ENUMERATE),
       JS_FS_END,
   };
 
