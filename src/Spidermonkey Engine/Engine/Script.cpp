@@ -514,7 +514,7 @@ bool Script::RunEventLoop() {
 
   m_threadState.lastSpinTime = std::chrono::steady_clock::now();
   uv_run(&m_loop, UV_RUN_NOWAIT);
-  //js::RunJobs(m_context);
+  js::RunJobs(m_context);
 
   // run loop until there are no more events or script is interrupted
   return ProcessAllEvents();
