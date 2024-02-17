@@ -4,6 +4,7 @@
 #include "JSControl.h"
 #include "Helpers.h"
 #include "Engine.h"
+#include "StringWrap.h"
 
 #include "Profile.h"
 
@@ -22,13 +23,12 @@ bool my_login(JSContext* ctx, JS::CallArgs& args) {
     } else
       THROW_ERROR(ctx, "Invalid profile specified!");
   } else {
-    char* szProfile = JS_EncodeString(ctx, args[0].toString());
+    StringWrap szProfile(ctx, args[0]);
     if (!szProfile) {
       THROW_ERROR(ctx, "failed to encode string");
     }
-    strcpy_s(Vars.szProfile, 256, szProfile);
-    profile = szProfile;
-    JS_free(ctx, szProfile);
+    strcpy_s(Vars.szProfile, 256, szProfile.c_str());
+    profile = szProfile.c_str();
   }
 
   if (profile.empty()) {
@@ -53,20 +53,18 @@ bool my_selectChar(JSContext* ctx, JS::CallArgs& args) {
   if (args.length() != 1 || !args[0].isString())
     THROW_ERROR(ctx, "Invalid parameters specified to selectCharacter");
 
-  char* szProfile = JS_EncodeString(ctx, args[0].toString());
+  StringWrap szProfile(ctx, args[0]);
   if (!szProfile) {
     THROW_ERROR(ctx, "failed to encode string");
   }
 
   if (!Profile::ProfileExists(szProfile)) {
-    JS_free(ctx, szProfile);
     THROW_ERROR(ctx, "Invalid profile specified");
   }
   char charname[24], file[_MAX_FNAME + MAX_PATH];
   sprintf_s(file, _countof(file), "%sd2bs.ini", Vars.szPath);
-  GetPrivateProfileStringA(szProfile, "character", "ERROR", charname, _countof(charname), file);
+  GetPrivateProfileStringA(szProfile.c_str(), "character", "ERROR", charname, _countof(charname), file);
 
-  JS_free(ctx, szProfile);
   args.rval().setBoolean(OOG_SelectCharacter(charname));
   return true;
 }
@@ -79,20 +77,18 @@ bool my_createGame(JSContext* ctx, JS::CallArgs& args) {
 
   std::string name, pass;
   if (args[0].isString()) {
-    char* jsname = JS_EncodeString(ctx, args[0].toString());
+    StringWrap jsname(ctx, args[0]);
     if (!jsname) {
       THROW_ERROR(ctx, "failed to encode string");
     }
-    name = jsname;
-    JS_free(ctx, jsname);
+    name = jsname.c_str();
   }
   if (args[1].isString()) {
-    char* jspass = JS_EncodeString(ctx, args[1].toString());
+    StringWrap jspass(ctx, args[1]);
     if (!jspass) {
       THROW_ERROR(ctx, "failed to encode string");
     }
-    pass = jspass;
-    JS_free(ctx, jspass);
+    pass = jspass.c_str();
   }
   int32_t diff = 3;
   if (args.length() > 2 && args[2].isInt32()) {
@@ -117,20 +113,18 @@ bool my_joinGame(JSContext* ctx, JS::CallArgs& args) {
 
   std::string name, pass;
   if (args[0].isString()) {
-    char* jsname = JS_EncodeString(ctx, args[0].toString());
+    StringWrap jsname(ctx, args[0]);
     if (!jsname) {
       THROW_ERROR(ctx, "failed to encode string");
     }
-    name = jsname;
-    JS_free(ctx, jsname);
+    name = jsname.c_str();
   }
-  if (args[1].toString()) {
-    char* jspass = JS_EncodeString(ctx, args[1].toString());
+  if (args[1].isString()) {
+    StringWrap jspass(ctx, args[1]);
     if (!jspass) {
       THROW_ERROR(ctx, "failed to encode string");
     }
-    pass = jspass;
-    JS_free(ctx, jspass);
+    pass = jspass.c_str();
   }
 
   if (name.length() > 15 || pass.length() > 15)
@@ -152,12 +146,11 @@ bool my_addProfile(JSContext* ctx, JS::CallArgs& args) {
 
   std::string* vals[] = {&profile, &mode, &gateway, &username, &password, &charname};
   for (uint32_t i = 0; i < 6; i++) {
-    char* tmp = JS_EncodeString(ctx, args[i].toString());
+    StringWrap tmp(ctx, args[i]);
     if (!tmp) {
       THROW_ERROR(ctx, "failed to encode string");
     }
-    *vals[i] = tmp;
-    JS_free(ctx, tmp);
+    *vals[i] = tmp.c_str();
   }
 
   if (args.length() == 7) {
@@ -205,13 +198,12 @@ bool my_createCharacter(JSContext* ctx, JS::CallArgs& args) {
   if (!args[0].isString() || !args[1].isInt32()) {
     THROW_ERROR(ctx, "invalid arguments");
   }
-  char* str = JS_EncodeString(ctx, args[0].toString());
+  StringWrap str(ctx, args[0]);
   if (!str) {
     THROW_ERROR(ctx, "failed to encode string");
   }
   type = args[1].toInt32();
-  name = str;
-  JS_free(ctx, str);
+  name = str.c_str();
   if (args[2].isBoolean()) {
     hc = args[2].toBoolean();
   }

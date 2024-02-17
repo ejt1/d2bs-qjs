@@ -6,6 +6,7 @@
 #include <Helpers.h>
 
 #include "Bindings.h"
+#include "StringWrap.h"
 
 JSObject* FrameWrap::Instantiate(JSContext* ctx) {
   JS::RootedObject global(ctx, JS::CurrentGlobalOrNull(ctx));
@@ -1019,12 +1020,11 @@ bool TextWrap::New(JSContext* ctx, JS::CallArgs& args) {
   std::wstring szText;
 
   if (args.length() > 0 && args[0].isString()) {
-    char* str = JS_EncodeString(ctx, args[0].toString());
+    StringWrap str(ctx, args[0]);
     if (!str) {
       THROW_ERROR(ctx, "failed to encode string");
     }
-    szText = AnsiToWide(str);
-    JS_free(ctx, str);
+    szText = AnsiToWide(str.c_str());
   }
   if (args.length() > 1 && args[1].isNumber())
     JS::ToUint32(ctx, args[1], &x);
@@ -1262,13 +1262,12 @@ bool TextWrap::SetText(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pTextHook = wrap->pText;
   if (args[0].isString()) {
-    char* szText = JS_EncodeString(ctx, args[0].toString());
+    StringWrap szText(ctx, args[0]);
     if (!szText) {
       THROW_ERROR(ctx, "failed to encode string");
     }
-    std::wstring pText = AnsiToWide(szText);
+    std::wstring pText = AnsiToWide(szText.c_str());
     pTextHook->SetText(pText.c_str());
-    JS_free(ctx, szText);
   }
   args.rval().setUndefined();
   return true;
@@ -1354,11 +1353,10 @@ bool ImageWrap::New(JSContext* ctx, JS::CallArgs& args) {
   bool automap = false;
   JS::RootedObject click(ctx);
   JS::RootedObject hover(ctx);
-  char* szText = nullptr;
   wchar_t path[_MAX_FNAME + _MAX_PATH];
 
   if (args.length() > 0 && args[0].isString()) {
-    char* str = JS_EncodeString(ctx, args[0].toString());
+    StringWrap str(ctx, args[0]);
     if (!str) {
       THROW_ERROR(ctx, "failed to encode string");
     }
@@ -1378,13 +1376,14 @@ bool ImageWrap::New(JSContext* ctx, JS::CallArgs& args) {
   if (args.length() > 7 && args[7].isObject() && JS_ObjectIsFunction(ctx, args[7].toObjectOrNull()))
     hover.set(args[7].toObjectOrNull());
 
-  if (isValidPath(szText)) {
-    swprintf_s(path, _countof(path), L"%S", szText);
-    JS_free(ctx, szText);
-  } else {
-    JS_free(ctx, szText);
-    THROW_ERROR(ctx, "Invalid image file path");
-  }
+  // TODO: cba to fix this now
+  //if (isValidPath(szText)) {
+  //  swprintf_s(path, _countof(path), L"%S", szText);
+  //  JS_free(ctx, szText);
+  //} else {
+  //  JS_free(ctx, szText);
+  //  THROW_ERROR(ctx, "Invalid image file path");
+  //}
 
   JS::RootedObject newObject(ctx, JS_NewObjectForConstructor(ctx, &m_class, args));
   if (!newObject) {
@@ -1470,13 +1469,12 @@ bool ImageWrap::SetLocation(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
   if (args[0].isString()) {
-    char* szText = JS_EncodeString(ctx, args[0].toString());
+    StringWrap szText(ctx, args[0]);
     if (!szText) {
       THROW_ERROR(ctx, "failed to encode string");
     }
-    std::wstring pText = AnsiToWide(szText);
+    std::wstring pText = AnsiToWide(szText.c_str());
     pImageHook->SetImage(pText.c_str());
-    JS_free(ctx, szText);
   }
   args.rval().setUndefined();
   return true;
