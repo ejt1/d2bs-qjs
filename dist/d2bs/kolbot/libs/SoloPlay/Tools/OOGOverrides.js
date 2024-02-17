@@ -109,7 +109,7 @@ const LocationAction = {
         Starter.profileInfo.difficulty = obj.Difficulty;
         obj.Realm = obj.Realm.toLowerCase();
         Starter.profileInfo.realm = ["east", "west"].includes(obj.Realm) ? "us" + obj.Realm : obj.Realm;
-        Starter.profileInfo.mode = new Profile().type;
+        Starter.profileInfo.mode = Profile().type;
         Starter.profileInfo.tag = infoTag;
 
         /**
@@ -326,7 +326,7 @@ const LocationAction = {
    */
   ControlAction.findCharacter = function (info) {
     let count = 0;
-    let singlePlayer = ![sdk.game.gametype.OpenBattlenet, sdk.game.gametype.BattleNet].includes(new Profile().type);
+    let singlePlayer = ![sdk.game.gametype.OpenBattlenet, sdk.game.gametype.BattleNet].includes(Profile().type);
     // offline doesn't have a character limit cap
     let cap = singlePlayer ? 999 : 24;
     let tick = getTickCount();
@@ -343,7 +343,7 @@ const LocationAction = {
     // Wrong char select screen fix
     if ([sdk.game.locations.CharSelect, sdk.game.locations.CharSelectNoChars].includes(getLocation())) {
       hideConsole(); // seems to fix odd crash with single-player characters if the console is open to type in
-      let spCheck = new Profile().type === sdk.game.profiletype.Battlenet;
+      let spCheck = Profile().type === sdk.game.profiletype.Battlenet;
       let realmControl = !!Controls.CharSelectCurrentRealm.control;
       if ((spCheck && !realmControl) || ((!spCheck && realmControl))) {
         Controls.BottomLeftExit.click();
@@ -421,7 +421,7 @@ const LocationAction = {
         case sdk.game.locations.MainMenu:
         case sdk.game.locations.Login:
           if (getLocation() === sdk.game.locations.MainMenu
-            && new Profile().type === sdk.game.profiletype.SinglePlayer
+            && Profile().type === sdk.game.profiletype.SinglePlayer
             && Controls.SinglePlayer.click()) {
             Starter.checkDifficulty();
             break;
@@ -547,7 +547,7 @@ const LocationAction = {
           let { profiles, realms } = Developer.setEmail;
           if (Developer.setEmail.enabled
             && (!profiles.length || profiles.includes(me.profile))
-            && (!realms.length || realms.includes(new Profile().gateway.toLowerCase()))) {
+            && (!realms.length || realms.includes(Profile().gateway.toLowerCase()))) {
             ControlAction.setEmail();
           } else {
             Controls.EmailDontRegisterContinue.control
@@ -722,7 +722,7 @@ const LocationAction = {
     }
   };
 
-  Starter.BNET = ([sdk.game.profiletype.Battlenet, sdk.game.profiletype.OpenBattlenet].includes(new Profile().type));
+  Starter.BNET = ([sdk.game.profiletype.Battlenet, sdk.game.profiletype.OpenBattlenet].includes(Profile().type));
   Starter.LocationEvents.oogCheck = function () {
     return (
       AutoMule.outOfGameCheck()
@@ -743,7 +743,7 @@ const LocationAction = {
 
   Starter.LocationEvents.login = function () {
     Starter.inGame && (Starter.inGame = false);
-    let pType = new Profile().type;
+    let pType = Profile().type;
 
     if (getLocation() === sdk.game.locations.MainMenu && Starter.firstRun
       && pType === sdk.game.profiletype.SinglePlayer

@@ -24,7 +24,7 @@ Starter.Config.GlobalAccountPassword = ""; // Set value for a global password fo
 
 // Override default values for StarterConfig under here by following format
 // Starter.Config.ValueToChange = value; // Example: Starter.Config.MinGameTime = 500; // changes MinGameTime to 500 seconds
-// new Profile().type === sdk.game.profiletype.SinglePlayer && (Starter.Config.CrashDelay = 2);
+// Profile().type === sdk.game.profiletype.SinglePlayer && (Starter.Config.CrashDelay = 2);
 
 /**
  * @todo
@@ -76,7 +76,7 @@ function main () {
 
   load("threads/heartbeat.js");
 
-  if (new Profile().type === sdk.game.profiletype.TcpIpJoin) {
+  if (Profile().type === sdk.game.profiletype.TcpIpJoin) {
     D2Bot.printToConsole("TcpJoin is unsupported.");
     D2Bot.stop();
   }
