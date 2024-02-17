@@ -424,6 +424,7 @@ bool Script::Initialize() {
     } else {
       JS::CompileOptions opts(m_context);
       opts.setFileAndLine("<eval>", 1);
+      opts.setUTF8(true);
       const char* cmd = "function main() {print('ÿc2D2BSÿc0 :: Started Console'); while (true){delay(10000)};}  ";
       JS_CompileScript(m_context, cmd, strlen(cmd), opts, &m_script);
     }

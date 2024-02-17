@@ -49,13 +49,12 @@ bool my_print(JSContext* ctx, JS::CallArgs& args) {
     if (i != 0) {
       ss << " ";
     }
-    char* str = JS_EncodeString(ctx, JS::ToString(ctx, args[i]));
+    StringWrap str(ctx, JS::ToString(ctx, args[i]));
     if (!str) {
       JS_ReportErrorASCII(ctx, "failed to encode string");
       return false;
     }
-    ss << str;
-    JS_free(ctx, str);
+    ss << str.c_str();
   }
   std::string finalstr = ss.str();
   Print(finalstr.c_str());

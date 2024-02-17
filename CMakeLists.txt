@@ -106,7 +106,7 @@ set(D2BS_SRCS
 
 add_library(D2BS SHARED ${D2BS_SRCS})
 
-target_compile_options(D2BS PRIVATE /W4)
+target_compile_options(D2BS PRIVATE /W4 /utf-8)
 
 target_include_directories(D2BS PRIVATE
 	"${CMAKE_CURRENT_SOURCE_DIR}/src"
