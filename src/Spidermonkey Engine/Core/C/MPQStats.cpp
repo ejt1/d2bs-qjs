@@ -173,7 +173,7 @@ bool FillBaseStat(int table, int row, int column, void* result, size_t size) {
   return true;
 }
 
-DWORD FillBaseStat(JSContext* cx, JSValue* argv, int table, int row, int column, const char* szTable, const char* szStat) {
+DWORD FillBaseStat(JSContext* cx, JS::MutableHandleValue argv, int table, int row, int column, const char* szTable, const char* szStat) {
   if (szTable) {
     table = -1;
     for (int i = 0; BaseStatTable[i].pTable != NULL; i++)
@@ -215,17 +215,17 @@ DWORD FillBaseStat(JSContext* cx, JSValue* argv, int table, int row, int column,
       szBuffer = new char[(pTable[column].dwFieldLength + 1)];
       memset(szBuffer, NULL, pTable[column].dwFieldLength + 1);
       if (!FillBaseStat(table, row, column, szBuffer, pTable[column].dwFieldLength + 1))
-        (*argv) = JS_UNDEFINED;
+        argv.setUndefined();
       else
-        (*argv) = JS_NewString(cx, szBuffer);
+        argv.setString(JS_NewStringCopyZ(cx, szBuffer));
       delete[] szBuffer;
       return TRUE;
 
     case FIELDTYPE_DATA_DWORD:
       if (!FillBaseStat(table, row, column, &dwBuffer, sizeof(DWORD)))
-        (*argv) = JS_UNDEFINED;
+        argv.setUndefined();
       else
-        *argv = JS_NewFloat64(cx, (double)dwBuffer);
+        argv.setDouble((double)dwBuffer);
       return TRUE;
 
     case FIELDTYPE_CALC_TO_DWORD:
@@ -233,9 +233,9 @@ DWORD FillBaseStat(JSContext* cx, JSValue* argv, int table, int row, int column,
     case FIELDTYPE_DATA_DWORD_2:
     case FIELDTYPE_UNKNOWN_11:
       if (!FillBaseStat(table, row, column, &dwBuffer, sizeof(DWORD)))
-        (*argv) = JS_UNDEFINED;
+        argv.setUndefined();
       else
-        *argv = JS_NewFloat64(cx, (long)dwBuffer);
+        argv.setDouble((long)dwBuffer);
       return TRUE;
 
     case FIELDTYPE_NAME_TO_INDEX_2:
@@ -246,25 +246,25 @@ DWORD FillBaseStat(JSContext* cx, JSValue* argv, int table, int row, int column,
     case FIELDTYPE_DATA_WORD:
     case FIELDTYPE_CODE_TO_WORD:
       if (!FillBaseStat(table, row, column, &wBuffer, sizeof(WORD)))
-        (*argv) = JS_UNDEFINED;
+        argv.setUndefined();
       else
-        (*argv) = JS_NewInt32(cx, wBuffer);
+        argv.setInt32(wBuffer);
       return TRUE;
 
     case FIELDTYPE_CODE_TO_BYTE:
     case FIELDTYPE_DATA_BYTE_2:
     case FIELDTYPE_DATA_BYTE:
       if (!FillBaseStat(table, row, column, &dwBuffer, dwHelperSize))
-        (*argv) = JS_UNDEFINED;
+        argv.setUndefined();
       else
-        (*argv) = JS_NewUint32(cx, dwBuffer);
+        argv.setInt32(dwBuffer);
       return TRUE;
 
     case FIELDTYPE_DATA_BIT:
       if (!FillBaseStat(table, row, column, &dwBuffer, sizeof(DWORD)))
-        (*argv) = JS_UNDEFINED;
+        argv.setUndefined();
       else
-        (*argv) = JS_NewUint32(cx, dwBuffer);
+        argv.setInt32(dwBuffer);
       //(*argv) = (BOOLEAN_TO_JSVAL(!!dwBuffer) ? 1 : 0);
       return TRUE;
 
@@ -273,9 +273,9 @@ DWORD FillBaseStat(JSContext* cx, JSValue* argv, int table, int row, int column,
       szBuffer = new char[5];
       memset(szBuffer, NULL, 5);
       if (!FillBaseStat(table, row, column, szBuffer, 5))
-        (*argv) = JS_UNDEFINED;
+        argv.setUndefined();
       else
-        (*argv) = JS_NewString(cx, szBuffer);
+        argv.setString(JS_NewStringCopyZ(cx, szBuffer));
       delete[] szBuffer;
       return TRUE;
 

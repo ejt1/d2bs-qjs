@@ -25,6 +25,7 @@
 #include "File.h"
 #include "Engine.h"
 #include "Helpers.h"
+#include "StringWrap.h"
 
 char* readLine(FILE* fptr, bool locking) {
   if (feof(fptr))
@@ -44,38 +45,38 @@ char* readLine(FILE* fptr, bool locking) {
   return _strdup(buffer.c_str());
 }
 
-bool writeValue(FILE* fptr, JSContext* cx, JSValue value, bool isBinary, bool locking) {
+bool writeValue(FILE* fptr, JSContext* cx, JS::HandleValue value, bool isBinary, bool locking) {
   int len = 0, result;
   int32_t ival = 0;
   double dval = 0;
   bool bval;
 
   // TODO(ejt): better method to detect int or double
-  if (JS_IsNull(value) || JS_IsUndefined(value)) {
+  if (value.isNullOrUndefined()) {
     if (locking)
       result = fwrite(&ival, sizeof(int), 1, fptr);
     else
       result = _fwrite_nolock(&ival, sizeof(int), 1, fptr);
     if (result == 1)
       return true;
-  } else if (JS_IsString(value)) {
-    size_t len2;
-    const char* str = JS_ToCStringLen(cx, &len2, value);
+  } else if (value.isString()) {
+    StringWrap str(cx, value);
     if (locking)
-      result = fwrite(str, sizeof(char), len2, fptr);
+      result = fwrite(str, sizeof(char), str.length(), fptr);
     else
-      result = _fwrite_nolock(str, sizeof(char), len2, fptr);
-    JS_FreeCString(cx, str);
-    return len2 == static_cast<size_t>(result);
-  } else if (JS_IsNumber(value)) {
+      result = _fwrite_nolock(str, sizeof(char), str.length(), fptr);
+    return str.length() == static_cast<size_t>(result);
+  } else if (value.isNumber()) {
     if (isBinary) {
-      if (!JS_ToInt32(cx, &ival, value)) {
+      if (value.isInt32()) {
+        ival = value.toInt32();
         if (locking)
           result = fwrite(&ival, sizeof(int32_t), 1, fptr);
         else
           result = _fwrite_nolock(&dval, sizeof(int32_t), 1, fptr);
         return result == 1;
-      } else if (!JS_ToFloat64(cx, &dval, value)) {
+      } else if (value.isNumber()) {
+        dval = value.toNumber();
         if (locking)
           result = fwrite(&dval, sizeof(double), 1, fptr);
         else
@@ -84,7 +85,7 @@ bool writeValue(FILE* fptr, JSContext* cx, JSValue value, bool isBinary, bool lo
       }
       return false;
     } else {
-      if (!JS_ToInt32(cx, &ival, value)) {
+      if (value.isInt32()) {
         char* str = new char[16];
         _itoa_s(ival, str, 16, 10);
         len = strlen(str);
@@ -95,7 +96,8 @@ bool writeValue(FILE* fptr, JSContext* cx, JSValue value, bool isBinary, bool lo
         delete[] str;
         if (result == len)
           return true;
-      } else if (!JS_ToFloat64(cx, &dval, value)) {
+      } else if (value.isNumber()) {
+        dval = value.toNumber();
         // double will never be a 64-char string, but I'd rather be safe than sorry
         char* str = new char[64];
         sprintf_s(str, 64, "%.16f", dval);
@@ -110,9 +112,9 @@ bool writeValue(FILE* fptr, JSContext* cx, JSValue value, bool isBinary, bool lo
       }
       return false;
     }
-  } else if (JS_IsBool(value)) {
+  } else if (value.isBoolean()) {
     if (!isBinary) {
-      bval = !!JS_ToBool(cx, value);
+      bval = value.toBoolean();
       const char* str = bval ? "true" : "false";
       if (locking)
         result = fwrite(str, sizeof(char), strlen(str), fptr);
@@ -120,7 +122,7 @@ bool writeValue(FILE* fptr, JSContext* cx, JSValue value, bool isBinary, bool lo
         result = _fwrite_nolock(str, sizeof(char), strlen(str), fptr);
       return (int)strlen(str) == result;
     } else {
-      bval = !!JS_ToBool(cx, value);
+      bval = value.toBoolean();
       if (locking)
         result = fwrite(&bval, sizeof(bool), 1, fptr);
       else
@@ -151,7 +153,7 @@ FILE* fileOpenRelScript(const char* filename, const char* mode, JSContext* cx) {
 
   // Get the relative path
   if (getPathRelScript(filename, _MAX_PATH + _MAX_FNAME, fullPath) == NULL) {
-    JS_ReportError(cx, "Invalid file name");
+    JS_ReportErrorASCII(cx, "Invalid file name");
     return NULL;
   }
 
@@ -159,7 +161,7 @@ FILE* fileOpenRelScript(const char* filename, const char* mode, JSContext* cx) {
   if (fopen_s(&f, fullPath, mode) != 0 || f == NULL) {
     char message[128];
     _strerror_s(message, 128, NULL);
-    JS_ReportError(cx, "Couldn't open file %ls: %s", filename, message);
+    JS_ReportErrorASCII(cx, "Couldn't open file %s: %s", filename, message);
     return NULL;
   }
 

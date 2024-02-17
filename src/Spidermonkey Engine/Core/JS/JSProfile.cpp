@@ -2,65 +2,70 @@
 
 #include "Bindings.h"
 
-JSValue ProfileWrap::Instantiate(JSContext* ctx, JSValue new_target, Profile* prof) {
-  JSValue proto;
-  if (JS_IsUndefined(new_target)) {
-    proto = JS_GetClassProto(ctx, m_class_id);
-  } else {
-    proto = JS_GetPropertyStr(ctx, new_target, "prototype");
-    if (JS_IsException(proto)) {
-      return JS_EXCEPTION;
-    }
+JSObject* ProfileWrap::Instantiate(JSContext* ctx, Profile* prof) {
+  JS::RootedObject global(ctx, JS::CurrentGlobalOrNull(ctx));
+  JS::RootedValue constructor_val(ctx);
+  if (!JS_GetProperty(ctx, global, "Profile", &constructor_val)) {
+    JS_ReportErrorASCII(ctx, "Could not find constructor object for Profile");
+    return nullptr;
   }
-  JSValue obj = JS_NewObjectProtoClass(ctx, proto, m_class_id);
-  JS_FreeValue(ctx, proto);
-  if (JS_IsException(obj)) {
-    return obj;
+  if (!constructor_val.isObject()) {
+    JS_ReportErrorASCII(ctx, "Profile is not a constructor");
+    return nullptr;
   }
+  JS::RootedObject constructor(ctx, &constructor_val.toObject());
 
-  ProfileWrap* wrap = new ProfileWrap(ctx, prof);
+  JS::RootedObject obj(ctx, JS_New(ctx, constructor, JS::HandleValueArray::empty()));
+  if (!obj) {
+    JS_ReportErrorASCII(ctx, "Calling Profile constructor failed");
+    return nullptr;
+  }
+  ProfileWrap* wrap = new ProfileWrap(ctx, obj, prof);
   if (!wrap) {
-    JS_FreeValue(ctx, obj);
-    return JS_ThrowOutOfMemory(ctx);
+    JS_ReportOutOfMemory(ctx);
+    return nullptr;
   }
-  JS_SetOpaque(obj, wrap);
-
   return obj;
 }
 
-void ProfileWrap::Initialize(JSContext* ctx, JSValue target) {
-  JSClassDef def{};
-  def.class_name = "Profile";
-  def.finalizer = [](JSRuntime* /*rt*/, JSValue val) {
-    ProfileWrap* wrap = static_cast<ProfileWrap*>(JS_GetOpaque(val, m_class_id));
-    if (wrap) {
-      delete wrap;
-    }
+void ProfileWrap::Initialize(JSContext* ctx, JS::HandleObject target) {
+  static JSPropertySpec props[] = {
+      JS_PSG("type", trampoline<GetType>, JSPROP_ENUMERATE),                                      //
+      JS_PSG("ip", trampoline<GetIP>, JSPROP_ENUMERATE),                                          //
+      JS_PSG("username", trampoline<GetUsername>, JSPROP_ENUMERATE),                              //
+      JS_PSG("gateway", trampoline<GetGateway>, JSPROP_ENUMERATE),                                //
+      JS_PSG("character", trampoline<GetCharacter>, JSPROP_ENUMERATE),                            //
+      JS_PSG("difficulty", trampoline<GetDifficulty>, JSPROP_ENUMERATE),                          //
+      JS_PSG("maxLoginTime", trampoline<GetMaxLoginTime>, JSPROP_ENUMERATE),                      //
+      JS_PSG("maxCharacterSelectTime", trampoline<GetMaxCharacterSelectTime>, JSPROP_ENUMERATE),  //
+      JS_PS_END,
+  };
+  static JSFunctionSpec methods[] = {
+      JS_FN("login", trampoline<Login>, 0, JSPROP_ENUMERATE),
+      JS_FS_END,
   };
 
-  if (m_class_id == 0) {
-    JS_NewClassID(&m_class_id);
+  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, trampoline<New>, 0, props, methods, nullptr, nullptr));
+  if (!proto) {
+    return;
   }
-  JS_NewClass(JS_GetRuntime(ctx), m_class_id, &def);
-
-  JSValue proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, proto, m_proto_funcs, _countof(m_proto_funcs));
-
-  JSValue obj = JS_NewCFunction2(ctx, New, "Profile", 0, JS_CFUNC_constructor, 0);
-  JS_SetConstructor(ctx, obj, proto);
-
-  JS_SetClassProto(ctx, m_class_id, proto);
-  JS_SetPropertyStr(ctx, target, "Profile", obj);
 }
 
-ProfileWrap::ProfileWrap(JSContext* /*ctx*/, Profile* prof) : profile(prof) {
+ProfileWrap::ProfileWrap(JSContext* ctx, JS::HandleObject obj, Profile* prof) : BaseObject(ctx, obj), profile(prof) {
 }
 
 ProfileWrap::~ProfileWrap() {
   delete profile;
 }
 
-JSValue ProfileWrap::New(JSContext* ctx, JSValue new_target, int argc, JSValue* argv) {
+void ProfileWrap::finalize(JSFreeOp* /*fop*/, JSObject* obj) {
+  BaseObject* wrap = BaseObject::FromJSObject(obj);
+  if (wrap) {
+    delete wrap;
+  }
+}
+
+bool ProfileWrap::New(JSContext* ctx, JS::CallArgs& args) {
   Profile* prof;
   ProfileType pt;
   // unsigned int i;
@@ -69,71 +74,65 @@ JSValue ProfileWrap::New(JSContext* ctx, JSValue new_target, int argc, JSValue* 
 
   try {
     // Profile()
-    if (argc == 0) {
+    if (args.length() == 0) {
       if (Vars.szProfile != NULL)
         prof = new Profile();
       else
         THROW_ERROR(ctx, "No active profile!");
     }
     // Profile(name) - get the named profile
-    else if (argc == 1 && JS_IsString(argv[0])) {
-      const char* str1 = JS_ToCString(ctx, argv[0]);
+    else if (args.length() == 1 && args[0].isString()) {
+      char* str1 = JS_EncodeString(ctx, args[0].toString());
       prof = new Profile(str1);
-      JS_FreeCString(ctx, str1);
-    } else if (argc > 1 && JS_IsNumber(argv[0])) {
-      int32_t type = PROFILETYPE_SINGLEPLAYER;
-      JS_ToInt32(ctx, &type, argv[0]);
+      JS_free(ctx, str1);
+    } else if (args.length() > 1 && args[0].isInt32()) {
+      int32_t type = args[0].toInt32();
 
       // Profile(ProfileType.singlePlayer, charname, diff)
-      if (argc == 3 && type == PROFILETYPE_SINGLEPLAYER) {
-        const char* str1 = JS_ToCString(ctx, argv[1]);
-        int32_t diff;
-        JS_ToInt32(ctx, &diff, argv[2]);
+      if (args.length() == 3 && type == PROFILETYPE_SINGLEPLAYER) {
+        char* str1 = JS_EncodeString(ctx, args[1].toString());
+        int32_t diff = args[2].toInt32();
         prof = new Profile(PROFILETYPE_SINGLEPLAYER, str1, static_cast<char>(diff));
-        JS_FreeCString(ctx, str1);
+        JS_free(ctx, str1);
       }
       // Profile(ProfileType.battleNet, account, pass, charname, gateway)
-      else if (argc == 5 && type == PROFILETYPE_BATTLENET) {
-        const char* str1 = JS_ToCString(ctx, argv[1]);
-        const char* str2 = JS_ToCString(ctx, argv[2]);
-        const char* str3 = JS_ToCString(ctx, argv[3]);
-        const char* str4 = JS_ToCString(ctx, argv[4]);
+      else if (args.length() == 5 && type == PROFILETYPE_BATTLENET) {
+        char* str1 = JS_EncodeString(ctx, args[1].toString());
+        char* str2 = JS_EncodeString(ctx, args[2].toString());
+        char* str3 = JS_EncodeString(ctx, args[3].toString());
+        char* str4 = JS_EncodeString(ctx, args[4].toString());
         prof = new Profile(PROFILETYPE_BATTLENET, str1, str2, str3, str4);
-        JS_FreeCString(ctx, str1);
-        JS_FreeCString(ctx, str2);
-        JS_FreeCString(ctx, str3);
-        JS_FreeCString(ctx, str4);
+        JS_free(ctx, str1);
+        JS_free(ctx, str2);
+        JS_free(ctx, str3);
+        JS_free(ctx, str4);
       }
       // Profile(ProfileType.openBattleNet, account, pass, charname, gateway)
-      else if (argc == 5 && type == PROFILETYPE_OPEN_BATTLENET) {
-        const char* str1 = JS_ToCString(ctx, argv[1]);
-        const char* str2 = JS_ToCString(ctx, argv[2]);
-        const char* str3 = JS_ToCString(ctx, argv[3]);
-        const char* str4 = JS_ToCString(ctx, argv[4]);
+      else if (args.length() == 5 && type == PROFILETYPE_OPEN_BATTLENET) {
+        char* str1 = JS_EncodeString(ctx, args[1].toString());
+        char* str2 = JS_EncodeString(ctx, args[2].toString());
+        char* str3 = JS_EncodeString(ctx, args[3].toString());
+        char* str4 = JS_EncodeString(ctx, args[4].toString());
         prof = new Profile(PROFILETYPE_OPEN_BATTLENET, str1, str2, str3, str4);
-        JS_FreeCString(ctx, str1);
-        JS_FreeCString(ctx, str2);
-        JS_FreeCString(ctx, str3);
-        JS_FreeCString(ctx, str4);
+        JS_free(ctx, str1);
+        JS_free(ctx, str2);
+        JS_free(ctx, str3);
+        JS_free(ctx, str4);
       }
       // Profile(ProfileType.tcpIpHost, charname, diff)
-      else if (argc == 3 && type == PROFILETYPE_TCPIP_HOST) {
-        // JS_ConvertArguments(cx, argc, argv, "isu", &pt, &str1, &i);
-        const char* str1 = JS_ToCString(ctx, argv[1]);
-        int32_t diff;
-        JS_ToInt32(ctx, &diff, argv[2]);
+      else if (args.length() == 3 && type == PROFILETYPE_TCPIP_HOST) {
+        char* str1 = JS_EncodeString(ctx, args[1].toString());
+        int32_t diff = args[2].toInt32();
         prof = new Profile(PROFILETYPE_TCPIP_HOST, str1, static_cast<char>(diff));
-        JS_FreeCString(ctx, str1);
+        JS_free(ctx, str1);
       }
       // Profile(ProfileType.tcpIpJoin, charname, ip)
-      else if (argc == 3 && type == PROFILETYPE_TCPIP_JOIN) {
-        // JS_ConvertArguments(cx, argc, argv, "iss", &pt, &str1,
-        // &str2);
-        const char* str1 = JS_ToCString(ctx, argv[1]);
-        const char* str2 = JS_ToCString(ctx, argv[2]);
+      else if (args.length() == 3 && type == PROFILETYPE_TCPIP_JOIN) {
+        char* str1 = JS_EncodeString(ctx, args[1].toString());
+        char* str2 = JS_EncodeString(ctx, args[2].toString());
         prof = new Profile(PROFILETYPE_TCPIP_JOIN, str1, str2);
-        JS_FreeCString(ctx, str1);
-        JS_FreeCString(ctx, str2);
+        JS_free(ctx, str1);
+        JS_free(ctx, str2);
       } else {
         THROW_ERROR(ctx, "Invalid parameters.");
       }
@@ -144,104 +143,96 @@ JSValue ProfileWrap::New(JSContext* ctx, JSValue new_target, int argc, JSValue* 
     THROW_ERROR(ctx, ex);
   }
 
-  return ProfileWrap::Instantiate(ctx, new_target, prof);
+  JS::RootedObject newObject(ctx, JS_NewObjectForConstructor(ctx, &m_class, args));
+  if (!newObject) {
+    THROW_ERROR(ctx, "failed to instantiate profile");
+  }
+  ProfileWrap* wrap = new ProfileWrap(ctx, newObject, prof);
+  if (!wrap) {
+    JS_ReportOutOfMemory(ctx);
+    return false;
+  }
+  args.rval().setObject(*newObject);
+  return true;
 }
 
 // properties
-JSValue ProfileWrap::GetType(JSContext* ctx, JSValue this_val) {
-  ProfileWrap* wrap = static_cast<ProfileWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool ProfileWrap::GetType(JSContext* ctx, JS::CallArgs& args) {
+  ProfileWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Profile* profile = wrap->profile;
-  return JS_NewInt32(ctx, profile->type);
+  args.rval().setInt32(profile->type);
+  return true;
 }
 
-JSValue ProfileWrap::GetIP(JSContext* ctx, JSValue this_val) {
-  ProfileWrap* wrap = static_cast<ProfileWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool ProfileWrap::GetIP(JSContext* ctx, JS::CallArgs& args) {
+  ProfileWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Profile* profile = wrap->profile;
-  return JS_NewString(ctx, profile->ip);
+  args.rval().setString(JS_NewStringCopyZ(ctx, profile->ip));
+  return true;
 }
 
-JSValue ProfileWrap::GetUsername(JSContext* ctx, JSValue this_val) {
-  ProfileWrap* wrap = static_cast<ProfileWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool ProfileWrap::GetUsername(JSContext* ctx, JS::CallArgs& args) {
+  ProfileWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Profile* profile = wrap->profile;
-  return JS_NewString(ctx, profile->username);
+  args.rval().setString(JS_NewStringCopyZ(ctx, profile->username));
+  return true;
 }
 
-JSValue ProfileWrap::GetGateway(JSContext* ctx, JSValue this_val) {
-  ProfileWrap* wrap = static_cast<ProfileWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool ProfileWrap::GetGateway(JSContext* ctx, JS::CallArgs& args) {
+  ProfileWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Profile* profile = wrap->profile;
-  return JS_NewString(ctx, profile->gateway);
+  args.rval().setString(JS_NewStringCopyZ(ctx, profile->gateway));
+  return true;
 }
 
-JSValue ProfileWrap::GetCharacter(JSContext* ctx, JSValue this_val) {
-  ProfileWrap* wrap = static_cast<ProfileWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool ProfileWrap::GetCharacter(JSContext* ctx, JS::CallArgs& args) {
+  ProfileWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Profile* profile = wrap->profile;
-  return JS_NewString(ctx, profile->charname);
+  args.rval().setString(JS_NewStringCopyZ(ctx, profile->charname));
+  return true;
 }
 
-JSValue ProfileWrap::GetDifficulty(JSContext* ctx, JSValue this_val) {
-  ProfileWrap* wrap = static_cast<ProfileWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool ProfileWrap::GetDifficulty(JSContext* ctx, JS::CallArgs& args) {
+  ProfileWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Profile* profile = wrap->profile;
-  return JS_NewInt32(ctx, profile->diff);
+  args.rval().setInt32(profile->diff);
+  return true;
 }
 
-JSValue ProfileWrap::GetMaxLoginTime(JSContext* ctx, JSValue this_val) {
-  ProfileWrap* wrap = static_cast<ProfileWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool ProfileWrap::GetMaxLoginTime(JSContext* ctx, JS::CallArgs& args) {
+  ProfileWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Profile* profile = wrap->profile;
-  return JS_NewUint32(ctx, profile->maxLoginTime);
+  args.rval().setInt32(profile->maxLoginTime);
+  return true;
 }
 
-JSValue ProfileWrap::GetMaxCharacterSelectTime(JSContext* ctx, JSValue this_val) {
-  ProfileWrap* wrap = static_cast<ProfileWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool ProfileWrap::GetMaxCharacterSelectTime(JSContext* ctx, JS::CallArgs& args) {
+  ProfileWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   Profile* profile = wrap->profile;
-  return JS_NewUint32(ctx, profile->maxCharTime);
+  args.rval().setInt32(profile->maxCharTime);
+  return true;
 }
 
 // functions
-JSValue ProfileWrap::Login(JSContext* ctx, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
+bool ProfileWrap::Login(JSContext* ctx, JS::CallArgs& args) {
+  ProfileWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
+
   const char* error;
-
-  ProfileWrap* wrap = static_cast<ProfileWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
   Profile* profile = wrap->profile;
   if (profile->login(&error) != 0)
     THROW_ERROR(ctx, error);
 
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
 D2BS_BINDING_INTERNAL(ProfileWrap, ProfileWrap::Initialize)

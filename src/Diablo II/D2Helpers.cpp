@@ -42,19 +42,17 @@ void LogNoFormat(const char* szString) {
   localtime_s(&timestamp, &tTime);
   strftime(szTime, sizeof(szTime), "%Y%m%d", &timestamp);
   sprintf_s(path, _countof(path), "%sd2bs-%s-%s.log", Vars.szLogPath, Vars.szProfile, szTime);
-#ifdef DEBUG
-  FILE* log = stderr;
-#else
+//#ifdef DEBUG
+  //FILE* log = stderr;
+//#else
   FILE* log = _fsopen(path, "a+", _SH_DENYNO);
-#endif
+//#endif
   static DWORD id = GetProcessId(GetCurrentProcess());
   DWORD tid = GetCurrentThreadId();
   strftime(szTime, sizeof(szTime), "%x %X", &timestamp);
   fprintf(log, "[%s pid %d tid %d] D2BS: %s\n", szTime, id, tid, szString);
-#ifndef DEBUG
   fflush(log);
   fclose(log);
-#endif
 }
 
 // Do not edit without the express consent of bsdunx or lord2800
@@ -144,7 +142,7 @@ BYTE CalcPercent(DWORD dwVal, DWORD dwMaxVal, BYTE iMin) {
   if (iRes > 100)
     iRes = 100;
 
-  return max(iRes, iMin);
+  return std::max(iRes, iMin);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -386,7 +384,7 @@ double GetDistance(long x1, long y1, long x2, long y2, DistanceType type) {
       long dy = (y2 - y1);
       dx = abs(dx);
       dy = abs(dy);
-      dist = max(dx, dy);
+      dist = std::max(dx, dy);
     } break;
     case Manhattan: {
       long dx = (x2 - x1);

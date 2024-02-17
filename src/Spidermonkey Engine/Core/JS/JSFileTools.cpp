@@ -17,122 +17,134 @@
 #include "JSFileTools.h"
 
 #include "Bindings.h"
+#include "D2Helpers.h"
 #include "File.h"
 #include "Globals.h"
+#include "StringWrap.h"
 
-void FileToolsWrap::Initialize(JSContext* ctx, JSValue target) {
-  JSClassDef def{};
-  def.class_name = "FileTools";
+void FileToolsWrap::Initialize(JSContext* ctx, JS::HandleObject target) {
+  static JSFunctionSpec smethods[] = {
+      JS_FN("remove", trampoline<Remove>, 1, JSPROP_ENUMERATE),          //
+      JS_FN("rename", trampoline<Rename>, 2, JSPROP_ENUMERATE),          //
+      JS_FN("copy", trampoline<Copy>, 2, JSPROP_ENUMERATE),              //
+      JS_FN("exists", trampoline<Exists>, 1, JSPROP_ENUMERATE),          //
+      JS_FN("readText", trampoline<ReadText>, 1, JSPROP_ENUMERATE),      //
+      JS_FN("writeText", trampoline<WriteText>, 2, JSPROP_ENUMERATE),    //
+      JS_FN("appendText", trampoline<AppendText>, 2, JSPROP_ENUMERATE),  //
+      JS_FS_END,
+  };
 
-  if (m_class_id == 0) {
-    JS_NewClassID(&m_class_id);
+  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, trampoline<New>, 0, nullptr, nullptr, nullptr, smethods));
+  if (!proto) {
+    Log("failed to initialize FileTools");
+    return;
   }
-  JS_NewClass(JS_GetRuntime(ctx), m_class_id, &def);
+}
 
-  // should prototypes be created for classes that does not define anything on it?
-  JSValue proto = JS_NewObject(ctx);
-
-  JSValue obj = JS_NewObjectProtoClass(ctx, proto, m_class_id);
-  JS_SetPropertyFunctionList(ctx, obj, m_static_funcs, _countof(m_static_funcs));
-  JS_SetClassProto(ctx, m_class_id, proto);
-  JS_SetPropertyStr(ctx, target, "FileTools", obj);
+bool FileToolsWrap::New(JSContext* ctx, JS::CallArgs& /*args*/) {
+  THROW_ERROR(ctx, "FileTools constructor is not callable");
 }
 
 // static functions
-JSValue FileToolsWrap::Remove(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
-  if (argc < 1 || !JS_IsString(argv[0]))
-    THROW_ERROR(ctx, "You must supply a file name");
+bool FileToolsWrap::Remove(JSContext* ctx, JS::CallArgs& args) {
+  if (args.length() < 1 || !args[0].isString()) {
+    JS_ReportErrorASCII(ctx, "You must supply a file name");
+    return false;
+  }
 
-  const char* szFile = JS_ToCString(ctx, argv[0]);
+  char* szFile = JS_EncodeString(ctx, args[0].toString());
   if (!szFile) {
-    return JS_EXCEPTION;
+    THROW_ERROR(ctx, "failed to encode string");
   }
   char fullpath[_MAX_PATH + _MAX_FNAME];
 
   if (getPathRelScript(szFile, _MAX_PATH + _MAX_FNAME, fullpath) == NULL) {
-    JS_FreeCString(ctx, szFile);
-    THROW_ERROR(ctx, "Invalid file name");
+    JS_free(ctx, szFile);
+    JS_ReportErrorASCII(ctx, "Invalid file name");
+    return false;
   }
-  JS_FreeCString(ctx, szFile);
+  JS_free(ctx, szFile);
 
   remove(fullpath);
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue FileToolsWrap::Rename(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
-  if (argc < 1 || !JS_IsString(argv[0]))
+bool FileToolsWrap::Rename(JSContext* ctx, JS::CallArgs& args) {
+  if (args.length() < 1 || !args[0].isString()) {
     THROW_ERROR(ctx, "You must supply an original file name");
-  if (argc < 2 || !JS_IsString(argv[1]))
+  }
+  if (args.length() < 2 || !args[1].isString())
     THROW_ERROR(ctx, "You must supply a new file name");
 
-  const char* szOrig = JS_ToCString(ctx, argv[0]);
-  const char* szNewName = JS_ToCString(ctx, argv[1]);
+  char* szOrig = JS_EncodeString(ctx, args[0].toString());
+  char* szNewName = JS_EncodeString(ctx, args[1].toString());
   if (!szOrig || !szNewName) {
-    return JS_EXCEPTION;
+    THROW_ERROR(ctx, "failed to encode string");
   }
 
   char porig[_MAX_PATH + _MAX_FNAME];
   char pnewName[_MAX_PATH + _MAX_FNAME];
 
   if (getPathRelScript(szOrig, _MAX_PATH + _MAX_FNAME, porig) == NULL) {
-    JS_FreeCString(ctx, szOrig);
-    JS_FreeCString(ctx, szNewName);
+    JS_free(ctx, szOrig);
+    JS_free(ctx, szNewName);
     THROW_ERROR(ctx, "Invalid original file name");
   }
 
   if (getPathRelScript(szNewName, _MAX_PATH + _MAX_FNAME, pnewName) == NULL) {
-    JS_FreeCString(ctx, szOrig);
-    JS_FreeCString(ctx, szNewName);
+    JS_free(ctx, szOrig);
+    JS_free(ctx, szNewName);
     THROW_ERROR(ctx, "Invalid new file name");
   }
-  JS_FreeCString(ctx, szOrig);
-  JS_FreeCString(ctx, szNewName);
+  JS_free(ctx, szOrig);
+  JS_free(ctx, szNewName);
 
   // hehe, get rid of "ignoring return value" warning
-  if (rename(porig, pnewName)) {
-    return JS_UNDEFINED;
-  }
-  return JS_UNDEFINED;
+  rename(porig, pnewName);
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue FileToolsWrap::Copy(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
-  if (argc < 1 || !JS_IsString(argv[0]))
+bool FileToolsWrap::Copy(JSContext* ctx, JS::CallArgs& args) {
+  if (args.length() < 1 || !args[0].isString()) {
     THROW_ERROR(ctx, "You must supply an original file name");
-  if (argc < 2 || !JS_IsString(argv[1]))
+  }
+  if (args.length() < 2 || !args[1].isString())
     THROW_ERROR(ctx, "You must supply a new file name");
 
-  const char* szOrig = JS_ToCString(ctx, argv[0]);
-  const char* szNewName = JS_ToCString(ctx, argv[1]);
+  char* szOrig = JS_EncodeString(ctx, args[0].toString());
+  char* szNewName = JS_EncodeString(ctx, args[1].toString());
   if (!szOrig || !szNewName) {
-    return JS_EXCEPTION;
+    THROW_ERROR(ctx, "failed to encode string");
   }
 
   char pnewName[_MAX_PATH + _MAX_FNAME];
   bool overwrite = false;
 
-  if (argc > 2 && JS_IsBool(argv[2]))
-    overwrite = !!JS_ToBool(ctx, argv[2]);
+  if (args.length() > 2 && args[2].isBoolean())
+    overwrite = args[2].toBoolean();
 
   if (getPathRelScript(szNewName, _MAX_PATH + _MAX_FNAME, pnewName) == NULL) {
-    JS_FreeCString(ctx, szOrig);
-    JS_FreeCString(ctx, szNewName);
+    JS_free(ctx, szOrig);
+    JS_free(ctx, szNewName);
     THROW_ERROR(ctx, "Invalid new file name");
   }
 
   if (overwrite && _access(pnewName, 0) == 0) {
-    JS_FreeCString(ctx, szOrig);
-    JS_FreeCString(ctx, szNewName);
-    return JS_UNDEFINED;
+    JS_free(ctx, szOrig);
+    JS_free(ctx, szNewName);
+    THROW_ERROR(ctx, "permission denied");
   }
 
   FILE* fptr1 = fileOpenRelScript(szOrig, "r", ctx);
   FILE* fptr2 = fileOpenRelScript(szNewName, "w", ctx);
-  JS_FreeCString(ctx, szOrig);
-  JS_FreeCString(ctx, szNewName);
+  JS_free(ctx, szOrig);
+  JS_free(ctx, szNewName);
 
   // If fileOpenRelScript failed, it already reported the error
   if (fptr1 == NULL || fptr2 == NULL)
-    return JS_EXCEPTION;
+    return false;
 
   while (!feof(fptr1)) {
     int ch = fgetc(fptr1);
@@ -161,44 +173,46 @@ JSValue FileToolsWrap::Copy(JSContext* ctx, JSValue /*this_val*/, int argc, JSVa
   fflush(fptr2);
   fclose(fptr2);
   fclose(fptr1);
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue FileToolsWrap::Exists(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
-  if (argc < 1 || !JS_IsString(argv[0]))
+bool FileToolsWrap::Exists(JSContext* ctx, JS::CallArgs& args) {
+  if (args.length() < 1 || !args[0].isString())
     THROW_ERROR(ctx, "Invalid file name");
 
-  const char* szFile = JS_ToCString(ctx, argv[0]);
+  char* szFile = JS_EncodeString(ctx, args[0].toString());
   if (!szFile) {
-    return JS_EXCEPTION;
+    THROW_ERROR(ctx, "failed to encode string");
   }
 
   char fullpath[_MAX_PATH + _MAX_FNAME];
 
   if (getPathRelScript(szFile, _MAX_PATH + _MAX_FNAME, fullpath) == NULL) {
-    JS_FreeCString(ctx, szFile);
+    JS_free(ctx, szFile);
     THROW_ERROR(ctx, "Invalid file name");
   }
-  JS_FreeCString(ctx, szFile);
+  JS_free(ctx, szFile);
 
-  return JS_NewBool(ctx, !(_access(fullpath, 0) != 0 && errno == ENOENT));
+  args.rval().setBoolean(!(_access(fullpath, 0) != 0 && errno == ENOENT));
+  return true;
 }
 
-JSValue FileToolsWrap::ReadText(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
-  if (argc < 1 || !JS_IsString(argv[0]))
+bool FileToolsWrap::ReadText(JSContext* ctx, JS::CallArgs& args) {
+  if (args.length() < 1 || !args[0].isString())
     THROW_ERROR(ctx, "You must supply a file name");
 
-  const char* szFile = JS_ToCString(ctx, argv[0]);
+  char* szFile = JS_EncodeString(ctx, args[0].toString());
   if (!szFile) {
-    return JS_EXCEPTION;
+    THROW_ERROR(ctx, "failed to encode string");
   }
 
   FILE* fptr = fileOpenRelScript(szFile, "r", ctx);
-  JS_FreeCString(ctx, szFile);
+  JS_free(ctx, szFile);
 
   // If fileOpenRelScript failed, it already reported the error
   if (fptr == NULL)
-    return JS_EXCEPTION;
+    return false;
 
   uint32_t size, readCount;
   char* contents;
@@ -228,35 +242,34 @@ JSValue FileToolsWrap::ReadText(JSContext* ctx, JSValue /*this_val*/, int argc, 
   }
 
   // Convert to JSVAL cleanup and return
-  JSValue rval = JS_NewString(ctx, contents + offset);
+  args.rval().setString(JS_NewStringCopyZ(ctx, contents + offset));
   delete[] contents;
-  return rval;
+  return true;
 }
 
-JSValue FileToolsWrap::WriteText(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
-  if (argc < 1 || !JS_IsString(argv[0]))
+bool FileToolsWrap::WriteText(JSContext* ctx, JS::CallArgs& args) {
+  if (args.length() < 1 || !args[0].isString())
     THROW_ERROR(ctx, "You must supply a file name");
 
   EnterCriticalSection(&Vars.cFileSection);
 
-  const char* szFile = JS_ToCString(ctx, argv[0]);
+  StringWrap szFile(ctx, args[0]);
   if (!szFile) {
     LeaveCriticalSection(&Vars.cFileSection);
-    return JS_EXCEPTION;
+    THROW_ERROR(ctx, "failed to encode string");
   }
 
   FILE* fptr = fileOpenRelScript(szFile, "w", ctx);
-  JS_FreeCString(ctx, szFile);
   bool result = true;
 
   // If fileOpenRelScript failed, it already reported the error
   if (fptr == NULL) {
     LeaveCriticalSection(&Vars.cFileSection);
-    return JS_EXCEPTION;
+    THROW_ERROR(ctx, "fptr == NULL");
   }
 
-  for (int i = 1; i < argc; i++)
-    if (!writeValue(fptr, ctx, argv[i], false, true))
+  for (uint32_t i = 1; i < args.length(); i++)
+    if (!writeValue(fptr, ctx, args[i], false, true))
       result = false;
 
   fflush(fptr);
@@ -264,41 +277,42 @@ JSValue FileToolsWrap::WriteText(JSContext* ctx, JSValue /*this_val*/, int argc,
 
   LeaveCriticalSection(&Vars.cFileSection);
 
-  return JS_NewBool(ctx, result);
+  args.rval().setBoolean(result);
+  return true;
 }
 
-JSValue FileToolsWrap::AppendText(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
-  if (argc < 1 || !JS_IsString(argv[0]))
+bool FileToolsWrap::AppendText(JSContext* ctx, JS::CallArgs& args) {
+  if (args.length() < 1 || !args[0].isString())
     THROW_ERROR(ctx, "You must supply a file name");
 
   EnterCriticalSection(&Vars.cFileSection);
 
-  const char* szFile = JS_ToCString(ctx, argv[0]);
+  char* szFile = JS_EncodeString(ctx, args[0].toString());
   if (!szFile) {
     LeaveCriticalSection(&Vars.cFileSection);
-    return JS_EXCEPTION;
+    THROW_ERROR(ctx, "failed to encode string");
   }
 
   FILE* fptr = fileOpenRelScript(szFile, "a+", ctx);
-  JS_FreeCString(ctx, szFile);
+  JS_free(ctx, szFile);
   bool result = true;
 
   // If fileOpenRelScript failed, it already reported the error
   if (fptr == NULL) {
     LeaveCriticalSection(&Vars.cFileSection);
-    return JS_EXCEPTION;
+    return false;
   }
 
-  for (int i = 1; i < argc; i++)
-    if (!writeValue(fptr, ctx, argv[i], false, true))
+  for (uint32_t i = 1; i < args.length(); i++)
+    if (!writeValue(fptr, ctx, args[i], false, true))
       result = false;
 
   fflush(fptr);
   fclose(fptr);
 
   LeaveCriticalSection(&Vars.cFileSection);
-
-  return JS_NewBool(ctx, result);
+  args.rval().setBoolean(result);
+  return true;
 }
 
 D2BS_BINDING_INTERNAL(FileToolsWrap, FileToolsWrap::Initialize)

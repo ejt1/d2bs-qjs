@@ -6,229 +6,214 @@
 #include "JSPresetUnit.h"
 #include "JSUnit.h"
 
-JSValue RoomWrap::Instantiate(JSContext* ctx, JSValue new_target, D2DrlgRoomStrc* room) {
-  JSValue proto;
-  if (JS_IsUndefined(new_target)) {
-    proto = JS_GetClassProto(ctx, m_class_id);
-  } else {
-    proto = JS_GetPropertyStr(ctx, new_target, "prototype");
-    if (JS_IsException(proto)) {
-      return JS_EXCEPTION;
-    }
+JSObject* RoomWrap::Instantiate(JSContext* ctx, D2DrlgRoomStrc* room) {
+  JS::RootedObject global(ctx, JS::CurrentGlobalOrNull(ctx));
+  JS::RootedValue constructor_val(ctx);
+  if (!JS_GetProperty(ctx, global, "Room", &constructor_val)) {
+    JS_ReportErrorASCII(ctx, "Could not find constructor object for Room");
+    return nullptr;
   }
-  JSValue obj = JS_NewObjectProtoClass(ctx, proto, m_class_id);
-  JS_FreeValue(ctx, proto);
-  if (JS_IsException(obj)) {
-    return obj;
+  if (!constructor_val.isObject()) {
+    JS_ReportErrorASCII(ctx, "Room is not a constructor");
+    return nullptr;
   }
+  JS::RootedObject constructor(ctx, &constructor_val.toObject());
 
-  RoomWrap* wrap = new RoomWrap(ctx, room);
+  JS::RootedObject obj(ctx, JS_New(ctx, constructor, JS::HandleValueArray::empty()));
+  if (!obj) {
+    JS_ReportErrorASCII(ctx, "Calling Room constructor failed");
+    return nullptr;
+  }
+  RoomWrap* wrap = new RoomWrap(ctx, obj, room);
   if (!wrap) {
-    JS_FreeValue(ctx, obj);
-    return JS_ThrowOutOfMemory(ctx);
+    JS_ReportOutOfMemory(ctx);
+    return nullptr;
   }
-  JS_SetOpaque(obj, wrap);
-
   return obj;
 }
 
-void RoomWrap::Initialize(JSContext* ctx, JSValue target) {
-  JSClassDef def{};
-  def.class_name = "Room";
-  def.finalizer = [](JSRuntime* /*rt*/, JSValue val) {
-    RoomWrap* wrap = static_cast<RoomWrap*>(JS_GetOpaque(val, m_class_id));
-    if (wrap) {
-      delete wrap;
-    }
-  };
-
-  if (m_class_id == 0) {
-    JS_NewClassID(&m_class_id);
+void RoomWrap::Initialize(JSContext* ctx, JS::HandleObject target) {
+  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, trampoline<New>, 0, m_props, m_methods, nullptr, nullptr));
+  if (!proto) {
+    return;
   }
-  JS_NewClass(JS_GetRuntime(ctx), m_class_id, &def);
-
-  JSValue proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, proto, m_proto_funcs, _countof(m_proto_funcs));
-
-  JSValue obj = JS_NewCFunction2(ctx, New, "Room", 0, JS_CFUNC_constructor, 0);
-  JS_SetConstructor(ctx, obj, proto);
-
-  JS_SetClassProto(ctx, m_class_id, proto);
-  JS_SetPropertyStr(ctx, target, "Room", obj);
 
   // globals
-  JS_SetPropertyStr(ctx, target, "getRoom", JS_NewCFunction(ctx, GetRoom, "getRoom", 0));
+  JS_DefineFunction(ctx, target, "getRoom", trampoline<GetRoom>, 0, JSPROP_ENUMERATE);
 }
 
-RoomWrap::RoomWrap(JSContext* /*ctx*/, D2DrlgRoomStrc* room) : pRoom(room) {
+RoomWrap::RoomWrap(JSContext* ctx, JS::HandleObject obj, D2DrlgRoomStrc* room) : BaseObject(ctx, obj), pRoom(room) {
 }
 
-JSValue RoomWrap::New(JSContext* /*ctx*/, JSValue /*new_target*/, int /*argc*/, JSValue* /*argv*/) {
-  // TODO(ejt): empty constructor for compatibility with kolbot
-  return JS_UNDEFINED;
+void RoomWrap::finalize(JSFreeOp* /*fop*/, JSObject* obj) {
+  BaseObject* wrap = BaseObject::FromJSObject(obj);
+  if (wrap) {
+    delete wrap;
+  }
+}
+
+bool RoomWrap::New(JSContext* ctx, JS::CallArgs& args) {
+  JS::RootedObject newObject(ctx, JS_NewObjectForConstructor(ctx, &m_class, args));
+  if (!newObject) {
+    THROW_ERROR(ctx, "failed to instantiate room");
+  }
+  // BUG(ejt): ask ejt
+  JS_DefineProperties(ctx, newObject, m_props);
+  JS_DefineFunctions(ctx, newObject, m_methods);
+
+  args.rval().setObject(*newObject);
+  return true;
 }
 
 // properties
-JSValue RoomWrap::GetNumber(JSContext* ctx, JSValue this_val) {
-  RoomWrap* wrap = static_cast<RoomWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool RoomWrap::GetNumber(JSContext* ctx, JS::CallArgs& args) {
+  RoomWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* room = wrap->pRoom;
 
+  args.rval().setUndefined();
   if (room->dwPresetType != 2)
-    return JS_NewInt32(ctx, -1);
+    args.rval().setInt32(-1);
   else if (room->pType2Info)
-    return JS_NewInt32(ctx, room->pType2Info->dwRoomNumber);
-  return JS_UNDEFINED;
+    args.rval().setInt32(room->pType2Info->dwRoomNumber);
+  return true;
 }
 
-JSValue RoomWrap::GetX(JSContext* ctx, JSValue this_val) {
-  RoomWrap* wrap = static_cast<RoomWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool RoomWrap::GetX(JSContext* ctx, JS::CallArgs& args) {
+  RoomWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* room = wrap->pRoom;
-  return JS_NewInt32(ctx, room->dwPosX);
+  args.rval().setInt32(room->dwPosX);
+  return true;
 }
 
-JSValue RoomWrap::GetY(JSContext* ctx, JSValue this_val) {
-  RoomWrap* wrap = static_cast<RoomWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool RoomWrap::GetY(JSContext* ctx, JS::CallArgs& args) {
+  RoomWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* room = wrap->pRoom;
-  return JS_NewInt32(ctx, room->dwPosY);
+  args.rval().setInt32(room->dwPosY);
+  return true;
 }
 
-JSValue RoomWrap::GetSizeX(JSContext* ctx, JSValue this_val) {
-  RoomWrap* wrap = static_cast<RoomWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool RoomWrap::GetSizeX(JSContext* ctx, JS::CallArgs& args) {
+  RoomWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* room = wrap->pRoom;
-  return JS_NewInt32(ctx, room->dwSizeX * 5);
+  args.rval().setInt32(room->dwSizeX * 5);
+  return true;
 }
 
-JSValue RoomWrap::GetSizeY(JSContext* ctx, JSValue this_val) {
-  RoomWrap* wrap = static_cast<RoomWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool RoomWrap::GetSizeY(JSContext* ctx, JS::CallArgs& args) {
+  RoomWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* room = wrap->pRoom;
-  return JS_NewInt32(ctx, room->dwSizeY * 5);
+  args.rval().setInt32(room->dwSizeY * 5);
+  return true;
 }
 
-JSValue RoomWrap::GetArea(JSContext* ctx, JSValue this_val) {
-  RoomWrap* wrap = static_cast<RoomWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool RoomWrap::GetArea(JSContext* ctx, JS::CallArgs& args) {
+  RoomWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* room = wrap->pRoom;
-  if (room->pLevel)
-    return JS_NewInt32(ctx, room->pLevel->dwLevelNo);
-  return JS_UNDEFINED;
+  if (room->pLevel) {
+    args.rval().setInt32(room->pLevel->dwLevelNo);
+    return true;
+  }
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue RoomWrap::GetLevel(JSContext* ctx, JSValue this_val) {
-  RoomWrap* wrap = static_cast<RoomWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool RoomWrap::GetLevel(JSContext* ctx, JS::CallArgs& args) {
+  RoomWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* room = wrap->pRoom;
-  if (room->pLevel)
-    return JS_NewInt32(ctx, room->pLevel->dwLevelNo);
-  return JS_UNDEFINED;
+  if (room->pLevel) {
+    args.rval().setInt32(room->pLevel->dwLevelNo);
+    return true;
+  }
+  args.rval().setUndefined();
+  return true;
 }
 
-JSValue RoomWrap::GetCorrectTomb(JSContext* ctx, JSValue this_val) {
-  RoomWrap* wrap = static_cast<RoomWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool RoomWrap::GetCorrectTomb(JSContext* ctx, JS::CallArgs& args) {
+  RoomWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* room = wrap->pRoom;
-  if (room->pLevel && room->pLevel->pMisc && room->pLevel->pMisc->dwStaffTombLevel)
-    return JS_NewInt32(ctx, room->pLevel->pMisc->dwStaffTombLevel);
-  return JS_UNDEFINED;
+  if (room->pLevel && room->pLevel->pMisc && room->pLevel->pMisc->dwStaffTombLevel) {
+    args.rval().setInt32(room->pLevel->pMisc->dwStaffTombLevel);
+    return true;
+  }
+  args.rval().setUndefined();
+  return true;
 }
 
 // functions
-JSValue RoomWrap::GetFirst(JSContext* ctx, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
-  RoomWrap* wrap = static_cast<RoomWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
+bool RoomWrap::GetFirst(JSContext* ctx, JS::CallArgs& args) {
+  RoomWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
+  D2DrlgRoomStrc* room = wrap->pRoom;
+  if (!room || !room->pLevel || !room->pLevel->pRoom2First) {
+    args.rval().setUndefined();
+    return true;
   }
 
-  D2DrlgRoomStrc* room = wrap->pRoom;
-
-  if (!room || !room->pLevel || !room->pLevel->pRoom2First)
-    return JS_UNDEFINED;
-
-  return RoomWrap::Instantiate(ctx, JS_UNDEFINED, room->pLevel->pRoom2First);
+  JS::RootedObject obj(ctx, RoomWrap::Instantiate(ctx, room->pLevel->pRoom2First));
+  if (!obj) {
+    THROW_ERROR(ctx, "failed to instantiate room");
+  }
+  args.rval().setObject(*obj);
+  return true;
 }
 
-JSValue RoomWrap::GetNext(JSContext* /*ctx*/, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
-  RoomWrap* wrap = static_cast<RoomWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool RoomWrap::GetNext(JSContext* ctx, JS::CallArgs& args) {
+  RoomWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* room = wrap->pRoom;
   if (!room->pRoom2Next) {
-    return JS_FALSE;
+    args.rval().setBoolean(false);
+    return true;
   }
   wrap->pRoom = room->pRoom2Next;
-  return JS_TRUE;
+  args.rval().setBoolean(true);
+  return true;
 }
 
-JSValue RoomWrap::Reveal(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
-  RoomWrap* wrap = static_cast<RoomWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool RoomWrap::Reveal(JSContext* ctx, JS::CallArgs& args) {
+  RoomWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* room = wrap->pRoom;
   BOOL bDrawPresets = false;
-  if (argc == 1 && JS_IsBool(argv[0]))
-    bDrawPresets = !!JS_ToBool(ctx, argv[0]);
+  if (args.length() == 1 && args[0].isBoolean())
+    bDrawPresets = args[0].toBoolean();
 
   AutoCriticalRoom cRoom;
   if (!room || !GameReady()) {
-    return JS_UNDEFINED;
+    args.rval().setUndefined();
+    return true;
   }
-
-  return JS_NewBool(ctx, room->Reveal(bDrawPresets));
+  args.rval().setBoolean(room->Reveal(bDrawPresets));
+  return true;
 }
 
-JSValue RoomWrap::GetPresetUnits(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
-  RoomWrap* wrap = static_cast<RoomWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool RoomWrap::GetPresetUnits(JSContext* ctx, JS::CallArgs& args) {
+  RoomWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* room = wrap->pRoom;
   uint32_t nType = NULL;
   uint32_t nClass = NULL;
 
-  if (argc > 0 && JS_IsNumber(argv[0]))
-    JS_ToUint32(ctx, &nType, argv[0]);
-  if (argc > 1 && JS_IsNumber(argv[1]))
-    JS_ToUint32(ctx, &nClass, argv[1]);
+  if (args.length() > 0 && args[0].isNumber())
+    JS::ToUint32(ctx, args[0], &nType);
+  if (args.length() > 1 && args[1].isNumber())
+    JS::ToUint32(ctx, args[1], &nClass);
 
   bool bAdded = FALSE;
   DWORD dwArrayCount = NULL;
 
   AutoCriticalRoom cRoom;
   if (!room || !GameReady()) {
-    return JS_UNDEFINED;
+    args.rval().setUndefined();
+    return true;
   }
 
   if (!room->pRoom1) {
@@ -236,16 +221,16 @@ JSValue RoomWrap::GetPresetUnits(JSContext* ctx, JSValue this_val, int argc, JSV
     D2COMMON_AddRoomData(D2CLIENT_GetPlayerUnit()->pAct, room->pLevel->dwLevelNo, room->dwPosX, room->dwPosY, D2CLIENT_GetPlayerUnit()->pPath->pRoom1);
   }
 
-  JSValue pReturnArray = JS_NewArray(ctx);
+  JS::RootedObject pReturnArray(ctx, JS_NewArrayObject(ctx, 0));
   for (D2PresetUnitStrc* pUnit = room->pPreset; pUnit; pUnit = pUnit->pPresetNext) {
     if ((pUnit->dwType == nType || nType == NULL) && (pUnit->dwTxtFileNo == nClass || nClass == NULL)) {
-      JSValue jsUnit = PresetUnitWrap::Instantiate(ctx, JS_UNDEFINED, pUnit, room, room->pLevel ? room->pLevel->dwLevelNo : 0);
-      if (JS_IsException(jsUnit)) {
-        JS_FreeValue(ctx, pReturnArray);
-        return JS_FALSE;
+      JS::RootedObject jsUnit(ctx, PresetUnitWrap::Instantiate(ctx, pUnit, room, room->pLevel ? room->pLevel->dwLevelNo : 0));
+      if (!jsUnit) {
+        args.rval().setBoolean(false);
+        return true;
       }
 
-      JS_SetPropertyUint32(ctx, pReturnArray, dwArrayCount, jsUnit);
+      JS_SetElement(ctx, pReturnArray, dwArrayCount, jsUnit);
       dwArrayCount++;
     }
   }
@@ -253,27 +238,28 @@ JSValue RoomWrap::GetPresetUnits(JSContext* ctx, JSValue this_val, int argc, JSV
   if (bAdded)
     D2COMMON_RemoveRoomData(D2CLIENT_GetPlayerUnit()->pAct, room->pLevel->dwLevelNo, room->dwPosX, room->dwPosY, D2CLIENT_GetPlayerUnit()->pPath->pRoom1);
 
-  return pReturnArray;
+  args.rval().setObject(*pReturnArray);
+  return true;
 }
 
-JSValue RoomWrap::GetCollision(JSContext* ctx, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
-  RoomWrap* wrap = static_cast<RoomWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool RoomWrap::GetCollision(JSContext* ctx, JS::CallArgs& args) {
+  RoomWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* pRoom2 = wrap->pRoom;
   bool bAdded = FALSE;
   D2DrlgCoordsStrc* pCol = NULL;
 
   AutoCriticalRoom cRoom;
   if (!pRoom2 || !GameReady()) {
-    return JS_UNDEFINED;
+    args.rval().setUndefined();
+    return true;
   }
 
-  JSValue jsobjy = JS_NewArray(ctx);
-  if (!jsobjy)
-    return JS_UNDEFINED;
+  JS::RootedObject jsobjy(ctx, JS_NewArrayObject(ctx, 0));
+  if (!jsobjy) {
+    args.rval().setUndefined();
+    return true;
+  }
 
   if (!pRoom2->pRoom1) {
     bAdded = TRUE;
@@ -286,8 +272,8 @@ JSValue RoomWrap::GetCollision(JSContext* ctx, JSValue this_val, int /*argc*/, J
   if (!pCol) {
     if (bAdded)
       D2COMMON_RemoveRoomData(D2CLIENT_GetPlayerUnit()->pAct, pRoom2->pLevel->dwLevelNo, pRoom2->dwPosX, pRoom2->dwPosY, D2CLIENT_GetPlayerUnit()->pPath->pRoom1);
-    JS_FreeValue(ctx, jsobjy);
-    return JS_UNDEFINED;
+    args.rval().setUndefined();
+    return true;
   }
 
   int x = pCol->dwPosGameX - pRoom2->pLevel->dwPosX * 5;
@@ -302,39 +288,37 @@ JSValue RoomWrap::GetCollision(JSContext* ctx, JSValue this_val, int /*argc*/, J
 
   WORD* p = pCol->pMapStart;
   for (int j = y; j < nLimitY; j++) {
-    JSValue jsobjx = JS_NewArray(ctx);
+    JS::RootedObject jsobjx(ctx, JS_NewArrayObject(ctx, 0));
 
     int nCurrentArrayX = 0;
     for (int i = x; i < nLimitX; i++) {
-      JSValue nNode = JS_NewInt32(ctx, *p);
-      JS_SetPropertyUint32(ctx, jsobjx, nCurrentArrayX, nNode);
+      JS_SetElement(ctx, jsobjx, nCurrentArrayX, *p);
       nCurrentArrayX++;
       p++;
     }
 
-    JS_SetPropertyUint32(ctx, jsobjy, nCurrentArrayY, jsobjx);
+    JS_SetElement(ctx, jsobjy, nCurrentArrayY, jsobjx);
     nCurrentArrayY++;
   }
 
   if (bAdded)
     D2COMMON_RemoveRoomData(D2CLIENT_GetPlayerUnit()->pAct, pRoom2->pLevel->dwLevelNo, pRoom2->dwPosX, pRoom2->dwPosY, D2CLIENT_GetPlayerUnit()->pPath->pRoom1);
 
-  return jsobjy;
+  args.rval().setObject(*jsobjy);
+  return true;
 }
 
-JSValue RoomWrap::GetCollisionA(JSContext* ctx, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
-  RoomWrap* wrap = static_cast<RoomWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool RoomWrap::GetCollisionA(JSContext* ctx, JS::CallArgs& args) {
+  RoomWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* pRoom2 = wrap->pRoom;
   bool bAdded = FALSE;
   D2DrlgCoordsStrc* pCol = NULL;
 
   AutoCriticalRoom cRoom;
   if (!pRoom2 || !GameReady()) {
-    return JS_UNDEFINED;
+    args.rval().setUndefined();
+    return true;
   }
 
   if (!pRoom2->pRoom1) {
@@ -342,9 +326,11 @@ JSValue RoomWrap::GetCollisionA(JSContext* ctx, JSValue this_val, int /*argc*/, 
     D2COMMON_AddRoomData(D2CLIENT_GetPlayerUnit()->pAct, pRoom2->pLevel->dwLevelNo, pRoom2->dwPosX, pRoom2->dwPosY, D2CLIENT_GetPlayerUnit()->pPath->pRoom1);
   }
 
-  JSValue jsobjy = JS_NewArray(ctx);
-  if (!jsobjy)
-    return JS_UNDEFINED;
+  JS::RootedObject jsobjy(ctx, JS_NewArrayObject(ctx, 0));
+  if (!jsobjy) {
+    args.rval().setUndefined();
+    return true;
+  }
 
   if (pRoom2->pRoom1)
     pCol = pRoom2->pRoom1->pCoords;
@@ -352,8 +338,8 @@ JSValue RoomWrap::GetCollisionA(JSContext* ctx, JSValue this_val, int /*argc*/, 
   if (!pCol) {
     if (bAdded)
       D2COMMON_RemoveRoomData(D2CLIENT_GetPlayerUnit()->pAct, pRoom2->pLevel->dwLevelNo, pRoom2->dwPosX, pRoom2->dwPosY, D2CLIENT_GetPlayerUnit()->pPath->pRoom1);
-    JS_FreeValue(ctx, jsobjy);
-    return JS_UNDEFINED;
+    args.rval().setUndefined();
+    return true;
   }
 
   int x = pCol->dwPosGameX - pRoom2->pLevel->dwPosX * 5;
@@ -370,8 +356,7 @@ JSValue RoomWrap::GetCollisionA(JSContext* ctx, JSValue this_val, int /*argc*/, 
   for (int j = y; j < nLimitY; j++) {
     int nCurrentArrayX = 0;
     for (int i = x; i < nLimitX; i++) {
-      JSValue nNode = JS_NewInt32(ctx, *p);
-      JS_SetPropertyUint32(ctx, jsobjy, nCurrentArrayY * nCx + nCurrentArrayX, nNode);
+      JS_SetElement(ctx, jsobjy, nCurrentArrayY * nCx + nCurrentArrayX, *p);
       nCurrentArrayX++;
       p++;
     }
@@ -381,51 +366,47 @@ JSValue RoomWrap::GetCollisionA(JSContext* ctx, JSValue this_val, int /*argc*/, 
   if (bAdded)
     D2COMMON_RemoveRoomData(D2CLIENT_GetPlayerUnit()->pAct, pRoom2->pLevel->dwLevelNo, pRoom2->dwPosX, pRoom2->dwPosY, D2CLIENT_GetPlayerUnit()->pPath->pRoom1);
 
-  return jsobjy;
+  args.rval().setObject(*jsobjy);
+  return true;
 }
 
-JSValue RoomWrap::GetNearby(JSContext* ctx, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
-  RoomWrap* wrap = static_cast<RoomWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool RoomWrap::GetNearby(JSContext* ctx, JS::CallArgs& args) {
+  RoomWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* pRoom2 = wrap->pRoom;
-  JSValue jsobj = JS_NewArray(ctx);
-  if (!jsobj)
-    return JS_UNDEFINED;
+  JS::RootedObject jsobj(ctx, JS_NewArrayObject(ctx, 0));
+  if (!jsobj) {
+    args.rval().setUndefined();
+    return true;
+  }
 
   for (DWORD i = 0; i < pRoom2->dwRoomsNear; ++i) {
-    JSValue jsroom = RoomWrap::Instantiate(ctx, JS_UNDEFINED, pRoom2->pRoom2Near[i]);
-    if (JS_IsException(jsroom)) {
-      JS_FreeValue(ctx, jsobj);
-      return JS_UNDEFINED;
+    JS::RootedObject jsroom(ctx, RoomWrap::Instantiate(ctx, pRoom2->pRoom2Near[i]));
+    if (!jsroom) {
+      args.rval().setUndefined();
+      return true;
     }
-    JS_SetPropertyUint32(ctx, jsobj, i, jsroom);
+    JS_SetElement(ctx, jsobj, i, jsroom);
   }
-
-  return jsobj;
+  args.rval().setObject(*jsobj);
+  return true;
 }
 
-JSValue RoomWrap::GetStat(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
-  RoomWrap* wrap = static_cast<RoomWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
-  JSValue rval = JS_NULL;
+bool RoomWrap::GetStat(JSContext* ctx, JS::CallArgs& args) {
+  RoomWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* pRoom2 = wrap->pRoom;
-  if (argc < 1 || !JS_IsNumber(argv[0]))
-    return rval;
+  args.rval().setNull();
+  if (args.length() < 1 || !args[0].isInt32())
+    return true;
 
-  int32_t nStat;
-  JS_ToInt32(ctx, &nStat, argv[0]);
+  int32_t nStat = args[0].toInt32();
 
   bool bAdded = false;
 
   AutoCriticalRoom cRoom;
   if (!pRoom2 || !GameReady()) {
-    return rval;
+    return true;
   }
   if (!pRoom2->pRoom1) {
     bAdded = true;
@@ -433,137 +414,148 @@ JSValue RoomWrap::GetStat(JSContext* ctx, JSValue this_val, int argc, JSValue* a
   }
 
   if (!pRoom2->pRoom1) {
-    return rval;
+    return true;
   }
 
   if (nStat == 0)  // xStart
-    rval = JS_NewInt32(ctx, (pRoom2->pRoom1->dwXStart));
+    args.rval().setInt32(pRoom2->pRoom1->dwXStart);
   else if (nStat == 1)
-    rval = JS_NewInt32(ctx, (pRoom2->pRoom1->dwYStart));
+    args.rval().setInt32(pRoom2->pRoom1->dwYStart);
   else if (nStat == 2)
-    rval = JS_NewInt32(ctx, (pRoom2->pRoom1->dwXSize));
+    args.rval().setInt32(pRoom2->pRoom1->dwXSize);
   else if (nStat == 3)
-    rval = JS_NewInt32(ctx, (pRoom2->pRoom1->dwYSize));
+    args.rval().setInt32(pRoom2->pRoom1->dwYSize);
   else if (nStat == 4)
-    rval = JS_NewInt32(ctx, (pRoom2->dwPosX));
+    args.rval().setInt32(pRoom2->dwPosX);
   else if (nStat == 5)
-    rval = JS_NewInt32(ctx, (pRoom2->dwPosY));
+    args.rval().setInt32(pRoom2->dwPosY);
   else if (nStat == 6)
-    rval = JS_NewInt32(ctx, (pRoom2->dwSizeX));
+    args.rval().setInt32(pRoom2->dwSizeX);
   else if (nStat == 7)
-    rval = JS_NewInt32(ctx, (pRoom2->dwSizeY));
+    args.rval().setInt32(pRoom2->dwSizeY);
   //	else if(nStat == 8)
   //		*rval = INT_TO_JSVAL(pRoom2->pRoom1->dwYStart); // God knows??!!??!?!?!?!
   else if (nStat == 9)
-    rval = JS_NewInt32(ctx, (pRoom2->pRoom1->pCoords->dwPosGameX));
+    args.rval().setInt32(pRoom2->pRoom1->pCoords->dwPosGameX);
   else if (nStat == 10)
-    rval = JS_NewInt32(ctx, (pRoom2->pRoom1->pCoords->dwPosGameY));
+    args.rval().setInt32(pRoom2->pRoom1->pCoords->dwPosGameY);
   else if (nStat == 11)
-    rval = JS_NewInt32(ctx, (pRoom2->pRoom1->pCoords->dwSizeGameX));
+    args.rval().setInt32(pRoom2->pRoom1->pCoords->dwSizeGameX);
   else if (nStat == 12)
-    rval = JS_NewInt32(ctx, (pRoom2->pRoom1->pCoords->dwSizeGameY));
+    args.rval().setInt32(pRoom2->pRoom1->pCoords->dwSizeGameY);
   else if (nStat == 13)
-    rval = JS_NewInt32(ctx, (pRoom2->pRoom1->pCoords->dwPosRoomX));
+    args.rval().setInt32(pRoom2->pRoom1->pCoords->dwPosRoomX);
   else if (nStat == 14)
-    rval = JS_NewInt32(ctx, (pRoom2->pRoom1->pCoords->dwPosGameY));
+    args.rval().setInt32(pRoom2->pRoom1->pCoords->dwPosGameY);
   else if (nStat == 15)
-    rval = JS_NewInt32(ctx, (pRoom2->pRoom1->pCoords->dwSizeRoomX));
+    args.rval().setInt32(pRoom2->pRoom1->pCoords->dwSizeRoomX);
   else if (nStat == 16)
-    rval = JS_NewInt32(ctx, (pRoom2->pRoom1->pCoords->dwSizeRoomY));
+    args.rval().setInt32(pRoom2->pRoom1->pCoords->dwSizeRoomY);
 
   if (bAdded)
     D2COMMON_RemoveRoomData(D2CLIENT_GetPlayerUnit()->pAct, pRoom2->pLevel->dwLevelNo, pRoom2->dwPosX, pRoom2->dwPosY, D2CLIENT_GetPlayerUnit()->pPath->pRoom1);
 
-  return rval;
+  return true;
 }
 
-JSValue RoomWrap::UnitInRoom(JSContext* ctx, JSValue this_val, int argc, JSValue* argv) {
-  RoomWrap* wrap = static_cast<RoomWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
-
+bool RoomWrap::UnitInRoom(JSContext* ctx, JS::CallArgs& args) {
+  RoomWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* pRoom2 = wrap->pRoom;
-  if (!pRoom2 || argc < 1 || !JS_IsObject(argv[0]))
-    return JS_UNDEFINED;
+  args.rval().setUndefined();
+  if (!pRoom2 || args.length() < 1 || !args[0].isObject())
+    return true;
 
-  UnitWrap::UnitData* pmyUnit = UnitWrap::DataFromJSObject(argv[0]);
+  UnitWrap* unit_wrap;
+  UNWRAP_OR_RETURN(ctx, &unit_wrap, args[0]);
+  UnitWrap::UnitData* pmyUnit = unit_wrap->GetData();
   if (!pmyUnit || (pmyUnit->dwPrivateType & PRIVATE_UNIT) != PRIVATE_UNIT)
-    return JS_UNDEFINED;
+    return true;
 
   D2UnitStrc* pUnit = D2UnitStrc::FindUnit(pmyUnit->dwUnitId, pmyUnit->dwType);
 
   if (!pUnit)
-    return JS_UNDEFINED;
+    return true;
 
   D2ActiveRoomStrc* pRoom1 = D2COMMON_GetRoomFromUnit(pUnit);
 
   if (!pRoom1 || !pRoom1->pRoom2)
-    return JS_UNDEFINED;
+    return true;
 
-  return JS_NewBool(ctx, pRoom1->pRoom2 == pRoom2);
+  args.rval().setBoolean(pRoom1->pRoom2 == pRoom2);
+  return true;
 }
 
-JSValue RoomWrap::GetRoom(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
+bool RoomWrap::GetRoom(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady())
     THROW_ERROR(ctx, "Get Room Game not ready");
 
   AutoCriticalRoom cRoom;
 
-  if (argc == 1 && JS_IsNumber(argv[0])) {
+  if (args.length() == 1 && args[0].isNumber()) {
     uint32_t levelId;
-    JS_ToUint32(ctx, &levelId, argv[0]);
+    JS::ToUint32(ctx, args[0], &levelId);
     if (levelId != 0)  // 1 Parameter, AreaId
     {
       D2DrlgLevelStrc* pLevel = D2DrlgLevelStrc::FindLevelFromLevelId(levelId);
       if (!pLevel || !pLevel->pRoom2First) {
-        return JS_UNDEFINED;
+        args.rval().setUndefined();
+        return true;
       }
 
-      JSValue jsroom = RoomWrap::Instantiate(ctx, JS_UNDEFINED, pLevel->pRoom2First);
+      JS::RootedObject jsroom(ctx, RoomWrap::Instantiate(ctx, pLevel->pRoom2First));
       if (!jsroom) {
-        return JS_UNDEFINED;
+        args.rval().setUndefined();
+        return true;
       }
-      return jsroom;
+
+      args.rval().setObject(*jsroom);
+      return true;
     } else if (levelId == 0) {
       D2ActiveRoomStrc* pRoom1 = D2COMMON_GetRoomFromUnit(D2CLIENT_GetPlayerUnit());
 
       if (!pRoom1 || !pRoom1->pRoom2) {
-        return JS_UNDEFINED;
+        args.rval().setUndefined();
+        return true;
       }
 
-      JSValue jsroom = RoomWrap::Instantiate(ctx, JS_UNDEFINED, pRoom1->pRoom2);
-      if (JS_IsException(jsroom))
-        return JS_UNDEFINED;
+      JS::RootedObject jsroom(ctx, RoomWrap::Instantiate(ctx, pRoom1->pRoom2));
+      if (!jsroom) {
+        args.rval().setUndefined();
+        return true;
+      }
 
-      return jsroom;
+      args.rval().setObject(*jsroom);
+      return true;
     }
-  } else if (argc == 3 || argc == 2)  // area ,x and y
+  } else if (args.length() == 3 || args.length() == 2)  // area ,x and y
   {
     D2DrlgLevelStrc* pLevel = NULL;
 
     uint32_t levelId;
-    JS_ToUint32(ctx, &levelId, argv[0]);
-    if (argc == 3) {
+    JS::ToUint32(ctx, args[0], &levelId);
+    if (args.length() == 3) {
       pLevel = D2DrlgLevelStrc::FindLevelFromLevelId(levelId);
     } else if (D2CLIENT_GetPlayerUnit() && D2CLIENT_GetPlayerUnit()->pPath && D2CLIENT_GetPlayerUnit()->pPath->pRoom1 && D2CLIENT_GetPlayerUnit()->pPath->pRoom1->pRoom2)
       pLevel = D2CLIENT_GetPlayerUnit()->pPath->pRoom1->pRoom2->pLevel;
 
     if (!pLevel || !pLevel->pRoom2First) {
-      return JS_UNDEFINED;
+      args.rval().setUndefined();
+      return true;
     }
 
     uint32_t nX = NULL;
     uint32_t nY = NULL;
-    if (argc == 2) {
-      JS_ToUint32(ctx, &nX, argv[0]);
-      JS_ToUint32(ctx, &nY, argv[1]);
-    } else if (argc == 3) {
-      JS_ToUint32(ctx, &nX, argv[1]);
-      JS_ToUint32(ctx, &nY, argv[2]);
+    if (args.length() == 2) {
+      JS::ToUint32(ctx, args[0], &nX);
+      JS::ToUint32(ctx, args[1], &nY);
+    } else if (args.length() == 3) {
+      JS::ToUint32(ctx, args[1], &nX);
+      JS::ToUint32(ctx, args[2], &nY);
     }
     if (!nX || !nY) {
-      return JS_UNDEFINED;
+      args.rval().setUndefined();
+      return true;
     }
 
     // Scan for the room with the matching x,y coordinates.
@@ -579,30 +571,41 @@ JSValue RoomWrap::GetRoom(JSContext* ctx, JSValue /*this_val*/, int argc, JSValu
         if (bAdded)
           D2COMMON_RemoveRoomData(D2CLIENT_GetPlayerUnit()->pAct, pLevel->dwLevelNo, pRoom->dwPosX, pRoom->dwPosY, D2CLIENT_GetPlayerUnit()->pPath->pRoom1);
 
-        JSValue jsroom = RoomWrap::Instantiate(ctx, JS_UNDEFINED, pRoom);
-        if (JS_IsException(jsroom))
-          return JS_UNDEFINED;
+        JS::RootedObject jsroom(ctx, RoomWrap::Instantiate(ctx, pRoom));
+        if (!jsroom) {
+          args.rval().setUndefined();
+          return true;
+        }
 
-        return jsroom;
+        args.rval().setObject(*jsroom);
+        return true;
       }
 
       if (bAdded)
         D2COMMON_RemoveRoomData(D2CLIENT_GetPlayerUnit()->pAct, pLevel->dwLevelNo, pRoom->dwPosX, pRoom->dwPosY, D2CLIENT_GetPlayerUnit()->pPath->pRoom1);
     }
 
-    JSValue jsroom = RoomWrap::Instantiate(ctx, JS_UNDEFINED, pLevel->pRoom2First);
-    if (JS_IsException(jsroom))
-      return JS_UNDEFINED;
+    JS::RootedObject jsroom(ctx, RoomWrap::Instantiate(ctx, pLevel->pRoom2First));
+    if (!jsroom) {
+      args.rval().setUndefined();
+      return true;
+    }
 
-    return jsroom;
+    args.rval().setObject(*jsroom);
+    return true;
   } else {
-    JSValue jsroom = RoomWrap::Instantiate(ctx, JS_UNDEFINED, D2CLIENT_GetPlayerUnit()->pPath->pRoom1->pRoom2->pLevel->pRoom2First);
-    if (JS_IsException(jsroom))
-      return JS_UNDEFINED;
+    JS::RootedObject jsroom(ctx, RoomWrap::Instantiate(ctx, D2CLIENT_GetPlayerUnit()->pPath->pRoom1->pRoom2->pLevel->pRoom2First));
+    if (!jsroom) {
+      args.rval().setUndefined();
+      return true;
+    }
 
-    return jsroom;
+    args.rval().setObject(*jsroom);
+    return true;
   }
-  return JS_UNDEFINED;
+
+  args.rval().setUndefined();
+  return true;
 }
 
 D2BS_BINDING_INTERNAL(RoomWrap, RoomWrap::Initialize)

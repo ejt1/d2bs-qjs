@@ -1,31 +1,34 @@
 #include "JSMenu.h"
-// #include "Control.h"
+
+#include "Control.h"
 #include "JSControl.h"
 #include "Helpers.h"
 #include "Engine.h"
 
 #include "Profile.h"
 
-JSAPI_FUNC(my_login) {
-  if (ClientState() != ClientStateMenu)
-    return JS_UNDEFINED;
+bool my_login(JSContext* ctx, JS::CallArgs& args) {
+  if (ClientState() != ClientStateMenu) {
+    args.rval().setUndefined();
+    return true;
+  }
 
   std::string profile;
   const char* error;
 
-  if (!JS_IsString(argv[0])) {
+  if (!args[0].isString()) {
     if (Vars.szProfile != NULL) {
       profile = Vars.szProfile;
     } else
       THROW_ERROR(ctx, "Invalid profile specified!");
   } else {
-    const char* szProfile = JS_ToCString(ctx, argv[0]);
+    char* szProfile = JS_EncodeString(ctx, args[0].toString());
     if (!szProfile) {
-      return JS_EXCEPTION;
+      THROW_ERROR(ctx, "failed to encode string");
     }
     strcpy_s(Vars.szProfile, 256, szProfile);
     profile = szProfile;
-    JS_FreeCString(ctx, szProfile);
+    JS_free(ctx, szProfile);
   }
 
   if (profile.empty()) {
@@ -42,56 +45,58 @@ JSAPI_FUNC(my_login) {
   }
 
   delete prof;
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSAPI_FUNC(my_selectChar) {
-  if (argc != 1 || !JS_IsString(argv[0]))
+bool my_selectChar(JSContext* ctx, JS::CallArgs& args) {
+  if (args.length() != 1 || !args[0].isString())
     THROW_ERROR(ctx, "Invalid parameters specified to selectCharacter");
 
-  const char* szProfile = JS_ToCString(ctx, argv[0]);
+  char* szProfile = JS_EncodeString(ctx, args[0].toString());
   if (!szProfile) {
-    return JS_EXCEPTION;
+    THROW_ERROR(ctx, "failed to encode string");
   }
 
   if (!Profile::ProfileExists(szProfile)) {
-    JS_FreeCString(ctx, szProfile);
+    JS_free(ctx, szProfile);
     THROW_ERROR(ctx, "Invalid profile specified");
   }
   char charname[24], file[_MAX_FNAME + MAX_PATH];
   sprintf_s(file, _countof(file), "%sd2bs.ini", Vars.szPath);
   GetPrivateProfileStringA(szProfile, "character", "ERROR", charname, _countof(charname), file);
 
-  JS_FreeCString(ctx, szProfile);
-  return JS_NewBool(ctx, OOG_SelectCharacter(charname));
+  JS_free(ctx, szProfile);
+  args.rval().setBoolean(OOG_SelectCharacter(charname));
+  return true;
 }
 
-JSAPI_FUNC(my_createGame) {
-  if (ClientState() != ClientStateMenu)
-    return JS_NULL;
+bool my_createGame(JSContext* ctx, JS::CallArgs& args) {
+  if (ClientState() != ClientStateMenu) {
+    args.rval().setNull();
+    return true;
+  }
 
   std::string name, pass;
-  if (JS_IsString(argv[0])) {
-    const char* jsname = JS_ToCString(ctx, argv[0]);
+  if (args[0].isString()) {
+    char* jsname = JS_EncodeString(ctx, args[0].toString());
     if (!jsname) {
-      return JS_EXCEPTION;
+      THROW_ERROR(ctx, "failed to encode string");
     }
     name = jsname;
-    JS_FreeCString(ctx, jsname);
+    JS_free(ctx, jsname);
   }
-  if (JS_IsString(argv[1])) {
-    const char* jspass = JS_ToCString(ctx, argv[1]);
+  if (args[1].isString()) {
+    char* jspass = JS_EncodeString(ctx, args[1].toString());
     if (!jspass) {
-      return JS_EXCEPTION;
+      THROW_ERROR(ctx, "failed to encode string");
     }
     pass = jspass;
-    JS_FreeCString(ctx, jspass);
+    JS_free(ctx, jspass);
   }
   int32_t diff = 3;
-  if (argc > 2 && JS_IsNumber(argv[2])) {
-    if (JS_ToInt32(ctx, &diff, argv[2])) {
-      return JS_EXCEPTION;
-    }
+  if (args.length() > 2 && args[2].isInt32()) {
+    diff = args[2].toInt32();
   }
 
   if (name.length() > 15 || pass.length() > 15)
@@ -100,29 +105,32 @@ JSAPI_FUNC(my_createGame) {
   if (!OOG_CreateGame(name.c_str(), pass.c_str(), diff))
     THROW_ERROR(ctx, "createGame failed");
 
-  return JS_NULL;
+  args.rval().setNull();
+  return true;
 }
 
-JSAPI_FUNC(my_joinGame) {
-  if (ClientState() != ClientStateMenu)
-    return JS_NULL;
+bool my_joinGame(JSContext* ctx, JS::CallArgs& args) {
+  if (ClientState() != ClientStateMenu) {
+    args.rval().setNull();
+    return true;
+  }
 
   std::string name, pass;
-  if (JS_IsString(argv[0])) {
-    const char* jsname = JS_ToCString(ctx, argv[0]);
+  if (args[0].isString()) {
+    char* jsname = JS_EncodeString(ctx, args[0].toString());
     if (!jsname) {
-      return JS_EXCEPTION;
+      THROW_ERROR(ctx, "failed to encode string");
     }
     name = jsname;
-    JS_FreeCString(ctx, jsname);
+    JS_free(ctx, jsname);
   }
-  if (JS_IsString(argv[1])) {
-    const char* jspass = JS_ToCString(ctx, argv[1]);
+  if (args[1].toString()) {
+    char* jspass = JS_EncodeString(ctx, args[1].toString());
     if (!jspass) {
-      return JS_EXCEPTION;
+      THROW_ERROR(ctx, "failed to encode string");
     }
     pass = jspass;
-    JS_FreeCString(ctx, jspass);
+    JS_free(ctx, jspass);
   }
 
   if (name.length() > 15 || pass.length() > 15)
@@ -131,28 +139,29 @@ JSAPI_FUNC(my_joinGame) {
   if (!OOG_JoinGame(name.c_str(), pass.c_str()))
     THROW_ERROR(ctx, "joinGame failed");
 
-  return JS_NULL;
+  args.rval().setNull();
+  return true;
 }
 
-JSAPI_FUNC(my_addProfile) {
+bool my_addProfile(JSContext* ctx, JS::CallArgs& args) {
   // validate the args...
   std::string profile, mode, gateway, username, password, charname;
   int spdifficulty = 3;
-  if (argc < 6 || argc > 7)
+  if (args.length() < 6 || args.length() > 7)
     THROW_ERROR(ctx, "Invalid arguments passed to addProfile");
 
-  std::string* args[] = {&profile, &mode, &gateway, &username, &password, &charname};
+  std::string* vals[] = {&profile, &mode, &gateway, &username, &password, &charname};
   for (uint32_t i = 0; i < 6; i++) {
-    const char* tmp = JS_ToCString(ctx, argv[i]);
+    char* tmp = JS_EncodeString(ctx, args[i].toString());
     if (!tmp) {
-      return JS_EXCEPTION;
+      THROW_ERROR(ctx, "failed to encode string");
     }
-    *args[i] = tmp;
-    JS_FreeCString(ctx, tmp);
+    *vals[i] = tmp;
+    JS_free(ctx, tmp);
   }
 
-  if (argc == 7) {
-    JS_ToInt32(ctx, &spdifficulty, argv[6]);
+  if (args.length() == 7) {
+    spdifficulty = args[6].toInt32();
   }
 
   if (spdifficulty > 3 || spdifficulty < 0)
@@ -161,47 +170,55 @@ JSAPI_FUNC(my_addProfile) {
   char file[_MAX_FNAME + _MAX_PATH];
 
   sprintf_s(file, _countof(file), "%sd2bs.ini", Vars.szPath);
-  if (!Profile::ProfileExists(args[0]->c_str())) {
+  if (!Profile::ProfileExists(vals[0]->c_str())) {
     char settings[600] = "";
     sprintf_s(settings, _countof(settings), "mode=%s\tgateway=%s\tusername=%s\tpassword=%s\tcharacter=%s\tspdifficulty=%d\t", mode.c_str(), gateway.c_str(),
-               username.c_str(), password.c_str(), charname.c_str(), spdifficulty);
+              username.c_str(), password.c_str(), charname.c_str(), spdifficulty);
 
     StringReplace(settings, '\t', '\0', 600);
-    WritePrivateProfileSectionA(args[0]->c_str(), settings, file);
+    WritePrivateProfileSectionA(vals[0]->c_str(), settings, file);
   }
 
-  return JS_NULL;
+  args.rval().setNull();
+  return true;
 }
 
-JSAPI_FUNC(my_getOOGLocation) {
-  if (ClientState() != ClientStateMenu)
-    return JS_NULL;
+bool my_getOOGLocation(JSContext* /*ctx*/, JS::CallArgs& args) {
+  if (ClientState() != ClientStateMenu) {
+    args.rval().setNull();
+    return true;
+  }
 
-  return JS_NewInt32(ctx, OOG_GetLocation());
+  args.rval().setInt32(OOG_GetLocation());
+  return true;
 }
 
-JSAPI_FUNC(my_createCharacter) {
-  if (ClientState() != ClientStateMenu)
-    return JS_UNDEFINED;
+bool my_createCharacter(JSContext* ctx, JS::CallArgs& args) {
+  if (ClientState() != ClientStateMenu) {
+    args.rval().setUndefined();
+    return true;
+  }
 
   std::string name;
   int32_t type = -1;
   bool hc = false, ladder = false;
-  if (!JS_IsString(argv[0]) || !JS_IsNumber(argv[1])) {
-    return JS_EXCEPTION;
+  if (!args[0].isString() || !args[1].isInt32()) {
+    THROW_ERROR(ctx, "invalid arguments");
   }
-  const char* str = JS_ToCString(ctx, argv[0]);
-  if (!str || JS_ToInt32(ctx, &type, argv[1])) {
-    return JS_EXCEPTION;
+  char* str = JS_EncodeString(ctx, args[0].toString());
+  if (!str) {
+    THROW_ERROR(ctx, "failed to encode string");
   }
+  type = args[1].toInt32();
   name = str;
-  JS_FreeCString(ctx, str);
-  if (JS_IsBool(argv[2])) {
-    hc = JS_ToBool(ctx, argv[2]);
+  JS_free(ctx, str);
+  if (args[2].isBoolean()) {
+    hc = args[2].toBoolean();
   }
-  if (JS_IsBool(argv[3])) {
-    ladder = JS_ToBool(ctx, argv[3]);
+  if (args[3].isBoolean()) {
+    ladder = args[3].toBoolean();
   }
 
-  return JS_NewBool(ctx, OOG_CreateCharacter(name.c_str(), type, hc, ladder));
+  args.rval().setBoolean(OOG_CreateCharacter(name.c_str(), type, hc, ladder));
+  return true;
 }

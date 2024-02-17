@@ -1,49 +1,48 @@
 #pragma once
 
 #include "js32.h"
-#include "JSGlobalClasses.h"
 
-JSAPI_FUNC(my_rand);
-JSAPI_FUNC(my_submitItem);
-JSAPI_FUNC(my_copyUnit);
-JSAPI_FUNC(my_clickMap);
-JSAPI_FUNC(my_acceptTrade);
-JSAPI_FUNC(my_tradeOk);
-JSAPI_FUNC(my_getDialogLines);
-JSAPI_FUNC(my_clickDialog);
-JSAPI_FUNC(my_clickItem);
-JSAPI_FUNC(my_gold);
-JSAPI_FUNC(my_checkCollision);
-JSAPI_FUNC(my_playSound);
-JSAPI_FUNC(my_quit);
-JSAPI_FUNC(my_quitGame);
-JSAPI_FUNC(my_say);
-JSAPI_FUNC(my_weaponSwitch);
-JSAPI_FUNC(my_transmute);
-JSAPI_FUNC(my_clickParty);
-JSAPI_FUNC(my_useStatPoint);
-JSAPI_FUNC(my_useSkillPoint);
+bool my_rand(JSContext* ctx, JS::CallArgs& args);
+bool my_submitItem(JSContext* ctx, JS::CallArgs& args);
+bool my_copyUnit(JSContext* ctx, JS::CallArgs& args);
+bool my_clickMap(JSContext* ctx, JS::CallArgs& args);
+bool my_acceptTrade(JSContext* ctx, JS::CallArgs& args);
+bool my_tradeOk(JSContext* ctx, JS::CallArgs& args);
+bool my_getDialogLines(JSContext* ctx, JS::CallArgs& args);
+bool my_clickDialog(JSContext* ctx, JS::CallArgs& args);
+bool my_clickItem(JSContext* ctx, JS::CallArgs& args);
+bool my_gold(JSContext* ctx, JS::CallArgs& args);
+bool my_checkCollision(JSContext* ctx, JS::CallArgs& args);
+bool my_playSound(JSContext* ctx, JS::CallArgs& args);
+bool my_quit(JSContext* ctx, JS::CallArgs& args);
+bool my_quitGame(JSContext* ctx, JS::CallArgs& args);
+bool my_say(JSContext* ctx, JS::CallArgs& args);
+bool my_weaponSwitch(JSContext* ctx, JS::CallArgs& args);
+bool my_transmute(JSContext* ctx, JS::CallArgs& args);
+bool my_clickParty(JSContext* ctx, JS::CallArgs& args);
+bool my_useStatPoint(JSContext* ctx, JS::CallArgs& args);
+bool my_useSkillPoint(JSContext* ctx, JS::CallArgs& args);
 
-JSAPI_FUNC(my_getInteractedNPC);
-JSAPI_FUNC(my_getIsTalkingNPC);
+bool my_getInteractedNPC(JSContext* ctx, JS::CallArgs& args);
+bool my_getIsTalkingNPC(JSContext* ctx, JS::CallArgs& args);
 
-JSAPI_FUNC(my_takeScreenshot);
-JSAPI_FUNC(my_getMouseCoords);
-JSAPI_FUNC(my_getDistance);
-JSAPI_FUNC(my_getPath);
-JSAPI_FUNC(my_getCollision);
-JSAPI_FUNC(my_getCursorType);
-JSAPI_FUNC(my_getSkillByName);
-JSAPI_FUNC(my_getSkillById);
-JSAPI_FUNC(my_getLocaleString);
-JSAPI_FUNC(my_getTextSize);
-JSAPI_FUNC(my_getUIFlag);
-JSAPI_FUNC(my_getTradeInfo);
-JSAPI_FUNC(my_getWaypoint);
-JSAPI_FUNC(my_getBaseStat);
-JSAPI_FUNC(my_getPlayerFlag);
-JSAPI_FUNC(my_moveNPC);
-JSAPI_FUNC(my_revealLevel);
+bool my_takeScreenshot(JSContext* ctx, JS::CallArgs& args);
+bool my_getMouseCoords(JSContext* ctx, JS::CallArgs& args);
+bool my_getDistance(JSContext* ctx, JS::CallArgs& args);
+bool my_getPath(JSContext* ctx, JS::CallArgs& args);
+bool my_getCollision(JSContext* ctx, JS::CallArgs& args);
+bool my_getCursorType(JSContext* ctx, JS::CallArgs& args);
+bool my_getSkillByName(JSContext* ctx, JS::CallArgs& args);
+bool my_getSkillById(JSContext* ctx, JS::CallArgs& args);
+bool my_getLocaleString(JSContext* ctx, JS::CallArgs& args);
+bool my_getTextSize(JSContext* ctx, JS::CallArgs& args);
+bool my_getUIFlag(JSContext* ctx, JS::CallArgs& args);
+bool my_getTradeInfo(JSContext* ctx, JS::CallArgs& args);
+bool my_getWaypoint(JSContext* ctx, JS::CallArgs& args);
+bool my_getBaseStat(JSContext* ctx, JS::CallArgs& args);
+bool my_getPlayerFlag(JSContext* ctx, JS::CallArgs& args);
+bool my_moveNPC(JSContext* ctx, JS::CallArgs& args);
+bool my_revealLevel(JSContext* ctx, JS::CallArgs& args);
 
-JSAPI_FUNC(screenToAutomap);
-JSAPI_FUNC(automapToScreen);
+bool screenToAutomap(JSContext* ctx, JS::CallArgs& args);
+bool automapToScreen(JSContext* ctx, JS::CallArgs& args);

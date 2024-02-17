@@ -147,7 +147,7 @@ void Engine::OnUpdate() {
     if (!sScriptEngine->Initialize()) {
       strcpy_s(Vars.szPath, MAX_PATH, "common");
       Log("D2BS Engine startup failed. %s", Vars.szCommandLine);
-      Print("ÿc2D2BSÿc0 :: Engine startup failed!");
+      Print("Ã¿c2D2BSÃ¿c0 :: Engine startup failed!");
       exit(-1);
     }
 
@@ -163,14 +163,14 @@ void Engine::OnUpdate() {
         LoadMPQ(value.c_str());
       } else if (arg == "-profile") {
         if (SwitchToProfile(value.c_str()))
-          Print("ÿc2D2BSÿc0 :: Switched to profile %s", value.c_str());
+          Print("Ã¿c2D2BSÃ¿c0 :: Switched to profile %s", value.c_str());
         else
-          Print("ÿc2D2BSÿc0 :: Profile %s not found", value.c_str());
+          Print("Ã¿c2D2BSÃ¿c0 :: Profile %s not found", value.c_str());
       }
     }
 
     Log("D2BS Engine startup complete. %s", D2BS_VERSION);
-    Print("ÿc2D2BSÿc0 :: Engine startup complete!");
+    Print("Ã¿c2D2BSÃ¿c0 :: Engine startup complete!");
   });
 
   // spin the event loop
@@ -227,11 +227,11 @@ void Engine::OnGameEntered() {
   if (!Vars.bUseProfileScript) {
     const char* starter = GetStarterScriptName();
     if (starter != NULL) {
-      Print("ÿc2D2BSÿc0 :: Starting %s", starter);
+      Print("Ã¿c2D2BSÃ¿c0 :: Starting %s", starter);
       if (StartScript(starter, GetStarterScriptState()))
-        Print("ÿc2D2BSÿc0 :: %s running.", starter);
+        Print("Ã¿c2D2BSÃ¿c0 :: %s running.", starter);
       else
-        Print("ÿc2D2BSÿc0 :: Failed to start %s!", starter);
+        Print("Ã¿c2D2BSÃ¿c0 :: Failed to start %s!", starter);
     }
   }
 }
@@ -240,11 +240,11 @@ void Engine::OnMenuEntered(bool beginStarter) {
   if (beginStarter && !Vars.bUseProfileScript) {
     const char* starter = GetStarterScriptName();
     if (starter != NULL) {
-      Print("ÿc2D2BSÿc0 :: Starting %s", starter);
+      Print("Ã¿c2D2BSÃ¿c0 :: Starting %s", starter);
       if (StartScript(starter, GetStarterScriptState()))
-        Print("ÿc2D2BSÿc0 :: %s running.", starter);
+        Print("Ã¿c2D2BSÃ¿c0 :: %s running.", starter);
       else
-        Print("ÿc2D2BSÿc0 :: Failed to start %s!", starter);
+        Print("Ã¿c2D2BSÃ¿c0 :: Failed to start %s!", starter);
     }
   }
 }
@@ -473,9 +473,9 @@ LRESULT __stdcall Engine::HandleWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
           sScriptEngine->RunCommand(lpszData);
         } else if (pCopy->dwData == 0x31337) {  // 0x31337 = Set Profile
           if (SwitchToProfile(lpszData)) {
-            Print("ÿc2D2BSÿc0 :: Switched to profile %s", lpszData);
+            Print("Ã¿c2D2BSÃ¿c0 :: Switched to profile %s", lpszData);
           } else {
-            Print("ÿc2D2BSÿc0 :: Profile %s not found", lpszData);
+            Print("Ã¿c2D2BSÃ¿c0 :: Profile %s not found", lpszData);
           }
         } else {
           CopyDataEvent(pCopy->dwData, lpszData);

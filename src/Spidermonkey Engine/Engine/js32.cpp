@@ -1,17 +1,17 @@
 #include "js32.h"
-
-#include "Helpers.h"
+//
+// #include "Helpers.h"
 #include "D2Helpers.h"
 #include "Core.h"
 #include "Globals.h"
 #include "Console.h"
+//
+// JSValue JS_NewString(JSContext* ctx, const wchar_t* str) {
+//  std::string utf8 = WideToAnsi(str);
+//  return JS_NewString(ctx, utf8.c_str());
+//}
 
-JSValue JS_NewString(JSContext* ctx, const wchar_t* str) {
-  std::string utf8 = WideToAnsi(str);
-  return JS_NewString(ctx, utf8.c_str());
-}
-
-JSValue JS_CompileFile(JSContext* ctx, JSValue /*globalObject*/, std::string fileName) {
+JSScript* JS_CompileFile(JSContext* ctx, JS::HandleObject /*globalObject*/, std::string fileName) {
   std::ifstream t(fileName.c_str(), std::ios::binary);
   std::string str;
 
@@ -31,75 +31,57 @@ JSValue JS_CompileFile(JSContext* ctx, JSValue /*globalObject*/, std::string fil
     str[2] = ' ';
   }
 
-  JSValue rval = JS_Eval(ctx, str.c_str(), str.size(), fileName.c_str(), JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
+  JS::CompileOptions opts(ctx);
+  opts.setFileAndLine(fileName.c_str(), 1);
+  JS::RootedScript script(ctx);
+  if (!JS_CompileScript(ctx, str.c_str(), str.length(), opts, &script)) {
+    t.close();
+    return nullptr;
+  }
   t.close();
 
-  return rval;
+  return script;
 }
 
-std::optional<std::string> JS_CStringToStd(JSContext* ctx, JSValue val) {
-  size_t len;
-  const char* ptr = JS_ToCStringLen(ctx, &len, val);
-  if (!ptr) {
-    return std::nullopt;
-  }
-  std::string s(ptr, len);
-  JS_FreeCString(ctx, ptr);
-  return s;
-}
+// std::optional<std::string> JS_CStringToStd(JSContext* ctx, JSValue val) {
+//   size_t len;
+//   const char* ptr = JS_ToCStringLen(ctx, &len, val);
+//   if (!ptr) {
+//     return std::nullopt;
+//   }
+//   std::string s(ptr, len);
+//   JS_FreeCString(ctx, ptr);
+//   return s;
+// }
 
-// TODO(ejt): this function is a mess after throwing the old 'reportError' in here
-void JS_ReportPendingException(JSContext* ctx) {
-  std::optional<std::string> what;
-  std::optional<std::string> stackframe;
-  JSValue ex;
-  bool isError;
-
-
-  ex = JS_GetException(ctx);
-  // skip uncatchable errors to avoid logging "interrupted" exceptions
-  if (JS_IsUncatchableError(ctx, ex)) {
-    JS_FreeValue(ctx, ex);
-    return;
-  }
-
-  isError = JS_IsError(ctx, ex);
-  if (isError) {
-    what = JS_CStringToStd(ctx, ex);
-    JSValue stack = JS_GetPropertyStr(ctx, ex, "stack");
-    if (!JS_IsNull(stack) && !JS_IsUndefined(stack)) {
-      stackframe = JS_CStringToStd(ctx, stack);
-    }
-    JS_FreeValue(ctx, stack);
-  }
-  JS_FreeValue(ctx, ex);
-
-  bool warn = false;      // JSREPORT_IS_WARNING(report->flags);
-  bool isStrict = false;  // JSREPORT_IS_STRICT(report->flags);
+void JS_LogReport(JSContext* ctx, JSErrorReport* report) {
+  bool warn = JSREPORT_IS_WARNING(report->flags);
+  bool isStrict = JSREPORT_IS_STRICT(report->flags);
   const char* type = (warn ? "Warning" : "Error");
   const char* strict = (isStrict ? "Strict " : "");
-  // wchar_t* filename = report->filename ? AnsiToUnicode(report->filename) : _wcsdup(L"<unknown>");
-  // wchar_t* displayName = filename;
-  // if (_wcsicmp(L"Command Line", filename) != 0 && _wcsicmp(L"<unknown>", filename) != 0)
-  //   displayName = filename + wcslen(Vars.szPath);
+  const char* filename = report->filename ? report->filename : "<unknown>";
+  const char* displayName = filename;
+  if (_stricmp("Command Line", filename) != 0 && _stricmp("<unknown>", filename) != 0)
+    displayName = filename + strlen(Vars.szPath);
 
-  if (what) {
-    if (stackframe) {
-      Log("[%hs%hs] %s\n%s", strict, type, what->c_str(), stackframe->c_str());
-      Print("[ÿc%d%hs%hsÿc0] %s\n%s", (warn ? 9 : 1), strict, type, what->c_str(), stackframe->c_str());
-    } else {
-      Log("[%hs%hs] %s", strict, type, what->c_str());
-      Print("[ÿc%d%hs%hsÿc0] %s", (warn ? 9 : 1), strict, type, what->c_str());
-    }
-  }
+  Log("[%hs%hs] Code(%d) File(%s:%d) %s", strict, type, report->errorNumber, filename, report->lineno, report->message().c_str());
+  Print("[Ã¿c%d%hs%hsÃ¿c0 (%d)] File(%s:%d) %s", (warn ? 9 : 1), strict, type, report->errorNumber, displayName, report->lineno, report->message().c_str());
 
-  // if (filename[0] == L'<')
-  //   free(filename);
-  // else
-  //   delete[] filename;
-
-  if (Vars.bQuitOnError && /*!JSREPORT_IS_WARNING(report->flags) && */ ClientState() == ClientStateInGame)
+  if (Vars.bQuitOnError && !JSREPORT_IS_WARNING(report->flags) && ClientState() == ClientStateInGame)
     D2CLIENT_ExitGame();
   else
     Console::ShowBuffer();
+}
+
+//  TODO(ejt): this function is a mess after throwing the old 'reportError' in here
+void JS_ReportPendingException(JSContext* ctx) {
+  JS::RootedValue ex(ctx);
+
+  if (!JS_GetPendingException(ctx, &ex)) {
+    return;
+  }
+  JS_ClearPendingException(ctx);
+  JS::RootedObject error(ctx, ex.toObjectOrNull());
+  JSErrorReport* report = JS_ErrorFromException(ctx, error);
+  JS_LogReport(ctx, report);
 }

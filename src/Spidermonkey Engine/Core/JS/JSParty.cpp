@@ -4,242 +4,251 @@
 #include "D2Helpers.h"  // WaitForGameReady
 #include "JSUnit.h"     // JSUnit
 
-JSValue PartyWrap::Instantiate(JSContext* ctx, JSValue new_target, D2RosterUnitStrc* unit) {
-  JSValue proto;
-  if (JS_IsUndefined(new_target)) {
-    proto = JS_GetClassProto(ctx, m_class_id);
-  } else {
-    proto = JS_GetPropertyStr(ctx, new_target, "prototype");
-    if (JS_IsException(proto)) {
-      return JS_EXCEPTION;
-    }
+JSObject* PartyWrap::Instantiate(JSContext* ctx, D2RosterUnitStrc* unit) {
+  JS::RootedObject global(ctx, JS::CurrentGlobalOrNull(ctx));
+  JS::RootedValue constructor_val(ctx);
+  if (!JS_GetProperty(ctx, global, "Party", &constructor_val)) {
+    JS_ReportErrorASCII(ctx, "Could not find constructor object for Party");
+    return nullptr;
   }
-  JSValue obj = JS_NewObjectProtoClass(ctx, proto, m_class_id);
-  JS_FreeValue(ctx, proto);
-  if (JS_IsException(obj)) {
-    return obj;
+  if (!constructor_val.isObject()) {
+    JS_ReportErrorASCII(ctx, "Party is not a constructor");
+    return nullptr;
   }
+  JS::RootedObject constructor(ctx, &constructor_val.toObject());
 
-  PartyWrap* wrap = new PartyWrap(ctx, unit);
+  JS::RootedObject obj(ctx, JS_New(ctx, constructor, JS::HandleValueArray::empty()));
+  if (!obj) {
+    JS_ReportErrorASCII(ctx, "Calling Party constructor failed");
+    return nullptr;
+  }
+  PartyWrap* wrap = new PartyWrap(ctx, obj, unit);
   if (!wrap) {
-    JS_FreeValue(ctx, obj);
-    return JS_ThrowOutOfMemory(ctx);
+    JS_ReportOutOfMemory(ctx);
+    return nullptr;
   }
-  JS_SetOpaque(obj, wrap);
-
   return obj;
 }
 
-void PartyWrap::Initialize(JSContext* ctx, JSValue target) {
-  JSClassDef def{};
-  def.class_name = "Party";
-  def.finalizer = [](JSRuntime* /*rt*/, JSValue val) {
-    PartyWrap* wrap = static_cast<PartyWrap*>(JS_GetOpaque(val, m_class_id));
-    if (wrap) {
-      delete wrap;
-    }
+void PartyWrap::Initialize(JSContext* ctx, JS::HandleObject target) {
+  static JSPropertySpec props[] = {
+      JS_PSG("x", trampoline<GetX>, JSPROP_ENUMERATE),
+      JS_PSG("y", trampoline<GetY>, JSPROP_ENUMERATE),
+      JS_PSG("area", trampoline<GetArea>, JSPROP_ENUMERATE),
+      JS_PSG("gid", trampoline<GetGid>, JSPROP_ENUMERATE),
+      JS_PSG("life", trampoline<GetLife>, JSPROP_ENUMERATE),
+      JS_PSG("partyflag", trampoline<GetPartyFlag>, JSPROP_ENUMERATE),
+      JS_PSG("partyid", trampoline<GetPartyId>, JSPROP_ENUMERATE),
+      JS_PSG("name", trampoline<GetName>, JSPROP_ENUMERATE),
+      JS_PSG("classid", trampoline<GetClassId>, JSPROP_ENUMERATE),
+      JS_PSG("level", trampoline<GetLevel>, JSPROP_ENUMERATE),
+      JS_PS_END,
   };
 
-  if (m_class_id == 0) {
-    JS_NewClassID(&m_class_id);
+  static JSFunctionSpec methods[] = {
+      JS_FN("getNext", trampoline<GetNext>, 0, JSPROP_ENUMERATE),
+      JS_FS_END,
+  };
+
+  JS::RootedObject proto(ctx, JS_InitClass(ctx, target, nullptr, &m_class, trampoline<New>, 0, props, methods, nullptr, nullptr));
+  if (!proto) {
+    return;
   }
-  JS_NewClass(JS_GetRuntime(ctx), m_class_id, &def);
-
-  JSValue proto = JS_NewObject(ctx);
-  JS_SetPropertyFunctionList(ctx, proto, m_proto_funcs, _countof(m_proto_funcs));
-
-  JSValue obj = JS_NewCFunction2(ctx, New, "Party", 0, JS_CFUNC_constructor, 0);
-  JS_SetConstructor(ctx, obj, proto);
-
-  JS_SetClassProto(ctx, m_class_id, proto);
-  JS_SetPropertyStr(ctx, target, "Party", obj);
 
   // globals
-  JS_SetPropertyStr(ctx, target, "getParty", JS_NewCFunction(ctx, GetParty, "getParty", 0));
+  JS_DefineFunction(ctx, target, "getParty", trampoline<GetParty>, 0, JSPROP_ENUMERATE);
 }
 
-PartyWrap::PartyWrap(JSContext* /*ctx*/, D2RosterUnitStrc* unit) : pPresetUnit(unit) {
+D2RosterUnitStrc* PartyWrap::GetData() {
+  return pPresetUnit;
 }
 
-JSValue PartyWrap::New(JSContext* /*ctx*/, JSValue /*new_target*/, int /*argc*/, JSValue* /*argv*/) {
-  // TODO(ejt): empty constructor for compatibility with kolbot
-  return JS_UNDEFINED;
+PartyWrap::PartyWrap(JSContext* ctx, JS::HandleObject obj, D2RosterUnitStrc* unit) : BaseObject(ctx, obj), pPresetUnit(unit) {
+}
+
+void PartyWrap::finalize(JSFreeOp* fop, JSObject* obj) {
+  BaseObject* wrap = BaseObject::FromJSObject(obj);
+  if (wrap) {
+    delete wrap;
+  }
+}
+
+bool PartyWrap::New(JSContext* ctx, JS::CallArgs& args) {
+  JS::RootedObject newObject(ctx, JS_NewObjectForConstructor(ctx, &m_class, args));
+  if (!newObject) {
+    THROW_ERROR(ctx, "failed to instantiate party");
+  }
+  args.rval().setObject(*newObject);
+  return true;
 }
 
 // properties
-JSValue PartyWrap::GetX(JSContext* ctx, JSValue this_val) {
-  PartyWrap* wrap = static_cast<PartyWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
+bool PartyWrap::GetX(JSContext* ctx, JS::CallArgs& args) {
+  PartyWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
 
   D2RosterUnitStrc* unit = wrap->pPresetUnit;
-  return JS_NewUint32(ctx, unit->Xpos);
+  args.rval().setInt32(unit->Xpos);
+  return true;
 }
 
-JSValue PartyWrap::GetY(JSContext* ctx, JSValue this_val) {
-  PartyWrap* wrap = static_cast<PartyWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
+bool PartyWrap::GetY(JSContext* ctx, JS::CallArgs& args) {
+  PartyWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
 
   D2RosterUnitStrc* unit = wrap->pPresetUnit;
-  return JS_NewUint32(ctx, unit->Ypos);
+  args.rval().setInt32(unit->Ypos);
+  return true;
 }
 
-JSValue PartyWrap::GetArea(JSContext* ctx, JSValue this_val) {
-  PartyWrap* wrap = static_cast<PartyWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
+bool PartyWrap::GetArea(JSContext* ctx, JS::CallArgs& args) {
+  PartyWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
 
   D2RosterUnitStrc* unit = wrap->pPresetUnit;
-  return JS_NewUint32(ctx, unit->dwLevelId);
+  args.rval().setInt32(unit->dwLevelId);
+  return true;
 }
 
-JSValue PartyWrap::GetGid(JSContext* ctx, JSValue this_val) {
-  PartyWrap* wrap = static_cast<PartyWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
+bool PartyWrap::GetGid(JSContext* ctx, JS::CallArgs& args) {
+  PartyWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
 
   D2RosterUnitStrc* unit = wrap->pPresetUnit;
-  return JS_NewUint32(ctx, unit->dwUnitId);
+  args.rval().setInt32(unit->dwUnitId);
+  return true;
 }
 
-JSValue PartyWrap::GetLife(JSContext* ctx, JSValue this_val) {
-  PartyWrap* wrap = static_cast<PartyWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
+bool PartyWrap::GetLife(JSContext* ctx, JS::CallArgs& args) {
+  PartyWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
 
   D2RosterUnitStrc* unit = wrap->pPresetUnit;
-  return JS_NewUint32(ctx, unit->dwPartyLife);
+  args.rval().setInt32(unit->dwPartyLife);
+  return true;
 }
 
-JSValue PartyWrap::GetPartyFlag(JSContext* ctx, JSValue this_val) {
-  PartyWrap* wrap = static_cast<PartyWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
+bool PartyWrap::GetPartyFlag(JSContext* ctx, JS::CallArgs& args) {
+  PartyWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
 
   D2RosterUnitStrc* unit = wrap->pPresetUnit;
-  return JS_NewUint32(ctx, unit->dwPartyFlags);
+  args.rval().setInt32(unit->dwPartyFlags);
+  return true;
 }
 
-JSValue PartyWrap::GetPartyId(JSContext* ctx, JSValue this_val) {
-  PartyWrap* wrap = static_cast<PartyWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
+bool PartyWrap::GetPartyId(JSContext* ctx, JS::CallArgs& args) {
+  PartyWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
 
   D2RosterUnitStrc* unit = wrap->pPresetUnit;
-  return JS_NewUint32(ctx, unit->wPartyId);
+  args.rval().setInt32(unit->wPartyId);
+  return true;
 }
 
-JSValue PartyWrap::GetName(JSContext* ctx, JSValue this_val) {
-  PartyWrap* wrap = static_cast<PartyWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
+bool PartyWrap::GetName(JSContext* ctx, JS::CallArgs& args) {
+  PartyWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
 
   D2RosterUnitStrc* unit = wrap->pPresetUnit;
-  return JS_NewString(ctx, unit->szName);
+  args.rval().setString(JS_NewStringCopyZ(ctx, unit->szName));
+  return true;
 }
 
-JSValue PartyWrap::GetClassId(JSContext* ctx, JSValue this_val) {
-  PartyWrap* wrap = static_cast<PartyWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
+bool PartyWrap::GetClassId(JSContext* ctx, JS::CallArgs& args) {
+  PartyWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
 
   D2RosterUnitStrc* unit = wrap->pPresetUnit;
-  return JS_NewUint32(ctx, unit->dwClassId);
+  args.rval().setInt32(unit->dwClassId);
+  return true;
 }
 
-JSValue PartyWrap::GetLevel(JSContext* ctx, JSValue this_val) {
-  PartyWrap* wrap = static_cast<PartyWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
+bool PartyWrap::GetLevel(JSContext* ctx, JS::CallArgs& args) {
+  PartyWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
 
   D2RosterUnitStrc* unit = wrap->pPresetUnit;
-  return JS_NewUint32(ctx, unit->wLevel);
+  args.rval().setInt32(unit->wLevel);
+  return true;
 }
 
 // functions
-JSValue PartyWrap::GetNext(JSContext* ctx, JSValue this_val, int /*argc*/, JSValue* /*argv*/) {
-  PartyWrap* wrap = static_cast<PartyWrap*>(JS_GetOpaque(this_val, m_class_id));
-  if (!wrap) {
-    return JS_EXCEPTION;
-  }
+bool PartyWrap::GetNext(JSContext* ctx, JS::CallArgs& args) {
+  PartyWrap* wrap;
+  UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
 
   D2RosterUnitStrc* unit = wrap->pPresetUnit;
   if (!unit || !unit->pNext) {
-    return JS_FALSE;
+    args.rval().setBoolean(false);
+    return true;
   }
 
   wrap->pPresetUnit = unit->pNext;
-  return JS_DupValue(ctx, this_val);
+  args.rval().setObjectOrNull(args.thisv().toObjectOrNull());
+  return true;
 }
 
 // globals
-JSValue PartyWrap::GetParty(JSContext* ctx, JSValue /*this_val*/, int argc, JSValue* argv) {
+bool PartyWrap::GetParty(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady())
     THROW_WARNING(ctx, "Game not ready");
 
-  D2RosterUnitStrc* pUnit = *D2CLIENT_PlayerUnitList;
-  if (!pUnit)
-    return JS_UNDEFINED;
+  D2RosterUnitStrc* pRosterUnit = *D2CLIENT_PlayerUnitList;
+  if (!pRosterUnit) {
+    args.rval().setUndefined();
+    return true;
+  }
 
-  if (argc == 1) {
-    D2UnitStrc* inUnit = NULL;
-    const char* nPlayerName = nullptr;
+  if (args.length() == 1) {
+    char* nPlayerName = nullptr;
     uint32_t nPlayerId = NULL;
 
-    if (JS_IsString(argv[0])) {
-      nPlayerName = JS_ToCString(ctx, argv[0]);
-    } else if (JS_IsNumber(argv[0]) && JS_ToUint32(ctx, &nPlayerId, argv[0])) {
+    if (args.get(0).toString()) {
+      nPlayerName = JS_EncodeString(ctx, args[0].toString());
+    } else if (args.get(0).isNumber() && !JS::ToUint32(ctx, args[0], &nPlayerId)) {
       THROW_ERROR(ctx, "Unable to get ID");
-    } else if (JS_IsObject(argv[0])) {
-      UnitWrap::UnitData* lpUnit = UnitWrap::DataFromJSObject(argv[0]);
-      if (!lpUnit)
-        return JS_UNDEFINED;
-
-      inUnit = D2UnitStrc::FindUnit(lpUnit->dwUnitId, lpUnit->dwType);
-      if (!inUnit)
-        THROW_ERROR(ctx, "Unable to get Unit");
-
-      nPlayerId = inUnit->dwUnitId;
+    } else if (args.get(0).isObject()) {
+      UNWRAP_UNIT_OR_ERROR(ctx, 0, args[0]);
+      nPlayerId = pUnit->dwUnitId;
     }
 
-    if (!nPlayerName && !nPlayerId)
-      return JS_UNDEFINED;
+    if (!nPlayerName && !nPlayerId) {
+      args.rval().setUndefined();
+      return true;
+    }
 
     bool bFound = false;
 
-    for (D2RosterUnitStrc* pScan = pUnit; pScan; pScan = pScan->pNext) {
+    for (D2RosterUnitStrc* pScan = pRosterUnit; pScan; pScan = pScan->pNext) {
       if (nPlayerId && pScan->dwUnitId == nPlayerId) {
         bFound = true;
-        pUnit = pScan;
+        pRosterUnit = pScan;
         break;
       }
       if (nPlayerName && _stricmp(pScan->szName, nPlayerName) == 0) {
         bFound = true;
-        pUnit = pScan;
+        pRosterUnit = pScan;
         break;
       }
     }
 
     if (nPlayerName) {
-      JS_FreeCString(ctx, nPlayerName);
+      JS_free(ctx, nPlayerName);
     }
 
-    if (!bFound)
-      return JS_UNDEFINED;
+    if (!bFound) {
+      args.rval().setUndefined();
+      return true;
+    }
   }
 
-  return PartyWrap::Instantiate(ctx, JS_UNDEFINED, pUnit);
+  JS::RootedObject obj(ctx, PartyWrap::Instantiate(ctx, pRosterUnit));
+  if (!obj) {
+    THROW_ERROR(ctx, "failed to instantiate party");
+  }
+  args.rval().setObject(*obj);
+  return true;
 }
 
 D2BS_BINDING_INTERNAL(PartyWrap, PartyWrap::Initialize)

@@ -1,51 +1,70 @@
 #pragma once
 
-#include "js32.h"
+#include "JSBaseObject.h"
 
 #include <uv.h>
 
-class TimerWrap {
+class TimerWrap : public BaseObject {
  public:
-  static JSValue Instantiate(JSContext* ctx, int64_t delay, JSValue func, int argc, JSValue* argv, bool interval = false);
-  static void Initialize(JSContext* ctx, JSValue target);
+  static JSObject* Instantiate(JSContext* ctx, int64_t delay, JS::HandleValue func, unsigned argc, JS::Value* argv, bool interval = false);
+  static void Initialize(JSContext* ctx, JS::HandleObject target);
 
   void Unref();
 
  private:
-  TimerWrap(JSContext* ctx);
+  TimerWrap(JSContext* ctx, JS::HandleObject obj);
   virtual ~TimerWrap();
 
-  static void MarkGC(JSRuntime* rt, JSValue val, JS_MarkFunc* mark_func);
+  static void finalize(JSFreeOp* fop, JSObject* obj);
+  // static void MarkGC(JSRuntime* rt, JSValue val, JS_MarkFunc* mark_func);
 
   // globals
-  static JSValue setImmediate(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue clearImmediate(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+  static bool setImmediate(JSContext* ctx, JS::CallArgs& args);
+  static bool clearImmediate(JSContext* ctx, JS::CallArgs& args);
 
-  static JSValue setTimeout(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue clearTimeout(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+  static bool setTimeout(JSContext* ctx, JS::CallArgs& args);
+  static bool clearTimeout(JSContext* ctx, JS::CallArgs& args);
 
-  static JSValue setInterval(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue clearInterval(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-
-  static inline JSClassID m_class_id = 0;
-  static inline JSCFunctionListEntry m_funcs[] = {
-      JS_CFUNC_DEF("setImmediate", 1, setImmediate),
-      JS_CFUNC_DEF("clearImmediate", 1, clearImmediate),
-      JS_CFUNC_DEF("setTimeout", 2, setTimeout),
-      JS_CFUNC_DEF("clearTimeout", 1, clearTimeout),
-      JS_CFUNC_DEF("setInterval", 2, setInterval),
-      JS_CFUNC_DEF("clearInterval", 1, clearInterval),
-  };
+  static bool setInterval(JSContext* ctx, JS::CallArgs& args);
+  static bool clearInterval(JSContext* ctx, JS::CallArgs& args);
 
   // implementation detail
   static void TimerCallback(uv_timer_t* handle);
   void Clear();
 
+  static inline JSClassOps m_ops = {
+      .addProperty = nullptr,
+      .delProperty = nullptr,
+      .enumerate = nullptr,
+      .newEnumerate = nullptr,
+      .resolve = nullptr,
+      .mayResolve = nullptr,
+      .finalize = finalize,
+      .call = nullptr,
+      .hasInstance = nullptr,
+      .construct = nullptr,
+      .trace = nullptr,
+  };
+  static inline JSClass m_class = {
+      "Timeout",
+      JSCLASS_HAS_RESERVED_SLOTS(kInternalFieldCount) | JSCLASS_FOREGROUND_FINALIZE,
+      &m_ops,
+  };
+  static inline JSFunctionSpec m_methods[] = {
+      JS_FN("setImmediate", trampoline<setImmediate>, 1, JSPROP_ENUMERATE),      //
+      JS_FN("clearImmediate", trampoline<clearImmediate>, 1, JSPROP_ENUMERATE),  //
+      JS_FN("setTimeout", trampoline<setTimeout>, 2, JSPROP_ENUMERATE),          //
+      JS_FN("clearTimeout", trampoline<clearTimeout>, 1, JSPROP_ENUMERATE),      //
+      JS_FN("setInterval", trampoline<setInterval>, 2, JSPROP_ENUMERATE),        //
+      JS_FN("clearInterval", trampoline<clearInterval>, 1, JSPROP_ENUMERATE),    //
+      JS_FS_END,                                                                 //
+  };
+
   JSContext* context;
-  JSValue ref;
   uv_timer_t timer_handle;
-  JSValue callback;
-  std::vector<JSValue> args;
+  JS::PersistentRootedObject ref;
+  JS::PersistentRootedObject callback;
+  JS::AutoValueVector args;
   bool inside_callback;
   bool clear_after_callback;
 };

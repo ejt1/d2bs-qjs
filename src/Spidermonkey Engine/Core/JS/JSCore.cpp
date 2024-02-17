@@ -2,91 +2,98 @@
 
 #include <sstream>
 
-#include "D2Helpers.h"
-
-#include <io.h>
+//
+// #include <io.h>
 #include <windows.h>
 #include <wininet.h>
-#include <iostream>
+// #include <iostream>
+//
+// #include "JSCore.h"
+// #include "Events.h"
+//
+// #include "JSScript.h"
 
-#include "JSCore.h"
-#include "Core.h"
-#include "Helpers.h"
-#include "Events.h"
 #include "Console.h"
+#include "Core.h"
+#include "D2Helpers.h"
 #include "File.h"
-
-#include "JSScript.h"
+#include "Globals.h"
+#include "Helpers.h"
+#include "Localization.h"
+#include "ScriptEngine.h"
+#include "StringWrap.h"
 
 // TODO(ejt): is this function necessary, and does it even work?!
-JSAPI_FUNC(my_stringToEUC) {
-  if (argc == 0 || JS_IsNull(argv[0])) {
-    return JS_NULL;
+bool my_stringToEUC(JSContext* ctx, JS::CallArgs& args) {
+  if (!args.requireAtLeast(ctx, "stringToEUC", 1)) {
+    return false;
+  }
+  if (args[0].isNullOrUndefined()) {
+    args.rval().setUndefined();
+    return true;
   }
 
-  const char* szText = JS_ToCString(ctx, argv[0]);
+  char* szText = JS_EncodeString(ctx, args[0].toString());
   if (!szText) {
-    return JS_EXCEPTION;
+    THROW_ERROR(ctx, "failed to encode string");
   }
   std::string ansi = UTF8ToANSI(szText);
-  JS_FreeCString(ctx, szText);
-  return JS_NewString(ctx, ansi.c_str());
+  JS_free(ctx, szText);
+  args.rval().setString(JS_NewStringCopyN(ctx, ansi.c_str(), ansi.length()));
+  return true;
 }
 
-JSAPI_FUNC(my_print) {
+bool my_print(JSContext* ctx, JS::CallArgs& args) {
   std::stringstream ss;
-  for (int32_t i = 0; i < argc; i++) {
+  for (uint32_t i = 0; i < args.length(); i++) {
     if (i != 0) {
       ss << " ";
     }
-    size_t len;
-    const char* str = JS_ToCStringLen(ctx, &len, argv[i]);
+    char* str = JS_EncodeString(ctx, JS::ToString(ctx, args[i]));
     if (!str) {
-      return JS_EXCEPTION;
+      JS_ReportErrorASCII(ctx, "failed to encode string");
+      return false;
     }
     ss << str;
-    JS_FreeCString(ctx, str);
+    JS_free(ctx, str);
   }
   std::string finalstr = ss.str();
   Print(finalstr.c_str());
-  return JS_NULL;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSAPI_FUNC(my_delay) {
-  uint32_t nDelay = 0;
-  if (JS_ToUint32(ctx, &nDelay, argv[0])) {
-    return JS_EXCEPTION;
+bool my_delay(JSContext* ctx, JS::CallArgs& args) {
+  if (!args.requireAtLeast(ctx, "delay", 1)) {
+    return false;
   }
+  uint32_t nDelay = args[0].isInt32() ? args[0].toInt32() : 1;
+  ThreadState* ts = static_cast<ThreadState*>(JS_GetContextPrivate(ctx));
 
-  Script* script = (Script*)JS_GetContextOpaque(ctx);
-
-  if (nDelay) {  // loop so we can exec events while in delay
-    script->BlockThread(nDelay);
-  } else {
-    THROW_ERROR(ctx, "delay(0) called, argument must be >= 1");
+  if (!ts->script->BlockThread(nDelay)) {
+    return false;
   }
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSAPI_FUNC(my_load) {
-  Script* script = (Script*)JS_GetContextOpaque(ctx);
-  if (!script) {
-    JS_ReportError(ctx, "Failed to get script object");
-    return JS_EXCEPTION;
+bool my_load(JSContext* ctx, JS::CallArgs& args) {
+  if (!args.requireAtLeast(ctx, "load", 1)) {
+    return false;
   }
-
-  const char* file = JS_ToCString(ctx, argv[0]);
+  ThreadState* ts = static_cast<ThreadState*>(JS_GetContextPrivate(ctx));
+  char* file = JS_EncodeString(ctx, args[0].toString());
   if (!file) {
-    return JS_EXCEPTION;
+    THROW_ERROR(ctx, "failed to encode string");
   }
 
   if (strlen(file) > (_MAX_FNAME + _MAX_PATH - strlen(Vars.szScriptPath))) {
-    JS_FreeCString(ctx, file);
-    JS_ReportError(ctx, "File name too long!");
-    return JS_EXCEPTION;
+    JS_free(ctx, file);
+    JS_ReportErrorASCII(ctx, "File name too long!");
+    return false;
   }
 
-  ScriptMode scriptState = script->GetMode();
+  ScriptMode scriptState = ts->script->GetMode();
   if (scriptState == kScriptModeCommand)
     scriptState = (ClientState() == ClientStateInGame ? kScriptModeGame : kScriptModeMenu);
 
@@ -101,131 +108,146 @@ JSAPI_FUNC(my_load) {
   // }
 
   Script* newScript = sScriptEngine->NewScript(buf, scriptState /*, argc - 1, autoBuffer*/);
-
   if (newScript) {
     newScript->Start();
   } else {
     // TODO: Should this actually be there? No notification is bad, but do we want this? maybe throw an exception?
     Print("File \"%s\" not found.", file);
   }
-  JS_FreeCString(ctx, file);
-  return JS_NULL;
+  JS_free(ctx, file);
+  args.rval().setUndefined();
+  return true;
 }
 
-JSAPI_FUNC(my_include) {
-  Script* script = (Script*)JS_GetContextOpaque(ctx);
-  if (!script) {
-    JS_ReportError(ctx, "Failed to get script object");
-    return JS_EXCEPTION;
+bool my_include(JSContext* ctx, JS::CallArgs& args) {
+  if (!args.requireAtLeast(ctx, "include", 1)) {
+    return false;
   }
-
-  const char* file = JS_ToCString(ctx, argv[0]);
+  ThreadState* ts = static_cast<ThreadState*>(JS_GetContextPrivate(ctx));
+  char* file = JS_EncodeString(ctx, args[0].toString());
   if (!file) {
-    return JS_EXCEPTION;
+    THROW_ERROR(ctx, "failed to encode string");
   }
 
   if (strlen(file) > (_MAX_FNAME + _MAX_PATH - strlen(Vars.szScriptPath) - 6)) {
-    JS_FreeCString(ctx, file);
-    JS_ReportError(ctx, "File name too long!");
-    return JS_EXCEPTION;
+    JS_free(ctx, file);
+    JS_ReportErrorASCII(ctx, "File name too long!");
+    return false;
   }
 
   char buf[_MAX_PATH + _MAX_FNAME];
   sprintf_s(buf, _countof(buf), "%s\\libs\\%s", Vars.szScriptPath, file);
-  JS_FreeCString(ctx, file);
+  JS_free(ctx, file);
 
-  if (_access(buf, 0) == 0)
-    return JS_NewBool(ctx, script->Include(buf));
-
-  return JS_FALSE;
-}
-
-JSAPI_FUNC(my_stop) {
-  int ival;
-  if (argc > 0 && (JS_IsNumber(argv[0]) && (!JS_ToInt32(ctx, &ival, argv[0]) && ival == 1)) || (JS_IsBool(argv[0]) && JS_ToBool(ctx, argv[0]) == TRUE)) {
-    Script* script = (Script*)JS_GetContextOpaque(ctx);
-    if (script)
-      script->Stop();
-  } else
-    sScriptEngine->StopAll();
-  return JS_EXCEPTION;
-}
-
-JSAPI_FUNC(my_stacktrace) {
-  Log("stacktrace is deprecated");
-  return JS_TRUE;
-}
-
-JSAPI_FUNC(my_beep) {
-  int32_t nBeepId = NULL;
-
-  if (argc > 0 && JS_IsNumber(argv[0])) {
-    JS_ToInt32(ctx, &nBeepId, argv[0]);
+  args.rval().setBoolean(false);
+  if (_access(buf, 0) == 0) {
+    args.rval().setBoolean(ts->script->Include(buf));
   }
 
-  MessageBeep(nBeepId);
-  return JS_TRUE;
+  return true;
 }
 
-JSAPI_FUNC(my_getTickCount) {
-  return JS_NewFloat64(ctx, GetTickCount());
+bool my_stop(JSContext* ctx, JS::CallArgs& args) {
+  if (args.length() > 0 && (args[0].isInt32() && args[0].toInt32() == 1) || (args[0].isBoolean() && args[0].toBoolean())) {
+    ThreadState* ts = static_cast<ThreadState*>(JS_GetContextPrivate(ctx));
+    ts->script->Stop();
+  } else {
+    sScriptEngine->StopAll();
+  }
+
+  args.rval().setUndefined();
+  return true;
 }
 
-JSAPI_FUNC(my_getThreadPriority) {
-  return JS_NewUint32(ctx, (uint32_t)GetCurrentThread());
+bool my_stacktrace(JSContext* /*ctx*/, JS::CallArgs& args) {
+  Log("stacktrace is deprecated");
+  args.rval().setUndefined();
+  return true;
 }
 
-JSAPI_FUNC(my_isIncluded) {
-  const char* file = JS_ToCString(ctx, argv[0]);
+bool my_beep(JSContext* ctx, JS::CallArgs& args) {
+  if (!args.requireAtLeast(ctx, "beep", 1)) {
+    return false;
+  }
+
+  if (!args[0].isInt32()) {
+    THROW_ERROR(ctx, "invalid argument");
+  }
+  MessageBeep(args[0].toInt32());
+  args.rval().setUndefined();
+  return true;
+}
+
+bool my_getTickCount(JSContext* /*ctx*/, JS::CallArgs& args) {
+  args.rval().setNumber(static_cast<double>(GetTickCount()));
+  return true;
+}
+
+bool my_getThreadPriority(JSContext* /*ctx*/, JS::CallArgs& args) {
+  args.rval().setInt32(GetThreadPriority(GetCurrentThread()));
+  return true;
+}
+
+bool my_isIncluded(JSContext* ctx, JS::CallArgs& args) {
+  if (!args.requireAtLeast(ctx, "isIncluded", 1)) {
+    return false;
+  }
+  char* file = JS_EncodeString(ctx, args[0].toString());
   if (!file) {
-    return JS_EXCEPTION;
+    THROW_ERROR(ctx, "failed to encode string");
   }
 
   if (strlen(file) > (_MAX_FNAME + _MAX_PATH - strlen(Vars.szScriptPath) - 6)) {
-    JS_FreeCString(ctx, file);
-    JS_ReportError(ctx, "File name too long");
-    return JS_EXCEPTION;
+    JS_free(ctx, file);
+    JS_ReportErrorASCII(ctx, "File name too long");
+    return false;
   }
 
   char path[_MAX_FNAME + _MAX_PATH];
   sprintf_s(path, _countof(path), "%s\\libs\\%s", Vars.szScriptPath, file);
-  JS_FreeCString(ctx, file);
-  Script* script = (Script*)JS_GetContextOpaque(ctx);
-  return JS_NewBool(ctx, script->IsIncluded(path));
+  JS_free(ctx, file);
+  ThreadState* ts = static_cast<ThreadState*>(JS_GetContextPrivate(ctx));
+  args.rval().setBoolean(ts->script->IsIncluded(path));
+  return true;
 }
 
-JSAPI_FUNC(my_version) {
-  if (argc < 1) {
-    return JS_NewString(ctx, D2BS_VERSION);
+bool my_version(JSContext* ctx, JS::CallArgs& args) {
+  if (!args.hasDefined(0)) {
+    args.rval().setString(JS_NewStringCopyN(ctx, D2BS_VERSION, strlen(D2BS_VERSION)));
+    return true;
   }
 
-  Print("ÿc4D2BSÿc1 ÿc3%s for Diablo II 1.14d.", D2BS_VERSION);
-  return JS_TRUE;
+  Print("Ã¿c4D2BSÃ¿c1 Ã¿c3%s for Diablo II 1.14d.", D2BS_VERSION);
+  args.rval().setUndefined();
+  return true;
 }
 
-JSAPI_FUNC(my_debugLog) {
+bool my_debugLog(JSContext* ctx, JS::CallArgs& args) {
   std::stringstream ss;
-  for (int32_t i = 0; i < argc; i++) {
+  for (uint32_t i = 0; i < args.length(); i++) {
     if (i != 0) {
       ss << " ";
     }
-    size_t len;
-    const char* str = JS_ToCStringLen(ctx, &len, argv[i]);
+    char* str = JS_EncodeString(ctx, args[i].toString());
     if (!str) {
-      return JS_EXCEPTION;
+      THROW_ERROR(ctx, "failed to encode string");
     }
     ss << str;
-    JS_FreeCString(ctx, str);
+    JS_free(ctx, str);
   }
   std::string finalstr = ss.str();
   Log(finalstr.c_str());
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSAPI_FUNC(my_copy) {
-  const char* data = JS_ToCString(ctx, argv[0]);
+bool my_copy(JSContext* ctx, JS::CallArgs& args) {
+  if (!args.requireAtLeast(ctx, "copy", 1)) {
+    return false;
+  }
+  char* data = JS_EncodeString(ctx, args[0].toString());
   if (!data) {
-    return JS_EXCEPTION;
+    THROW_ERROR(ctx, "failed to encode string");
   }
   HGLOBAL hText;
   char* pText;
@@ -239,132 +261,152 @@ JSAPI_FUNC(my_copy) {
   EmptyClipboard();
   SetClipboardData(CF_TEXT, hText);
   CloseClipboard();
-  JS_FreeCString(ctx, data);
-  return JS_UNDEFINED;
+  JS_free(ctx, data);
+  args.rval().setUndefined();
+  return true;
 }
 
-JSAPI_FUNC(my_paste) {
+bool my_paste(JSContext* ctx, JS::CallArgs& args) {
   OpenClipboard(NULL);
   HANDLE foo = GetClipboardData(CF_TEXT);
   CloseClipboard();
   LPVOID lptstr = GlobalLock(foo);
-  return JS_NewString(ctx, (const char*)lptstr);
+  args.rval().setString(JS_NewStringCopyZ(ctx, static_cast<const char*>(lptstr)));
+  return true;
 }
 
-JSAPI_FUNC(my_sendCopyData) {
-  if (argc < 4) {
-    return JS_FALSE;
+bool my_sendCopyData(JSContext* ctx, JS::CallArgs& args) {
+  if (!args.requireAtLeast(ctx, "sendCopyData", 4)) {
+    return false;
   }
 
-  const char *windowClassName = NULL, *windowName = NULL;
-  const char* data = NULL;
+  StringWrap windowClassName;
+  StringWrap windowName;
+  StringWrap data;
   int32_t nModeId = NULL;
   HWND hWnd = NULL;
 
-  if (JS_IsString(argv[0]) && !JS_IsNull(argv[0])) {
-    windowClassName = JS_ToCString(ctx, argv[0]);
+  if (args[0].isString() && !args[0].isNullOrUndefined()) {
+    windowClassName = std::move(StringWrap{ctx, args[0]});
   }
 
-  if (!JS_IsNull(argv[1])) {
-    if (JS_IsNumber(argv[1])) {
-      JS_ToUint32(ctx, (uint32_t*)&hWnd, argv[1]);
-    } else if (JS_IsString(argv[1])) {
-      windowName = JS_ToCString(ctx, argv[1]);
+  if (!args[1].isNull()) {
+    if (args[1].isInt32()) {
+      JS::ToUint32(ctx, args[1], reinterpret_cast<uint32_t*>(&hWnd));
+    } else if (args[1].isString()) {
+      windowName = std::move(StringWrap{ctx, args[1]});
     }
   }
 
-  if (JS_IsNumber(argv[2]) && !JS_IsNull(argv[2])) {
-    JS_ToUint32(ctx, (uint32_t*)&nModeId, argv[2]);
+  if (args[2].isInt32() && !args[2].isNull()) {
+    nModeId = args[2].toInt32();
   }
 
-  if (JS_IsString(argv[3]) && !JS_IsNull(argv[3])) {
-    data = JS_ToCString(ctx, argv[3]);
+  if (args[3].isString() && !args[3].isNull()) {
+    data = std::move(StringWrap{ctx, args[3]});
   }
 
   if (hWnd == NULL && windowName != NULL) {
     hWnd = FindWindowA(windowClassName, windowName);
     if (!hWnd) {
-      JS_FreeCString(ctx, windowName);
-      JS_FreeCString(ctx, windowClassName);
-      JS_FreeCString(ctx, data);
-      return JS_FALSE;
+      THROW_ERROR(ctx, "failed to find window");
     }
   }
 
   // if data is NULL, strlen crashes
   COPYDATASTRUCT aCopy{};
-  if (data == NULL) {
+  if (!data) {
     aCopy = {static_cast<ULONG_PTR>(nModeId), 0, nullptr};
   } else {
-    aCopy = {static_cast<ULONG_PTR>(nModeId), strlen(data) + 1, (LPVOID)data};
+    aCopy = {static_cast<ULONG_PTR>(nModeId), data.length(), (LPVOID)data.c_str()};
   }
 
-  JSValue rval = JS_NewInt64(ctx, SendMessage(hWnd, WM_COPYDATA, (WPARAM)D2GFX_GetHwnd(), (LPARAM)&aCopy));
-  JS_FreeCString(ctx, windowName);
-  JS_FreeCString(ctx, windowClassName);
-  JS_FreeCString(ctx, data);
-  return rval;
+  args.rval().setNumber(static_cast<double>(SendMessage(hWnd, WM_COPYDATA, (WPARAM)D2GFX_GetHwnd(), (LPARAM)&aCopy)));
+  return true;
 }
 
-JSAPI_FUNC(my_keystate) {
-  if (argc < 1 || !JS_IsNumber(argv[0]))
-    return JS_FALSE;
+bool my_keystate(JSContext* ctx, JS::CallArgs& args) {
+  if (!args.requireAtLeast(ctx, "keystate", 1)) {
+    return false;
+  }
+  if (!args[0].isInt32()) {
+    THROW_ERROR(ctx, "invalid argument");
+  }
 
-  int vKey;
-  JS_ToInt32(ctx, &vKey, argv[0]);
-  return JS_NewBool(ctx, !!GetAsyncKeyState(vKey));
+  int vKey = args[0].toInt32();
+  args.rval().setBoolean(static_cast<bool>(GetAsyncKeyState(vKey)));
+  return true;
 }
 
-JSAPI_FUNC(my_addEventListener) {
-  if (JS_IsString(argv[0]) && JS_IsFunction(ctx, argv[1])) {
-    const char* evtName = JS_ToCString(ctx, argv[0]);
+bool my_addEventListener(JSContext* ctx, JS::CallArgs& args) {
+  if (!args.requireAtLeast(ctx, "addEventListener", 2)) {
+    return false;
+  }
+
+  if (args[0].isString() && JS::IsCallable(args[1].toObjectOrNull())) {
+    char* evtName = JS_EncodeString(ctx, args[0].toString());
     if (evtName && strlen(evtName)) {
-      Script* self = (Script*)JS_GetContextOpaque(ctx);
-      self->AddEventListener(evtName, argv[1]);
+      ThreadState* ts = static_cast<ThreadState*>(JS_GetContextPrivate(ctx));
+      JS::RootedValue func(ctx, args[1]);
+      ts->script->AddEventListener(evtName, func);
     } else {
-      THROW_ERROR(ctx, "Event name is invalid!");
+      JS_ReportErrorASCII(ctx, "Event name is invalid!");
+      return false;
     }
-    JS_FreeCString(ctx, evtName);
+    JS_free(ctx, evtName);
   }
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSAPI_FUNC(my_removeEventListener) {
-  if (JS_IsString(argv[0]) && JS_IsFunction(ctx, argv[1])) {
-    const char* evtName = JS_ToCString(ctx, argv[0]);
+bool my_removeEventListener(JSContext* ctx, JS::CallArgs& args) {
+  if (!args.requireAtLeast(ctx, "removeEventListener", 2)) {
+    return false;
+  }
+  if (args[0].isString() && JS::IsCallable(args[1].toObjectOrNull())) {
+    char* evtName = JS_EncodeString(ctx, args[0].toString());
     if (evtName && strlen(evtName)) {
-      Script* self = (Script*)JS_GetContextOpaque(ctx);
-      self->RemoveEventListener(evtName, argv[1]);
+      ThreadState* ts = static_cast<ThreadState*>(JS_GetContextPrivate(ctx));
+      JS::RootedValue func(ctx, args[1]);
+      ts->script->RemoveEventListener(evtName, func);
     } else {
-      THROW_ERROR(ctx, "Event name is invalid!");
+      JS_ReportErrorASCII(ctx, "Event name is invalid!");
+      return false;
     }
-    JS_FreeCString(ctx, evtName);
+    JS_free(ctx, evtName);
   }
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSAPI_FUNC(my_clearEvent) {
-  if (JS_IsString(argv[0])) {
-    Script* self = (Script*)JS_GetContextOpaque(ctx);
-    const char* evt = JS_ToCString(ctx, argv[0]);
-    self->RemoveAllListeners(evt);
-    JS_FreeCString(ctx, evt);
+bool my_clearEvent(JSContext* ctx, JS::CallArgs& args) {
+  if (!args.requireAtLeast(ctx, "clearEvent", 1)) {
+    return false;
   }
-  return JS_UNDEFINED;
+  if (args[0].isString()) {
+    ThreadState* ts = static_cast<ThreadState*>(JS_GetContextPrivate(ctx));
+    char* evt = JS_EncodeString(ctx, args[0].toString());
+    ts->script->RemoveAllListeners(evt);
+    JS_free(ctx, evt);
+  }
+  args.rval().setUndefined();
+  return true;
 }
 
-JSAPI_FUNC(my_clearAllEvents) {
-  Script* self = (Script*)JS_GetContextOpaque(ctx);
-  self->RemoveAllEventListeners();
-  return JS_UNDEFINED;
+bool my_clearAllEvents(JSContext* ctx, JS::CallArgs& args) {
+  ThreadState* ts = static_cast<ThreadState*>(JS_GetContextPrivate(ctx));
+  ts->script->RemoveAllEventListeners();
+  args.rval().setUndefined();
+  return true;
 }
 
-JSAPI_FUNC(my_js_strict) {
-  if (argc == NULL) {
-    return JS_NewBool(ctx, true);
+bool my_js_strict(JSContext* /*ctx*/, JS::CallArgs& args) {
+  if (args.length() == NULL) {
+    args.rval().setBoolean(true);
+    return true;
   }
 
-  if (argc == 1) {
+  if (args.length() == 1) {
     // NOTE(ejt): disabled setting strict this way for now
     //
     // bool bFlag = ((JS_GetOptions(cx) & JSOPTION_STRICT) == JSOPTION_STRICT);
@@ -377,69 +419,97 @@ JSAPI_FUNC(my_js_strict) {
     //}
   }
 
-  return JS_UNDEFINED;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSAPI_FUNC(my_scriptBroadcast) {
-  if (argc < 1)
-    THROW_ERROR(ctx, "You must specify something to broadcast");
+bool my_scriptBroadcast(JSContext* ctx, JS::CallArgs& args) {
+  if (!args.requireAtLeast(ctx, "scriptBroadcast", 1)) {
+    return false;
+  }
 
-  ScriptBroadcastEvent(ctx, argv);
-  return JS_NULL;
+  // documentation says to not use args.array but we do anyway because we're badasses
+  ScriptBroadcastEvent(ctx, args.length(), args.array());
+  args.rval().setUndefined();
+  return true;
 }
 
-JSAPI_FUNC(my_showConsole) {
+bool my_showConsole(JSContext* /*ctx*/, JS::CallArgs& args) {
   Console::Show();
-  return JS_NULL;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSAPI_FUNC(my_hideConsole) {
+bool my_hideConsole(JSContext* /*ctx*/, JS::CallArgs& args) {
   Console::Hide();
-  return JS_NULL;
+  args.rval().setUndefined();
+  return true;
 }
 
-JSAPI_FUNC(my_handler) {
-  return JS_NewUint32(ctx, (uint32_t)Vars.hHandle);
+bool my_handler(JSContext* /*ctx*/, JS::CallArgs& args) {
+  args.rval().setInt32(reinterpret_cast<int32_t>(Vars.hHandle));
+  return true;
 }
 
-JSAPI_FUNC(my_loadMpq) {
-  const char* path = JS_ToCString(ctx, argv[0]);
+bool my_loadMpq(JSContext* ctx, JS::CallArgs& args) {
+  if (!args.requireAtLeast(ctx, "loadMpq", 1)) {
+    return false;
+  }
+  char* path = JS_EncodeString(ctx, args[0].toString());
   if (!path) {
-    return JS_EXCEPTION;
+    THROW_ERROR(ctx, "failed to encode string");
   }
   if (isValidPath(path)) {
     LoadMPQ(path);
   }
-  JS_FreeCString(ctx, path);
-  return JS_NULL;
+  JS_free(ctx, path);
+  args.rval().setUndefined();
+  return true;
 }
 
-JSAPI_FUNC(my_sendPacket) {
+bool my_sendPacket(JSContext* ctx, JS::CallArgs& args) {
+  if (!args.requireAtLeast(ctx, "sendPacket", 1)) {
+    return false;
+  }
   if (!Vars.bEnableUnsupported) {
-    THROW_WARNING(ctx, "sendPacket requires EnableUnsupported = true in d2bs.ini");
+    JS_ReportWarningASCII(ctx, "sendPacket requires EnableUnsupported = true in d2bs.ini");
+    args.rval().setBoolean(false);
+    return true;
   }
 
   BYTE* aPacket;
   bool del = false;
   uint32_t len = 0;
 
-  if (JS_IsObject(argv[0])) {
-    aPacket = JS_GetArrayBuffer(ctx, &len, argv[0]);
+  if (args[0].isObject()) {
+    JS::RootedObject obj(ctx, args[0].toObjectOrNull());
+    if (!JS_IsArrayBufferObject(obj)) {
+      THROW_WARNING(ctx, "invalid ArrayBuffer parameter");
+    }
+    JS::AutoAssertNoGC hazard(ctx);
+    bool isSharedMemory;
+    len = JS_GetArrayBufferByteLength(obj);
+    aPacket = JS_GetArrayBufferData(obj, &isSharedMemory, hazard);
     if (!aPacket) {
-      THROW_ERROR(ctx, "getPacket: invalid ArrayBuffer parameter");
+      JS_ReportErrorASCII(ctx, "getPacket: invalid ArrayBuffer parameter");
+      return false;
     }
   } else {
-    if (argc % 2 != 0) {
-      THROW_WARNING(ctx, "invalid packet format");
+    if (args.length() % 2 != 0) {
+      JS_ReportWarningASCII(ctx, "invalid packet format");
+      args.rval().setBoolean(false);
+      return true;
     }
 
-    aPacket = new BYTE[2 * argc];
+    aPacket = new BYTE[2 * args.length()];
     del = true;
     uint32_t size = 0;
 
-    for (int32_t i = 0; i < argc; i += 2, len += size) {
-      JS_ToUint32(ctx, &size, argv[i]);
-      JS_ToUint32(ctx, (uint32_t*)&aPacket[len], argv[i + 1]);
+    for (uint32_t i = 0; i < args.length(); i += 2, len += size) {
+      JS::ToUint32(ctx, args[i], &size);
+      JS::ToUint32(ctx, args[i + 1], (uint32_t*)&aPacket[len]);
+      size = args[i].toInt32();
+      aPacket[len] = static_cast<BYTE>(args[i + 1].toInt32());
     }
   }
 
@@ -447,35 +517,48 @@ JSAPI_FUNC(my_sendPacket) {
   if (del) {
     delete[] aPacket;
   }
-  return JS_TRUE;
+  args.rval().setBoolean(true);
+  return true;
 }
 
-JSAPI_FUNC(my_getPacket) {
+bool my_getPacket(JSContext* ctx, JS::CallArgs& args) {
+  if (!args.requireAtLeast(ctx, "getPacket", 1)) {
+    return false;
+  }
   if (!Vars.bEnableUnsupported) {
-    THROW_WARNING(ctx, "getPacket requires EnableUnsupported = true in d2bs.ini");
+    JS_ReportWarningASCII(ctx, "sendPacket requires EnableUnsupported = true in d2bs.ini");
+    args.rval().setBoolean(false);
+    return true;
   }
 
   BYTE* aPacket;
   bool del = false;
   uint32_t len = 0;
 
-  if (JS_IsObject(argv[0])) {
-    aPacket = JS_GetArrayBuffer(ctx, &len, argv[0]);
+  bool isArray;
+  if (JS_IsArrayObject(ctx, args[0], &isArray) && isArray) {
+    JS::AutoAssertNoGC hazard(ctx);
+    bool isSharedMemory;
+    len = JS_GetArrayBufferByteLength(args[0].toObjectOrNull());
+    aPacket = JS_GetArrayBufferData(args[0].toObjectOrNull(), &isSharedMemory, hazard);
     if (!aPacket) {
-      THROW_ERROR(ctx, "getPacket: invalid ArrayBuffer parameter");
+      JS_ReportErrorASCII(ctx, "getPacket: invalid ArrayBuffer parameter");
+      return false;
     }
   } else {
-    if (argc % 2 != 0) {
-      THROW_WARNING(ctx, "invalid packet format");
+    if (args.length() % 2 != 0) {
+      JS_ReportWarningASCII(ctx, "invalid packet format");
+      args.rval().setBoolean(false);
+      return true;
     }
 
-    aPacket = new BYTE[2 * argc];
+    aPacket = new BYTE[2 * args.length()];
     del = true;
     uint32_t size = 0;
 
-    for (int32_t i = 0; i < argc; i += 2, len += size) {
-      JS_ToUint32(ctx, &size, argv[i]);
-      JS_ToUint32(ctx, (uint32_t*)&aPacket[len], argv[i + 1]);
+    for (uint32_t i = 0; i < args.length(); i += 2, len += size) {
+      size = args[i].toInt32();
+      aPacket[len] = static_cast<BYTE>(args[i + 1].toInt32());
     }
   }
 
@@ -483,11 +566,12 @@ JSAPI_FUNC(my_getPacket) {
   if (del) {
     delete[] aPacket;
   }
-  return JS_TRUE;
+  args.rval().setBoolean(true);
+  return true;
 }
 
 #pragma comment(lib, "wininet")
-JSAPI_FUNC(my_getIP) {
+bool my_getIP(JSContext* ctx, JS::CallArgs& args) {
   HINTERNET hInternet, hFile;
   DWORD rSize;
   char buffer[32];
@@ -495,17 +579,23 @@ JSAPI_FUNC(my_getIP) {
   hInternet = InternetOpen(NULL, INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);
   hFile = InternetOpenUrl(hInternet, "http://ipv4bot.whatismyipaddress.com", NULL, 0, INTERNET_FLAG_RELOAD, 0);
   InternetReadFile(hFile, &buffer, sizeof(buffer), &rSize);
-  buffer[min(rSize, 31)] = '\0';
+  buffer[std::min(static_cast<uint32_t>(rSize), 31u)] = '\0';
   InternetCloseHandle(hFile);
   InternetCloseHandle(hInternet);
-  return JS_NewString(ctx, buffer);
+  args.rval().setString(JS_NewStringCopyZ(ctx, buffer));
+  return true;
 }
 
-JSAPI_FUNC(my_sendClick) {
-  uint32_t x = 0;
-  uint32_t y = 0;
-  if (JS_ToUint32(ctx, &x, argv[0]) || JS_ToUint32(ctx, &y, argv[1])) {
-    return JS_EXCEPTION;
+bool my_sendClick(JSContext* ctx, JS::CallArgs& args) {
+  if (!args.requireAtLeast(ctx, "sendClick", 2)) {
+    return false;
+  }
+  uint32_t x = args[0].isInt32() ? args[0].toInt32() : 0;
+  uint32_t y = args[1].isInt32() ? args[1].toInt32() : 0;
+
+  if (!JS::ToUint32(ctx, args[0], &x) || !JS::ToUint32(ctx, args[1], &y)) {
+    JS_ReportErrorASCII(ctx, "failed to convert values to uint32");
+    return false;
   }
   Vars.bIgnoreMouse = TRUE;
   Sleep(100);
@@ -514,13 +604,18 @@ JSAPI_FUNC(my_sendClick) {
   SendMouseClick(x, y, 1);
   Sleep(100);
   Vars.bIgnoreMouse = FALSE;
-  return JS_NULL;
+  args.rval().setNull();
+  return true;
 }
 
-JSAPI_FUNC(my_sendKey) {
+bool my_sendKey(JSContext* ctx, JS::CallArgs& args) {
+  if (!args.requireAtLeast(ctx, "sendKey", 1)) {
+    return false;
+  }
   uint32_t key;
-  if (JS_ToUint32(ctx, &key, argv[0])) {
-    return JS_EXCEPTION;
+  if (!JS::ToUint32(ctx, args[0], &key)) {
+    JS_ReportErrorASCII(ctx, "failed to convert values to uint32");
+    return false;
   }
   BOOL prompt = Console::IsEnabled();
   if (prompt) {
@@ -536,5 +631,6 @@ JSAPI_FUNC(my_sendKey) {
   if (prompt) {
     Console::ShowPrompt();
   }
-  return JS_NULL;
+  args.rval().setNull();
+  return true;
 }

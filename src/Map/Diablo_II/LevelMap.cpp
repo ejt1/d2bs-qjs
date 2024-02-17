@@ -383,27 +383,27 @@ void LevelMap::FindRoomLinkageExits(ExitArray& exits, RoomList& added) const {
       X = Point(rooms[i]->dwPosX * 5, rooms[i]->dwPosY * 5);
       Y = Point(rooms[i]->dwPosX * 5 + rooms[i]->dwSizeX * 5, rooms[i]->dwPosY * 5 + rooms[i]->dwSizeY * 5);
 
-      overlappingX = min(B.first, Y.first) - max(A.first, X.first);
-      overlappingY = min(B.second, Y.second) - max(A.second, X.second);
+      overlappingX = std::min(B.first, Y.first) - std::max(A.first, X.first);
+      overlappingY = std::min(B.second, Y.second) - std::max(A.second, X.second);
 
       if (overlappingX > 0)  // top or bottom edge
       {
         if (A.second < X.second)  // bottom edge
         {
-          startPoint = Point(max(A.first, X.first), B.second - 1);
+          startPoint = Point(std::max(A.first, X.first), B.second - 1);
           startBottom = true;
         } else {
-          startPoint = Point(max(A.first, X.first), A.second);
+          startPoint = Point(std::max(A.first, X.first), A.second);
           startTop = true;
         }
       } else if (overlappingY > 0)  // left or right edge
       {
         if (A.first < X.first)  // right edge
         {
-          startPoint = Point(B.first - 1, max(A.second, X.second));
+          startPoint = Point(B.first - 1, std::max(A.second, X.second));
           startRight = true;
         } else {
-          startPoint = Point(A.first, max(A.second, X.second));
+          startPoint = Point(A.first, std::max(A.second, X.second));
           startLeft = true;
         }
       }

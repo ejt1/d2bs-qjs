@@ -1,49 +1,56 @@
 #pragma once
 
-#include "js32.h"
+#include "JSBaseObject.h"
 #include "Script.h"
 
-class ScriptWrap {
+class ScriptWrap : public BaseObject {
  public:
-  static JSValue Instantiate(JSContext* ctx, JSValue new_target, Script* script);
-  static void Initialize(JSContext* ctx, JSValue target);
+  static JSObject* Instantiate(JSContext* ctx, Script* script);
+  static void Initialize(JSContext* ctx, JS::HandleObject target);
 
  private:
-  ScriptWrap(JSContext* ctx, Script* script);
+  ScriptWrap(JSContext* ctx, JS::HandleObject obj, Script* script);
+
+  static void finalize(JSFreeOp* fop, JSObject* obj);
+
+  static bool New(JSContext* ctx, JS::CallArgs& args);
 
   // properties
-  static JSValue GetName(JSContext* ctx, JSValue this_val);
-  static JSValue GetType(JSContext* ctx, JSValue this_val);
-  static JSValue GetRunning(JSContext* ctx, JSValue this_val);
-  static JSValue GetThreadId(JSContext* ctx, JSValue this_val);
-  static JSValue GetMemory(JSContext* ctx, JSValue this_val);
+  static bool GetName(JSContext* ctx, JS::CallArgs& args);
+  static bool GetType(JSContext* ctx, JS::CallArgs& args);
+  static bool GetRunning(JSContext* ctx, JS::CallArgs& args);
+  static bool GetThreadId(JSContext* ctx, JS::CallArgs& args);
+  static bool GetMemory(JSContext* ctx, JS::CallArgs& args);
 
   // functions
-  static JSValue GetNext(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue Pause(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue Resume(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue Stop(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue Join(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue Send(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+  static bool GetNext(JSContext* ctx, JS::CallArgs& args);
+  static bool Pause(JSContext* ctx, JS::CallArgs& args);
+  static bool Resume(JSContext* ctx, JS::CallArgs& args);
+  static bool Stop(JSContext* ctx, JS::CallArgs& args);
+  static bool Join(JSContext* ctx, JS::CallArgs& args);
+  static bool Send(JSContext* ctx, JS::CallArgs& args);
 
   // global functions
-  static JSValue GetScript(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue GetScripts(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+  static bool GetScript(JSContext* ctx, JS::CallArgs& args);
+  static bool GetScripts(JSContext* ctx, JS::CallArgs& args);
 
-  static inline JSClassID m_class_id = 0;
-  static inline JSCFunctionListEntry m_proto_funcs[] = {
-      JS_CGETSET_DEF("name", GetName, nullptr),          //
-      JS_CGETSET_DEF("type", GetType, nullptr),          //
-      JS_CGETSET_DEF("running", GetRunning, nullptr),    //
-      JS_CGETSET_DEF("threadid", GetThreadId, nullptr),  //
-      JS_CGETSET_DEF("memory", GetMemory, nullptr),      //
-
-      JS_FS("getNext", GetNext, 0, FUNCTION_FLAGS),  //
-      JS_FS("pause", Pause, 0, FUNCTION_FLAGS),      //
-      JS_FS("resume", Resume, 0, FUNCTION_FLAGS),    //
-      JS_FS("stop", Stop, 0, FUNCTION_FLAGS),        //
-      JS_FS("join", Join, 0, FUNCTION_FLAGS),        //
-      JS_FS("send", Send, 1, FUNCTION_FLAGS),
+  static inline JSClassOps m_ops = {
+      .addProperty = nullptr,
+      .delProperty = nullptr,
+      .enumerate = nullptr,
+      .newEnumerate = nullptr,
+      .resolve = nullptr,
+      .mayResolve = nullptr,
+      .finalize = finalize,
+      .call = nullptr,
+      .hasInstance = nullptr,
+      .construct = nullptr,
+      .trace = nullptr,
+  };
+  static inline JSClass m_class = {
+      "D2BSScript",
+      JSCLASS_HAS_RESERVED_SLOTS(kInternalFieldCount) | JSCLASS_FOREGROUND_FINALIZE,
+      &m_ops,
   };
 
   Script* m_script;

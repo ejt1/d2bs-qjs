@@ -15,8 +15,21 @@ if (NOT D2BS_VERSION)
   set(D2BS_VERSION "local" CACHE STRING "")
 endif()
 
+if(CMAKE_BUILD_TYPE MATCHES "^(D|d)ebug$")
+  add_definitions(-DDEBUG -D_DEBUG)
+else()
+  add_definitions(-DNDEBUG -D_NDEBUG)
+endif()
+
+add_definitions(
+  -DWIN32_LEAN_AND_MEAN
+  -DNOMINMAX)
+
 project(d2bs)
 
+option(MOZJS_USE_PREBUILT "Use the prebuilt release library of mozjs (vendor/mozjs-prebuilt)" OFF)
+
+#add_subdirectory(sandbox)
 add_subdirectory(vendor)
 
 if (NOT CMAKE_BUILD_TYPE)
@@ -65,7 +78,6 @@ set(D2BS_SRCS
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSFile.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSFileTools.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSGame.cpp"
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSGlobalClasses.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSHash.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSMenu.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSParty.cpp"
@@ -77,7 +89,9 @@ set(D2BS_SRCS
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSSocket.cpp"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JS/JSUnit.cpp"
 
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JSBaseObject.cc"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/JSTimer.cc"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Core/StringWrap.cc"
   
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Engine/Bindings.cc"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/Spidermonkey Engine/Engine/js32.cpp"
@@ -125,7 +139,8 @@ target_link_libraries(D2BS PRIVATE
   shlwapi
 
   # vendor dependencies
-  libquickjs
+  mozjs
+  #libquickjs
   minhook
   # libuv
   uv_a)

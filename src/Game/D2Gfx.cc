@@ -127,7 +127,7 @@ D2CellFileStrc* LoadBmpCellFile(uint8_t* buf1, int width, int height) {
   for (int i = 0; i < height; i++) {
     BYTE *src = buf1 + (i * ((width + 3) & -4)), *limit = src + width;
     while (src < limit) {
-      BYTE *start = src, *limit2 = min(limit, src + 0x7f), trans = !*src;
+      BYTE *start = src, *limit2 = std::min(limit, src + 0x7f), trans = !*src;
       do src++;
       while ((trans == (BYTE) !*src) && (src < limit2));
       if (!trans || (src < limit))

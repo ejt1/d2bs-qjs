@@ -20,6 +20,12 @@ jobs:
       run: |
         echo "sha_short=$(git rev-parse --short "$GITHUB_SHA")" >> "$GITHUB_ENV"
         echo "branch=$(echo ${GITHUB_REF#refs/heads/})" >> "$GITHUB_ENV"
+  
+    - name: Extract mozjs
+      uses: ihiroky/extract-action@v1
+      with:
+        file_path: vendor/mozjs-prebuilt/mozjs-prebuilt.zip
+        extract_dir: vendor/mozjs-prebuilt
         
     - name: Copy Distributables
       shell: bash
@@ -28,7 +34,7 @@ jobs:
         mv dist/* final/bin
 
     - name: Configure CMake
-      run: cmake -A Win32 -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/final -DD2BS_VERSION="${{ env.D2BS_VERSION }}"
+      run: cmake -A Win32 -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/final -DD2BS_VERSION="${{ env.D2BS_VERSION }}" -DMOZJS_USE_PREBUILT=ON
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}

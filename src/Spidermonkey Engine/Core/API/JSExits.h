@@ -1,57 +1,54 @@
 #pragma once
 
-#include "js32.h"
-#include "MapHeader.h" // Exit
+#include "JSBaseObject.h"
+#include "MapHeader.h"  // Exit
 
-//CLASS_CTOR(exit);
-//CLASS_FINALIZER(exit);
-//
-//JSAPI_PROP(exit_getProperty);
-//
-//struct JSExit {
-//  DWORD x;
-//  DWORD y;
-//  DWORD id;
-//  DWORD type;
-//  DWORD tileid;
-//  DWORD level;
-//};
-//
-//enum exit_tinyid { EXIT_X, EXIT_Y, EXIT_TARGET, EXIT_TYPE, EXIT_TILEID, EXIT_LEVELID };
-//
-//static JSCFunctionListEntry exit_proto_funcs[] = {
-//    JS_CGETSET_MAGIC_DEF("x", exit_getProperty, nullptr, EXIT_X),            //
-//    JS_CGETSET_MAGIC_DEF("y", exit_getProperty, nullptr, EXIT_Y),            //
-//    JS_CGETSET_MAGIC_DEF("target", exit_getProperty, nullptr, EXIT_TARGET),  //
-//    JS_CGETSET_MAGIC_DEF("type", exit_getProperty, nullptr, EXIT_TYPE),      //
-//    JS_CGETSET_MAGIC_DEF("tileid", exit_getProperty, nullptr, EXIT_TILEID),  //
-//    JS_CGETSET_MAGIC_DEF("level", exit_getProperty, nullptr, EXIT_LEVELID),
-//};
-
-class ExitWrap {
+class ExitWrap : public BaseObject {
  public:
-  static JSValue Instantiate(JSContext* ctx, JSValue new_target, Exit* exit, uint32_t level_id);
-  static void Initialize(JSContext* ctx, JSValue target);
+  static JSObject* Instantiate(JSContext* ctx, Exit* exit, uint32_t level_id);
+  static void Initialize(JSContext* ctx, JS::HandleObject target);
 
  private:
-  ExitWrap(JSContext* ctx, Exit* exit, uint32_t level_id);
+  ExitWrap(JSContext* ctx, JS::HandleObject obj, Exit* exit, uint32_t level_id);
+
+  static void finalize(JSFreeOp* fop, JSObject* obj);
+
+  static bool New(JSContext* ctx, JS::CallArgs& args);
 
   // properties
-  static JSValue GetX(JSContext* ctx, JSValue this_val);
-  static JSValue GetY(JSContext* ctx, JSValue this_val);
-  static JSValue GetTarget(JSContext* ctx, JSValue this_val);
-  static JSValue GetType(JSContext* ctx, JSValue this_val);
-  static JSValue GetTileId(JSContext* ctx, JSValue this_val);
-  static JSValue GetLevelId(JSContext* ctx, JSValue this_val);
+  static bool GetX(JSContext* ctx, JS::CallArgs& args);
+  static bool GetY(JSContext* ctx, JS::CallArgs& args);
+  static bool GetTarget(JSContext* ctx, JS::CallArgs& args);
+  static bool GetType(JSContext* ctx, JS::CallArgs& args);
+  static bool GetTileId(JSContext* ctx, JS::CallArgs& args);
+  static bool GetLevelId(JSContext* ctx, JS::CallArgs& args);
 
-  static inline JSClassID m_class_id = 0;
-  static inline JSCFunctionListEntry m_proto_funcs[] = {
-      JS_CGETSET_DEF("x", GetX, nullptr),        //
-      JS_CGETSET_DEF("y", GetY, nullptr),    //
-      JS_CGETSET_DEF("target", GetTarget, nullptr),  //
-      JS_CGETSET_DEF("type", GetType, nullptr),       //
-      JS_CGETSET_DEF("tileid", GetTileId, nullptr),       //
-      JS_CGETSET_DEF("level", GetLevelId, nullptr),  //
+  static inline JSClassOps m_ops = {
+      .addProperty = nullptr,
+      .delProperty = nullptr,
+      .enumerate = nullptr,
+      .newEnumerate = nullptr,
+      .resolve = nullptr,
+      .mayResolve = nullptr,
+      .finalize = finalize,
+      .call = nullptr,
+      .hasInstance = nullptr,
+      .construct = nullptr,
+      .trace = nullptr,
+  };
+  static inline JSClass m_class = {
+      "Exit",
+      JSCLASS_HAS_RESERVED_SLOTS(kInternalFieldCount) | JSCLASS_FOREGROUND_FINALIZE,
+      &m_ops,
+  };
+  static inline JSPropertySpec m_props[] = {
+      JS_PSG("x", trampoline<GetX>, JSPROP_ENUMERATE | JSPROP_PERMANENT),            //
+      JS_PSG("y", trampoline<GetY>, JSPROP_ENUMERATE | JSPROP_PERMANENT),            //
+      JS_PSG("target", trampoline<GetTarget>, JSPROP_ENUMERATE | JSPROP_PERMANENT),  //
+      JS_PSG("type", trampoline<GetType>, JSPROP_ENUMERATE | JSPROP_PERMANENT),      //
+      JS_PSG("tileid", trampoline<GetTileId>, JSPROP_ENUMERATE | JSPROP_PERMANENT),  //
+      JS_PSG("level", trampoline<GetLevelId>, JSPROP_ENUMERATE | JSPROP_PERMANENT),  //
+      JS_PS_END,
   };
 
   uint32_t x;

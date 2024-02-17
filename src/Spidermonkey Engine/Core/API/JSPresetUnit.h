@@ -1,43 +1,62 @@
 #pragma once
 
-// #include <windows.h>
-#include "js32.h"
+#include "JSBaseObject.h"
 
 #include "Game/Drlg/D2DrlgDrlg.h"
 
-class PresetUnitWrap {
+class PresetUnitWrap : public BaseObject {
  public:
-  static JSValue Instantiate(JSContext* ctx, JSValue new_target, D2PresetUnitStrc* preset, D2DrlgRoomStrc* room, uint32_t level);
-  static void Initialize(JSContext* ctx, JSValue target);
+  static JSObject* Instantiate(JSContext* ctx, D2PresetUnitStrc* preset, D2DrlgRoomStrc* room, uint32_t level);
+  static void Initialize(JSContext* ctx, JS::HandleObject target);
 
  private:
-  PresetUnitWrap(JSContext* ctx, D2PresetUnitStrc* preset, D2DrlgRoomStrc* room, uint32_t level);
+  PresetUnitWrap(JSContext* ctx, JS::HandleObject obj, D2PresetUnitStrc* preset, D2DrlgRoomStrc* room, uint32_t level);
+
+  static void finalize(JSFreeOp* fop, JSObject* obj);
 
   // constructor
-  static JSValue New(JSContext* ctx, JSValue new_target, int argc, JSValue* argv);
+  static bool New(JSContext* ctx, JS::CallArgs& args);
 
   // properties
-  static JSValue GetType(JSContext* ctx, JSValue this_val);
-  static JSValue GetRoomX(JSContext* ctx, JSValue this_val);
-  static JSValue GetRoomY(JSContext* ctx, JSValue this_val);
-  static JSValue GetX(JSContext* ctx, JSValue this_val);
-  static JSValue GetY(JSContext* ctx, JSValue this_val);
-  static JSValue GetId(JSContext* ctx, JSValue this_val);
-  static JSValue GetLevel(JSContext* ctx, JSValue this_val);
+  static bool GetType(JSContext* ctx, JS::CallArgs& args);
+  static bool GetRoomX(JSContext* ctx, JS::CallArgs& args);
+  static bool GetRoomY(JSContext* ctx, JS::CallArgs& args);
+  static bool GetX(JSContext* ctx, JS::CallArgs& args);
+  static bool GetY(JSContext* ctx, JS::CallArgs& args);
+  static bool GetId(JSContext* ctx, JS::CallArgs& args);
+  static bool GetLevel(JSContext* ctx, JS::CallArgs& args);
 
   // globals
-  static JSValue GetPresetUnit(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-  static JSValue GetPresetUnits(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
+  static bool GetPresetUnit(JSContext* ctx, JS::CallArgs& args);
+  static bool GetPresetUnits(JSContext* ctx, JS::CallArgs& args);
 
-  static inline JSClassID m_class_id = 0;
-  static inline JSCFunctionListEntry m_proto_funcs[] = {
-      JS_CGETSET_DEF("type", GetType, nullptr),    //
-      JS_CGETSET_DEF("roomx", GetRoomX, nullptr),  //
-      JS_CGETSET_DEF("roomy", GetRoomY, nullptr),  //
-      JS_CGETSET_DEF("x", GetX, nullptr),          //
-      JS_CGETSET_DEF("y", GetY, nullptr),          //
-      JS_CGETSET_DEF("id", GetId, nullptr),        //
-      JS_CGETSET_DEF("level", GetLevel, nullptr),  //
+  static inline JSClassOps m_ops = {
+      .addProperty = nullptr,
+      .delProperty = nullptr,
+      .enumerate = nullptr,
+      .newEnumerate = nullptr,
+      .resolve = nullptr,
+      .mayResolve = nullptr,
+      .finalize = finalize,
+      .call = nullptr,
+      .hasInstance = nullptr,
+      .construct = nullptr,
+      .trace = nullptr,
+  };
+  static inline JSClass m_class = {
+      "PresetUnit",
+      JSCLASS_HAS_RESERVED_SLOTS(kInternalFieldCount) | JSCLASS_FOREGROUND_FINALIZE,
+      &m_ops,
+  };
+  static inline JSPropertySpec m_props[] = {
+      JS_PSG("type", trampoline<GetType>, JSPROP_ENUMERATE),    //
+      JS_PSG("roomx", trampoline<GetRoomX>, JSPROP_ENUMERATE),  //
+      JS_PSG("roomy", trampoline<GetRoomY>, JSPROP_ENUMERATE),  //
+      JS_PSG("x", trampoline<GetX>, JSPROP_ENUMERATE),          //
+      JS_PSG("y", trampoline<GetY>, JSPROP_ENUMERATE),          //
+      JS_PSG("id", trampoline<GetId>, JSPROP_ENUMERATE),        //
+      JS_PSG("level", trampoline<GetLevel>, JSPROP_ENUMERATE),  //
+      JS_PS_END,
   };
 
   uint32_t dwPosX;

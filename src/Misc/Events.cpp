@@ -129,62 +129,33 @@ void MouseMoveEvent(POINT pt) {
   sScriptEngine->ForEachScript(MouseMoveCallback, &helper);
 }
 
-bool ScriptMessageEvent(JSContext* ctx, Script* script, JSValue obj) {
+bool ScriptMessageEvent(JSContext* ctx, Script* script, unsigned argc, JS::Value* argv) {
   if (script && script->IsRunning() && script->GetListenerCount("scriptmsg") > 0) {
-    uint8_t* data;
-    size_t data_len;
-    uint8_t** sab_tab;
-    size_t sab_tab_len;
-
-    data = JS_WriteObject2(ctx, &data_len, obj, JS_WRITE_OBJ_SAB | JS_WRITE_OBJ_REFERENCE, &sab_tab, &sab_tab_len);
-    if (!data) {
-      return false;
-    }
-
     std::shared_ptr<ScriptMsgEvent> evt = std::make_shared<ScriptMsgEvent>();
     evt->name = "scriptmsg";
+    for (unsigned i = 0; i < argc; ++i) {
+      // NOTE(ejt): root the value here, preferrably we would get
+      // an array of JS::HandleValue and let caller handle rooting
+      JS::RootedValue val(ctx, argv[i]);
 
-    // write data
-    evt->data = static_cast<uint8_t*>(malloc(data_len));
-    evt->data_len = data_len;
-    if (!evt->data) {
-      js_free(ctx, data);
-      js_free(ctx, sab_tab);
-      return false;
+      // NOTE(ejt): don't know if this is a good way of doing it but documentation is poor around this API
+      JSAutoStructuredCloneBuffer buffer(JS::StructuredCloneScope::SameProcessDifferentThread, nullptr, nullptr);
+      buffer.write(ctx, val);
+      evt->buffers.emplace_back(std::move(buffer));
     }
-    memcpy(evt->data, data, data_len);
-
-    // write sab
-    evt->sab_tab = static_cast<uint8_t**>(malloc(sizeof(uint8_t*) * sab_tab_len));
-    if (!evt->sab_tab) {
-      free(evt->data);
-      js_free(ctx, data);
-      js_free(ctx, sab_tab);
-      return false;
-    }
-    memcpy(evt->sab_tab, sab_tab, sizeof(uint8_t*) * sab_tab_len);
-    evt->sab_tab_len = sab_tab_len;
-
-    // increase SAB reference counts
-    for (size_t i = 0; i < evt->sab_tab_len; ++i) {
-      js_sab_dup(NULL, evt->sab_tab[i]);
-    }
-
-    js_free(ctx, data);
-    js_free(ctx, sab_tab);
 
     script->DispatchEvent(evt);
   }
   return true;
 }
 
-bool __fastcall BCastEventCallback(Script* script, void* argv) {
+static bool __fastcall BCastEventCallback(Script* script, void* argv) {
   BCastEventHelper* helper = (BCastEventHelper*)argv;
-  return ScriptMessageEvent(helper->cx, script, helper->argv[0]);
+  return ScriptMessageEvent(helper->cx, script, helper->argc, helper->argv);
 }
 
-void ScriptBroadcastEvent(JSContext* cx, JSValue* args) {
-  BCastEventHelper helper = {cx, args};
+void ScriptBroadcastEvent(JSContext* cx, unsigned argc, JS::Value* argv) {
+  BCastEventHelper helper = {cx, argc, argv};
   sScriptEngine->ForEachScript(BCastEventCallback, &helper);
 }
 
@@ -341,36 +312,36 @@ bool RealmPacketEvent(BYTE* pPacket, DWORD dwSize) {
   return sScriptEngine->ForEachScript(PacketEventCallback, &helper);
 }
 
-bool GenhookClickEvent(Script* script, int button, POINT* loc, JSValue func) {
+bool GenhookClickEvent(Script* script, int button, POINT* loc, JS::HandleObject func) {
   bool block = false;
-  if (script && JS_IsFunction(script->GetContext(), func)) {
-    std::shared_ptr<GenHookEvent> evt = std::make_shared<GenHookEvent>();
-    evt->name = "ScreenHookClick";
-    evt->x = loc->x;
-    evt->y = loc->y;
-    evt->button = button;
-    evt->callback = JS_DupValue(script->GetContext(), func);
+  // if (script && JS_IsFunction(script->GetContext(), func)) {
+  //   std::shared_ptr<GenHookEvent> evt = std::make_shared<GenHookEvent>();
+  //   evt->name = "ScreenHookClick";
+  //   evt->x = loc->x;
+  //   evt->y = loc->y;
+  //   evt->button = button;
+  //   evt->callback = JS_DupValue(script->GetContext(), func);
 
-    {
-      ResetEvent(Vars.eventSignal);
-      script->DispatchEvent(evt);
-      if (WaitForSingleObject(Vars.eventSignal, 3000) == WAIT_TIMEOUT)
-        return false;
-    }
+  //  {
+  //    ResetEvent(Vars.eventSignal);
+  //    script->DispatchEvent(evt);
+  //    if (WaitForSingleObject(Vars.eventSignal, 3000) == WAIT_TIMEOUT)
+  //      return false;
+  //  }
 
-    block = evt->block;
-  }
+  //  block = evt->block;
+  //}
   return block;
 }
 
-void GenhookHoverEvent(Script* script, POINT* loc, JSValue func) {
-  if (script && JS_IsFunction(script->GetContext(), func)) {
-    std::shared_ptr<GenHookEvent> evt = std::make_shared<GenHookEvent>();
-    evt->name = "ScreenHookHover";
-    evt->x = loc->x;
-    evt->y = loc->y;
-    evt->callback = JS_DupValue(script->GetContext(), func);
+void GenhookHoverEvent(Script* script, POINT* loc, JS::HandleObject func) {
+  // if (script && JS_IsFunction(script->GetContext(), func)) {
+  //   std::shared_ptr<GenHookEvent> evt = std::make_shared<GenHookEvent>();
+  //   evt->name = "ScreenHookHover";
+  //   evt->x = loc->x;
+  //   evt->y = loc->y;
+  //   evt->callback = JS_DupValue(script->GetContext(), func);
 
-    script->DispatchEvent(evt);
-  }
+  //  script->DispatchEvent(evt);
+  //}
 }
