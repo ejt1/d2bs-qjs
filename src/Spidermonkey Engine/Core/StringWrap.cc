@@ -3,6 +3,9 @@
 #include <jsfriendapi.h>
 #include <js/CharacterEncoding.h>
 
+StringWrap::StringWrap() : m_str(nullptr), m_length(0) {
+}
+
 StringWrap::StringWrap(JSContext* ctx, JSString* str) : m_length(0) {
   if (!str) {
     JS_ReportErrorUTF8(ctx, "cannot flatten null string");

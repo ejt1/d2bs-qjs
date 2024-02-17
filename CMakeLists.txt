@@ -29,7 +29,6 @@ project(d2bs)
 
 option(MOZJS_USE_PREBUILT "Use the prebuilt release library of mozjs (vendor/mozjs-prebuilt)" OFF)
 
-#add_subdirectory(sandbox)
 add_subdirectory(vendor)
 
 if (NOT CMAKE_BUILD_TYPE)
@@ -106,7 +105,7 @@ set(D2BS_SRCS
 
 add_library(D2BS SHARED ${D2BS_SRCS})
 
-target_compile_options(D2BS PRIVATE /W4)
+target_compile_options(D2BS PRIVATE /W4 /utf-8)
 
 target_include_directories(D2BS PRIVATE
 	"${CMAKE_CURRENT_SOURCE_DIR}/src"

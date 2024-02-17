@@ -227,7 +227,7 @@ void Engine::OnGameEntered() {
   if (!Vars.bUseProfileScript) {
     const char* starter = GetStarterScriptName();
     if (starter != NULL) {
-      Print("ÿc2D2BSÿc0 :: Starting %s", starter);
+      Print("\u00FFc2D2BS\u00FFc0 :: Starting %s", starter);
       if (StartScript(starter, GetStarterScriptState()))
         Print("ÿc2D2BSÿc0 :: %s running.", starter);
       else
@@ -240,7 +240,7 @@ void Engine::OnMenuEntered(bool beginStarter) {
   if (beginStarter && !Vars.bUseProfileScript) {
     const char* starter = GetStarterScriptName();
     if (starter != NULL) {
-      Print("ÿc2D2BSÿc0 :: Starting %s", starter);
+      Print("\u00FFc2D2BS\u00FFc0 :: Starting %s", starter);
       if (StartScript(starter, GetStarterScriptState()))
         Print("ÿc2D2BSÿc0 :: %s running.", starter);
       else
@@ -281,14 +281,10 @@ void Engine::FlushPrint() {
         std::wstring wstr = AnsiToWide(*it);
         D2CLIENT_PrintGameString(wstr.c_str(), 0);
       }
-      /*} else if (Vars.bUseGamePrint && ClientState() == ClientStateMenu && findControl(4, (const wchar_t*)NULL, -1, 28, 410, 354, 298)) {
-          while (getline(ss, temp))
-              SplitLines(temp, Console::MaxWidth() - 100, ' ', lines);
-              // TODO: Double check this function, make sure it is working as intended.
-              for (list<string>::iterator it = lines.begin(); it != lines.end(); ++it)
-                  D2MULTI_PrintChannelText((char*)it->c_str(), 0);*/
     } else {
-      while (getline(ss, temp)) Console::AddLine(temp);
+      while (getline(ss, temp)) {
+        Console::AddLine(temp);
+      }
     }
 
     clean.pop();

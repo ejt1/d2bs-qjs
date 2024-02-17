@@ -33,6 +33,7 @@ JSScript* JS_CompileFile(JSContext* ctx, JS::HandleObject /*globalObject*/, std:
 
   JS::CompileOptions opts(ctx);
   opts.setFileAndLine(fileName.c_str(), 1);
+  opts.setUTF8(true);
   JS::RootedScript script(ctx);
   if (!JS_CompileScript(ctx, str.c_str(), str.length(), opts, &script)) {
     t.close();
