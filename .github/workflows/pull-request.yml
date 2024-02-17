@@ -13,9 +13,15 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    
+  
+    - name: Extract mozjs
+      uses: ihiroky/extract-action@v1
+      with:
+        file_path: vendor/mozjs-prebuilt/mozjs-prebuilt.zip
+        extract_dir: vendor/mozjs-prebuilt
+
     - name: Configure CMake
-      run: cmake -A Win32 -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+      run: cmake -A Win32 -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DMOZJS_USE_PREBUILT=ON
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}

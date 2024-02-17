@@ -27,6 +27,8 @@ add_definitions(
 
 project(d2bs)
 
+option(MOZJS_USE_PREBUILT "Use the prebuilt release library of mozjs (vendor/mozjs-prebuilt)" OFF)
+
 #add_subdirectory(sandbox)
 add_subdirectory(vendor)
 
