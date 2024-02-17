@@ -1027,18 +1027,13 @@ Set.prototype.toString = function () {
     };
 
     console.error = function (error = "") {
-      let msg, source = "<unknown>", line = 0;
+      let msg, source;
       
       if (typeof error === "string") {
         msg = error;
       } else {
-        if (error.fileName && typeof error.fileName === "string") {
-          source = error.fileName.substring(error.fileName.lastIndexOf("\\") + 1, error.fileName.length);
-        }
-        if (error.lineNumber) {
-          line = error.lineNumber;
-        }
-        msg = "ÿc1[" + source + " :: " + line + "] ÿc0" + error.message;
+        source = error.fileName.substring(error.fileName.lastIndexOf("\\") + 1, error.fileName.length);
+        msg = "ÿc1[" + source + " :: " + error.lineNumber + "] ÿc0" + error.message;
       }
 
       this.log("[ÿc1Errorÿc0] " + msg);

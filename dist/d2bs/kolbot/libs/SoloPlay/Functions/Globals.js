@@ -260,7 +260,6 @@ const SetUp = {
     Array.isArray(files) && files
       .filter(file => file.endsWith(".js"))
       .sort(a => a.startsWith("PrototypeOverrides.js") ? 0 : 1) // Dirty fix to load new prototypes first
-      .reverse()
       .forEach(function (x) {
         if (!isIncluded("SoloPlay/Functions/" + x)) {
           if (!include("SoloPlay/Functions/" + x)) {
