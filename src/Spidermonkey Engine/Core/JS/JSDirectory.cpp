@@ -20,7 +20,6 @@
 #include "D2Helpers.h"  // Log
 #include "Globals.h"
 #include "File.h"
-#include "StringWrap.h"
 
 #include <direct.h>
 
@@ -109,21 +108,24 @@ bool DirectoryWrap::Create(JSContext* ctx, JS::CallArgs& args) {
   if (!args[0].isString())
     THROW_ERROR(ctx, "No path passed to dir.create()");
 
-  StringWrap szName(ctx, args[0]);
+  char* szName = JS_EncodeString(ctx, args[0].toString());
   if (!szName) {
     THROW_ERROR(ctx, "failed to encode string");
   }
 
   if (!isValidPath(szName)) {
+    JS_free(ctx, szName);
     THROW_ERROR(ctx, "invalid path");
   }
 
-  sprintf_s(path, _MAX_PATH, "%s\\%s\\%s", Vars.szScriptPath, wrap->szName, szName.c_str());
+  sprintf_s(path, _MAX_PATH, "%s\\%s\\%s", Vars.szScriptPath, wrap->szName, szName);
   if (_mkdir(path) == -1 && (errno == ENOENT)) {
-    JS_ReportErrorASCII(ctx, "Couldn't create directory %s, path %s not found", szName.c_str(), path);
+    JS_ReportErrorASCII(ctx, "Couldn't create directory %s, path %s not found", szName, path);
+    JS_free(ctx, szName);
     return false;
   }
   args.rval().setObjectOrNull(DirectoryWrap::Instantiate(ctx, szName));
+  JS_free(ctx, szName);
   return true;
 }
 
@@ -154,11 +156,12 @@ bool DirectoryWrap::GetFiles(JSContext* ctx, JS::CallArgs& args) {
   if (args.length() > 1)
     THROW_ERROR(ctx, "not enough arguments");
   if (args.length() == 1) {
-    StringWrap szSearch(ctx, args[0]);
+    char* szSearch = JS_EncodeString(ctx, args[0].toString());
     if (!szSearch) {
       THROW_ERROR(ctx, "failed to encode string");
     }
     strcpy_s(search, szSearch);
+    JS_free(ctx, szSearch);
   }
 
   long hFile;
@@ -204,11 +207,12 @@ bool DirectoryWrap::GetFolders(JSContext* ctx, JS::CallArgs& args) {
   if (args.length() > 1)
     THROW_ERROR(ctx, "not enough arguments");
   if (args.length() == 1) {
-    StringWrap szSearch(ctx, args[0]);
+    char* szSearch = JS_EncodeString(ctx, args[0].toString());
     if (!szSearch) {
       THROW_ERROR(ctx, "failed to encode string");
     }
     strcpy_s(search, szSearch);
+    JS_free(ctx, szSearch);
   }
 
   long hFile;
@@ -254,27 +258,31 @@ bool DirectoryWrap::OpenDirectory(JSContext* ctx, JS::CallArgs& args) {
   }
 
   char path[_MAX_PATH];
-  StringWrap szName(ctx, args[0]);
+  char* szName = JS_EncodeString(ctx, args[0].toString());
   if (!szName) {
     THROW_ERROR(ctx, "failed to encode string");
   }
 
   if (!isValidPath(szName)) {
-    Log("The following path was deemed invalid: %s. (%s, %s)", szName.c_str(), "JSDirectory.cpp", "my_openDir");
+    Log("The following path was deemed invalid: %s. (%s, %s)", szName, "JSDirectory.cpp", "my_openDir");
+    JS_free(ctx, szName);
     THROW_ERROR(ctx, "invalid path");
   }
 
-  sprintf_s(path, _MAX_PATH, "%s\\%s", Vars.szScriptPath, szName.c_str());
+  sprintf_s(path, _MAX_PATH, "%s\\%s", Vars.szScriptPath, szName);
 
   if ((_mkdir(path) == -1) && (errno == ENOENT)) {
-    JS_ReportErrorASCII(ctx, "Couldn't get directory %s, path '%s' not found", szName.c_str(), path);
+    JS_ReportErrorASCII(ctx, "Couldn't get directory %s, path '%s' not found", szName, path);
+    JS_free(ctx, szName);
     return false;
   }
   JS::RootedObject obj(ctx, DirectoryWrap::Instantiate(ctx, szName));
   if (!obj) {
+    JS_free(ctx, szName);
     THROW_ERROR(ctx, "failed to instantiate folder");
   }
   args.rval().setObject(*obj);
+  JS_free(ctx, szName);
   return true;
 }
 

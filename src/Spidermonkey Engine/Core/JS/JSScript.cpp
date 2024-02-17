@@ -4,7 +4,6 @@
 #include "D2Helpers.h"
 #include "Localization.h"
 #include "ScriptEngine.h"
-#include "StringWrap.h"
 
 struct FindHelper {
   DWORD tid;
@@ -256,11 +255,12 @@ bool ScriptWrap::GetScript(JSContext* ctx, JS::CallArgs& args) {
       return true;
     }
   } else if (args.length() == 1 && args[0].isString()) {
-    StringWrap name(ctx, args[0]);
+    char* name = JS_EncodeString(ctx, args[0].toString());
     if (!name) {
       THROW_ERROR(ctx, "failed to encode string");
     }
     char* fname = _strdup(name);
+    JS_free(ctx, name);
     StringReplace(fname, '/', '\\', strlen(fname));
     FindHelper helper = {0, fname, NULL};
     sScriptEngine->ForEachScript(FindScriptByName, &helper);

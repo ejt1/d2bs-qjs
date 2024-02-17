@@ -11,7 +11,6 @@
 #include "Console.h"
 #include "JSTimer.h"
 #include "Bindings.h"
-#include "StringWrap.h"
 
 #include <chrono>
 #include <cassert>
@@ -493,9 +492,10 @@ void Script::RunMain() {
     JS_ReportPendingException(m_context);
   }
   if (!rval.isUndefined()) {
-    StringWrap text(m_context, JS::ToString(m_context, rval));
+    char* text = JS_EncodeString(m_context, JS::ToString(m_context, rval));
     if (text) {
       Log(text);
+      JS_free(m_context, text);
     }
   }
 }
@@ -732,9 +732,10 @@ bool Script::HandleEvent(std::shared_ptr<Event> evt, bool clearList) {
     if (!JS::Evaluate(m_context, opts, test.data(), test.length(), &rval)) {
       JS_ReportPendingException(m_context);
     } else if (!rval.isUndefined()) {
-      StringWrap text(m_context, JS::ToString(m_context, rval));
+      char* text = JS_EncodeString(m_context, JS::ToString(m_context, rval));
       if (text) {
         Print(text);
+        JS_free(m_context, text);
       }
     }
   }

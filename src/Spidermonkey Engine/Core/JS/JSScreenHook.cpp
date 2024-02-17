@@ -6,7 +6,6 @@
 #include <Helpers.h>
 
 #include "Bindings.h"
-#include "StringWrap.h"
 
 JSObject* FrameWrap::Instantiate(JSContext* ctx) {
   JS::RootedObject global(ctx, JS::CurrentGlobalOrNull(ctx));
@@ -1020,12 +1019,12 @@ bool TextWrap::New(JSContext* ctx, JS::CallArgs& args) {
   std::wstring szText;
 
   if (args.length() > 0 && args[0].isString()) {
-    StringWrap str(ctx, args[0]);
+    char* str = JS_EncodeString(ctx, args[0].toString());
     if (!str) {
       THROW_ERROR(ctx, "failed to encode string");
     }
-    std::string ansi = UTF8ToANSI(str.c_str());
-    szText = AnsiToWide(ansi);
+    szText = AnsiToWide(str);
+    JS_free(ctx, str);
   }
   if (args.length() > 1 && args[1].isNumber())
     JS::ToUint32(ctx, args[1], &x);
@@ -1263,13 +1262,13 @@ bool TextWrap::SetText(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   TextHook* pTextHook = wrap->pText;
   if (args[0].isString()) {
-    StringWrap szText(ctx, args[0]);
+    char* szText = JS_EncodeString(ctx, args[0].toString());
     if (!szText) {
       THROW_ERROR(ctx, "failed to encode string");
     }
-    std::string ansi = UTF8ToANSI(szText.c_str());
-    std::wstring pText = AnsiToWide(ansi);
+    std::wstring pText = AnsiToWide(szText);
     pTextHook->SetText(pText.c_str());
+    JS_free(ctx, szText);
   }
   args.rval().setUndefined();
   return true;
@@ -1359,7 +1358,7 @@ bool ImageWrap::New(JSContext* ctx, JS::CallArgs& args) {
   wchar_t path[_MAX_FNAME + _MAX_PATH];
 
   if (args.length() > 0 && args[0].isString()) {
-    StringWrap str(ctx, args[0]);
+    char* str = JS_EncodeString(ctx, args[0].toString());
     if (!str) {
       THROW_ERROR(ctx, "failed to encode string");
     }
@@ -1471,13 +1470,13 @@ bool ImageWrap::SetLocation(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   ImageHook* pImageHook = wrap->pImage;
   if (args[0].isString()) {
-    StringWrap szText(ctx, args[0]);
+    char* szText = JS_EncodeString(ctx, args[0].toString());
     if (!szText) {
       THROW_ERROR(ctx, "failed to encode string");
     }
-    std::string ansi = UTF8ToANSI(szText.c_str());
-    std::wstring pText = AnsiToWide(ansi);
+    std::wstring pText = AnsiToWide(szText);
     pImageHook->SetImage(pText.c_str());
+    JS_free(ctx, szText);
   }
   args.rval().setUndefined();
   return true;

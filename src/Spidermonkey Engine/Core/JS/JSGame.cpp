@@ -23,7 +23,6 @@
 #include "JSUnit.h"
 #include "MapHeader.h"
 #include "MPQStats.h"
-#include "StringWrap.h"
 
 bool my_copyUnit(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "copyUnit", 1)) {
@@ -905,7 +904,7 @@ bool my_getSkillByName(JSContext* ctx, JS::CallArgs& args) {
     return true;
   }
 
-  StringWrap lpszText(ctx, args[0]);
+  char* lpszText = JS_EncodeString(ctx, args[0].toString());
   if (!lpszText || lpszText[0]) {
     JS_ReportErrorASCII(ctx, "Could not convert string");
     return false;
@@ -913,12 +912,14 @@ bool my_getSkillByName(JSContext* ctx, JS::CallArgs& args) {
 
   D2UnitStrc* player = D2CLIENT_GetPlayerUnit();
   if (!player) {
+    JS_free(ctx, lpszText);
     args.rval().setUndefined();
     return true;
   }
 
   D2SkillStrc* skill = player->GetSkillFromSkillName(lpszText);
   if (!skill) {
+    JS_free(ctx, lpszText);
     args.rval().setUndefined();
     return true;
   }
@@ -953,13 +954,14 @@ bool my_getTextSize(JSContext* ctx, JS::CallArgs& args) {
     return true;
   }
 
-  StringWrap szString(ctx, args[0]);
+  char* szString = JS_EncodeString(ctx, args[0].toString());
   if (!szString) {
     THROW_ERROR(ctx, "failed to encode string");
   }
 
   int font = args[1].toInt32();
   POINT r = CalculateTextLen(szString, font);
+  JS_free(ctx, szString);
   JS::RootedValue x(ctx, JS::NumberValue(r.x));
   JS::RootedValue y(ctx, JS::NumberValue(r.y));
 
@@ -1094,11 +1096,12 @@ bool my_playSound(JSContext* ctx, JS::CallArgs& args) {
 
 bool my_say(JSContext* ctx, JS::CallArgs& args) {
   for (uint32_t i = 0; i < args.length(); i++) {
-    StringWrap str(ctx, JS::ToString(ctx, args[i]));
+    char* str = JS_EncodeString(ctx, args[i].toString());
     if (!str) {
       THROW_ERROR(ctx, "failed to encode string");
     }
-    Say(L"%S", str.c_str());
+    Say(L"%S", str);
+    JS_free(ctx, str);
   }
   args.rval().setBoolean(true);
   return true;
@@ -1217,13 +1220,12 @@ bool my_useSkillPoint(JSContext* ctx, JS::CallArgs& args) {
 
 bool my_getBaseStat(JSContext* ctx, JS::CallArgs& args) {
   if (args.length() > 2) {
-    StringWrap szStatName;
-      StringWrap szTableName;
+    char *szStatName = NULL, *szTableName = NULL;
     int32_t nBaseStat = 0;
     int32_t nClassId = 0;
     int32_t nStat = -1;
     if (args[0].isString()) {
-      szTableName = std::move(StringWrap{ctx, args[0]});
+      szTableName = JS_EncodeString(ctx, args[0].toString());
       if (!szTableName) {
         JS_ReportErrorASCII(ctx, "Invalid table value");
         return false;
@@ -1240,19 +1242,23 @@ bool my_getBaseStat(JSContext* ctx, JS::CallArgs& args) {
     }
 
     if (args[2].isString()) {
-      szStatName = std::move(StringWrap{ctx, args[2]});
+      szStatName = JS_EncodeString(ctx, args[2].toString());
       if (!szStatName) {
+        JS_free(ctx, szTableName);
         JS_ReportErrorASCII(ctx, "Invalid column value");
         return false;
       }
     } else if (args[2].isInt32())
       nStat = args[2].toInt32();
     else {
+      JS_free(ctx, szTableName);
       JS_ReportErrorASCII(ctx, "Invalid column value");
       return false;
     }
     JS::RootedValue rval(ctx);
     FillBaseStat(ctx, &rval, nBaseStat, nClassId, nStat, szTableName, szStatName);
+    JS_free(ctx, szTableName);
+    JS_free(ctx, szStatName);
     args.rval().set(rval);
     return true;
   }

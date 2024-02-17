@@ -6,7 +6,7 @@
 
 class StringWrap {
  public:
-  StringWrap();
+  StringWrap() = default;
   StringWrap(JSContext* ctx, JSString* str);
   StringWrap(JSContext* ctx, JS::HandleValue value);
 

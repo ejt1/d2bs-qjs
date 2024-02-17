@@ -33,11 +33,12 @@ bool my_stringToEUC(JSContext* ctx, JS::CallArgs& args) {
     return true;
   }
 
-  StringWrap szText(ctx, args[0]);
+  char* szText = JS_EncodeString(ctx, args[0].toString());
   if (!szText) {
     THROW_ERROR(ctx, "failed to encode string");
   }
-  std::string ansi = UTF8ToANSI(szText.c_str());
+  std::string ansi = UTF8ToANSI(szText);
+  JS_free(ctx, szText);
   args.rval().setString(JS_NewStringCopyN(ctx, ansi.c_str(), ansi.length()));
   return true;
 }
@@ -48,12 +49,13 @@ bool my_print(JSContext* ctx, JS::CallArgs& args) {
     if (i != 0) {
       ss << " ";
     }
-    StringWrap str(ctx, JS::ToString(ctx, args[i]));
+    char* str = JS_EncodeString(ctx, JS::ToString(ctx, args[i]));
     if (!str) {
       JS_ReportErrorASCII(ctx, "failed to encode string");
       return false;
     }
-    ss << str.c_str();
+    ss << str;
+    JS_free(ctx, str);
   }
   std::string finalstr = ss.str();
   Print(finalstr.c_str());
@@ -80,13 +82,13 @@ bool my_load(JSContext* ctx, JS::CallArgs& args) {
     return false;
   }
   ThreadState* ts = static_cast<ThreadState*>(JS_GetContextPrivate(ctx));
-
-  StringWrap file(ctx, args[0]);
+  char* file = JS_EncodeString(ctx, args[0].toString());
   if (!file) {
     THROW_ERROR(ctx, "failed to encode string");
   }
 
-  if (file.length() > (_MAX_FNAME + _MAX_PATH - strlen(Vars.szScriptPath))) {
+  if (strlen(file) > (_MAX_FNAME + _MAX_PATH - strlen(Vars.szScriptPath))) {
+    JS_free(ctx, file);
     JS_ReportErrorASCII(ctx, "File name too long!");
     return false;
   }
@@ -96,7 +98,7 @@ bool my_load(JSContext* ctx, JS::CallArgs& args) {
     scriptState = (ClientState() == ClientStateInGame ? kScriptModeGame : kScriptModeMenu);
 
   char buf[_MAX_PATH + _MAX_FNAME];
-  sprintf_s(buf, _countof(buf), "%s\\%s", Vars.szScriptPath, file.c_str());
+  sprintf_s(buf, _countof(buf), "%s\\%s", Vars.szScriptPath, file);
   StringReplace(buf, '/', '\\', _countof(buf));
 
   // JSAutoStructuredCloneBuffer** autoBuffer = new JSAutoStructuredCloneBuffer*[argc - 1];
@@ -110,8 +112,9 @@ bool my_load(JSContext* ctx, JS::CallArgs& args) {
     newScript->Start();
   } else {
     // TODO: Should this actually be there? No notification is bad, but do we want this? maybe throw an exception?
-    Print("File \"%s\" not found.", file.c_str());
+    Print("File \"%s\" not found.", file);
   }
+  JS_free(ctx, file);
   args.rval().setUndefined();
   return true;
 }
@@ -121,19 +124,20 @@ bool my_include(JSContext* ctx, JS::CallArgs& args) {
     return false;
   }
   ThreadState* ts = static_cast<ThreadState*>(JS_GetContextPrivate(ctx));
-
-  StringWrap file(ctx, args[0]);
+  char* file = JS_EncodeString(ctx, args[0].toString());
   if (!file) {
     THROW_ERROR(ctx, "failed to encode string");
   }
 
-  if (file.length() > (_MAX_FNAME + _MAX_PATH - strlen(Vars.szScriptPath) - 6)) {
+  if (strlen(file) > (_MAX_FNAME + _MAX_PATH - strlen(Vars.szScriptPath) - 6)) {
+    JS_free(ctx, file);
     JS_ReportErrorASCII(ctx, "File name too long!");
     return false;
   }
 
   char buf[_MAX_PATH + _MAX_FNAME];
-  sprintf_s(buf, _countof(buf), "%s\\libs\\%s", Vars.szScriptPath, file.c_str());
+  sprintf_s(buf, _countof(buf), "%s\\libs\\%s", Vars.szScriptPath, file);
+  JS_free(ctx, file);
 
   args.rval().setBoolean(false);
   if (_access(buf, 0) == 0) {
@@ -188,19 +192,20 @@ bool my_isIncluded(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "isIncluded", 1)) {
     return false;
   }
-
-  StringWrap file(ctx, args[0]);
+  char* file = JS_EncodeString(ctx, args[0].toString());
   if (!file) {
     THROW_ERROR(ctx, "failed to encode string");
   }
 
-  if (file.length() > (_MAX_FNAME + _MAX_PATH - strlen(Vars.szScriptPath) - 6)) {
+  if (strlen(file) > (_MAX_FNAME + _MAX_PATH - strlen(Vars.szScriptPath) - 6)) {
+    JS_free(ctx, file);
     JS_ReportErrorASCII(ctx, "File name too long");
     return false;
   }
 
   char path[_MAX_FNAME + _MAX_PATH];
-  sprintf_s(path, _countof(path), "%s\\libs\\%s", Vars.szScriptPath, file.c_str());
+  sprintf_s(path, _countof(path), "%s\\libs\\%s", Vars.szScriptPath, file);
+  JS_free(ctx, file);
   ThreadState* ts = static_cast<ThreadState*>(JS_GetContextPrivate(ctx));
   args.rval().setBoolean(ts->script->IsIncluded(path));
   return true;
@@ -223,11 +228,12 @@ bool my_debugLog(JSContext* ctx, JS::CallArgs& args) {
     if (i != 0) {
       ss << " ";
     }
-    StringWrap str(ctx, JS::ToString(ctx, args[i]));
+    char* str = JS_EncodeString(ctx, args[i].toString());
     if (!str) {
       THROW_ERROR(ctx, "failed to encode string");
     }
-    ss << str.c_str();
+    ss << str;
+    JS_free(ctx, str);
   }
   std::string finalstr = ss.str();
   Log(finalstr.c_str());
@@ -239,23 +245,23 @@ bool my_copy(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "copy", 1)) {
     return false;
   }
-
-  StringWrap data(ctx, args[0]);
+  char* data = JS_EncodeString(ctx, args[0].toString());
   if (!data) {
     THROW_ERROR(ctx, "failed to encode string");
   }
   HGLOBAL hText;
   char* pText;
-  hText = GlobalAlloc(GMEM_DDESHARE | GMEM_MOVEABLE, data.length() + 1);
+  hText = GlobalAlloc(GMEM_DDESHARE | GMEM_MOVEABLE, strlen(data) + 1);
   pText = (char*)GlobalLock(hText);
 
-  strcpy_s(pText, data.length() + 1, data);
+  strcpy_s(pText, strlen(data) + 1, data);
   GlobalUnlock(hText);
 
   OpenClipboard(NULL);
   EmptyClipboard();
   SetClipboardData(CF_TEXT, hText);
   CloseClipboard();
+  JS_free(ctx, data);
   args.rval().setUndefined();
   return true;
 }
@@ -338,8 +344,8 @@ bool my_addEventListener(JSContext* ctx, JS::CallArgs& args) {
   }
 
   if (args[0].isString() && JS::IsCallable(args[1].toObjectOrNull())) {
-    StringWrap evtName(ctx, args[0]);
-    if (evtName && evtName.length()) {
+    char* evtName = JS_EncodeString(ctx, args[0].toString());
+    if (evtName && strlen(evtName)) {
       ThreadState* ts = static_cast<ThreadState*>(JS_GetContextPrivate(ctx));
       JS::RootedValue func(ctx, args[1]);
       ts->script->AddEventListener(evtName, func);
@@ -347,6 +353,7 @@ bool my_addEventListener(JSContext* ctx, JS::CallArgs& args) {
       JS_ReportErrorASCII(ctx, "Event name is invalid!");
       return false;
     }
+    JS_free(ctx, evtName);
   }
   args.rval().setUndefined();
   return true;
@@ -357,8 +364,8 @@ bool my_removeEventListener(JSContext* ctx, JS::CallArgs& args) {
     return false;
   }
   if (args[0].isString() && JS::IsCallable(args[1].toObjectOrNull())) {
-    StringWrap evtName(ctx, args[0]);
-    if (evtName && evtName.length()) {
+    char* evtName = JS_EncodeString(ctx, args[0].toString());
+    if (evtName && strlen(evtName)) {
       ThreadState* ts = static_cast<ThreadState*>(JS_GetContextPrivate(ctx));
       JS::RootedValue func(ctx, args[1]);
       ts->script->RemoveEventListener(evtName, func);
@@ -366,6 +373,7 @@ bool my_removeEventListener(JSContext* ctx, JS::CallArgs& args) {
       JS_ReportErrorASCII(ctx, "Event name is invalid!");
       return false;
     }
+    JS_free(ctx, evtName);
   }
   args.rval().setUndefined();
   return true;
@@ -377,8 +385,9 @@ bool my_clearEvent(JSContext* ctx, JS::CallArgs& args) {
   }
   if (args[0].isString()) {
     ThreadState* ts = static_cast<ThreadState*>(JS_GetContextPrivate(ctx));
-    StringWrap evt(ctx, args[0]);
+    char* evt = JS_EncodeString(ctx, args[0].toString());
     ts->script->RemoveAllListeners(evt);
+    JS_free(ctx, evt);
   }
   args.rval().setUndefined();
   return true;
@@ -446,13 +455,14 @@ bool my_loadMpq(JSContext* ctx, JS::CallArgs& args) {
   if (!args.requireAtLeast(ctx, "loadMpq", 1)) {
     return false;
   }
-  StringWrap path(ctx, args[0]);
+  char* path = JS_EncodeString(ctx, args[0].toString());
   if (!path) {
     THROW_ERROR(ctx, "failed to encode string");
   }
   if (isValidPath(path)) {
     LoadMPQ(path);
   }
+  JS_free(ctx, path);
   args.rval().setUndefined();
   return true;
 }

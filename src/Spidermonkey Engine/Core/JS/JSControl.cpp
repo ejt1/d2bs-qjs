@@ -2,7 +2,6 @@
 
 #include "Bindings.h"
 #include "D2Helpers.h"  // ClientState
-#include "StringWrap.h"
 
 JSObject* ControlWrap::Instantiate(JSContext* ctx, D2WinControlStrc* control) {
   JS::RootedObject global(ctx, JS::CurrentGlobalOrNull(ctx));
@@ -101,11 +100,12 @@ bool ControlWrap::SetText(JSContext* ctx, JS::CallArgs& args) {
   UNWRAP_CONTROL_OR_ERROR(ctx, &ctrl, args.thisv());
 
   if (ctrl->dwType == 1 && args[0].isString()) {
-    StringWrap szText(ctx, args[0]);
+    char* szText = JS_EncodeString(ctx, args[0].toString());
     if (!szText) {
       THROW_ERROR(ctx, "failed to encode string");
     }
     setControlText(ctrl, szText);
+    JS_free(ctx, szText);
   }
   args.rval().setUndefined();
   return true;
@@ -362,12 +362,13 @@ bool ControlWrap::FreeSetText(JSContext* ctx, JS::CallArgs& args) {
     return true;
   }
 
-  StringWrap szText(ctx, args[0]);
+  char* szText = JS_EncodeString(ctx, args[0].toString());
   if (!szText) {
     args.rval().setUndefined();
     return true;
   }
   setControlText(pControl, szText);
+  JS_free(ctx, szText);
   args.rval().setUndefined();
   return true;
 }

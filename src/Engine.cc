@@ -165,7 +165,7 @@ void Engine::OnUpdate() {
         if (SwitchToProfile(value.c_str()))
           Print("ÿc2D2BSÿc0 :: Switched to profile %s", value.c_str());
         else
-          Print("ÿc2D2BSÿFc0 :: Profile %s not found", value.c_str());
+          Print("ÿc2D2BSÿc0 :: Profile %s not found", value.c_str());
       }
     }
 

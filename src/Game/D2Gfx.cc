@@ -80,8 +80,7 @@ D2CellFileStrc* LoadCellFile(const char* lpszPath, uint32_t bMPQ) {
     Vars.mCachedCellFiles[hash] = result;
     return result;
   } else {
-    std::string ansi = UTF8ToANSI(lpszPath);
-    std::wstring path = AnsiToWide(ansi);
+    std::wstring path = AnsiToWide(lpszPath);
     D2CellFileStrc* ret = LoadCellFile(path.c_str(), bMPQ);
     return ret;
   }
@@ -192,8 +191,7 @@ POINT CalculateTextLen(const char* szwText, int Font) {
   if (!szwText)
     return ret;
 
-  std::string ansi(UTF8ToANSI(szwText));
-  std::wstring buf = AnsiToWide(ansi);
+  std::wstring buf = AnsiToWide(szwText);
   ret = CalculateTextLen(buf.c_str(), Font);
   return ret;
 }
@@ -214,10 +212,7 @@ POINT CalculateTextLen(const wchar_t* szwText, int Font) {
 }
 
 void myDrawText(const char* szwText, int x, int y, int color, int font) {
-  // TODO(ejt): this is kinda fucked. we expect to supply an UTF8 encoded narrow string
-  // D2 expects a ANSI encoded wide string.
-  std::string ansi(UTF8ToANSI(szwText));
-  std::wstring str = AnsiToWide(ansi);
+  std::wstring str = AnsiToWide(szwText);
   myDrawText(str.c_str(), x, y, color, font);
 }
 
@@ -228,8 +223,7 @@ void myDrawText(const wchar_t* szwText, int x, int y, int color, int font) {
 }
 
 void myDrawCenterText(const char* szText, int x, int y, int color, int font, int div) {
-  std::string ansi(UTF8ToANSI(szText));
-  std::wstring str = AnsiToWide(ansi);
+  std::wstring str = AnsiToWide(szText);
   myDrawCenterText(str.c_str(), x, y, color, font, div);
 }
 
