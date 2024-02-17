@@ -10,8 +10,7 @@
       "installDir": "${sourceDir}/out/install/${presetName}",
       "cacheVariables": {
         "CMAKE_C_COMPILER": "cl.exe",
-        "CMAKE_CXX_COMPILER": "cl.exe",
-        "MOZJS_USE_PREBUILT": true
+        "CMAKE_CXX_COMPILER": "cl.exe"
       },
       "condition": {
         "type": "equals",
@@ -35,7 +34,10 @@
       "displayName": "x86 Distribute",
       "description": "Target Windows (32-bit) with the Visual Studio development environment.",
       "inherits": "x86-debug",
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "MOZJS_USE_PREBUILT": true
+      }
     },
     {
       "name": "x86-relwithdebinfo",
