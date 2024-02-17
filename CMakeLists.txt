@@ -137,7 +137,7 @@ target_link_libraries(D2BS PRIVATE
   shlwapi
 
   # vendor dependencies
-  js
+  mozjs
   #libquickjs
   minhook
   # libuv
