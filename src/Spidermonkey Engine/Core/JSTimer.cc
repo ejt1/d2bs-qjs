@@ -49,16 +49,20 @@ void TimerWrap::Unref() {
 
 TimerWrap::TimerWrap(JSContext* ctx, JS::HandleObject obj)
     : BaseObject(ctx, obj), context(ctx), ref(ctx), timer_handle(), callback(ctx), args(ctx), inside_callback(false), clear_after_callback(false) {
+  timer_handle.data = this;
 }
 
 TimerWrap::~TimerWrap() {
-  uv_close((uv_handle_t*)(&timer_handle), nullptr);
 }
 
 void TimerWrap::finalize(JSFreeOp* /*fop*/, JSObject* obj) {
-  BaseObject* wrap = BaseObject::FromJSObject(obj);
+  TimerWrap* wrap = static_cast<TimerWrap*>(BaseObject::FromJSObject(obj));
   if (wrap) {
-    delete wrap;
+    // TODO(ejt): this is a bit of a mess
+    uv_close((uv_handle_t*)(&wrap->timer_handle), [](uv_handle_t* handle) {
+      TimerWrap* wrap = static_cast<TimerWrap*>(handle->data);
+      delete wrap;
+    });
   }
 }
 
