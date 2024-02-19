@@ -99,6 +99,9 @@ void InitSettings(void) {
 }
 
 const char* GetStarterScriptName(void) {
+  if (kScriptUseModules) {
+    return Vars.szStarter;
+  }
   return (ClientState() == ClientStateInGame ? Vars.szDefault : ClientState() == ClientStateMenu ? Vars.szStarter : NULL);
 }
 

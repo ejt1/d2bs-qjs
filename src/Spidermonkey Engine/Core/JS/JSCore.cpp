@@ -62,6 +62,10 @@ bool my_print(JSContext* ctx, JS::CallArgs& args) {
 }
 
 bool my_delay(JSContext* ctx, JS::CallArgs& args) {
+  if (kScriptUseModules) {
+    THROW_ERROR(ctx, "delay is disabled when using modules");
+  }
+
   if (!args.requireAtLeast(ctx, "delay", 1)) {
     return false;
   }
@@ -76,6 +80,10 @@ bool my_delay(JSContext* ctx, JS::CallArgs& args) {
 }
 
 bool my_load(JSContext* ctx, JS::CallArgs& args) {
+  if (kScriptUseModules) {
+    THROW_ERROR(ctx, "load is disabled when using modules");
+  }
+
   if (!args.requireAtLeast(ctx, "load", 1)) {
     return false;
   }
@@ -116,6 +124,10 @@ bool my_load(JSContext* ctx, JS::CallArgs& args) {
 }
 
 bool my_include(JSContext* ctx, JS::CallArgs& args) {
+  if (kScriptUseModules) {
+    THROW_ERROR(ctx, "include is disabled when using modules");
+  }
+
   if (!args.requireAtLeast(ctx, "include", 1)) {
     return false;
   }
@@ -183,6 +195,10 @@ bool my_getThreadPriority(JSContext* /*ctx*/, JS::CallArgs& args) {
 }
 
 bool my_isIncluded(JSContext* ctx, JS::CallArgs& args) {
+  if (kScriptUseModules) {
+    THROW_ERROR(ctx, "isIncluded is disabled when using modules");
+  }
+
   if (!args.requireAtLeast(ctx, "isIncluded", 1)) {
     return false;
   }

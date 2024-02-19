@@ -5,7 +5,7 @@
   V(ControlWrap)                \
   V(DirectoryWrap)              \
   V(ExitWrap)                   \
-  /*V(FileWrap)*/               \
+  V(FileWrap)                   \
   V(FileToolsWrap)              \
   V(PartyWrap)                  \
   V(PresetUnitWrap)             \
