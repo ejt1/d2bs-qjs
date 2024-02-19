@@ -1,98 +1,123 @@
-//#pragma once
-//
-//#include "js32.h"
-//
-//enum {
-//  FILE_READ = 0,
-//  FILE_WRITE = 1,
-//  FILE_APPEND = 2,
-//};
-//
-//class FileWrap {
-// public:
-//   // TODO: get rid of this
-//  struct FileData {
-//    int mode;
-//    char* path;
-//    bool autoflush, locked;
-//    FILE* fptr;
-//#if DEBUG
-//    char* lockLocation;
-//    int line;
-//#endif
-//  };
-//
-//  static JSValue Instantiate(JSContext* ctx, JSValue new_target, const FileData& data);
-//  static void Initialize(JSContext* ctx, JSValue target);
-//
-// private:
-//  FileWrap(JSContext* ctx, const FileData& data);
-//  virtual ~FileWrap();
-//
-//  // properties
-//  static JSValue GetReadable(JSContext* ctx, JSValue this_val);
-//  static JSValue GetWriteable(JSContext* ctx, JSValue this_val);
-//  static JSValue GetSeekable(JSContext* ctx, JSValue this_val);
-//  static JSValue GetMode(JSContext* ctx, JSValue this_val);
-//  static JSValue GetBinaryMode(JSContext* ctx, JSValue this_val);
-//  static JSValue GetLength(JSContext* ctx, JSValue this_val);
-//  static JSValue GetPath(JSContext* ctx, JSValue this_val);
-//  static JSValue GetPosition(JSContext* ctx, JSValue this_val);
-//  static JSValue GetEOF(JSContext* ctx, JSValue this_val);
-//  static JSValue GetAccessed(JSContext* ctx, JSValue this_val);
-//  static JSValue GetCreated(JSContext* ctx, JSValue this_val);
-//  static JSValue GetModified(JSContext* ctx, JSValue this_val);
-//  static JSValue GetAutoFlush(JSContext* ctx, JSValue this_val);
-//  static JSValue SetAutoFlush(JSContext* ctx, JSValue this_val, JSValue val);
-//
-//  // functions
-//  static JSValue Close(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-//  static JSValue Reopen(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-//  static JSValue Read(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-//  static JSValue ReadLine(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-//  static JSValue ReadAllLines(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-//  static JSValue ReadAll(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-//  static JSValue Write(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-//  static JSValue Seek(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-//  static JSValue Flush(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-//  static JSValue Reset(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-//  static JSValue End(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-//
-//  // static functions
-//  static JSValue Open(JSContext* ctx, JSValue this_val, int argc, JSValue* argv);
-//
-//  static inline JSClassID m_class_id = 0;
-//  static inline JSCFunctionListEntry m_proto_funcs[] = {
-//      JS_CGETSET_DEF("readable", GetReadable, nullptr),
-//      JS_CGETSET_DEF("writeable", GetWriteable, nullptr),
-//      JS_CGETSET_DEF("seekable", GetSeekable, nullptr),
-//      JS_CGETSET_DEF("mode", GetMode, nullptr),
-//      JS_CGETSET_DEF("binaryMode", GetBinaryMode, nullptr),
-//      JS_CGETSET_DEF("length", GetLength, nullptr),
-//      JS_CGETSET_DEF("path", GetPath, nullptr),
-//      JS_CGETSET_DEF("position", GetPosition, nullptr),
-//      JS_CGETSET_DEF("eof", GetEOF, nullptr),
-//      JS_CGETSET_DEF("accessed", GetAccessed, nullptr),
-//      JS_CGETSET_DEF("created", GetCreated, nullptr),
-//      JS_CGETSET_DEF("modified", GetModified, nullptr),
-//      JS_CGETSET_DEF("autoflush", GetAutoFlush, SetAutoFlush),
-//
-//      JS_FN("close", Close, 0, FUNCTION_FLAGS),
-//      JS_FN("reopen", Reopen, 0, FUNCTION_FLAGS),
-//      JS_FN("read", Read, 1, FUNCTION_FLAGS),
-//      JS_FN("readLine", ReadLine, 0, FUNCTION_FLAGS),
-//      JS_FN("readAllLines", ReadAllLines, 0, FUNCTION_FLAGS),
-//      JS_FN("readAll", ReadAll, 0, FUNCTION_FLAGS),
-//      JS_FN("write", Write, 1, FUNCTION_FLAGS),
-//      JS_FN("seek", Seek, 1, FUNCTION_FLAGS),
-//      JS_FN("flush", Flush, 0, FUNCTION_FLAGS),
-//      JS_FN("reset", Reset, 0, FUNCTION_FLAGS),
-//      JS_FN("end", End, 0, FUNCTION_FLAGS),
-//  };
-//
-//  static inline JSCFunctionListEntry m_static_funcs[] = {
-//      JS_FN("open", Open, 2, FUNCTION_FLAGS),
-//  };
-//
-//  FileData fdata;
-//};
+#pragma once
+
+#include "JSBaseObject.h"
+
+enum {
+  FILE_READ = 0,
+  FILE_WRITE = 1,
+  FILE_APPEND = 2,
+};
+
+class FileWrap : public BaseObject {
+ public:
+  // TODO: get rid of this
+  struct FileData {
+    int mode;
+    char* path;
+    bool autoflush, locked;
+    FILE* fptr;
+#if DEBUG
+    char* lockLocation;
+    int line;
+#endif
+  };
+
+  static JSObject* Instantiate(JSContext* ctx, const FileData& data);
+  static void Initialize(JSContext* ctx, JS::HandleObject target);
+
+ private:
+  FileWrap(JSContext* ctx, JS::HandleObject obj, const FileData& data);
+  virtual ~FileWrap();
+
+  static void finalize(JSFreeOp* fop, JSObject* obj);
+
+  static bool New(JSContext* ctx, JS::CallArgs& args);
+
+  // properties
+  static bool GetReadable(JSContext* ctx, JS::CallArgs& args);
+  static bool GetWriteable(JSContext* ctx, JS::CallArgs& args);
+  static bool GetSeekable(JSContext* ctx, JS::CallArgs& args);
+  static bool GetMode(JSContext* ctx, JS::CallArgs& args);
+  static bool GetBinaryMode(JSContext* ctx, JS::CallArgs& args);
+  static bool GetLength(JSContext* ctx, JS::CallArgs& args);
+  static bool GetPath(JSContext* ctx, JS::CallArgs& args);
+  static bool GetPosition(JSContext* ctx, JS::CallArgs& args);
+  static bool GetEOF(JSContext* ctx, JS::CallArgs& args);
+  static bool GetAccessed(JSContext* ctx, JS::CallArgs& args);
+  static bool GetCreated(JSContext* ctx, JS::CallArgs& args);
+  static bool GetModified(JSContext* ctx, JS::CallArgs& args);
+  static bool GetAutoFlush(JSContext* ctx, JS::CallArgs& args);
+  static bool SetAutoFlush(JSContext* ctx, JS::CallArgs& args);
+
+  // functions
+  static bool Close(JSContext* ctx, JS::CallArgs& args);
+  static bool Reopen(JSContext* ctx, JS::CallArgs& args);
+  static bool Read(JSContext* ctx, JS::CallArgs& args);
+  static bool ReadLine(JSContext* ctx, JS::CallArgs& args);
+  static bool ReadAllLines(JSContext* ctx, JS::CallArgs& args);
+  static bool ReadAll(JSContext* ctx, JS::CallArgs& args);
+  static bool Write(JSContext* ctx, JS::CallArgs& args);
+  static bool Seek(JSContext* ctx, JS::CallArgs& args);
+  static bool Flush(JSContext* ctx, JS::CallArgs& args);
+  static bool Reset(JSContext* ctx, JS::CallArgs& args);
+  static bool End(JSContext* ctx, JS::CallArgs& args);
+
+  // static functions
+  static bool Open(JSContext* ctx, JS::CallArgs& args);
+
+  static inline JSClassOps m_ops = {
+      .addProperty = nullptr,
+      .delProperty = nullptr,
+      .enumerate = nullptr,
+      .newEnumerate = nullptr,
+      .resolve = nullptr,
+      .mayResolve = nullptr,
+      .finalize = finalize,
+      .call = nullptr,
+      .hasInstance = nullptr,
+      .construct = nullptr,
+      .trace = nullptr,
+  };
+  static inline JSClass m_class = {
+      "File",
+      JSCLASS_HAS_RESERVED_SLOTS(kInternalFieldCount),
+      &m_ops,
+  };
+  static inline JSPropertySpec m_props[] = {
+      JS_PSG("readable", trampoline<GetReadable>, JSPROP_ENUMERATE),
+      JS_PSG("writeable", trampoline<GetWriteable>, JSPROP_ENUMERATE),
+      JS_PSG("seekable", trampoline<GetSeekable>, JSPROP_ENUMERATE),
+      JS_PSG("mode", trampoline<GetMode>, JSPROP_ENUMERATE),
+      JS_PSG("binaryMode", trampoline<GetBinaryMode>, JSPROP_ENUMERATE),
+      JS_PSG("length", trampoline<GetLength>, JSPROP_ENUMERATE),
+      JS_PSG("path", trampoline<GetPath>, JSPROP_ENUMERATE),
+      JS_PSG("position", trampoline<GetPosition>, JSPROP_ENUMERATE),
+      JS_PSG("eof", trampoline<GetEOF>, JSPROP_ENUMERATE),
+      JS_PSG("accessed", trampoline<GetAccessed>, JSPROP_ENUMERATE),
+      JS_PSG("created", trampoline<GetCreated>, JSPROP_ENUMERATE),
+      JS_PSG("modified", trampoline<GetModified>, JSPROP_ENUMERATE),
+      JS_PSGS("autoflush", trampoline<GetAutoFlush>, trampoline<SetAutoFlush>, JSPROP_ENUMERATE),
+      JS_PS_END,
+  };
+
+  static inline JSFunctionSpec m_methods[] = {
+      JS_FN("close", trampoline<Close>, 0, JSPROP_ENUMERATE),
+      JS_FN("reopen", trampoline<Reopen>, 0, JSPROP_ENUMERATE),
+      JS_FN("read", trampoline<Read>, 1, JSPROP_ENUMERATE),
+      JS_FN("readLine", trampoline<ReadLine>, 0, JSPROP_ENUMERATE),
+      JS_FN("readAllLines", trampoline<ReadAllLines>, 0, JSPROP_ENUMERATE),
+      JS_FN("readAll", trampoline<ReadAll>, 0, JSPROP_ENUMERATE),
+      JS_FN("write", trampoline<Write>, 1, JSPROP_ENUMERATE),
+      JS_FN("seek", trampoline<Seek>, 1, JSPROP_ENUMERATE),
+      JS_FN("flush", trampoline<Flush>, 0, JSPROP_ENUMERATE),
+      JS_FN("reset", trampoline<Reset>, 0, JSPROP_ENUMERATE),
+      JS_FN("end", trampoline<End>, 0, JSPROP_ENUMERATE),
+      JS_FS_END,
+  };
+
+  static inline JSFunctionSpec m_smethods[] = {
+      JS_FN("open", trampoline<Open>, 2, JSPROP_ENUMERATE),
+  };
+
+  FileData fdata;
+};
