@@ -1,15 +1,40 @@
 #include "js32.h"
-//
-// #include "Helpers.h"
+
 #include "D2Helpers.h"
 #include "Core.h"
 #include "Globals.h"
 #include "Console.h"
-//
-// JSValue JS_NewString(JSContext* ctx, const wchar_t* str) {
-//  std::string utf8 = WideToAnsi(str);
-//  return JS_NewString(ctx, utf8.c_str());
-//}
+
+#include <codecvt>
+
+std::optional<std::string> ReadFileUTF8(const std::filesystem::path& filename) {
+  if (!std::filesystem::exists(filename)) {
+    return std::nullopt;
+  }
+
+  FILE* fp;
+  if (fopen_s(&fp, filename.string().c_str(), "rb")) {
+    return std::nullopt;
+  }
+  fseek(fp, 0, SEEK_END);
+  size_t size = ftell(fp);
+  fseek(fp, 0, SEEK_SET);
+  std::string code(size, 0);
+  fread(code.data(), 1, code.length(), fp);
+  fclose(fp);
+  return code;
+}
+
+std::optional<std::u16string> ReadFileUTF16(const std::filesystem::path& filename) {
+  std::optional<std::string> utf8_code = ReadFileUTF8(filename);
+  if (!utf8_code) {
+    return std::nullopt;
+  }
+
+  // convert utf8 -> utf16
+  std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
+  return convert.from_bytes(utf8_code.value());
+}
 
 JSScript* JS_CompileFile(JSContext* ctx, JS::HandleObject /*globalObject*/, std::string fileName) {
   std::ifstream t(fileName.c_str(), std::ios::binary);

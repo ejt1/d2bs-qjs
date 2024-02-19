@@ -52,6 +52,8 @@ bool Engine::Initialize(HMODULE hModule) {
       freopen_s(&fDummy, "CONIN$", "r", stdin);
       freopen_s(&fDummy, "CONOUT$", "w", stderr);
       freopen_s(&fDummy, "CONOUT$", "w", stdout);
+    } else if (arg == "-modules") {
+      kScriptUseModules = true;
     } else if (arg == "-title") {
       strncat_s(Vars.szTitle, value.c_str(), value.length());
     } else if (arg == "-sleepy") {
@@ -224,7 +226,8 @@ void Engine::OnUpdate() {
 }
 
 void Engine::OnGameEntered() {
-  if (!Vars.bUseProfileScript) {
+  // NOTE: when modules are enabled, don't switch
+  if (!Vars.bUseProfileScript && !kScriptUseModules) {
     const char* starter = GetStarterScriptName();
     if (starter != NULL) {
       Print("\u00FFc2D2BS\u00FFc0 :: Starting %s", starter);
@@ -474,6 +477,7 @@ LRESULT __stdcall Engine::HandleWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
             Print("ÿc2D2BSÿc0 :: Profile %s not found", lpszData);
           }
         } else {
+          Log("Copydata");
           CopyDataEvent(pCopy->dwData, lpszData);
         }
       }

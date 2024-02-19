@@ -16,6 +16,8 @@
 #include <chrono>
 #include <cassert>
 
+bool kScriptUseModules = false;
+
 const JSClassOps DefaultGlobalClassOps = {
     nullptr,                         // addProperty
     nullptr,                         // deleteProperty
@@ -429,13 +431,27 @@ bool Script::Initialize() {
       const char* cmd = "function main() {print('ÿc2D2BSÿc0 :: Started Console'); while (true){delay(10000)};}  ";
       JS_CompileScript(m_context, cmd, strlen(cmd), opts, &m_script);
     }
+  } else if (kScriptUseModules) {
+    m_threadState.moduleEntry = m_fileName;
+    m_threadState.moduleRoot = m_threadState.moduleEntry.parent_path();
+    Log("%s", m_threadState.moduleRoot.string().c_str());
+    Log("%s", m_threadState.moduleEntry.string().c_str());
+    if (!SetupModuleResolveHook(m_context)) {
+      Log("failed to setup module resolve hook");
+      return false;
+    }
+    if (!EvaluateModule(m_context, m_threadState.moduleEntry)) {
+      Log("EvaluateModule failed");
+      JS_ReportPendingException(m_context);
+      return false;
+    }
   } else {
     m_script = JS_CompileFile(m_context, m_globalObject, m_fileName);
-  }
 
-  if (!m_script) {
-    JS_ReportPendingException(m_context);
-    return false;
+    if (!m_script) {
+      JS_ReportPendingException(m_context);
+      return false;
+    }
   }
 
   m_scriptState = kScriptStateRunning;
@@ -443,18 +459,6 @@ bool Script::Initialize() {
 
   return true;
 }
-
-// TODO(ejt): this is kinda hacky so change this in the future
-//static void __walk_loop(uv_handle_t* handle, void* /*arg*/) {
-  // NOTE(ejt): as of writing this, the only uv timers are TimerWrap*
-  // std::vector<TimerWrap*> wraps;
-  // if (handle->type == uv_handle_type::UV_TIMER) {
-  //  TimerWrap* wrap = static_cast<TimerWrap*>(handle->data);
-  //  if (wrap) {
-  //    wrap->Unref();
-  //  }
-  //}
-//}
 
 void Script::Cleanup() {
   PurgeEventList();
@@ -479,24 +483,50 @@ void Script::Cleanup() {
 void Script::RunMain() {
   JSAutoRequest ar(m_context);
   JSAutoCompartment ac(m_context, m_globalObject);
-  JS::RootedValue main(m_context);
-  JS::RootedValue rval(m_context);
 
-  if (!JS_ExecuteScript(m_context, m_script)) {
-    JS_ReportPendingException(m_context);
-    return;
-  }
-  if (!JS_GetProperty(m_context, m_globalObject, "main", &main)) {
-    JS_ReportPendingException(m_context);
-    return;
-  }
-  if (!JS_CallFunctionValue(m_context, m_globalObject, main, JS::HandleValueArray::empty(), &rval)) {
-    JS_ReportPendingException(m_context);
-  }
-  if (!rval.isUndefined()) {
-    StringWrap text(m_context, JS::ToString(m_context, rval));
-    if (text) {
-      Log(text.c_str());
+  if (kScriptUseModules) {
+    for (;;) {
+      if (m_scriptState == kScriptStateRequestStop) {
+        Log("Request stop (modules) %s", GetShortFilename());
+        return;
+      }
+      WaitForSingleObjectEx(m_eventSignal, 1, true);
+      ResetEvent(m_eventSignal);
+
+      if (m_isPaused) {
+        // take a small break so we dont eat up the CPU
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        continue;
+      }
+      // the normal event loop block when paused so have to
+      // have the event stuff in here instead
+      m_threadState.lastSpinTime = std::chrono::steady_clock::now();
+      uv_run(&m_loop, UV_RUN_NOWAIT);
+      js::RunJobs(m_context);
+
+      // run loop until there are no more events or script is interrupted
+      ProcessAllEvents();
+    }
+  } else {
+    JS::RootedValue main(m_context);
+    JS::RootedValue rval(m_context);
+
+    if (!JS_ExecuteScript(m_context, m_script)) {
+      JS_ReportPendingException(m_context);
+      return;
+    }
+    if (!JS_GetProperty(m_context, m_globalObject, "main", &main)) {
+      JS_ReportPendingException(m_context);
+      return;
+    }
+    if (!JS_CallFunctionValue(m_context, m_globalObject, main, JS::HandleValueArray::empty(), &rval)) {
+      JS_ReportPendingException(m_context);
+    }
+    if (!rval.isUndefined()) {
+      StringWrap text(m_context, JS::ToString(m_context, rval));
+      if (text) {
+        Log(text.c_str());
+      }
     }
   }
 }
@@ -807,6 +837,141 @@ bool Script::ProcessAllEvents() {
   }
 
   return true;
+}
+
+static JSObject* CompileModule(JSContext* ctx, const JS::ReadOnlyCompileOptions& options, const std::u16string& code) {
+  JS::SourceBufferHolder srcBuf(code.c_str(), code.length(), JS::SourceBufferHolder::NoOwnership);
+  JS::RootedObject moduleObject(ctx);
+  if (!JS::CompileModule(ctx, options, srcBuf, &moduleObject)) {
+    return nullptr;
+  }
+  return moduleObject;
+}
+
+// let requestedModule = HostResolveImportedModule(module, specifier)
+static bool ModuleResolveHook(JSContext* ctx, unsigned argc, JS::Value* vp) {
+  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+  ThreadState* ts = static_cast<ThreadState*>(JS_GetContextPrivate(ctx));
+
+  // Module
+  JS::RootedObject moduleRequest(ctx, args[0].toObjectOrNull());
+
+  // step 1: get the host defined field of the module
+  JS::RootedValue hostField(ctx, JS::GetModuleHostDefinedField(moduleRequest));
+  // right now we store a string with resolved path to the module
+  if (!hostField.isString()) {
+    JS_ReportErrorUTF8(ctx, "invalid host field on module");
+    return false;
+  }
+  JS::RootedString moduleFilenameValue(ctx, hostField.toString());
+  char* moduleStr(JS_EncodeStringToUTF8(ctx, moduleFilenameValue));
+  std::filesystem::path moduleRoot = moduleStr;
+  JS_free(ctx, moduleStr);
+  // remove filename part as we store full path
+  moduleRoot.remove_filename();
+
+  // step 2: get the request specifier i.e the 'from' part
+  JS::RootedString specifierString(ctx, args[1].toString());
+  char* tmp = JS_EncodeStringToUTF8(ctx, specifierString);
+  std::string specifier(tmp);
+  JS_free(ctx, tmp);
+
+  // step 3: verify that specifier is relative i.e. ./file1.js or ../file1.js
+  while (!specifier.empty()) {
+    // starts with /
+    if (specifier[0] == '/') {
+      specifier.erase(0, 1);
+      continue;
+    }
+    // starts with ./
+    if (specifier.length() >= 2 && specifier[0] == '.' && specifier[1] == '/') {
+      specifier.erase(0, 2);
+      continue;
+    }
+    break;
+  }
+
+  std::filesystem::path resolved = moduleRoot / specifier;
+  resolved = std::filesystem::absolute(resolved);
+  if (!resolved.has_extension()) {
+    resolved.replace_extension(".js");
+  }
+
+  // step 4: box the specifier to our root directory
+  auto [end, _] = std::mismatch(ts->moduleRoot.begin(), ts->moduleRoot.end(), resolved.begin());
+  if (end != ts->moduleRoot.end()) {
+    JS_ReportErrorUTF8(ctx, "module specifier did not resolve inside root directory");
+    return false;
+  }
+
+  // step 5: check if module is already loaded
+  if (ts->moduleRegistry.contains(resolved.string())) {
+    args.rval().setObjectOrNull(ts->moduleRegistry[resolved.string()].get());
+    return true;
+  }
+
+  // step 6: load the module
+  std::string resolvedStr = resolved.string();
+  JS::CompileOptions options(ctx);
+  options.setUTF8(true);
+  options.setFileAndLine(resolvedStr.c_str(), 1);
+  std::optional<std::u16string> code = ReadFileUTF16(resolved);
+  if (!code) {
+    JS_ReportErrorUTF8(ctx, "failed to open file %s", resolvedStr.c_str());
+    return false;
+  }
+  JS::RootedObject moduleObject(ctx, CompileModule(ctx, options, code.value()));
+  if (!moduleObject) {
+    //JS_ReportErrorUTF8(ctx, "could not compile module %s", resolvedStr.c_str());
+    return false;
+  }
+  // set custom data on module
+  JS::RootedValue resolvedValue(ctx);
+  resolvedValue.setString(JS_NewUCStringCopyZ(ctx, (const char16_t*)resolved.c_str()));
+  JS::SetModuleHostDefinedField(moduleObject, resolvedValue);
+
+  // add to registry and return
+  args.rval().setObject(*moduleObject);
+  ts->moduleRegistry.emplace(resolved.string(), JS::PersistentRootedObject(ctx, moduleObject));
+  return true;
+}
+
+bool Script::SetupModuleResolveHook(JSContext* ctx) {
+  JS::RootedFunction resolveHook(ctx, JS_DefineFunction(ctx, m_globalObject, "__moduleResolveHook", ModuleResolveHook, 0, JSPROP_PERMANENT));
+  if (!resolveHook) {
+    return false;
+  }
+  JS::SetModuleResolveHook(ctx, resolveHook);
+  return true;
+}
+
+JSObject* Script::EvaluateModule(JSContext* ctx, const std::filesystem::path& entry) {
+  std::string filenameStr = entry.string();
+  std::optional<std::u16string> code = ReadFileUTF16(entry);
+  if (!code) {
+    JS_ReportErrorUTF8(ctx, "failed to open file %s", entry.string().c_str());
+    return nullptr;
+  }
+
+  JS::CompileOptions options(ctx);
+  options.setUTF8(true);
+  options.setFileAndLine(filenameStr.c_str(), 1);
+  JS::RootedObject moduleRecord(ctx, CompileModule(ctx, options, code.value()));
+  if (!moduleRecord) {
+    return nullptr;
+  }
+
+  // set our custom data on the module record
+  JS::RootedValue filenameValue(ctx, JS::StringValue(JS_NewUCStringCopyZ(ctx, (const char16_t*)entry.c_str())));
+  JS::SetModuleHostDefinedField(moduleRecord, filenameValue);
+
+  if (!JS::ModuleInstantiate(ctx, moduleRecord)) {
+    return nullptr;
+  }
+  if (!JS::ModuleEvaluate(ctx, moduleRecord)) {
+    return nullptr;
+  }
+  return moduleRecord;
 }
 
 // return false if the JS code needs to be interrupted

@@ -10,9 +10,11 @@
 #include "Events.h"
 
 #include <uv.h>
+#include <filesystem>
 
 typedef std::map<std::string, bool> IncludeList;
 typedef std::map<std::string, FunctionList> FunctionMap;
+typedef std::map<std::filesystem::path, JS::PersistentRootedObject> ModuleRegistry;
 
 enum ScriptMode { kScriptModeGame, kScriptModeMenu, kScriptModeCommand };
 
@@ -30,12 +32,19 @@ struct ThreadState {
   DWORD id;
   HANDLE handle;
   std::chrono::steady_clock::time_point lastSpinTime;
+
+  std::filesystem::path moduleRoot;
+  std::filesystem::path moduleEntry;
+  ModuleRegistry moduleRegistry;
 };
+
+// IMPORTANT NOTE: Using modules implies non-blocking API!
+extern bool kScriptUseModules;
 
 class Script {
   friend class ScriptEngine;
 
-  Script(const char* file, ScriptMode mode/*, uint32_t argc = 0, JSAutoStructuredCloneBuffer** argv = NULL*/);
+  Script(const char* file, ScriptMode mode /*, uint32_t argc = 0, JSAutoStructuredCloneBuffer** argv = NULL*/);
   ~Script();
 
  public:
@@ -103,7 +112,10 @@ class Script {
   void ExecuteEvent(char* evtName, const JS::AutoValueVector& argv, bool* block = nullptr);
   bool ProcessAllEvents();
 
-  //static bool InterruptHandler(JSContext* ctx);
+  bool SetupModuleResolveHook(JSContext* ctx);
+  JSObject* EvaluateModule(JSContext* ctx, const std::filesystem::path& entry);
+
+  // static bool InterruptHandler(JSContext* ctx);
 
   std::string m_fileName;
   ScriptMode m_scriptMode;
@@ -137,5 +149,5 @@ struct RUNCOMMANDSTRUCT {
 
 DWORD WINAPI ScriptThread(LPVOID lpThreadParameter);
 
-//JSBool contextCallback(JSContext* ctx, uint32_t contextOp);
-//void reportError(JSContext* cx, const char* message, JSErrorReport* report);
+// JSBool contextCallback(JSContext* ctx, uint32_t contextOp);
+// void reportError(JSContext* cx, const char* message, JSErrorReport* report);
