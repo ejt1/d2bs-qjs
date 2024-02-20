@@ -278,7 +278,7 @@ size_t Script::GetListenerCount(const char* evtName, JS::HandleValue evtFunc) {
 
 void Script::AddEventListener(const char* evtName, JS::HandleValue evtFunc) {
   EnterCriticalSection(&m_lock);
-  if (JS_ObjectIsFunction(m_context, evtFunc.toObjectOrNull()) && strlen(evtName) > 0) {
+  if (JS_ObjectIsFunction(evtFunc.toObjectOrNull()) && strlen(evtName) > 0) {
     JS::PersistentRootedValue val(m_context, evtFunc);
     m_functions[evtName].emplace_back(std::move(val));
   }
@@ -353,12 +353,6 @@ bool Script::Initialize() {
   m_threadState.script = this;
   m_threadState.loop = &m_loop;
 
-  // m_runtime = JS_NewRuntime();
-  // JS_SetRuntimeOpaque(m_runtime, &m_threadState);
-  // JS_SetInterruptHandler(m_runtime, InterruptHandler, this);
-  // JS_SetMaxStackSize(m_runtime, 0);
-  // JS_SetMemoryLimit(m_runtime, 100 * 1024 * 1024);
-
   m_context = JS_NewContext(100 * 1024 * 1024);
   JS_SetNativeStackQuota(m_context, 0);
   if (!m_context) {
@@ -379,12 +373,11 @@ bool Script::Initialize() {
     return false;
   }
 
-  JSAutoRequest request(m_context);
-  JS::CompartmentOptions global_options;
+  JS::RealmOptions realm_options;
   static JSClass kGlobalClass{"D2BSGlobal", JSCLASS_GLOBAL_FLAGS, &DefaultGlobalClassOps};
-  m_globalObject.init(m_context, JS_NewGlobalObject(m_context, &kGlobalClass, nullptr, JS::FireOnNewGlobalHook, global_options));
+  m_globalObject.init(m_context, JS_NewGlobalObject(m_context, &kGlobalClass, nullptr, JS::FireOnNewGlobalHook, realm_options));
 
-  JSAutoCompartment ac(m_context, m_globalObject);
+  JSAutoRealm ac(m_context, m_globalObject);
   m_script.init(m_context);
 
   // JSValue console = JS_NewObject(m_context);
@@ -427,9 +420,10 @@ bool Script::Initialize() {
     } else {
       JS::CompileOptions opts(m_context);
       opts.setFileAndLine("<eval>", 1);
-      opts.setUTF8(true);
-      const char* cmd = "function main() {print('ÿc2D2BSÿc0 :: Started Console'); while (true){delay(10000)};}  ";
-      JS_CompileScript(m_context, cmd, strlen(cmd), opts, &m_script);
+      std::string cmd = "function main() {print('ÿc2D2BSÿc0 :: Started Console'); while (true){delay(10000)};}  ";
+      JS::SourceText<mozilla::Utf8Unit> source;
+      source.init(m_context, cmd.c_str(), cmd.length(), JS::SourceOwnership::Borrowed);
+      m_script.set(JS::Compile(m_context, opts, source));
     }
   } else if (kScriptUseModules) {
     m_threadState.moduleEntry = m_fileName;
@@ -481,8 +475,7 @@ void Script::Cleanup() {
 }
 
 void Script::RunMain() {
-  JSAutoRequest ar(m_context);
-  JSAutoCompartment ac(m_context, m_globalObject);
+  JSAutoRealm ar(m_context, m_globalObject);
 
   if (kScriptUseModules) {
     for (;;) {
@@ -563,7 +556,7 @@ void Script::PurgeEventList() {
   RemoveAllEventListeners();
 }
 
-void Script::ExecuteEvent(char* evtName, const JS::AutoValueVector& args, bool* block) {
+void Script::ExecuteEvent(char* evtName, const JS::HandleValueArray& args, bool* block) {
   JS::RootedValue rval(m_context);
   for (const auto& fun : m_functions[evtName]) {
     if (!JS_CallFunctionValue(m_context, m_globalObject, fun, args, &rval)) {
@@ -577,13 +570,12 @@ void Script::ExecuteEvent(char* evtName, const JS::AutoValueVector& args, bool* 
 }
 
 bool Script::HandleEvent(std::shared_ptr<Event> evt, bool clearList) {
-  JS::AutoValueVector args(m_context);
   char* evtName = (char*)evt->name.c_str();
 
   if (strcmp(evtName, "itemaction") == 0) {
     if (!clearList) {
       std::shared_ptr<ItemEvent> itemEvt = std::dynamic_pointer_cast<ItemEvent>(evt);
-      args.resize(4);
+      JS::RootedValueArray<4> args(m_context);
       args[0].set(JS_NumberValue(itemEvt->id));
       args[1].set(JS_NumberValue(itemEvt->mode));
       args[2].set(JS::StringValue(JS_NewStringCopyZ(m_context, itemEvt->code.c_str())));
@@ -597,15 +589,17 @@ bool Script::HandleEvent(std::shared_ptr<Event> evt, bool clearList) {
   if (strcmp(evtName, "gameevent") == 0) {
     if (!clearList) {
       std::shared_ptr<GameEvent> gameEvt = std::dynamic_pointer_cast<GameEvent>(evt);
-      args.resize(3);
+      JS::RootedValueArray<5> args(m_context);
       args[0].set(JS_NumberValue(gameEvt->mode));
       args[1].set(JS_NumberValue(gameEvt->param1));
       args[2].set(JS_NumberValue(gameEvt->param2));
+      args[3].setUndefined();
+      args[4].setUndefined();
       if (!gameEvt->name1.empty()) {
-        args.append(JS::StringValue(JS_NewStringCopyZ(m_context, gameEvt->name1.c_str())));
+        args[3].setString(JS_NewStringCopyZ(m_context, gameEvt->name1.c_str()));
       }
       if (!gameEvt->name2.empty()) {
-        args.append(JS::StringValue(JS_NewStringCopyZ(m_context, gameEvt->name2.c_str())));
+        args[3].setString(JS_NewStringCopyZ(m_context, gameEvt->name2.c_str()));
       }
       ExecuteEvent(evtName, args);
     }
@@ -615,12 +609,11 @@ bool Script::HandleEvent(std::shared_ptr<Event> evt, bool clearList) {
   if (strcmp(evtName, "copydata") == 0) {
     if (!clearList) {
       std::shared_ptr<CopyDataMessageEvent> dataEvt = std::dynamic_pointer_cast<CopyDataMessageEvent>(evt);
-      args.resize(2);
+      JS::RootedValueArray<2> args(m_context);
       args[0].set(JS_NumberValue(dataEvt->mode));
+      args[1].setUndefined();
       if (!dataEvt->msg.empty()) {
         args[1].setString(JS_NewStringCopyZ(m_context, dataEvt->msg.c_str()));
-      } else {
-        args[1].setUndefined();
       }
 
       ExecuteEvent(evtName, args);
@@ -633,7 +626,9 @@ bool Script::HandleEvent(std::shared_ptr<Event> evt, bool clearList) {
     bool block = false;
     if (!clearList) {
       std::shared_ptr<ChatMessageEvent> chatEvt = std::dynamic_pointer_cast<ChatMessageEvent>(evt);
-      args.resize(2);
+      JS::RootedValueArray<2> args(m_context);
+      args[0].setUndefined();
+      args[1].setUndefined();
       if (!chatEvt->nickname.empty()) {
         args[0].set(JS::StringValue(JS_NewStringCopyZ(m_context, chatEvt->nickname.c_str())));
       }
@@ -652,7 +647,7 @@ bool Script::HandleEvent(std::shared_ptr<Event> evt, bool clearList) {
   if (strcmp(evtName, "mousemove") == 0) {
     if (!clearList) {
       std::shared_ptr<MouseEvent> mouseEvt = std::dynamic_pointer_cast<MouseEvent>(evt);
-      args.resize(2);
+      JS::RootedValueArray<2> args(m_context);
       args[0].setNumber(mouseEvt->x);
       args[1].setNumber(mouseEvt->y);
 
@@ -664,7 +659,7 @@ bool Script::HandleEvent(std::shared_ptr<Event> evt, bool clearList) {
   if (strcmp(evtName, "ScreenHookHover") == 0) {
     std::shared_ptr<GenHookEvent> genHookEvt = std::dynamic_pointer_cast<GenHookEvent>(evt);
     if (!clearList) {
-      args.resize(2);
+      JS::RootedValueArray<2> args(m_context);
       args[0].setNumber(genHookEvt->x);
       args[1].setNumber(genHookEvt->y);
 
@@ -676,7 +671,7 @@ bool Script::HandleEvent(std::shared_ptr<Event> evt, bool clearList) {
   if (strcmp(evtName, "mouseclick") == 0) {
     if (!clearList) {
       std::shared_ptr<MouseEvent> mouseEvt = std::dynamic_pointer_cast<MouseEvent>(evt);
-      args.resize(4);
+      JS::RootedValueArray<4> args(m_context);
       args[0].setNumber(mouseEvt->button);
       args[1].setNumber(mouseEvt->x);
       args[2].setNumber(mouseEvt->y);
@@ -690,7 +685,7 @@ bool Script::HandleEvent(std::shared_ptr<Event> evt, bool clearList) {
   if (strcmp(evtName, "melife") == 0 || strcmp(evtName, "memana") == 0) {
     if (!clearList) {
       std::shared_ptr<HealthManaEvent> hpmpEvt = std::dynamic_pointer_cast<HealthManaEvent>(evt);
-      args.resize(1);
+      JS::RootedValueArray<1> args(m_context);
       args[0].setNumber(hpmpEvt->value);
 
       ExecuteEvent(evtName, args);
@@ -701,7 +696,7 @@ bool Script::HandleEvent(std::shared_ptr<Event> evt, bool clearList) {
   if (strcmp(evtName, "playerassign") == 0) {
     if (!clearList) {
       std::shared_ptr<PlayerAssignedEvent> assignEvt = std::dynamic_pointer_cast<PlayerAssignedEvent>(evt);
-      args.resize(1);
+      JS::RootedValueArray<1> args(m_context);
       args[0].setNumber(assignEvt->id);
 
       ExecuteEvent(evtName, args);
@@ -713,7 +708,7 @@ bool Script::HandleEvent(std::shared_ptr<Event> evt, bool clearList) {
     bool block = false;
     if (!clearList) {
       std::shared_ptr<KeyEvent> keyEvt = std::dynamic_pointer_cast<KeyEvent>(evt);
-      args.resize(1);
+      JS::RootedValueArray<1> args(m_context);
       args[0].setNumber(keyEvt->key);
 
       ExecuteEvent(evtName, args, &block);
@@ -728,7 +723,7 @@ bool Script::HandleEvent(std::shared_ptr<Event> evt, bool clearList) {
     std::shared_ptr<GenHookEvent> genHookEvt = std::dynamic_pointer_cast<GenHookEvent>(evt);
     bool block = false;
     if (!clearList) {
-      args.resize(3);
+      JS::RootedValueArray<3> args(m_context);
       args[0].setNumber(genHookEvt->x);
       args[1].setNumber(genHookEvt->y);
       args[2].setNumber(genHookEvt->button);
@@ -756,11 +751,13 @@ bool Script::HandleEvent(std::shared_ptr<Event> evt, bool clearList) {
     test.append("try{ ");
     test.append(cmdEvt->command);
     test.append(" } catch (error){print(error)}");
+    JS::SourceText<mozilla::Utf8Unit> source;
+    source.init(m_context, test.c_str(), test.length(), JS::SourceOwnership::Borrowed);
 
     JS::RootedValue rval(m_context);
     JS::CompileOptions opts(m_context);
     opts.setFileAndLine("<command line>", 1);
-    if (!JS::Evaluate(m_context, opts, test.data(), test.length(), &rval)) {
+    if (!JS::Evaluate(m_context, opts, source, &rval)) {
       JS_ReportPendingException(m_context);
     } else if (!rval.isUndefined()) {
       StringWrap text(m_context, JS::ToString(m_context, rval));
@@ -772,6 +769,7 @@ bool Script::HandleEvent(std::shared_ptr<Event> evt, bool clearList) {
   if (strcmp(evtName, "scriptmsg") == 0) {
     std::shared_ptr<ScriptMsgEvent> msgEvt = std::dynamic_pointer_cast<ScriptMsgEvent>(evt);
     if (!clearList) {
+      JS::RootedValueVector args(m_context);
       // not sure if this is how we should use structured clone buffers
       // it works and can't find documentation of how to do it properly
       // so it will do for now unless it starts acting up
@@ -789,12 +787,12 @@ bool Script::HandleEvent(std::shared_ptr<Event> evt, bool clearList) {
     bool block = false;
     if (!clearList) {
       std::shared_ptr<PacketEvent> packetEvt = std::dynamic_pointer_cast<PacketEvent>(evt);
-      JS::RootedObject arr(m_context, JS_NewArrayObject(m_context, packetEvt->bytes.size()));
+      JS::RootedObject arr(m_context, JS::NewArrayObject(m_context, packetEvt->bytes.size()));
       for (size_t i = 0; i < packetEvt->bytes.size(); i++) {
         JS_SetElement(m_context, arr, i, packetEvt->bytes[i]);
       }
 
-      args.resize(1);
+      JS::RootedValueArray<1> args(m_context);
       args[0].setObject(*arr);
 
       ExecuteEvent(evtName, args, &block);
@@ -840,41 +838,34 @@ bool Script::ProcessAllEvents() {
 }
 
 static JSObject* CompileModule(JSContext* ctx, const JS::ReadOnlyCompileOptions& options, const std::u16string& code) {
-  JS::SourceBufferHolder srcBuf(code.c_str(), code.length(), JS::SourceBufferHolder::NoOwnership);
-  JS::RootedObject moduleObject(ctx);
-  if (!JS::CompileModule(ctx, options, srcBuf, &moduleObject)) {
+  JS::SourceText<char16_t> srcBuf;
+  if (!srcBuf.init(ctx, code.c_str(), code.length(), JS::SourceOwnership::Borrowed)) {
     return nullptr;
   }
-  return moduleObject;
+
+  return JS::CompileModule(ctx, options, srcBuf);
 }
 
 // let requestedModule = HostResolveImportedModule(module, specifier)
-static bool ModuleResolveHook(JSContext* ctx, unsigned argc, JS::Value* vp) {
-  JS::CallArgs args = JS::CallArgsFromVp(argc, vp);
+static JSObject* ModuleResolveHook(JSContext* ctx, JS::HandleValue modulePrivate, JS::HandleString spec) {
   ThreadState* ts = static_cast<ThreadState*>(JS_GetContextPrivate(ctx));
 
-  // Module
-  JS::RootedObject moduleRequest(ctx, args[0].toObjectOrNull());
-
   // step 1: get the host defined field of the module
-  JS::RootedValue hostField(ctx, JS::GetModuleHostDefinedField(moduleRequest));
-  // right now we store a string with resolved path to the module
-  if (!hostField.isString()) {
-    JS_ReportErrorUTF8(ctx, "invalid host field on module");
-    return false;
+  StringWrap moduleStr(ctx, modulePrivate.toString());
+  if (!moduleStr) {
+    return nullptr;
   }
-  JS::RootedString moduleFilenameValue(ctx, hostField.toString());
-  char* moduleStr(JS_EncodeStringToUTF8(ctx, moduleFilenameValue));
-  std::filesystem::path moduleRoot = moduleStr;
-  JS_free(ctx, moduleStr);
+  std::filesystem::path moduleRoot = moduleStr.c_str();
   // remove filename part as we store full path
   moduleRoot.remove_filename();
 
   // step 2: get the request specifier i.e the 'from' part
-  JS::RootedString specifierString(ctx, args[1].toString());
-  char* tmp = JS_EncodeStringToUTF8(ctx, specifierString);
-  std::string specifier(tmp);
-  JS_free(ctx, tmp);
+  JS::RootedString specifierString(ctx, spec);
+  StringWrap tmp(ctx, specifierString);
+  if (!tmp) {
+    return nullptr;
+  }
+  std::string specifier(tmp.c_str());
 
   // step 3: verify that specifier is relative i.e. ./file1.js or ../file1.js
   while (!specifier.empty()) {
@@ -901,47 +892,40 @@ static bool ModuleResolveHook(JSContext* ctx, unsigned argc, JS::Value* vp) {
   auto [end, _] = std::mismatch(ts->moduleRoot.begin(), ts->moduleRoot.end(), resolved.begin());
   if (end != ts->moduleRoot.end()) {
     JS_ReportErrorUTF8(ctx, "module specifier did not resolve inside root directory");
-    return false;
+    return nullptr;
   }
 
   // step 5: check if module is already loaded
   if (ts->moduleRegistry.contains(resolved.string())) {
-    args.rval().setObjectOrNull(ts->moduleRegistry[resolved.string()].get());
-    return true;
+    return ts->moduleRegistry[resolved.string()].get();
   }
 
   // step 6: load the module
   std::string resolvedStr = resolved.string();
   JS::CompileOptions options(ctx);
-  options.setUTF8(true);
   options.setFileAndLine(resolvedStr.c_str(), 1);
   std::optional<std::u16string> code = ReadFileUTF16(resolved);
   if (!code) {
     JS_ReportErrorUTF8(ctx, "failed to open file %s", resolvedStr.c_str());
-    return false;
+    return nullptr;
   }
   JS::RootedObject moduleObject(ctx, CompileModule(ctx, options, code.value()));
   if (!moduleObject) {
     //JS_ReportErrorUTF8(ctx, "could not compile module %s", resolvedStr.c_str());
-    return false;
+    return nullptr;
   }
   // set custom data on module
   JS::RootedValue resolvedValue(ctx);
   resolvedValue.setString(JS_NewUCStringCopyZ(ctx, (const char16_t*)resolved.c_str()));
-  JS::SetModuleHostDefinedField(moduleObject, resolvedValue);
+  JS::SetModulePrivate(moduleObject, resolvedValue);
 
   // add to registry and return
-  args.rval().setObject(*moduleObject);
   ts->moduleRegistry.emplace(resolved.string(), JS::PersistentRootedObject(ctx, moduleObject));
-  return true;
+  return moduleObject;
 }
 
 bool Script::SetupModuleResolveHook(JSContext* ctx) {
-  JS::RootedFunction resolveHook(ctx, JS_DefineFunction(ctx, m_globalObject, "__moduleResolveHook", ModuleResolveHook, 0, JSPROP_PERMANENT));
-  if (!resolveHook) {
-    return false;
-  }
-  JS::SetModuleResolveHook(ctx, resolveHook);
+  JS::SetModuleResolveHook(JS_GetRuntime(ctx), ModuleResolveHook);
   return true;
 }
 
@@ -954,7 +938,6 @@ JSObject* Script::EvaluateModule(JSContext* ctx, const std::filesystem::path& en
   }
 
   JS::CompileOptions options(ctx);
-  options.setUTF8(true);
   options.setFileAndLine(filenameStr.c_str(), 1);
   JS::RootedObject moduleRecord(ctx, CompileModule(ctx, options, code.value()));
   if (!moduleRecord) {
@@ -963,7 +946,7 @@ JSObject* Script::EvaluateModule(JSContext* ctx, const std::filesystem::path& en
 
   // set our custom data on the module record
   JS::RootedValue filenameValue(ctx, JS::StringValue(JS_NewUCStringCopyZ(ctx, (const char16_t*)entry.c_str())));
-  JS::SetModuleHostDefinedField(moduleRecord, filenameValue);
+  JS::SetModulePrivate(moduleRecord, filenameValue);
 
   if (!JS::ModuleInstantiate(ctx, moduleRecord)) {
     return nullptr;

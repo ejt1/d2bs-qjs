@@ -81,7 +81,7 @@ bool my_clickMap(JSContext* ctx, JS::CallArgs& args) {
     return false;
   }
   if (!WaitForGameReady()) {
-    JS_ReportWarningASCII(ctx, "Game not ready");
+    JS::WarnUTF8(ctx, "Game not ready");
     args.rval().setBoolean(false);
     return true;
   }
@@ -127,7 +127,7 @@ bool my_clickMap(JSContext* ctx, JS::CallArgs& args) {
 
 bool my_acceptTrade(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady()) {
-    JS_ReportWarningASCII(ctx, "Game not ready");
+    JS::WarnUTF8(ctx, "Game not ready");
     args.rval().setBoolean(false);
     return true;
   }
@@ -174,7 +174,7 @@ bool my_acceptTrade(JSContext* ctx, JS::CallArgs& args) {
 
 bool my_tradeOk(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady()) {
-    JS_ReportWarningASCII(ctx, "Game not ready");
+    JS::WarnUTF8(ctx, "Game not ready");
     args.rval().setBoolean(false);
     return true;
   }
@@ -209,7 +209,7 @@ bool my_getDialogLines(JSContext* ctx, JS::CallArgs& args) {
     return true;
   }
 
-  JS::RootedObject pReturnArray(ctx, JS_NewArrayObject(ctx, 0));
+  JS::RootedObject pReturnArray(ctx, JS::NewArrayObject(ctx, 0));
   for (i = 0; i < pTdi->numLines; ++i) {
     JS::RootedObject line(ctx, JS_NewPlainObject(ctx));
     if (!line) {
@@ -258,7 +258,7 @@ bool my_clickDialog(JSContext* ctx, JS::CallArgs& args) {
 
 bool my_getPath(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady()) {
-    JS_ReportWarningASCII(ctx, "Game not ready");
+    JS::WarnUTF8(ctx, "Game not ready");
     args.rval().setBoolean(false);
     return true;
   }
@@ -326,7 +326,7 @@ bool my_getPath(JSContext* ctx, JS::CallArgs& args) {
 
   int count = list.size();
 
-  JS::RootedObject arr(ctx, JS_NewArrayObject(ctx, count));
+  JS::RootedObject arr(ctx, JS::NewArrayObject(ctx, count));
   for (int i = 0; i < count; i++) {
     JS::RootedObject point(ctx, JS_NewPlainObject(ctx));
     JS_DefineProperty(ctx, point, "x", list[i].first, JSPROP_ENUMERATE);
@@ -342,7 +342,7 @@ bool my_getPath(JSContext* ctx, JS::CallArgs& args) {
 
 bool my_getCollision(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady()) {
-    JS_ReportWarningASCII(ctx, "Game not ready");
+    JS::WarnUTF8(ctx, "Game not ready");
     args.rval().setBoolean(false);
     return true;
   }
@@ -376,7 +376,7 @@ bool my_clickItem(JSContext* ctx, JS::CallArgs& args) {
   typedef void __fastcall clickequip(D2UnitStrc * pPlayer, D2InventoryStrc * pIventory, int loc);
 
   if (!WaitForGameReady()) {
-    JS_ReportWarningASCII(ctx, "Game not ready");
+    JS::WarnUTF8(ctx, "Game not ready");
     args.rval().setBoolean(false);
     return true;
   }
@@ -711,7 +711,7 @@ bool my_rand(JSContext* ctx, JS::CallArgs& args) {
 
 bool my_getDistance(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady()) {
-    JS_ReportWarningASCII(ctx, "Game not ready");
+    JS::WarnUTF8(ctx, "Game not ready");
     args.rval().setBoolean(false);
     return true;
   }
@@ -834,7 +834,7 @@ bool my_getDistance(JSContext* ctx, JS::CallArgs& args) {
 
 bool my_gold(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady()) {
-    JS_ReportWarningASCII(ctx, "Game not ready");
+    JS::WarnUTF8(ctx, "Game not ready");
     args.rval().setBoolean(false);
     return true;
   }
@@ -855,7 +855,7 @@ bool my_gold(JSContext* ctx, JS::CallArgs& args) {
 
 bool my_checkCollision(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady()) {
-    JS_ReportWarningASCII(ctx, "Game not ready");
+    JS::WarnUTF8(ctx, "Game not ready");
     args.rval().setBoolean(false);
     return true;
   }
@@ -972,7 +972,7 @@ bool my_getTextSize(JSContext* ctx, JS::CallArgs& args) {
     return true;
   }
 
-  JS::RootedObject pObj(ctx, JS_NewArrayObject(ctx, 2));
+  JS::RootedObject pObj(ctx, JS::NewArrayObject(ctx, 2));
   JS_SetElement(ctx, pObj, 0, x);
   JS_SetElement(ctx, pObj, 1, y);
   args.rval().setObject(*pObj);
@@ -986,7 +986,7 @@ bool my_getTradeInfo(JSContext* ctx, JS::CallArgs& args) {
   }
 
   if (!WaitForGameReady()) {
-    JS_ReportWarningASCII(ctx, "Game not ready");
+    JS::WarnUTF8(ctx, "Game not ready");
     args.rval().setBoolean(false);
     return true;
   }
@@ -1025,7 +1025,7 @@ bool my_getUIFlag(JSContext* ctx, JS::CallArgs& args) {
   }
 
   if (!WaitForGameReady()) {
-    JS_ReportWarningASCII(ctx, "Game not ready");
+    JS::WarnUTF8(ctx, "Game not ready");
     args.rval().setBoolean(false);
     return true;
   }
@@ -1042,7 +1042,7 @@ bool my_getWaypoint(JSContext* ctx, JS::CallArgs& args) {
   }
 
   if (!WaitForGameReady()) {
-    JS_ReportWarningASCII(ctx, "Game not ready");
+    JS::WarnUTF8(ctx, "Game not ready");
     args.rval().setBoolean(false);
     return true;
   }
@@ -1111,7 +1111,7 @@ bool my_clickParty(JSContext* ctx, JS::CallArgs& args) {
     return true;
 
   if (!WaitForGameReady()) {
-    JS_ReportWarningASCII(ctx, "Game not ready");
+    JS::WarnUTF8(ctx, "Game not ready");
     args.rval().setBoolean(false);
     return true;
   }
@@ -1179,7 +1179,7 @@ bool my_clickParty(JSContext* ctx, JS::CallArgs& args) {
 
 bool my_useStatPoint(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady()) {
-    JS_ReportWarningASCII(ctx, "Game not ready");
+    JS::WarnUTF8(ctx, "Game not ready");
     args.rval().setBoolean(false);
     return true;
   }
@@ -1198,7 +1198,7 @@ bool my_useStatPoint(JSContext* ctx, JS::CallArgs& args) {
 
 bool my_useSkillPoint(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady()) {
-    JS_ReportWarningASCII(ctx, "Game not ready");
+    JS::WarnUTF8(ctx, "Game not ready");
     args.rval().setBoolean(false);
     return true;
   }
@@ -1263,7 +1263,7 @@ bool my_getBaseStat(JSContext* ctx, JS::CallArgs& args) {
 
 bool my_weaponSwitch(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady()) {
-    JS_ReportWarningASCII(ctx, "Game not ready");
+    JS::WarnUTF8(ctx, "Game not ready");
     args.rval().setBoolean(false);
     return true;
   }
@@ -1297,7 +1297,7 @@ bool my_weaponSwitch(JSContext* ctx, JS::CallArgs& args) {
 
 bool my_transmute(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady()) {
-    JS_ReportWarningASCII(ctx, "Game not ready");
+    JS::WarnUTF8(ctx, "Game not ready");
     args.rval().setBoolean(false);
     return true;
   }
@@ -1322,7 +1322,7 @@ bool my_getPlayerFlag(JSContext* ctx, JS::CallArgs& args) {
   }
 
   if (!WaitForGameReady()) {
-    JS_ReportWarningASCII(ctx, "Game not ready");
+    JS::WarnUTF8(ctx, "Game not ready");
     args.rval().setBoolean(false);
     return true;
   }
@@ -1365,7 +1365,7 @@ bool my_getMouseCoords(JSContext* ctx, JS::CallArgs& args) {
     args.rval().setObject(*pObj);
     return true;
   } else {
-    JS::RootedObject pObj(ctx, JS_NewArrayObject(ctx, 2));
+    JS::RootedObject pObj(ctx, JS::NewArrayObject(ctx, 2));
     JS_SetElement(ctx, pObj, 0, jsX);
     JS_SetElement(ctx, pObj, 1, jsY);
     args.rval().setObject(*pObj);
@@ -1380,7 +1380,7 @@ bool my_submitItem(JSContext* ctx, JS::CallArgs& args) {
   args.rval().setNull();
 
   if (!WaitForGameReady()) {
-    JS_ReportWarningASCII(ctx, "Game not ready");
+    JS::WarnUTF8(ctx, "Game not ready");
     args.rval().setBoolean(false);
     return true;
   }
@@ -1416,7 +1416,7 @@ bool my_submitItem(JSContext* ctx, JS::CallArgs& args) {
 
 bool my_getIsTalkingNPC(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady()) {
-    JS_ReportWarningASCII(ctx, "Game not ready");
+    JS::WarnUTF8(ctx, "Game not ready");
     args.rval().setBoolean(false);
     return true;
   }
@@ -1427,7 +1427,7 @@ bool my_getIsTalkingNPC(JSContext* ctx, JS::CallArgs& args) {
 
 bool my_getInteractedNPC(JSContext* ctx, JS::CallArgs& args) {
   if (!WaitForGameReady()) {
-    JS_ReportWarningASCII(ctx, "Game not ready");
+    JS::WarnUTF8(ctx, "Game not ready");
     args.rval().setBoolean(false);
     return true;
   }
@@ -1471,13 +1471,13 @@ bool my_moveNPC(JSContext* ctx, JS::CallArgs& args) {
   }
 
   if (!WaitForGameReady()) {
-    JS_ReportWarningASCII(ctx, "Game not ready");
+    JS::WarnUTF8(ctx, "Game not ready");
     args.rval().setBoolean(false);
     return true;
   }
 
   if (!Vars.bEnableUnsupported) {
-    JS_ReportWarningASCII(ctx, "moveNPC requires EnableUnsupported = true in d2bs.ini");
+    JS::WarnUTF8(ctx, "moveNPC requires EnableUnsupported = true in d2bs.ini");
     args.rval().setBoolean(false);
     return true;
   }
@@ -1496,7 +1496,7 @@ bool my_moveNPC(JSContext* ctx, JS::CallArgs& args) {
   JS::ToUint32(ctx, args[2], &dwY);
 
   if (!WaitForGameReady()) {
-    JS_ReportWarningASCII(ctx, "Game not ready");
+    JS::WarnUTF8(ctx, "Game not ready");
     args.rval().setBoolean(false);
     return true;
   }

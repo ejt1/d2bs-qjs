@@ -133,7 +133,7 @@ bool ProfileWrap::New(JSContext* ctx, JS::CallArgs& args) {
 
   JS::RootedObject newObject(ctx, JS_NewObjectForConstructor(ctx, &m_class, args));
   if (!newObject) {
-    THROW_ERROR(ctx, "failed to instantiate profile");
+    return false;
   }
   ProfileWrap* wrap = new ProfileWrap(ctx, newObject, prof);
   if (!wrap) {

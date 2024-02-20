@@ -161,7 +161,7 @@ void TimerWrap::TimerCallback(uv_timer_t* handle) {
   TimerWrap* wrap = static_cast<TimerWrap*>(handle->data);
   wrap->inside_callback = true;
   JS::RootedValue rval(wrap->context);
-  JS::RootedObject global(wrap->context, JS_GetGlobalForObject(wrap->context, wrap->ref));
+  JS::RootedObject global(wrap->context, JS::CurrentGlobalOrNull(wrap->context));
   JS::RootedFunction fun(wrap->context, JS_GetObjectFunction(wrap->callback.get()));
   if (!JS_CallFunction(wrap->context, global, fun, wrap->args, &rval)) {
     JS_ReportPendingException(wrap->context);

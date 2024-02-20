@@ -210,7 +210,7 @@ bool PresetUnitWrap::GetPresetUnits(JSContext* ctx, JS::CallArgs& args) {
   bool bAddedRoom = FALSE;
   uint32_t dwArrayCount = NULL;
 
-  JS::RootedObject pReturnArray(ctx, JS_NewArrayObject(ctx, 0));
+  JS::RootedObject pReturnArray(ctx, JS::NewArrayObject(ctx, 0));
   for (D2DrlgRoomStrc* pRoom = pLevel->pRoom2First; pRoom; pRoom = pRoom->pRoom2Next) {
     bAddedRoom = FALSE;
 

@@ -164,6 +164,7 @@ function diablo () {
     !Attack.pwnDia() && Attack.killTarget(sdk.monsters.Diablo);
     Pickit.pickItems();
   } catch (e) {
+    console.error(e);
     //
   } finally {
     Messaging.sendToScript(SoloEvents.filePath, "removeDiaEvent");

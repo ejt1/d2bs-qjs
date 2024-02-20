@@ -297,7 +297,7 @@ bool ScriptWrap::GetScript(JSContext* ctx, JS::CallArgs& args) {
 bool ScriptWrap::GetScripts(JSContext* ctx, JS::CallArgs& args) {
   DWORD dwArrayCount = NULL;
 
-  JS::RootedObject pReturnArray(ctx, JS_NewArrayObject(ctx, 0));
+  JS::RootedObject pReturnArray(ctx, JS::NewArrayObject(ctx, 0));
   sScriptEngine->LockScriptList("getScripts");
 
   for (ScriptMap::iterator it = sScriptEngine->scripts().begin(); it != sScriptEngine->scripts().end(); it++) {

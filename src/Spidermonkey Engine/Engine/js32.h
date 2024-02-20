@@ -6,7 +6,14 @@
 #pragma warning(push, 0)
 #include <jsapi.h>
 #include <jsfriendapi.h>
+#include <js/Array.h>
+#include <js/ArrayBuffer.h>
 #include <js/Conversions.h>
+#include <js/CompilationAndEvaluation.h>
+#include <js/Modules.h>
+#include <js/Warnings.h>
+#include <js/SourceText.h>
+#include <js/StructuredClone.h>
 #pragma warning(pop)
 
 #include <atomic>
@@ -36,10 +43,10 @@ void JS_ReportPendingException(JSContext* ctx);
     return false;                 \
   }
 
-#define THROW_WARNING(cx, msg)       \
-  {                                  \
-    Log(msg);                        \
-    JS_ReportWarningASCII(ctx, msg); \
-    args.rval().setBoolean(false);   \
-    return true;                     \
+#define THROW_WARNING(cx, msg)     \
+  {                                \
+    Log(msg);                      \
+    JS::WarnUTF8(ctx, msg);        \
+    args.rval().setBoolean(false); \
+    return true;                   \
   }

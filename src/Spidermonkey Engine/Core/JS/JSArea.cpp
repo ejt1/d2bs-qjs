@@ -93,7 +93,7 @@ bool AreaWrap::GetExits(JSContext* ctx, JS::CallArgs& args) {
     THROW_ERROR(ctx, "failed to find level");
 
   if (wrap->arrExitArray.isUndefined()) {
-    JS::RootedObject arr(ctx, JS_NewArrayObject(ctx, 0));
+    JS::RootedObject arr(ctx, JS::NewArrayObject(ctx, 0));
 
     ActMap* map = ActMap::GetMap(pLevel);
 

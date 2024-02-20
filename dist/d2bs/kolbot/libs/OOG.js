@@ -596,7 +596,7 @@ includeIfNotIncluded("oog/D2Bot.js"); // required
     makeAccount: function (info) {
       me.blockMouse = true;
 
-      let openBnet = Profile().type === sdk.game.profiletype.OpenBattlenet;
+      let openBnet = new Profile().type === sdk.game.profiletype.OpenBattlenet;
       
       // cycle until in empty char screen
       MainLoop:
@@ -894,10 +894,10 @@ includeIfNotIncluded("oog/D2Bot.js"); // required
 
           break;
         case sdk.game.locations.MainMenu:
-          if (Profile().type === sdk.game.profiletype.OpenBattlenet) {
+          if (new Profile().type === sdk.game.profiletype.OpenBattlenet) {
             // check we are on the correct gateway
             let realms = { "west": 0, "east": 1, "asia": 2, "europe": 3 };
-            ControlAction.clickRealm(realms[Profile().gateway.toLowerCase()]);
+            ControlAction.clickRealm(realms[new Profile().gateway.toLowerCase()]);
             try {
               login(me.profile);
             } catch (e) {
@@ -1116,7 +1116,7 @@ includeIfNotIncluded("oog/D2Bot.js"); // required
           obj = JSON.parse(msg);
           console.debug("Recieved Game Request :: ", obj.profile);
 
-          if ([sdk.game.profiletype.TcpIpHost, sdk.game.profiletype.TcpIpJoin].includes(Profile().type)) {
+          if ([sdk.game.profiletype.TcpIpHost, sdk.game.profiletype.TcpIpJoin].includes(new Profile().type)) {
             me.gameReady && D2Bot.joinMe(obj.profile, me.gameserverip.toString(), "", "", Starter.isUp);
           } else {
             if (me.gameReady) {
@@ -1584,16 +1584,16 @@ includeIfNotIncluded("oog/D2Bot.js"); // required
             && Controls.CreateGameWindow.disabled === sdk.game.controls.Disabled) {
             if (Starter.Config.StopOnDeadHardcore) {
               D2Bot.printToConsole(
-                Profile().character + " has died. They shall be remembered...maybe. Shutting down, better luck next time",
+                new Profile().character + " has died. They shall be remembered...maybe. Shutting down, better luck next time",
                 sdk.colors.D2Bot.Gold
               );
               D2Bot.stop();
             } else {
               D2Bot.printToConsole(
-                Profile().character + " has died. They shall be remembered...maybe. Better luck next time",
+                new Profile().character + " has died. They shall be remembered...maybe. Better luck next time",
                 sdk.colors.D2Bot.Gold
               );
-              D2Bot.updateStatus(Profile().character + " has died. They shall be remembered...maybe. Better luck next time");
+              D2Bot.updateStatus(new Profile().character + " has died. They shall be remembered...maybe. Better luck next time");
               Starter.deadCheck = true;
               Controls.LobbyQuit.click();
             }
@@ -1643,7 +1643,7 @@ includeIfNotIncluded("oog/D2Bot.js"); // required
           }
 
           if (currLocation === sdk.game.locations.MainMenu) {
-            if (Profile().type === sdk.game.profiletype.SinglePlayer
+            if (new Profile().type === sdk.game.profiletype.SinglePlayer
               && Starter.firstRun
               && Controls.SinglePlayer.click()) {
               return true;
@@ -1653,8 +1653,8 @@ includeIfNotIncluded("oog/D2Bot.js"); // required
           // Wrong char select screen fix
           if (getLocation() === sdk.game.locations.CharSelect) {
             hideConsole(); // seems to fix odd crash with single-player characters if the console is open to type in
-            if ((Profile().type === sdk.game.profiletype.Battlenet && !Controls.CharSelectCurrentRealm.control)
-              || ((Profile().type !== sdk.game.profiletype.Battlenet && Controls.CharSelectCurrentRealm.control))) {
+            if ((new Profile().type === sdk.game.profiletype.Battlenet && !Controls.CharSelectCurrentRealm.control)
+              || ((new Profile().type !== sdk.game.profiletype.Battlenet && Controls.CharSelectCurrentRealm.control))) {
               Controls.BottomLeftExit.click();
             
               return false;
@@ -1685,7 +1685,7 @@ includeIfNotIncluded("oog/D2Bot.js"); // required
               } else {
                 login(me.profile);
               }
-            } else if (getLocation() === sdk.game.locations.TcpIpEnterIp && Profile().type === sdk.game.profiletype.TcpIpJoin) {
+            } else if (getLocation() === sdk.game.locations.TcpIpEnterIp && new Profile().type === sdk.game.profiletype.TcpIpJoin) {
               return true; // handled in its own case
             } else {
               console.error(e, " " + getLocation());
@@ -1696,7 +1696,7 @@ includeIfNotIncluded("oog/D2Bot.js"); // required
         },
 
         otherMultiplayerSelect: function () {
-          const pType = Profile().type;
+          const pType = new Profile().type;
           if ([sdk.game.profiletype.TcpIpHost, sdk.game.profiletype.TcpIpJoin].includes(pType)) {
             if (Controls.TcpIp.click()) {
               pType === sdk.game.profiletype.TcpIpHost

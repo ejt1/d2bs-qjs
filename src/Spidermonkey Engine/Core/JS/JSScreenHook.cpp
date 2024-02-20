@@ -77,9 +77,9 @@ bool FrameWrap::New(JSContext* ctx, JS::CallArgs& args) {
     JS::ToUint32(ctx, args[4], (uint32_t*)(&align));
   if (args.length() > 5 && args[5].isBoolean())
     automap = args[5].toBoolean();
-  if (args.length() > 6 && args[6].isObject() && JS_ObjectIsFunction(ctx, args[6].toObjectOrNull()))
+  if (args.length() > 6 && args[6].isObject() && JS_ObjectIsFunction(args[6].toObjectOrNull()))
     click.set(args[6].toObjectOrNull());
-  if (args.length() > 7 && args[7].isObject() && JS_ObjectIsFunction(ctx, args[7].toObjectOrNull()))
+  if (args.length() > 7 && args[7].isObject() && JS_ObjectIsFunction(args[7].toObjectOrNull()))
     hover.set(args[7].toObjectOrNull());
 
   JS::RootedObject newObject(ctx, JS_NewObjectForConstructor(ctx, &m_class, args));
@@ -383,9 +383,9 @@ bool BoxWrap::New(JSContext* ctx, JS::CallArgs& args) {
     JS::ToUint32(ctx, args[6], &align);
   if (args.length() > 7 && args[7].isBoolean())
     automap = args[7].toBoolean();
-  if (args.length() > 8 && args[8].isObject() && JS_ObjectIsFunction(ctx, args[8].toObjectOrNull()))
+  if (args.length() > 8 && args[8].isObject() && JS_ObjectIsFunction(args[8].toObjectOrNull()))
     click.set(args[8].toObjectOrNull());
-  if (args.length() > 9 && args[9].isObject() && JS_ObjectIsFunction(ctx, args[9].toObjectOrNull()))
+  if (args.length() > 9 && args[9].isObject() && JS_ObjectIsFunction(args[9].toObjectOrNull()))
     hover.set(args[9].toObjectOrNull());
 
   JS::RootedObject newObject(ctx, JS_NewObjectForConstructor(ctx, &m_class, args));
@@ -728,9 +728,9 @@ bool LineWrap::New(JSContext* ctx, JS::CallArgs& args) {
     JS::ToUint32(ctx, args[4], &color);
   if (args.length() > 5 && args[5].isBoolean())
     automap = args[5].toBoolean();
-  if (args.length() > 6 && args[6].isObject() && JS_ObjectIsFunction(ctx, args[6].toObjectOrNull()))
+  if (args.length() > 6 && args[6].isObject() && JS_ObjectIsFunction(args[6].toObjectOrNull()))
     click.set(args[6].toObjectOrNull());
-  if (args.length() > 7 && args[7].isObject() && JS_ObjectIsFunction(ctx, args[7].toObjectOrNull()))
+  if (args.length() > 7 && args[7].isObject() && JS_ObjectIsFunction(args[7].toObjectOrNull()))
     hover.set(args[7].toObjectOrNull());
 
   JS::RootedObject newObject(ctx, JS_NewObjectForConstructor(ctx, &m_class, args));
@@ -1038,9 +1038,9 @@ bool TextWrap::New(JSContext* ctx, JS::CallArgs& args) {
     JS::ToUint32(ctx, args[5], &align);
   if (args.length() > 6 && args[6].isBoolean())
     automap = args[6].toBoolean();
-  if (args.length() > 7 && args[7].isObject() && JS_ObjectIsFunction(ctx, args[7].toObjectOrNull()))
+  if (args.length() > 7 && args[7].isObject() && JS_ObjectIsFunction(args[7].toObjectOrNull()))
     click.set(args[7].toObjectOrNull());
-  if (args.length() > 8 && args[8].isObject() && JS_ObjectIsFunction(ctx, args[8].toObjectOrNull()))
+  if (args.length() > 8 && args[8].isObject() && JS_ObjectIsFunction(args[8].toObjectOrNull()))
     hover.set(args[8].toObjectOrNull());
 
   JS::RootedObject newObject(ctx, JS_NewObjectForConstructor(ctx, &m_class, args));
@@ -1371,9 +1371,9 @@ bool ImageWrap::New(JSContext* ctx, JS::CallArgs& args) {
     JS::ToUint32(ctx, args[4], &align);
   if (args.length() > 5 && args[5].isBoolean())
     automap = args[5].toBoolean();
-  if (args.length() > 6 && args[6].isObject() && JS_ObjectIsFunction(ctx, args[6].toObjectOrNull()))
+  if (args.length() > 6 && args[6].isObject() && JS_ObjectIsFunction(args[6].toObjectOrNull()))
     click.set(args[6].toObjectOrNull());
-  if (args.length() > 7 && args[7].isObject() && JS_ObjectIsFunction(ctx, args[7].toObjectOrNull()))
+  if (args.length() > 7 && args[7].isObject() && JS_ObjectIsFunction(args[7].toObjectOrNull()))
     hover.set(args[7].toObjectOrNull());
 
   // TODO: cba to fix this now

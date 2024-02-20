@@ -384,7 +384,7 @@ bool UnitWrap::GetPrefixes(JSContext* ctx, JS::CallArgs& args) {
     args.rval().setUndefined();
     return true;
   }
-  JS::RootedObject arr(ctx, JS_NewArrayObject(ctx, 3));
+  JS::RootedObject arr(ctx, JS::NewArrayObject(ctx, 3));
   for (int i = 0; i < 3; ++i) {
     char* str = D2COMMON_GetItemMagicalMods(pUnit->pItemData->wMagicPrefix[i]);
     if (str) {
@@ -402,7 +402,7 @@ bool UnitWrap::GetSuffixes(JSContext* ctx, JS::CallArgs& args) {
     args.rval().setUndefined();
     return true;
   }
-  JS::RootedObject arr(ctx, JS_NewArrayObject(ctx, 3));
+  JS::RootedObject arr(ctx, JS::NewArrayObject(ctx, 3));
   for (int i = 0; i < 3; ++i) {
     char* str = D2COMMON_GetItemMagicalMods(pUnit->pItemData->wMagicSuffix[i]);
     if (str) {
@@ -440,7 +440,7 @@ bool UnitWrap::GetPrefixNums(JSContext* ctx, JS::CallArgs& args) {
     args.rval().setUndefined();
     return true;
   }
-  JS::RootedObject arr(ctx, JS_NewArrayObject(ctx, 3));
+  JS::RootedObject arr(ctx, JS::NewArrayObject(ctx, 3));
   for (int i = 0; i < 3; ++i) {
     if (pUnit->pItemData->wMagicPrefix[i]) {
       JS_SetElement(ctx, arr, i, pUnit->pItemData->wMagicPrefix[i]);
@@ -456,7 +456,7 @@ bool UnitWrap::GetSuffixNums(JSContext* ctx, JS::CallArgs& args) {
     args.rval().setUndefined();
     return true;
   }
-  JS::RootedObject arr(ctx, JS_NewArrayObject(ctx, 3));
+  JS::RootedObject arr(ctx, JS::NewArrayObject(ctx, 3));
   for (int i = 0; i < 3; ++i) {
     if (pUnit->pItemData->wMagicSuffix[i]) {
       JS_SetElement(ctx, arr, i, pUnit->pItemData->wMagicSuffix[i]);
@@ -1320,7 +1320,7 @@ bool UnitWrap::getItems(JSContext* ctx, JS::CallArgs& args) {
     return true;
   }
 
-  JS::RootedObject pReturnArray(ctx, JS_NewArrayObject(ctx, 0));
+  JS::RootedObject pReturnArray(ctx, JS::NewArrayObject(ctx, 0));
   if (!pReturnArray) {
     args.rval().setUndefined();
     return true;
@@ -1498,10 +1498,10 @@ bool UnitWrap::getSkill(JSContext* ctx, JS::CallArgs& args) {
         return true;
         break;
       case 4: {
-        JS::RootedObject pReturnArray(ctx, JS_NewArrayObject(ctx, 0));
+        JS::RootedObject pReturnArray(ctx, JS::NewArrayObject(ctx, 0));
         int i = 0;
         for (D2SkillStrc* pSkill = pUnit->pInfo->pFirstSkill; pSkill; pSkill = pSkill->pNextSkill) {
-          JS::RootedObject pArrayInsert(ctx, JS_NewArrayObject(ctx, 0));
+          JS::RootedObject pArrayInsert(ctx, JS::NewArrayObject(ctx, 0));
           if (!pArrayInsert)
             continue;
 
@@ -1794,7 +1794,7 @@ bool UnitWrap::getStat(JSContext* ctx, JS::CallArgs& args) {
     if (pStatList) {
       DWORD dwStats = D2COMMON_CopyStatList(pStatList, (D2StatStrc*)aStatList, 256);
 
-      JS::RootedObject statArray(ctx, JS_NewArrayObject(ctx, 0));
+      JS::RootedObject statArray(ctx, JS::NewArrayObject(ctx, 0));
       for (int j = 0; j < pUnit->pStats->StatVec.wCount; j++) {
         bool inListAlready = false;
         for (DWORD k = 0; k < dwStats; k++) {
@@ -1810,7 +1810,7 @@ bool UnitWrap::getStat(JSContext* ctx, JS::CallArgs& args) {
         }
       }
       for (UINT i = 0; i < dwStats; i++) {
-        JS::RootedObject pArrayInsert(ctx, JS_NewArrayObject(ctx, 0));
+        JS::RootedObject pArrayInsert(ctx, JS::NewArrayObject(ctx, 0));
         if (!pArrayInsert)
           continue;
 
@@ -1829,7 +1829,7 @@ bool UnitWrap::getStat(JSContext* ctx, JS::CallArgs& args) {
     args.rval().setBoolean(false);
     return true;
   } else if (nStat == -2) {
-    JS::RootedObject statArray(ctx, JS_NewArrayObject(ctx, 0));
+    JS::RootedObject statArray(ctx, JS::NewArrayObject(ctx, 0));
 
     InsertStatsToGenericObject(pUnit, pUnit->pStats, ctx, &statArray);
     InsertStatsToGenericObject(pUnit, D2COMMON_GetStatList(pUnit, NULL, 0x40), ctx, &statArray);
@@ -1905,9 +1905,9 @@ void InsertStatsNow(D2StatStrc* pStat, int nStat, JSContext* cx, JS::MutableHand
     if (!index.isUndefined()) {
       // modify the existing object by stuffing it into an array
       bool isArray;
-      if (JS_IsArrayObject(cx, index, &isArray) && !isArray) {
+      if (JS::IsArrayObject(cx, index, &isArray) && !isArray) {
         // it's not an array, build one
-        JS::RootedObject arr(cx, JS_NewArrayObject(cx, 0));
+        JS::RootedObject arr(cx, JS::NewArrayObject(cx, 0));
         JS_SetElement(cx, arr, 0, index);
         JS_SetElement(cx, arr, 1, obj);
         JS_SetElement(cx, pArray, pStat[nStat].wStatIndex, arr);
@@ -1915,7 +1915,7 @@ void InsertStatsNow(D2StatStrc* pStat, int nStat, JSContext* cx, JS::MutableHand
         // it is an array, append the new value
         JS::RootedObject arr(cx, index.toObjectOrNull());
         uint32_t len = 0;
-        if (!JS_GetArrayLength(cx, arr, &len))
+        if (!JS::GetArrayLength(cx, arr, &len))
           return;
         len++;
         JS_SetElement(cx, arr, len, obj);
@@ -1935,7 +1935,7 @@ void InsertStatsNow(D2StatStrc* pStat, int nStat, JSContext* cx, JS::MutableHand
       return;
     if (index.isUndefined()) {
       // the array index doesn't exist, make it
-      index.setObjectOrNull(JS_NewArrayObject(cx, 0));
+      index.setObjectOrNull(JS::NewArrayObject(cx, 0));
       if (!JS_SetElement(cx, pArray, pStat[nStat].wStatIndex, index)) {
         return;
       }

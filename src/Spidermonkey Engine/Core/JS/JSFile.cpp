@@ -328,7 +328,7 @@ bool FileWrap::Read(JSContext* ctx, JS::CallArgs& args) {
         return true;
       }
       else {
-        JS::RootedObject arr(ctx, JS_NewArrayObject(ctx, 0));
+        JS::RootedObject arr(ctx, JS::NewArrayObject(ctx, 0));
         for (int i = 0; i < count; i++) {
           JS_SetElement(ctx, arr, i, result[i]);
         }
@@ -418,7 +418,7 @@ bool FileWrap::ReadAllLines(JSContext* ctx, JS::CallArgs& args) {
 
   FileData* fdata = &wrap->fdata;
   if (fdata && fdata->fptr) {
-    JS::RootedObject arr(ctx, JS_NewArrayObject(ctx, 0));
+    JS::RootedObject arr(ctx, JS::NewArrayObject(ctx, 0));
     int i = 0;
     while (!feof(fdata->fptr)) {
       uint32_t size = 0;

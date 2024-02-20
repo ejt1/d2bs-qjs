@@ -139,7 +139,7 @@ bool ScriptMessageEvent(JSContext* ctx, Script* script, unsigned argc, JS::Value
       JS::RootedValue val(ctx, argv[i]);
 
       // NOTE(ejt): don't know if this is a good way of doing it but documentation is poor around this API
-      JSAutoStructuredCloneBuffer buffer(JS::StructuredCloneScope::SameProcessDifferentThread, nullptr, nullptr);
+      JSAutoStructuredCloneBuffer buffer(JS::StructuredCloneScope::SameProcess, nullptr, nullptr);
       buffer.write(ctx, val);
       evt->buffers.emplace_back(std::move(buffer));
     }

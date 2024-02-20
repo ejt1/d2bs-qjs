@@ -109,7 +109,7 @@ class Script {
 
   bool RunEventLoop();
   void PurgeEventList();
-  void ExecuteEvent(char* evtName, const JS::AutoValueVector& argv, bool* block = nullptr);
+  void ExecuteEvent(char* evtName, const JS::HandleValueArray& argv, bool* block = nullptr);
   bool ProcessAllEvents();
 
   bool SetupModuleResolveHook(JSContext* ctx);
