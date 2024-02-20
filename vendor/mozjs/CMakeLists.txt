@@ -61,8 +61,8 @@ if(MOZJS_STATIC_RTL)
 endif()
 
 # TODO: Properly define version
-add_definitions(-DMOZILLA_VERSION="68.9.0")
-set(MOZJS_MAJOR_VERSION 68)
+add_definitions(-DMOZILLA_VERSION="78.9.0")
+set(MOZJS_MAJOR_VERSION 78)
 set(MOZJS_MINOR_VERSION 9)
 
 # Add the ESR version to directories so we don't override when doing multiple ESR builds
