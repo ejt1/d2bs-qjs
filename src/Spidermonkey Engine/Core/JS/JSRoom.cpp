@@ -221,7 +221,7 @@ bool RoomWrap::GetPresetUnits(JSContext* ctx, JS::CallArgs& args) {
     D2COMMON_AddRoomData(D2CLIENT_GetPlayerUnit()->pAct, room->pLevel->dwLevelNo, room->dwPosX, room->dwPosY, D2CLIENT_GetPlayerUnit()->pPath->pRoom1);
   }
 
-  JS::RootedObject pReturnArray(ctx, JS_NewArrayObject(ctx, 0));
+  JS::RootedObject pReturnArray(ctx, JS::NewArrayObject(ctx, 0));
   for (D2PresetUnitStrc* pUnit = room->pPreset; pUnit; pUnit = pUnit->pPresetNext) {
     if ((pUnit->dwType == nType || nType == NULL) && (pUnit->dwTxtFileNo == nClass || nClass == NULL)) {
       JS::RootedObject jsUnit(ctx, PresetUnitWrap::Instantiate(ctx, pUnit, room, room->pLevel ? room->pLevel->dwLevelNo : 0));
@@ -255,7 +255,7 @@ bool RoomWrap::GetCollision(JSContext* ctx, JS::CallArgs& args) {
     return true;
   }
 
-  JS::RootedObject jsobjy(ctx, JS_NewArrayObject(ctx, 0));
+  JS::RootedObject jsobjy(ctx, JS::NewArrayObject(ctx, 0));
   if (!jsobjy) {
     args.rval().setUndefined();
     return true;
@@ -288,7 +288,7 @@ bool RoomWrap::GetCollision(JSContext* ctx, JS::CallArgs& args) {
 
   WORD* p = pCol->pMapStart;
   for (int j = y; j < nLimitY; j++) {
-    JS::RootedObject jsobjx(ctx, JS_NewArrayObject(ctx, 0));
+    JS::RootedObject jsobjx(ctx, JS::NewArrayObject(ctx, 0));
 
     int nCurrentArrayX = 0;
     for (int i = x; i < nLimitX; i++) {
@@ -326,7 +326,7 @@ bool RoomWrap::GetCollisionA(JSContext* ctx, JS::CallArgs& args) {
     D2COMMON_AddRoomData(D2CLIENT_GetPlayerUnit()->pAct, pRoom2->pLevel->dwLevelNo, pRoom2->dwPosX, pRoom2->dwPosY, D2CLIENT_GetPlayerUnit()->pPath->pRoom1);
   }
 
-  JS::RootedObject jsobjy(ctx, JS_NewArrayObject(ctx, 0));
+  JS::RootedObject jsobjy(ctx, JS::NewArrayObject(ctx, 0));
   if (!jsobjy) {
     args.rval().setUndefined();
     return true;
@@ -374,7 +374,7 @@ bool RoomWrap::GetNearby(JSContext* ctx, JS::CallArgs& args) {
   RoomWrap* wrap;
   UNWRAP_OR_RETURN(ctx, &wrap, args.thisv());
   D2DrlgRoomStrc* pRoom2 = wrap->pRoom;
-  JS::RootedObject jsobj(ctx, JS_NewArrayObject(ctx, 0));
+  JS::RootedObject jsobj(ctx, JS::NewArrayObject(ctx, 0));
   if (!jsobj) {
     args.rval().setUndefined();
     return true;

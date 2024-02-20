@@ -314,14 +314,14 @@ bool ControlWrap::FreeGetText(JSContext* ctx, JS::CallArgs& args) {
     return true;
   }
 
-  JS::RootedObject pReturnArray(ctx, JS_NewArrayObject(ctx, 0));
+  JS::RootedObject pReturnArray(ctx, JS::NewArrayObject(ctx, 0));
   int nArrayCount = 0;
   for (D2WinTextBoxLineStrc* pText = pControl->pFirstText; pText; pText = pText->pNext) {
     if (!pText->wText[0])
       continue;
 
     if (pText->wText[1]) {
-      JS::RootedObject pSubArray(ctx, JS_NewArrayObject(ctx, 0));
+      JS::RootedObject pSubArray(ctx, JS::NewArrayObject(ctx, 0));
 
       for (int i = 0; i < 5; i++) {
         if (pText->wText[i]) {
@@ -408,7 +408,7 @@ bool ControlWrap::GetControls(JSContext* ctx, JS::CallArgs& args) {
 
   uint32_t dwArrayCount = NULL;
 
-  JS::RootedObject pReturnArray(ctx, JS_NewArrayObject(ctx, 0));
+  JS::RootedObject pReturnArray(ctx, JS::NewArrayObject(ctx, 0));
   for (D2WinControlStrc* pControl = *D2WIN_FirstControl; pControl; pControl = pControl->pNext) {
     JS::RootedObject obj(ctx, ControlWrap::Instantiate(ctx, pControl));
     if (!obj) {

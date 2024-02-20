@@ -11,14 +11,14 @@ StringWrap::StringWrap(JSContext* ctx, JSString* str) : m_length(0) {
     JS_ReportErrorUTF8(ctx, "cannot flatten null string");
     return;
   }
-  JSFlatString* flat = JS_FlattenString(ctx, str);
-  if (!flat) {
+  JSLinearString* linear = JS_EnsureLinearString(ctx, str);
+  if (!linear) {
     JS_ReportErrorUTF8(ctx, "failed to flatten string");
     return;
   }
-  m_length = JS::GetDeflatedUTF8StringLength(flat);
+  m_length = JS::GetDeflatedUTF8StringLength(linear);
   m_str.reset(new char[m_length + 1]);
-  JS::DeflateStringToUTF8Buffer(flat, mozilla::RangedPtr(m_str.get(), m_length));
+  JS::DeflateStringToUTF8Buffer(linear, mozilla::Span(m_str.get(), m_length));
   m_str[m_length] = '\0';
 }
 

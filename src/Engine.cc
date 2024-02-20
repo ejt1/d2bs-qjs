@@ -477,7 +477,6 @@ LRESULT __stdcall Engine::HandleWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
             Print("ÿc2D2BSÿc0 :: Profile %s not found", lpszData);
           }
         } else {
-          Log("Copydata");
           CopyDataEvent(pCopy->dwData, lpszData);
         }
       }

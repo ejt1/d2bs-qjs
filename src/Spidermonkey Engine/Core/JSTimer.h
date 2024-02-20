@@ -4,6 +4,7 @@
 
 #include <uv.h>
 
+// TODO(ejt): variable arguments passing to timers are broken
 class TimerWrap : public BaseObject {
  public:
   static JSObject* Instantiate(JSContext* ctx, int64_t delay, JS::HandleValue func, unsigned argc, JS::Value* argv, bool interval = false);
@@ -64,7 +65,7 @@ class TimerWrap : public BaseObject {
   uv_timer_t timer_handle;
   JS::PersistentRootedObject ref;
   JS::PersistentRootedObject callback;
-  JS::AutoValueVector args;
+  JS::PersistentRootedObjectVector args;
   bool inside_callback;
   bool clear_after_callback;
 };

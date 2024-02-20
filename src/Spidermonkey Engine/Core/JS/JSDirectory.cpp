@@ -175,7 +175,7 @@ bool DirectoryWrap::GetFiles(JSContext* ctx, JS::CallArgs& args) {
   }
 
   _finddata_t found;
-  JS::RootedObject jsarray(ctx, JS_NewArrayObject(ctx, 0));
+  JS::RootedObject jsarray(ctx, JS::NewArrayObject(ctx, 0));
   if ((hFile = _findfirst(search, &found)) != -1L) {
     int32_t element = 0;
     do {
@@ -226,7 +226,7 @@ bool DirectoryWrap::GetFolders(JSContext* ctx, JS::CallArgs& args) {
 
   _finddata_t found;
 
-  JS::RootedObject jsarray(ctx, JS_NewArrayObject(ctx, 0));
+  JS::RootedObject jsarray(ctx, JS::NewArrayObject(ctx, 0));
   if ((hFile = _findfirst(search, &found)) != -1L) {
     int32_t element = 0;
     do {

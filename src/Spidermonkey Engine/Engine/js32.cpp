@@ -58,15 +58,12 @@ JSScript* JS_CompileFile(JSContext* ctx, JS::HandleObject /*globalObject*/, std:
 
   JS::CompileOptions opts(ctx);
   opts.setFileAndLine(fileName.c_str(), 1);
-  opts.setUTF8(true);
-  JS::RootedScript script(ctx);
-  if (!JS_CompileScript(ctx, str.c_str(), str.length(), opts, &script)) {
-    t.close();
+  JS::SourceText<mozilla::Utf8Unit> source;
+  if (!source.init(ctx, str.c_str(), str.length(), JS::SourceOwnership::Borrowed)) {
     return nullptr;
   }
-  t.close();
 
-  return script;
+  return JS::Compile(ctx, opts, source);
 }
 
 // std::optional<std::string> JS_CStringToStd(JSContext* ctx, JSValue val) {
@@ -81,8 +78,8 @@ JSScript* JS_CompileFile(JSContext* ctx, JS::HandleObject /*globalObject*/, std:
 // }
 
 void JS_LogReport(JSContext* ctx, JSErrorReport* report) {
-  bool warn = JSREPORT_IS_WARNING(report->flags);
-  bool isStrict = JSREPORT_IS_STRICT(report->flags);
+  bool warn = report->isWarning();
+  bool isStrict = false; //JSREPORT_IS_STRICT(report->flags);
   const char* type = (warn ? "Warning" : "Error");
   const char* strict = (isStrict ? "Strict " : "");
   const char* filename = report->filename ? report->filename : "<unknown>";
@@ -93,7 +90,7 @@ void JS_LogReport(JSContext* ctx, JSErrorReport* report) {
   Log("[%hs%hs] Code(%d) File(%s:%d) %s", strict, type, report->errorNumber, filename, report->lineno, report->message().c_str());
   Print("[ÿc%d%hs%hsÿc0 (%d)] File(%s:%d) %s", (warn ? 9 : 1), strict, type, report->errorNumber, displayName, report->lineno, report->message().c_str());
 
-  if (Vars.bQuitOnError && !JSREPORT_IS_WARNING(report->flags) && ClientState() == ClientStateInGame)
+  if (Vars.bQuitOnError && !report->isWarning() && ClientState() == ClientStateInGame)
     D2CLIENT_ExitGame();
   else
     Console::ShowBuffer();

@@ -474,7 +474,7 @@ bool my_sendPacket(JSContext* ctx, JS::CallArgs& args) {
     return false;
   }
   if (!Vars.bEnableUnsupported) {
-    JS_ReportWarningASCII(ctx, "sendPacket requires EnableUnsupported = true in d2bs.ini");
+    JS::WarnUTF8(ctx, "sendPacket requires EnableUnsupported = true in d2bs.ini");
     args.rval().setBoolean(false);
     return true;
   }
@@ -485,20 +485,20 @@ bool my_sendPacket(JSContext* ctx, JS::CallArgs& args) {
 
   if (args[0].isObject()) {
     JS::RootedObject obj(ctx, args[0].toObjectOrNull());
-    if (!JS_IsArrayBufferObject(obj)) {
+    if (!JS::IsArrayBufferObject(obj)) {
       THROW_WARNING(ctx, "invalid ArrayBuffer parameter");
     }
     JS::AutoAssertNoGC hazard(ctx);
     bool isSharedMemory;
-    len = JS_GetArrayBufferByteLength(obj);
-    aPacket = JS_GetArrayBufferData(obj, &isSharedMemory, hazard);
+    len = JS::GetArrayBufferByteLength(obj);
+    aPacket = static_cast<BYTE*>(JS::GetArrayBufferData(obj, &isSharedMemory, hazard));
     if (!aPacket) {
       JS_ReportErrorASCII(ctx, "getPacket: invalid ArrayBuffer parameter");
       return false;
     }
   } else {
     if (args.length() % 2 != 0) {
-      JS_ReportWarningASCII(ctx, "invalid packet format");
+      JS::WarnUTF8(ctx, "invalid packet format");
       args.rval().setBoolean(false);
       return true;
     }
@@ -528,7 +528,7 @@ bool my_getPacket(JSContext* ctx, JS::CallArgs& args) {
     return false;
   }
   if (!Vars.bEnableUnsupported) {
-    JS_ReportWarningASCII(ctx, "sendPacket requires EnableUnsupported = true in d2bs.ini");
+    JS::WarnUTF8(ctx, "sendPacket requires EnableUnsupported = true in d2bs.ini");
     args.rval().setBoolean(false);
     return true;
   }
@@ -538,18 +538,18 @@ bool my_getPacket(JSContext* ctx, JS::CallArgs& args) {
   uint32_t len = 0;
 
   bool isArray;
-  if (JS_IsArrayObject(ctx, args[0], &isArray) && isArray) {
+  if (JS::IsArrayObject(ctx, args[0], &isArray) && isArray) {
     JS::AutoAssertNoGC hazard(ctx);
     bool isSharedMemory;
-    len = JS_GetArrayBufferByteLength(args[0].toObjectOrNull());
-    aPacket = JS_GetArrayBufferData(args[0].toObjectOrNull(), &isSharedMemory, hazard);
+    len = JS::GetArrayBufferByteLength(args[0].toObjectOrNull());
+    aPacket = static_cast<BYTE*>(JS::GetArrayBufferData(args[0].toObjectOrNull(), &isSharedMemory, hazard));
     if (!aPacket) {
       JS_ReportErrorASCII(ctx, "getPacket: invalid ArrayBuffer parameter");
       return false;
     }
   } else {
     if (args.length() % 2 != 0) {
-      JS_ReportWarningASCII(ctx, "invalid packet format");
+      JS::WarnUTF8(ctx, "invalid packet format");
       args.rval().setBoolean(false);
       return true;
     }
