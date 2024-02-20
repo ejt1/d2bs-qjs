@@ -26,7 +26,7 @@
       _loc.set(loc, action);
     });
   };
-  const pType = Profile().type;
+  const pType = new Profile().type;
   /**
    * Default locations written as if bot is running d2botlead
    */
@@ -38,7 +38,7 @@
     ],
     [sdk.game.locations.OtherMultiplayer,
       function () {
-        const pType = Profile().type;
+        const pType = new Profile().type;
         if ([sdk.game.profiletype.TcpIpHost, sdk.game.profiletype.TcpIpJoin].includes(pType)) {
           if (Controls.TcpIp.click()) {
             pType === sdk.game.profiletype.TcpIpHost

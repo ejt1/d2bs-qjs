@@ -1701,6 +1701,7 @@ Unit.prototype.getColor = function () {
     return -1;
   }
 
+  let fuzzy_color = -1;
   if (this.quality === sdk.items.quality.Magic || this.quality === sdk.items.quality.Rare) {
     colors = {
       "Screaming": Color.orange,
@@ -1875,13 +1876,19 @@ Unit.prototype.getColor = function () {
     }
   } else if (this.unique) {
     for (let i = 0; i < 401; i += 1) {
-      if (this.code === getBaseStat(17, i, 4).replace(/^\s+|\s+$/g, "")
-        && this.fname.split("\n").reverse()[0].includes(getLocaleString(getBaseStat(17, i, 2)))) {
-        return getBaseStat(17, i, 13) > 20 ? -1 : getBaseStat(17, i, 13);
+      if (this.fname.split("\n").reverse()[0].includes(getLocaleString(getBaseStat(17, i, 2)))) {
+        fuzzy_color = getBaseStat(17, i, 13) > 20 ? -1 : getBaseStat(17, i, 13);
+      }
+      if (fuzzy_color && this.code === getBaseStat(17, i, 4).replace(/^\s+|\s+$/g, "")) {
+        return fuzzy_color;
       }
     }
   }
 
+  if (!colors) {
+    return fuzzy_color;
+  }
+  
   for (let i = 0; i < this.suffixes.length; i += 1) {
     if (colors.hasOwnProperty(this.suffixes[i])) {
       return colors[this.suffixes[i]];

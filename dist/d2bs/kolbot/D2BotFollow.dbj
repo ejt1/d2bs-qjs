@@ -269,7 +269,7 @@ const locationAction = (function () {
   );
   locations.set(sdk.game.locations.TcpIp,
     function () {
-      Profile().type === sdk.game.profiletype.TcpIpJoin
+      new Profile().type === sdk.game.profiletype.TcpIpJoin
         ? Controls.TcpIpJoin.click()
         : Controls.TcpIpCancel.click();
     }
