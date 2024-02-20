@@ -618,9 +618,9 @@ bool FileWrap::End(JSContext* ctx, JS::CallArgs& args) {
 bool FileWrap::Open(JSContext* ctx, JS::CallArgs& args) {
   if (args.length() < 2)
     THROW_ERROR(ctx, "Not enough parameters, 2 or more expected");
-  if (!args[0].isBoolean())
+  if (!args[0].isString())
     THROW_ERROR(ctx, "Parameter 1 not a string");
-  if (!args[1].isBoolean())
+  if (!args[1].isInt32())
     THROW_ERROR(ctx, "Parameter 2 not a mode");
 
   // Convert from JS params to C values
