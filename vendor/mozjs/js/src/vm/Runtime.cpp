@@ -73,7 +73,7 @@ JS::FilenameValidationCallback js::gFilenameValidationCallback = nullptr;
 namespace js {
 void (*HelperThreadTaskCallback)(js::UniquePtr<RunnableTask>);
 
-bool gCanUseExtraThreads = true;
+bool gCanUseExtraThreads = false;
 }  // namespace js
 
 void js::DisableExtraThreads() { gCanUseExtraThreads = false; }

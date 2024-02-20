@@ -117,6 +117,7 @@ class FileWrap : public BaseObject {
 
   static inline JSFunctionSpec m_smethods[] = {
       JS_FN("open", trampoline<Open>, 2, JSPROP_ENUMERATE),
+      JS_FS_END,
   };
 
   FileData fdata;
