@@ -18,9 +18,9 @@ JSObject* TimerWrap::Instantiate(JSContext* ctx, int64_t delay, JS::HandleValue 
   }
   wrap->ref.init(ctx, obj);
   wrap->callback.init(ctx, func.toObjectOrNull());
-  //for (uint32_t i = 0; i < argc; ++i) {
-  //  wrap->args.append(argv[i]);
-  //}
+  for (uint32_t i = 0; i < argc; ++i) {
+    wrap->args.append(argv[i]);
+  }
 
   ThreadState* ts = static_cast<ThreadState*>(JS_GetContextPrivate(ctx));
   uv_timer_init(ts->loop, &wrap->timer_handle);
@@ -163,8 +163,7 @@ void TimerWrap::TimerCallback(uv_timer_t* handle) {
   JS::RootedValue rval(wrap->context);
   JS::RootedObject global(wrap->context, JS::CurrentGlobalOrNull(wrap->context));
   JS::RootedFunction fun(wrap->context, JS_GetObjectFunction(wrap->callback.get()));
-  //JS::RootedValueVector args(wrap->context);
-  if (!JS_CallFunction(wrap->context, global, fun, JS::HandleValueArray::empty()/*args*/, &rval)) {
+  if (!JS_CallFunction(wrap->context, global, fun, wrap->args, &rval)) {
     JS_ReportPendingException(wrap->context);
     wrap->Clear();
   }
